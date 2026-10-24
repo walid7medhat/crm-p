@@ -150,7 +150,7 @@ public const FEATURE_LABELS = [
         // see it; other viewers only ever see approved+published listings anyway.
         $canSeeStatus = $user && (
             $user->hasRole('super_admin')
-            || $user->hasRole('admin')
+            || $user->id==30
             || $user->hasRole('branch_admin')
             || $this->agent_id == $user->id
             || $this->added_by == $user->id
@@ -178,11 +178,11 @@ public const FEATURE_LABELS = [
          $canAssignAgent = false;$canViewUpdate=false;
 
     if ($user) {
-$roleAllowed = $user->hasAnyRole(['admin','super_admin','team_lead','manager']);
+$roleAllowed = $user->hasAnyRole(['super_admin','team_lead','manager']);
 $allowedAgentIds = [];
 
         if ($roleAllowed) {
-            if ($user->hasAnyRole(['super_admin','admin'])) {
+            if ($user->hasAnyRole(['super_admin'])) {
                 $canAssignAgent = true;
                 $canViewUpdate=true;
             }elseif ($user->hasAnyRole(['manager']) && $user->listing_team==1) {
@@ -528,7 +528,7 @@ $allowedAgentIds = [];
                 'can_add_internal_update' => $user && (
                     $this->agent_id == $user->id ||
                     $user->hasRole('super_admin') ||
-                    $user->hasRole('admin')
+                    $user->id==30
                 ),
         ];
     }

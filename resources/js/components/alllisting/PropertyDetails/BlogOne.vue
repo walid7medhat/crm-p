@@ -2579,7 +2579,7 @@ const canApproveListings = computed(() => {
 
   const isManagerWithListingTeam = (currentUser.roles?.includes('manager') || currentUser.roles?.includes('team_lead'))&& currentUser?.is_listing_team;
 
-  const isSuperAdminUser = currentUser.roles?.includes('super_admin') || currentUser.roles?.includes('admin');
+  const isSuperAdminUser = currentUser.roles?.includes('super_admin') ;
   return isManagerWithListingTeam || isSuperAdminUser;
 });
 
@@ -8571,7 +8571,7 @@ const canViewPropertyViewings = computed(() => {
 
   return property.value?.user_permissions?.is_owner ||
          user.roles?.includes('super_admin') ||
-         user.roles?.includes('admin') ||
+         
          (user.roles?.includes('manager') && user.is_listing_team) ||
          user.id === 30;
 });
@@ -8609,7 +8609,7 @@ const canViewInternalUpdates = computed(() => {
   
   return property.value?.user_permissions?.is_owner ||
          user.roles?.includes('super_admin') ||
-         user.roles?.includes('admin') ||
+        
          (user.roles?.includes('manager') && user.is_listing_team) ||
          user.id === 30;
 });
@@ -8620,8 +8620,7 @@ const canAddInternalUpdate = computed(() => {
   if (!user) return false;
   
   return property.value?.agent?.id === user.id ||
-         user.roles?.includes('super_admin') ||
-         user.roles?.includes('admin');
+         user.roles?.includes('super_admin');
 });
 
 // جلب التحديثات
@@ -8719,8 +8718,7 @@ const canDeleteUpdate = (update) => {
   if (!user) return false;
   
   return update.user.id === user.id ||
-         user.roles?.includes('super_admin') ||
-         user.roles?.includes('admin');
+         user.roles?.includes('super_admin') ;
 };
 
 // ========== History ==========
@@ -8732,7 +8730,7 @@ const canViewHistory = computed(() => {
     const user = getCurrentUser();
     if (!user) return false;
     return (user.roles?.includes('super_admin') ||
-           user.roles?.includes('admin') ||
+         
            (user.roles?.includes('manager') && user.is_listing_team) ) && property.value?.user_permissions?.can_assign_agent;
 });
 
