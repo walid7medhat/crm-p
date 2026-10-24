@@ -159,8 +159,7 @@ Route::prefix('auth')->group(function () {
     Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);
     Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
     Route::get('users/role/{role}', [UserController::class, 'getByRole']);
-    Route::put('/users/{id}/absent-email', [UserController::class, 'updateAbsentEmail'])
-        ->middleware('permission:users-absent-email');
+
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::middleware(['jwt.auth'])->group(function () {
@@ -764,6 +763,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/users/{user}/attendance-history', [AttendanceController::class, 'userAttendanceHistory']);
         Route::get('/users/online/current', [UserController::class, 'getOnlineUsers']);
     Route::get('/users/login-activity', [UserController::class, 'getLoginActivity']);
+    Route::put('/users/{id}/absent-email', [UserController::class, 'updateAbsentEmail'])
+    ->middleware('permission:users-absent-email');
 // Role Routes
 Route::apiResource('roles', RoleController::class);
 Route::get('/permissions', [RoleController::class, 'permissions']);

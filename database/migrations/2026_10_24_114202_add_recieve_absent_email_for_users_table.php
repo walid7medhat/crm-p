@@ -18,6 +18,7 @@ return new class extends Migration
 
         Permission::findOrCreate('users-absent-email', 'api');
         Role::findByName('hr')->givePermissionTo('users-absent-email');
+        Role::findByName('super_admin')->givePermissionTo('users-absent-email');
     }
 
     /**
