@@ -178,6 +178,12 @@ return [
         'path'   => storage_path('logs/kanban-perf.log'),
         'level'  => 'debug',
     ],
+    'bitrix_recovery' => [
+        'driver' => 'daily',
+        'path'   => storage_path('logs/bitrix_recovery.log'),
+        'level'  => 'debug',
+        'days'   => 30,
+    ],
     'endpoint_usage' => [
             'driver' => 'daily',
             'path'   => storage_path('logs/endpoint-usage.log'),
