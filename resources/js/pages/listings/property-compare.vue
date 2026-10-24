@@ -43,7 +43,6 @@
             </div>
             <strong>{{ cardName(listing) }}</strong>
             <small class="property-compare__price">{{ cardPrice(listing) }}</small>
-            <small v-if="cardPlace(listing)" class="property-compare__place">{{ cardPlace(listing) }}</small>
           </article>
         </div>
         <div class="property-compare__table" role="table">
@@ -130,11 +129,6 @@ function cellText(value) {
   if (value === 'Not set' || value === 'Not available') return '—'
   return value
 }
-function cardPlace(listing) {
-  const area = listing.area
-  if (!area) return listingHeadline(listing).reference
-  return typeof area === 'string' ? area : (area.title || area.name || null)
-}
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
 }
@@ -181,7 +175,6 @@ async function downloadFile(format) {
       listings: readyListings.value.map((listing) => ({
         ...listingHeadline(listing),
         image: cardImage(listing),
-        place: cardPlace(listing),
       })),
       groups: [{
         title: 'Compare',
@@ -403,30 +396,30 @@ onBeforeUnmount(() => {
   color: var(--text-secondary, #64748b);
 }
 .property-compare__cards strong,
-.property-compare__cards small {
+.property-compare__price {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .property-compare__cards strong {
-  margin-top: 0.55rem;
-  font-size: 0.92rem;
-  font-weight: 700;
+  margin: 0.7rem 0.35rem 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
   line-height: 1.25;
-  white-space: nowrap;
-}
-.property-compare__cards small {
-  color: var(--text-secondary, #64748b);
-  font-size: 0.75rem;
-  line-height: 1.3;
-  white-space: nowrap;
+  letter-spacing: -0.02em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .property-compare__price {
-  margin-top: 0.15rem;
-  color: var(--text-primary, #0f172a) !important;
-  font-size: 0.8rem !important;
-  font-weight: 700;
+  margin: 0.35rem 0.2rem 0.1rem;
+  color: var(--color-primary, #6d28d9);
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  white-space: normal;
 }
 .property-compare__table {
   margin-top: 0.7rem;

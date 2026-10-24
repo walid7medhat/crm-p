@@ -393,8 +393,8 @@ function treeLayout() {
     ? (stackUp ? Math.max(regionTop + 32, anchor.top - 12) : vh - (compact ? 88 : bottomSafe))
     : vh - bottomSafe
   const availableH = Math.max(32, regionBottom - regionTop)
-  let nodeH = compact ? 26 : 28
-  let gap = nodeH + 4
+  let nodeH = compact ? 38 : 44
+  let gap = nodeH + 8
   if (count > 1) {
     if ((count - 1) * gap + nodeH > availableH) {
       nodeH = Math.min(nodeH, availableH / count)
@@ -405,17 +405,19 @@ function treeLayout() {
   }
   const span = Math.max(0, (count - 1) * gap)
   const mid = anchor.top + anchor.height / 2
-  // Always grow the tree downward from the shortcut button.
-  const openUp = false
+  // Below the midpoint the tree grows up; above it the tree grows down, so every stage stays on screen.
+  const openUp = mid > vh * 0.5
   let start
   if (stacked) {
     start = stackUp ? regionBottom - span - nodeH : regionTop
+  } else if (openUp) {
+    start = mid - span - nodeH / 2
   } else {
-    start = Math.max(regionTop, Math.min(anchor.top, regionBottom - span - nodeH))
+    start = mid - nodeH / 2
   }
   const maxStart = regionBottom - span - nodeH
   start = Math.min(Math.max(regionTop, start), Math.max(regionTop, maxStart))
-  const width = Math.max(148, Math.min(stacked ? 210 : 188, stacked ? vw - inset * 2 : sideWidth))
+  const width = Math.max(176, Math.min(stacked ? 248 : 236, stacked ? vw - inset * 2 : sideWidth))
   return { vw, vh, anchor, count, compact, stacked, stackUp, openUp, toRight, width, sidePos, nodeH, gap, start, inset, mid }
 }
 
@@ -677,13 +679,13 @@ function placePop(node) {
   const vh = window.innerHeight
   const margin = 10
   const gap = 8
-  const preferredW = 196
+  const preferredW = 292
   const spaceLeft = box.left - margin
   const spaceRight = vw - box.right - margin
   let left
   let width
 
-  if (spaceLeft >= 150 || spaceRight >= 150) {
+  if (spaceLeft >= 180 || spaceRight >= 180) {
     if (spaceLeft >= spaceRight) {
       width = Math.min(preferredW, spaceLeft - gap)
       left = box.left - gap - width
@@ -692,12 +694,12 @@ function placePop(node) {
       left = box.right + gap
     }
   } else {
-    width = Math.min(preferredW, Math.max(160, vw - margin * 2))
+    width = Math.min(preferredW, Math.max(200, vw - margin * 2))
     left = Math.max(margin, Math.min(box.left, vw - width - margin))
   }
 
-  const beside = spaceLeft >= 150 || spaceRight >= 150
-  const maxHeight = Math.min(240, Math.round(vh - margin * 2))
+  const beside = spaceLeft >= 180 || spaceRight >= 180
+  const maxHeight = Math.min(460, Math.round(vh * 0.58))
   const height = Math.min(popRef.value?.offsetHeight || 180, maxHeight)
   // Rise beside the stage you opened. A lower stage pulls the card up instead of dropping it to the bottom.
   let top = beside ? box.bottom - height : box.top - gap - height
@@ -803,16 +805,16 @@ function openItem(item) {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   max-width: calc(100vw - 24px);
-  padding: 0 6px 0 10px;
+  padding: 0 8px 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
   color: #1c1730;
   text-align: left;
-  box-shadow: 0 8px 18px rgba(92, 70, 130, 0.08);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px rgba(92, 70, 130, 0.1);
+  backdrop-filter: blur(10px);
   opacity: 0;
   transform-origin: var(--origin, right center);
   transform: translate(var(--from-x), var(--from-y)) scale(0.15);
@@ -828,7 +830,7 @@ function openItem(item) {
 .sac-node__chevron {
   color: #9a8fb0;
   flex: none;
-  font-size: 14px;
+  font-size: 13px;
   transition: transform 0.16s ease;
 }
 .sac-node.is-hot .sac-node__chevron {
@@ -838,54 +840,77 @@ function openItem(item) {
 .sac-node__label {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sac-node.is-compact .sac-node__label { font-size: 11px; }
+.sac-node.is-compact .sac-node__label { font-size: 10px; }
 .sac-node.is-compact .sac-node__count {
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-}
-.sac-node__count {
   width: 20px;
   height: 20px;
+  font-size: 9px;
+}
+.sac-node__count {
+  width: 22px;
+  height: 22px;
   flex: none;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #f3eef8;
   color: #3b3348;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 }
 .sac-pop {
   position: fixed;
   z-index: 1500;
   box-sizing: border-box;
-  width: min(196px, calc(100vw - 16px));
-  max-height: min(40vh, 240px);
-  overflow: auto;
-  padding: 6px 6px 5px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(70, 50, 110, 0.14);
+  display: flex;
+  flex-direction: column;
+  width: min(292px, calc(100vw - 16px));
+  max-height: min(58vh, 460px);
+  overflow: hidden;
+  padding: 10px 8px 8px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 16px 36px rgba(70, 50, 110, 0.16);
 }
 .sac-pop.is-openable { cursor: pointer; }
 .sac-leads {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  min-height: 0;
+  max-height: min(50vh, 400px);
+  margin: 0 -2px;
+  padding: 2px 6px 8px 2px;
+  overflow: auto;
+  scroll-snap-type: y mandatory;
+  scroll-padding: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(115, 62, 135, 0.45) transparent;
+}
+.sac-leads::-webkit-scrollbar { width: 4px; }
+.sac-leads::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(115, 62, 135, 0.4);
 }
 .sac-lead {
-  padding: 5px 6px 4px;
-  border: 1px solid #efeaf5;
-  border-radius: 8px;
-  background: #fff;
+  flex: none;
+  scroll-snap-align: start;
+  padding: 10px 10px 8px;
+  border: 1px solid #efe8f6;
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(115, 62, 135, 0.9), rgba(115, 62, 135, 0.9)) left / 3px 100% no-repeat,
+    linear-gradient(180deg, #fff, #fbf8fd);
+  box-shadow: 0 6px 14px rgba(92, 70, 130, 0.06);
 }
 .sac-lead__main {
   display: flex;
@@ -904,33 +929,38 @@ function openItem(item) {
 .sac-lead__reason,
 .sac-lead__line {
   max-width: 100%;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .sac-lead__name {
   color: #1c1730;
   font-size: 11px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: 600;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
 }
 .sac-lead__reason {
   color: #6d28d9;
   font-size: 10px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: 600;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
 }
 .sac-lead__line {
-  color: #5c5668;
+  color: #6b6578;
   font-size: 10px;
-  line-height: 1.2;
+  line-height: 1.3;
+  -webkit-line-clamp: 1;
 }
 .sac-pop__kicker {
-  margin: 0 0 4px;
+  flex: none;
+  margin: 0 0 8px;
+  padding: 0 4px;
   color: #8b8498;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   line-height: 1.2;
   text-transform: uppercase;
   white-space: nowrap;
@@ -961,14 +991,14 @@ function openItem(item) {
 }
 .sac-pop__actions {
   display: flex;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 8px;
 }
 .sac-pop__actions a,
 .sac-pop__actions button,
 .sac-pop__pager button {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   font-size: 11px;
   display: grid;
   place-items: center;
@@ -1063,7 +1093,8 @@ function openItem(item) {
     left: 12px;
     max-width: none;
   }
-  .sac-pop { max-height: min(36vh, 220px); }
+  .sac-pop { max-height: min(52vh, 420px); }
+  .sac-leads { max-height: min(44vh, 360px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sac-wire,

@@ -118,14 +118,12 @@ async function renderSheet(payload) {
   const photos = await Promise.all(columns.map((listing) => loadImage(listing.image)))
 
   const measure = document.createElement('canvas').getContext('2d')
-  measure.font = '700 15px Arial'
+  measure.font = '800 17px Arial'
   const nameLines = columns.map((listing) => wrapLines(measure, listing.name, colW - 36, 2))
-  measure.font = '12px Arial'
-  const placeLines = columns.map((listing) => wrapLines(measure, listing.place, colW - 36, 2))
 
   const photoH = 146
   const cardTop = 86
-  const cardH = 12 + photoH + 12 + 40 + 20 + 36 + 12
+  const cardH = 12 + photoH + 14 + 40 + 8 + 22 + 14
   const tableTop = cardTop + cardH + 18
 
   measure.font = '13px Arial'
@@ -166,12 +164,12 @@ async function renderSheet(payload) {
 
     drawCover(ctx, photos[index], x + 10, cardTop + 10, w - 20, photoH)
     const center = x + w / 2
-    let textY = cardTop + 10 + photoH + 12
-    drawCenteredLines(ctx, nameLines[index], center, textY, 20, INK, '700 15px Arial')
-    textY += 42
-    drawCenteredLines(ctx, [listing.price || 'Price not set'], center, textY, 18, INK, '700 13px Arial')
-    textY += 20
-    drawCenteredLines(ctx, placeLines[index], center, textY, 16, MUTED, '12px Arial')
+    let textY = cardTop + 10 + photoH + 14
+    drawCenteredLines(ctx, nameLines[index], center, textY, 20, INK, '800 17px Arial')
+    textY += 44
+    ctx.font = '800 16px Arial'
+    const priceLines = wrapLines(ctx, listing.price || 'Price not set', w - 24, 2)
+    drawCenteredLines(ctx, priceLines, center, textY, 18, ACCENT, '800 16px Arial')
   })
 
   let rowY = tableTop
