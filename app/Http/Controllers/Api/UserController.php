@@ -70,7 +70,7 @@ class UserController extends Controller
             
                     // Apply hierarchical filtering based on user role
                  // users-code holders (biometric code managers) need the full list.
-                 if (!$user->hasِAnyRole(['super_admin','hr']) && $user->id != 30 && !$user->can('users-code')) {
+                 if (!$user->hasAnyRole(['super_admin','hr']) && $user->id != 30 && !$user->can('users-code')) {
 
                         // User #33: sees every user in their whole branch, not just their
                         // own subordinates.
