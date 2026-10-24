@@ -39,7 +39,7 @@ class NotifyAbsentEmployees extends Command
 
         // Anyone with a check-in on either day is excluded
         $presentIds = Attendance::whereIn('date', $dates)
-           ->where('receive_absent_email', true) 
+           
             ->whereNotNull('check_in')
             ->whereNotNull('user_id')
             ->pluck('user_id')
@@ -47,6 +47,7 @@ class NotifyAbsentEmployees extends Command
             ->all();
 
         $absentUsers = User::where('status', 'active')
+            ->where('receive_absent_email', true) 
             ->whereNotNull('biometric_code')
             ->whereNotNull('email')
             ->whereNotIn('id', $presentIds)
