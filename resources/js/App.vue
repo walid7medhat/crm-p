@@ -212,10 +212,11 @@ export default {
       if (!showLayout.value) {
         resetSidebarLayout()
       }
+      // Preload early so dashboard / search lead clicks open without a chunk wait.
       if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(preloadViewLeadModal, { timeout: 4000 })
+        requestIdleCallback(preloadViewLeadModal, { timeout: 1200 })
       } else {
-        setTimeout(preloadViewLeadModal, 2000)
+        setTimeout(preloadViewLeadModal, 400)
       }
       // Auto-open the lead modal on a hard refresh with ?lead= in the URL.
       // Done once here (page-agnostic) instead of per-page, so tabs like

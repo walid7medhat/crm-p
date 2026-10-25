@@ -247,6 +247,8 @@ watch(open, async (isOpen) => {
     loading.value = false
     return
   }
+  // Warm the lead modal chunk so a result click opens without waiting on download.
+  import('@/components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
   suppressWatch = true
   payload.value = null
   structured.value = {}
@@ -368,7 +370,7 @@ function schedule() {
     activeKey.value = ''
     return
   }
-  timer = setTimeout(runNow, 250)
+  timer = setTimeout(runNow, 400)
 }
 
 function runNow() {
@@ -474,7 +476,16 @@ function activate(item) {
   if (!row || row.action === 'choose_place') return
   close()
   if (row.action === 'open_lead') {
-    openLeadView(row.id, { id: row.id, lead_name: row.label })
+    // Seed enough fields for an instant modal shell while GET /leads/{id} finishes.
+    const meta = row.meta || {}
+    openLeadView(row.id, {
+      id: row.id,
+      lead_name: row.label,
+      lead_number: meta.lead_number || null,
+      stage: meta.stage ? { name: meta.stage } : null,
+      area: meta.area ? { name: meta.area } : null,
+      responsible_person: meta.agent ? { name: meta.agent, display_name: meta.agent } : null,
+    })
     return
   }
   if (row.action === 'open_deal') {

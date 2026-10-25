@@ -144,17 +144,17 @@ export function useDashboardHome() {
   const loadAll = async () => {
     loading.value = true
     try {
+      // Critical numbers first so the dashboard unlocks quickly; charts/agents follow.
+      await Promise.all([fetchStats(), fetchTaskSummary()])
+      loading.value = false
       await Promise.all([
-        fetchStats(),
         fetchListingsChart(),
         fetchListingsRing(),
-        fetchTaskSummary(),
         fetchTopAgents(),
         fetchSchedule(),
       ])
     } catch (e) {
       console.error('Dashboard load failed', e)
-    } finally {
       loading.value = false
     }
   }

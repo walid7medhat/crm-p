@@ -512,15 +512,16 @@ class SmartSearchService
             });
         } else {
             $exact = (clone $query)->where('lead_number', $raw)->with($this->leadWith())->limit($limit)->get();
-            // Full identity/contact/requirement text match (same columns as kanban admin search).
-            // Rows stay limited by constrainLeads / canViewLead — never wider than permission.
+            // Lean + admin field set (name/phone/email/source/agent) — same as kanban text
+            // search. Non-lean ORs starved MySQL and slowed dashboard + lead open.
+            // Visibility still enforced by constrainLeads / canViewLead.
             $like = '%'.addcslashes($intent['normalized'] !== '' ? $intent['normalized'] : $raw, '%_\\').'%';
             $query->where(function ($text) use ($raw, $like) {
                 LeadTextSearch::apply($text, $raw, [
                     'comments' => false,
                     'relations' => true,
                     'admin' => true,
-                    'lean' => false,
+                    'lean' => true,
                 ]);
                 $text->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like));
             });
@@ -799,11 +800,7 @@ class SmartSearchService
                     ->orWhere('unit_number', 'like', $like)
                     ->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like))
                     ->orWhereHas('project', fn ($p) => $p->where('title', 'like', $like))
-                    ->orWhereHas('propertyType', fn ($pt) => $pt->where('name', 'like', $like))
-                    ->orWhereHas('agent', function ($agent) use ($like) {
-                        $agent->where('name', 'like', $like)
-                            ->orWhere('display_name', 'like', $like);
-                    });
+                    ->orWhereHas('propertyType', fn ($pt) => $pt->where('name', 'like', $like));
             });
         } elseif ($intent['phone']) {
             $base->where(function ($q) use ($raw) {
