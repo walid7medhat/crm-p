@@ -62,6 +62,7 @@
     <PropertyCompareDock v-if="showLayout && !isAppLoading" />
     <PropertyDetailsModal v-if="showLayout" />
     <ProjectDetailsModal v-if="showLayout" />
+    <SmartSearchDialog v-if="showLayout && isDashboardHome" />
   </div>
 </template>
 
@@ -82,6 +83,7 @@ import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
 import PropertyCompareDock from './components/listings/PropertyCompareDock.vue'
 import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
+import SmartSearchDialog from './components/search/SmartSearchDialog.vue'
 const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
 const LeadOpeningLoader = {
   name: 'LeadOpeningLoader',
@@ -124,6 +126,7 @@ export default {
     PropertyDetailsModal,
     PropertyCompareDock,
     ProjectDetailsModal,
+    SmartSearchDialog,
     Header,
     Navbar,
     Footer,

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
 use App\Http\Controllers\Api\SalesActionCenterController;
+use App\Http\Controllers\Api\SmartSearchController;
 use App\Http\Controllers\Api\UserAnimationController;
 use App\Http\Controllers\Api\StageController;
 use App\Http\Controllers\Api\Marketing\BoardController as MarketingBoardController;
@@ -587,6 +588,8 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
 Route::middleware(['jwt.auth'])->group(function () {
+    // Autocomplete: debounce ~250ms; allow burst typing without 429. Still below the outer 300/min group.
+    Route::get('/smart-search', [SmartSearchController::class, 'index'])->middleware('throttle:120,1');
       Route::get('/my-clients', [LeadController::class, 'getMyClients']);
     Route::get('/logs', [DashboardController::class, 'index'])->name('logs');
     // أو يمكنك استخدام هذا الاسم

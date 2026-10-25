@@ -401,6 +401,11 @@
       </div>
 
       <div class="navbar-header-right">
+        <OiaSmartSearchLaunch
+          v-if="isDashboardHome"
+          placeholder="Search"
+          class="oia-smart-search-nav"
+        />
         <!-- ========== KANBAN SEARCH & CREATE BUTTON (تظهر فقط في صفحة الكانبان) ========== -->
       <template v-if="isKanbanRoute">
               <!-- في navbar-header-right، استبدلي الـ kanban-search-wrapper بالكود ده -->
@@ -819,6 +824,7 @@
 
 <script setup>
 import { useSidebar, resetSidebarLayout } from '@/composables/useSidebar.js';
+import OiaSmartSearchLaunch from '@/components/search/OiaSmartSearchLaunch.vue';
 import { ref, onMounted, computed, onUnmounted, watch, nextTick, getCurrentInstance, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { canUsePropertyCompare, startPropertyCompare } from '@/composables/propertyCompareSelection';
@@ -3308,6 +3314,11 @@ const showBackButton = computed(() => {
   position: relative;
   z-index: 2;
   pointer-events: auto;
+}
+
+.oia-smart-search-nav {
+  flex: none;
+  z-index: 3;
 }
 
 .navbar-header-back-icon {
