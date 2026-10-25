@@ -2,8 +2,11 @@
   <div
     ref="rootRef"
     class="oia-ssl"
+    data-smart-search-shell
     :class="{ 'is-open': isOpen, 'is-busy': loading }"
   >
+    <span class="oia-ssl__edge" aria-hidden="true" />
+
     <input
       ref="inputRef"
       v-model="query"
@@ -78,12 +81,10 @@ function onFocus() {
 
 function onEscape() {
   closeSmartSearch()
-  inputRef.value?.blur()
 }
 
 function onClear() {
   closeSmartSearch()
-  inputRef.value?.blur()
 }
 
 onMounted(() => {
@@ -99,6 +100,7 @@ onUnmounted(() => {
 .oia-ssl {
   --ssl-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   width: 132px;
@@ -108,28 +110,57 @@ onUnmounted(() => {
   border-radius: 999px;
   background: #fff;
   border: 1px solid rgba(27, 36, 56, 0.12);
-  box-shadow: 0 1px 2px rgba(16, 22, 36, 0.04);
+  box-shadow: 0 1px 2px rgba(16, 22, 36, 0.05);
   transition:
-    width 200ms var(--ssl-ease),
-    border-color 160ms var(--ssl-ease),
-    box-shadow 160ms var(--ssl-ease),
-    background 160ms var(--ssl-ease);
+    width 220ms var(--ssl-ease),
+    border-color 180ms var(--ssl-ease),
+    box-shadow 180ms var(--ssl-ease);
 }
 
-.oia-ssl.is-open,
-.oia-ssl:focus-within {
+.oia-ssl.is-open {
+  z-index: 14050;
   width: min(420px, calc(100vw - 168px));
   border-color: rgba(var(--color-primary-rgb, 115, 62, 135), 0.35);
   box-shadow:
     0 0 0 3px rgba(var(--color-primary-rgb, 115, 62, 135), 0.1),
-    0 8px 22px rgba(16, 22, 36, 0.08);
+    0 10px 24px rgba(16, 22, 36, 0.1);
+}
+
+.oia-ssl__edge {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(var(--color-primary-rgb, 115, 62, 135), 0.45),
+    rgba(27, 36, 56, 0.08) 40%,
+    rgba(var(--color-primary-rgb, 115, 62, 135), 0.3)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: opacity 180ms var(--ssl-ease);
+}
+
+.oia-ssl.is-open .oia-ssl__edge {
+  opacity: 1;
 }
 
 .oia-ssl.is-busy {
-  background: rgba(var(--color-primary-rgb, 115, 62, 135), 0.03);
+  background: #fff;
 }
 
 .oia-ssl__input {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -141,6 +172,9 @@ onUnmounted(() => {
   font-weight: 500;
   color: #1b2438;
   letter-spacing: -0.01em;
+  /* Keep text crisp — never inherit filters/transforms from ancestors */
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
 }
 
 .oia-ssl__input::placeholder {
@@ -155,6 +189,8 @@ onUnmounted(() => {
 }
 
 .oia-ssl__clear {
+  position: relative;
+  z-index: 1;
   flex: none;
   width: 22px;
   height: 22px;
@@ -179,27 +215,26 @@ onUnmounted(() => {
     width: 120px;
   }
 
-  .oia-ssl.is-open,
-  .oia-ssl:focus-within {
+  .oia-ssl.is-open {
     width: min(280px, calc(100vw - 140px));
   }
 }
 
 @media (max-width: 430px) {
   .oia-ssl,
-  .oia-ssl.is-open,
-  .oia-ssl:focus-within {
+  .oia-ssl.is-open {
     width: min(210px, calc(100vw - 120px));
   }
 
   .oia-ssl__input {
-    font-size: 16px; /* avoid iOS zoom */
+    font-size: 16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .oia-ssl {
-    transition: none;
+  .oia-ssl,
+  .oia-ssl__edge {
+    transition: none !important;
   }
 }
 </style>

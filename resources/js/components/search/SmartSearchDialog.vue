@@ -4,12 +4,19 @@
       <div
         v-if="open"
         class="oia-search"
-        data-smart-search-root
         @keydown.esc.stop.prevent="close"
       >
-        <button type="button" class="oia-search__backdrop" aria-label="Close search" @click="close" />
+        <button
+          type="button"
+          class="oia-search__backdrop"
+          data-smart-search-backdrop
+          aria-label="Close search"
+          @pointerdown.stop="close"
+          @click="close"
+        />
         <div
           class="oia-search__panel"
+          data-smart-search-panel
           role="listbox"
           aria-label="Search results"
           :style="panelStyle"
@@ -68,7 +75,34 @@
             class="oia-search__results"
             :class="{ 'is-refreshing': loading && flat.length }"
           >
-            <div v-if="loading && !flat.length" class="oia-search__skeletons" aria-hidden="true">
+            <section v-if="suggestions.length" class="oia-search__group oia-search__group--suggest">
+              <div class="oia-search__group-label">Suggestions</div>
+              <button
+                v-for="(item, sIndex) in suggestions"
+                :id="itemDomId(item)"
+                :key="item.id"
+                type="button"
+                class="oia-search__result oia-search__result--suggest"
+                :class="{ 'is-active': activeKey === itemKey(item) }"
+                :style="{ '--r': sIndex }"
+                role="option"
+                :aria-selected="activeKey === itemKey(item)"
+                @mouseenter="activeKey = itemKey(item)"
+                @mousedown.prevent
+                @click="runSuggestion(item)"
+              >
+                <span class="oia-search__icon" aria-hidden="true">
+                  <iconify-icon :icon="item.icon" width="15" height="15" />
+                </span>
+                <span class="oia-search__copy">
+                  <span class="oia-search__label" dir="auto">{{ item.label }}</span>
+                  <span class="oia-search__meta">{{ item.description }}</span>
+                </span>
+                <span class="oia-search__type" aria-hidden="true">Go</span>
+              </button>
+            </section>
+
+            <div v-if="loading && !resultRows.length" class="oia-search__skeletons" aria-hidden="true">
               <div v-for="n in 5" :key="n" class="oia-search__skeleton" :style="{ '--i': n }">
                 <span class="oia-search__skeleton-icon" />
                 <span class="oia-search__skeleton-copy">
@@ -83,11 +117,7 @@
               <button type="button" class="oia-search__text-btn" @mousedown.prevent @click="runNow">Try again</button>
             </div>
 
-            <p v-else-if="!flat.length" class="oia-search__state">
-              {{ emptyText }}
-            </p>
-
-            <template v-else>
+            <template v-else-if="resultRows.length || visibleGroups.length">
               <section
                 v-for="(group, gIndex) in visibleGroups"
                 :key="group.type"
@@ -142,6 +172,10 @@
                 </div>
               </section>
             </template>
+
+            <p v-else-if="!suggestions.length" class="oia-search__state">
+              {{ emptyText }}
+            </p>
           </div>
         </div>
       </div>
@@ -206,7 +240,63 @@ const visibleGroups = computed(() => {
   }
   return groups
 })
-const flat = computed(() => visibleGroups.value.flatMap((group) => group.results || []))
+const suggestions = computed(() => {
+  const q = query.value.trim()
+  if (q.length < 2) return []
+  const short = q.length > 42 ? `${q.slice(0, 42)}…` : q
+  return [
+    {
+      type: 'suggestion',
+      id: 'all',
+      tab: 'all',
+      icon: 'lucide:search',
+      label: `Search “${short}”`,
+      description: 'Across leads, deals, listings & location',
+      action: 'run_tab',
+    },
+    {
+      type: 'suggestion',
+      id: 'leads',
+      tab: 'leads',
+      icon: 'lucide:user-round',
+      label: `Search leads for “${short}”`,
+      description: 'Names, phones, emails, requirements',
+      action: 'run_tab',
+    },
+    {
+      type: 'suggestion',
+      id: 'deals',
+      tab: 'deals',
+      icon: 'lucide:handshake',
+      label: `Search deals for “${short}”`,
+      description: 'Deal numbers, names, parties',
+      action: 'run_tab',
+    },
+    {
+      type: 'suggestion',
+      id: 'listings',
+      tab: 'listings',
+      icon: 'lucide:building-2',
+      label: `Search listings for “${short}”`,
+      description: 'Titles, references, areas, projects',
+      action: 'run_tab',
+    },
+    {
+      type: 'suggestion',
+      id: 'places',
+      tab: 'places',
+      icon: 'lucide:map-pin',
+      label: `Search location for “${short}”`,
+      description: 'Areas and projects',
+      action: 'run_tab',
+    },
+  ]
+})
+const resultRows = computed(() => visibleGroups.value.flatMap((group) => group.results || []))
+const flat = computed(() => [
+  ...suggestions.value,
+  ...resultRows.value,
+])
 const emptyText = computed(() => {
   if (!query.value.trim() && !Object.keys(structured.value).length) {
     return 'Type a name, phone, reference, area, or phrase such as “2 bedroom Yas Island”.'
@@ -282,7 +372,7 @@ onUnmounted(() => {
 
 function updatePanelPosition() {
   const anchor = smartSearchAnchorEl.value
-  const gap = 8
+  const gap = 10
   const minWidth = 320
   const maxWidth = Math.min(520, window.innerWidth - 24)
   const vw = window.innerWidth
@@ -303,8 +393,9 @@ function updatePanelPosition() {
   const width = Math.min(maxWidth, Math.max(rect.width, minWidth, Math.min(420, vw - 24)))
   let left = rect.right - width
   left = Math.max(12, Math.min(left, vw - width - 12))
-  const top = Math.min(rect.bottom + gap, vh - 120)
-  const maxHeight = Math.max(180, Math.min(520, vh - top - 16))
+  // Keep the panel fully below the expanded header input so tabs stay visible.
+  const top = Math.min(Math.ceil(rect.bottom + gap), vh - 140)
+  const maxHeight = Math.max(220, Math.min(520, vh - top - 16))
 
   panelStyle.value = {
     top: `${top}px`,
@@ -440,9 +531,22 @@ function move(step) {
   document.getElementById(itemDomId(next))?.scrollIntoView({ block: 'nearest' })
 }
 
+function runSuggestion(item) {
+  if (!item?.tab) return
+  activeTab.value = item.tab
+  activeKey.value = itemKey(item)
+  confirmed.value = true
+  runNow()
+  document.querySelector('[data-smart-search-input]')?.focus?.()
+}
+
 function activate(item) {
   const row = item || flat.value.find((entry) => itemKey(entry) === activeKey.value)
   if (!row || row.action === 'choose_place') return
+  if (row.action === 'run_tab') {
+    runSuggestion(row)
+    return
+  }
   close()
   if (row.action === 'open_lead') {
     openLeadView(row.id, { id: row.id, lead_name: row.label })
@@ -526,7 +630,9 @@ function escapeHtml(value) {
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgba(16, 22, 36, 0.18);
+  cursor: default;
+  /* No backdrop-filter — it was blurring the header search text. */
+  background: rgba(16, 22, 36, 0.16);
 }
 
 .oia-search__panel {
@@ -534,21 +640,26 @@ function escapeHtml(value) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 16px;
+  padding-top: 10px;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 249, 252, 0.97) 100%);
   color: var(--oia-navy);
-  border: 1px solid var(--oia-line);
+  border: 1px solid rgba(var(--color-primary-rgb, 115, 62, 135), 0.14);
+  transform-origin: top center;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 18px 40px rgba(16, 22, 36, 0.16),
-    0 2px 8px rgba(16, 22, 36, 0.08);
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 24px 56px rgba(16, 22, 36, 0.2),
+    0 8px 18px rgba(var(--color-primary-rgb, 115, 62, 135), 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.4) inset;
 }
 
 .oia-search__ai-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px 0;
+  flex: none;
+  padding: 2px 12px 0;
   color: var(--color-primary, #733e87);
   font-size: 11px;
   font-weight: 600;
@@ -573,9 +684,14 @@ function escapeHtml(value) {
 
 .oia-search__tabs {
   display: flex;
+  align-items: center;
   gap: 2px;
-  padding: 8px 10px 0;
+  flex: none;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 4px 10px 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 
@@ -586,13 +702,16 @@ function escapeHtml(value) {
   background: transparent;
   color: var(--oia-muted);
   border-radius: 8px;
-  min-height: 28px;
+  min-height: 32px;
+  height: 32px;
   padding: 0 10px;
   cursor: pointer;
   font: inherit;
   font-size: 12px;
   font-weight: 550;
+  line-height: 1;
   white-space: nowrap;
+  flex: none;
 }
 
 .oia-search__tab:hover {
@@ -611,7 +730,8 @@ function escapeHtml(value) {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 10px 0;
+  flex: none;
+  padding: 4px 10px 0;
 }
 
 .oia-search__chip,
@@ -641,6 +761,7 @@ function escapeHtml(value) {
 }
 
 .oia-search__confirm {
+  flex: none;
   padding: 8px 10px 0;
 }
 
@@ -674,9 +795,9 @@ function escapeHtml(value) {
 
 .oia-search__results {
   overflow: auto;
-  padding: 6px 6px 8px;
-  min-height: 96px;
-  flex: 1;
+  padding: 4px 6px 10px;
+  flex: 1 1 auto;
+  min-height: 0;
   overscroll-behavior: contain;
 }
 
@@ -687,6 +808,16 @@ function escapeHtml(value) {
 .oia-search__group {
   animation: oia-search-rise 180ms var(--oia-ease) both;
   animation-delay: calc(var(--g, 0) * 28ms);
+}
+
+.oia-search__group--suggest {
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--oia-line);
+}
+
+.oia-search__result--suggest .oia-search__meta {
+  white-space: normal;
 }
 
 .oia-search__group-label {
@@ -714,15 +845,23 @@ function escapeHtml(value) {
   color: inherit;
   animation: oia-search-rise 170ms var(--oia-ease) both;
   animation-delay: calc((var(--g, 0) * 28ms) + (var(--r, 0) * 22ms));
+  transition:
+    background 140ms var(--oia-ease),
+    transform 140ms var(--oia-ease),
+    box-shadow 140ms var(--oia-ease);
 }
 
 .oia-search__result:hover,
 .oia-search__result.is-active {
   background: rgba(var(--color-primary-rgb, 115, 62, 135), 0.09);
+  transform: translateZ(4px) translateY(-0.5px);
+  box-shadow: 0 6px 14px rgba(16, 22, 36, 0.06);
 }
 
 .oia-search__result.is-active {
-  box-shadow: inset 2px 0 0 var(--color-primary, #733e87);
+  box-shadow:
+    inset 2px 0 0 var(--color-primary, #733e87),
+    0 6px 14px rgba(16, 22, 36, 0.06);
 }
 
 .oia-search__icon {
@@ -854,6 +993,11 @@ function escapeHtml(value) {
     transform 180ms var(--oia-ease);
 }
 
+.oia-search-shell-enter-active .oia-search__backdrop,
+.oia-search-shell-leave-active .oia-search__backdrop {
+  transition: opacity 180ms var(--oia-ease);
+}
+
 .oia-search-shell-enter-from .oia-search__backdrop,
 .oia-search-shell-leave-to .oia-search__backdrop {
   opacity: 0;
@@ -862,7 +1006,7 @@ function escapeHtml(value) {
 .oia-search-shell-enter-from .oia-search__panel,
 .oia-search-shell-leave-to .oia-search__panel {
   opacity: 0;
-  transform: translateY(-6px) scale(0.98);
+  transform: translateY(-8px) scale(0.97);
 }
 
 @keyframes oia-search-rise {

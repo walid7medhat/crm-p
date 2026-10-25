@@ -3321,6 +3321,14 @@ const showBackButton = computed(() => {
   z-index: 3;
 }
 
+/* Keep header search crisp above the results overlay */
+:global(body.oia-smart-search-open .navbar-header),
+:global(body.oia-smart-search-open .navbar-header-right),
+:global(body.oia-smart-search-open [data-smart-search-shell]) {
+  position: relative;
+  z-index: 14050;
+}
+
 .navbar-header-back-icon {
   font-size: 1.125rem !important;
   width: 1.125rem;
