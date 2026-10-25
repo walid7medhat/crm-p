@@ -171,6 +171,7 @@ import {
   smartSearchOpen,
   smartSearchQuery,
 } from '@/composables/useSmartSearch.js'
+import { useDashboardPermissions } from '@/composables/useDashboardPermissions.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -186,12 +187,22 @@ const structured = ref({})
 const confirmed = ref(false)
 const panelStyle = ref({})
 
-const tabs = [
-  { id: 'leads', label: 'Leads' },
-  { id: 'deals', label: 'Deals' },
-  { id: 'listings', label: 'Listings' },
-  { id: 'places', label: 'Location' },
-]
+const { canViewModule } = useDashboardPermissions()
+
+const tabs = computed(() => {
+  const all = [
+    { id: 'leads', label: 'Leads', module: 'crm' },
+    { id: 'deals', label: 'Deals', module: 'deals' },
+    { id: 'listings', label: 'Listings', module: 'listing' },
+    { id: 'places', label: 'Location', module: 'listing' },
+  ]
+  return all.filter((tab) => {
+    if (tab.id === 'places') {
+      return canViewModule('crm') || canViewModule('listing')
+    }
+    return canViewModule(tab.module)
+  })
+})
 
 let timer = null
 let seq = 0

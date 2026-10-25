@@ -33,7 +33,7 @@ class SmartSearchService
         $limit = min(self::MAX_LIMIT, max(1, (int) ($input['limit'] ?? self::MAX_LIMIT)));
         $raw = trim((string) ($input['q'] ?? ''));
         $suppress = $this->suppressSet($input['suppress'] ?? '');
-        $types = $this->types($input['types'] ?? null);
+        $types = $this->typesAllowedFor($user, $this->types($input['types'] ?? null));
         $intent = $this->intent($raw, $suppress);
         $filters = $this->filters($input, $intent, $suppress);
         $confirmed = filter_var($input['confirmed'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -46,6 +46,10 @@ class SmartSearchService
 
         if (! $this->actionable($raw, $filters, $intent)) {
             return $this->payload($raw, $limit, $intent, $filters, [], false, $this->hint($raw, $intent));
+        }
+
+        if ($types === []) {
+            return $this->payload($raw, $limit, $intent, $filters, [], false, 'No searchable modules for your permissions.');
         }
 
         $previewOnly = ($this->isAreaOnly($intent) || $intent['blocked_action']) && ! $confirmed && ! $this->hasExplicit($input);
@@ -62,26 +66,36 @@ class SmartSearchService
             return $this->payload($raw, $limit, $intent, $filters, $groups, false, $message);
         }
 
+        // Explicit module tab (types=leads|deals|…) always runs that module.
+        // Multi-module (default "all") still uses wants* to cut noisy cross-hits.
+        $forcedModule = count($types) === 1;
+
         $groups = [];
         if (in_array('leads', $types, true)) {
             $groups[] = [
                 'type' => 'leads',
                 'label' => 'Leads',
-                'results' => $this->wantsLeads($intent, $filters) ? $this->leads($user, $raw, $filters, $intent, $limit) : [],
+                'results' => ($forcedModule || $this->wantsLeads($intent, $filters))
+                    ? $this->leads($user, $raw, $filters, $intent, $limit)
+                    : [],
             ];
         }
         if (in_array('deals', $types, true)) {
             $groups[] = [
                 'type' => 'deals',
                 'label' => 'Deals',
-                'results' => $this->wantsDeals($intent, $filters) ? $this->deals($user, $raw, $filters, $intent, $limit) : [],
+                'results' => ($forcedModule || $this->wantsDeals($intent, $filters))
+                    ? $this->deals($user, $raw, $filters, $intent, $limit)
+                    : [],
             ];
         }
         if (in_array('listings', $types, true)) {
             $groups[] = [
                 'type' => 'listings',
                 'label' => 'Listings',
-                'results' => $this->wantsListings($intent, $filters) ? $this->listings($user, $raw, $filters, $intent, $limit) : [],
+                'results' => ($forcedModule || $this->wantsListings($intent, $filters))
+                    ? $this->listings($user, $raw, $filters, $intent, $limit)
+                    : [],
             ];
         }
         if (in_array('places', $types, true)) {
@@ -498,12 +512,18 @@ class SmartSearchService
             });
         } else {
             $exact = (clone $query)->where('lead_number', $raw)->with($this->leadWith())->limit($limit)->get();
-            LeadTextSearch::apply($query, $raw, [
-                'comments' => false,
-                'relations' => true,
-                'admin' => $user->hasRole(['admin', 'super_admin']),
-                'lean' => true,
-            ]);
+            // Full identity/contact/requirement text match (same columns as kanban admin search).
+            // Rows stay limited by constrainLeads / canViewLead — never wider than permission.
+            $like = '%'.addcslashes($intent['normalized'] !== '' ? $intent['normalized'] : $raw, '%_\\').'%';
+            $query->where(function ($text) use ($raw, $like) {
+                LeadTextSearch::apply($text, $raw, [
+                    'comments' => false,
+                    'relations' => true,
+                    'admin' => true,
+                    'lean' => false,
+                ]);
+                $text->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like));
+            });
             $rows = $query->with($this->leadWith())->orderByDesc('id')->limit($limit + count($exact))->get();
             $merged = $exact->concat($rows)->unique('id')->take($limit + 8);
 
@@ -626,6 +646,10 @@ class SmartSearchService
      */
     private function deals(User $user, string $raw, array $filters, array $intent, int $limit): array
     {
+        if (! $this->canSearchDeals($user)) {
+            return [];
+        }
+
         $query = Deal::query()->select([
             'id', 'deal_number', 'deal_name', 'stage_id', 'lead_id', 'responsible_person_id', 'status', 'deal_type',
         ]);
@@ -736,10 +760,16 @@ class SmartSearchService
      */
     private function listings(User $user, string $raw, array $filters, array $intent, int $limit): array
     {
+        if (! $this->canSearchListings($user)) {
+            return [];
+        }
+
         $base = Listing::query()->select([
             'id', 'title', 'reference_number', 'unit_number', 'number_of_bedrooms', 'number_of_bathrooms',
-            'price', 'listing_status', 'status', 'area_id', 'project_id', 'is_active', 'is_archived', 'approved',
+            'price', 'listing_status', 'status', 'area_id', 'project_id', 'property_type_id', 'agent_id',
+            'is_active', 'is_archived', 'approved',
         ]);
+        // Same inventory window as All Listings for non–super-admins.
         if (! $user->hasRole('super_admin')) {
             $base->activeUnit();
         }
@@ -749,7 +779,7 @@ class SmartSearchService
             || ! empty($filters['property_type_id']) || ! empty($filters['listing_status'])
             || isset($filters['min_price']) || isset($filters['max_price']);
 
-        $with = ['area:id,name', 'project:id,title'];
+        $with = ['area:id,name', 'project:id,title', 'propertyType:id,name', 'agent:id,name,display_name'];
         $exact = collect();
         if ($raw !== '') {
             $exact = (clone $base)->where(function ($q) use ($raw) {
@@ -768,7 +798,12 @@ class SmartSearchService
                     ->orWhere('unit_number', $raw)
                     ->orWhere('unit_number', 'like', $like)
                     ->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like))
-                    ->orWhereHas('project', fn ($p) => $p->where('title', 'like', $like));
+                    ->orWhereHas('project', fn ($p) => $p->where('title', 'like', $like))
+                    ->orWhereHas('propertyType', fn ($pt) => $pt->where('name', 'like', $like))
+                    ->orWhereHas('agent', function ($agent) use ($like) {
+                        $agent->where('name', 'like', $like)
+                            ->orWhere('display_name', 'like', $like);
+                    });
             });
         } elseif ($intent['phone']) {
             $base->where(function ($q) use ($raw) {
@@ -971,15 +1006,64 @@ class SmartSearchService
         ];
     }
 
+    /**
+     * Drop modules the caller cannot open in the UI.
+     *
+     * @param  list<string>  $types
+     * @return list<string>
+     */
+    private function typesAllowedFor(User $user, array $types): array
+    {
+        return array_values(array_filter($types, function (string $type) use ($user) {
+            return match ($type) {
+                'leads' => $this->canSearchLeads($user),
+                'deals' => $this->canSearchDeals($user),
+                'listings' => $this->canSearchListings($user),
+                'places' => $this->canSearchLeads($user) || $this->canSearchListings($user),
+                default => false,
+            };
+        }));
+    }
+
     private function canSearchLeads(User $user): bool
     {
         // Same exceptions as lead visibility: these accounts already bypass row scope.
-        if ($user->hasRole('super_admin') || (int) $user->id === 30 || (int) $user->id === 33) {
+        if ($user->hasRole('super_admin') || $user->hasRole('admin') || (int) $user->id === 30 || (int) $user->id === 33) {
             return true;
         }
 
+        // Nav uses show-leads; API list uses leads-list — accept either.
+        return $this->hasPermission($user, 'show-leads')
+            || $this->hasPermission($user, 'leads-list');
+    }
+
+    private function canSearchDeals(User $user): bool
+    {
+        // Deals kanban is gated by the same show-leads permission as Leads.
+        return $this->canSearchLeads($user);
+    }
+
+    private function canSearchListings(User $user): bool
+    {
+        if ($user->hasRole('super_admin') || $user->hasRole('admin') || (int) $user->id === 30 || (int) $user->id === 33) {
+            return true;
+        }
+        if ($user->hasRole('manager') || $user->hasRole('only show listings')) {
+            return true;
+        }
+        if (! empty($user->is_listing_team)) {
+            return true;
+        }
+
+        return $this->hasPermission($user, 'listings-list')
+            || $this->hasPermission($user, 'listings-show')
+            || $this->hasPermission($user, 'show-leads');
+    }
+
+    private function hasPermission(User $user, string $permission): bool
+    {
         try {
-            return $user->checkPermissionTo('leads-list');
+            return $user->checkPermissionTo($permission);
         } catch (\Throwable $e) {
             return false;
         }
