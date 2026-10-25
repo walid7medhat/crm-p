@@ -28,7 +28,7 @@
             <span>Searching…</span>
           </div>
 
-          <div class="oia-search__tabs" role="tablist" aria-label="Search in">
+          <div class="oia-search__tabs" role="tablist" aria-label="Filter results">
             <button
               v-for="tab in tabs"
               :key="tab.id"
@@ -38,7 +38,7 @@
               :class="{ 'is-on': activeTab === tab.id }"
               :aria-selected="activeTab === tab.id"
               @mousedown.prevent
-              @click="activeTab = tab.id"
+              @click="toggleTab(tab.id)"
             >
               {{ tab.label }}
             </button>
@@ -75,33 +75,6 @@
             class="oia-search__results"
             :class="{ 'is-refreshing': loading && flat.length }"
           >
-            <section v-if="suggestions.length" class="oia-search__group oia-search__group--suggest">
-              <div class="oia-search__group-label">Suggestions</div>
-              <button
-                v-for="(item, sIndex) in suggestions"
-                :id="itemDomId(item)"
-                :key="item.id"
-                type="button"
-                class="oia-search__result oia-search__result--suggest"
-                :class="{ 'is-active': activeKey === itemKey(item) }"
-                :style="{ '--r': sIndex }"
-                role="option"
-                :aria-selected="activeKey === itemKey(item)"
-                @mouseenter="activeKey = itemKey(item)"
-                @mousedown.prevent
-                @click="runSuggestion(item)"
-              >
-                <span class="oia-search__icon" aria-hidden="true">
-                  <iconify-icon :icon="item.icon" width="15" height="15" />
-                </span>
-                <span class="oia-search__copy">
-                  <span class="oia-search__label" dir="auto">{{ item.label }}</span>
-                  <span class="oia-search__meta">{{ item.description }}</span>
-                </span>
-                <span class="oia-search__type" aria-hidden="true">Go</span>
-              </button>
-            </section>
-
             <div v-if="loading && !resultRows.length" class="oia-search__skeletons" aria-hidden="true">
               <div v-for="n in 5" :key="n" class="oia-search__skeleton" :style="{ '--i': n }">
                 <span class="oia-search__skeleton-icon" />
@@ -173,7 +146,7 @@
               </section>
             </template>
 
-            <p v-else-if="!suggestions.length" class="oia-search__state">
+            <p v-else class="oia-search__state">
               {{ emptyText }}
             </p>
           </div>
@@ -214,7 +187,6 @@ const confirmed = ref(false)
 const panelStyle = ref({})
 
 const tabs = [
-  { id: 'all', label: 'All' },
   { id: 'leads', label: 'Leads' },
   { id: 'deals', label: 'Deals' },
   { id: 'listings', label: 'Listings' },
@@ -234,69 +206,18 @@ const needsConfirmation = computed(() => !!payload.value?.interpretation?.needs_
 const executed = computed(() => payload.value?.executed !== false)
 const banner = computed(() => payload.value?.message || '')
 const visibleGroups = computed(() => {
-  const groups = payload.value?.groups || []
+  let groups = payload.value?.groups || []
+  // When a module tab is selected, only show that module's results.
+  if (activeTab.value && activeTab.value !== 'all') {
+    groups = groups.filter((group) => group.type === activeTab.value)
+  }
   if (!executed.value && needsConfirmation.value) {
     return groups.filter((group) => group.results?.length)
   }
   return groups
 })
-const suggestions = computed(() => {
-  const q = query.value.trim()
-  if (q.length < 2) return []
-  const short = q.length > 42 ? `${q.slice(0, 42)}…` : q
-  return [
-    {
-      type: 'suggestion',
-      id: 'all',
-      tab: 'all',
-      icon: 'lucide:search',
-      label: `Search “${short}”`,
-      description: 'Across leads, deals, listings & location',
-      action: 'run_tab',
-    },
-    {
-      type: 'suggestion',
-      id: 'leads',
-      tab: 'leads',
-      icon: 'lucide:user-round',
-      label: `Search leads for “${short}”`,
-      description: 'Names, phones, emails, requirements',
-      action: 'run_tab',
-    },
-    {
-      type: 'suggestion',
-      id: 'deals',
-      tab: 'deals',
-      icon: 'lucide:handshake',
-      label: `Search deals for “${short}”`,
-      description: 'Deal numbers, names, parties',
-      action: 'run_tab',
-    },
-    {
-      type: 'suggestion',
-      id: 'listings',
-      tab: 'listings',
-      icon: 'lucide:building-2',
-      label: `Search listings for “${short}”`,
-      description: 'Titles, references, areas, projects',
-      action: 'run_tab',
-    },
-    {
-      type: 'suggestion',
-      id: 'places',
-      tab: 'places',
-      icon: 'lucide:map-pin',
-      label: `Search location for “${short}”`,
-      description: 'Areas and projects',
-      action: 'run_tab',
-    },
-  ]
-})
 const resultRows = computed(() => visibleGroups.value.flatMap((group) => group.results || []))
-const flat = computed(() => [
-  ...suggestions.value,
-  ...resultRows.value,
-])
+const flat = computed(() => resultRows.value)
 const emptyText = computed(() => {
   if (!query.value.trim() && !Object.keys(structured.value).length) {
     return 'Type a name, phone, reference, area, or phrase such as “2 bedroom Yas Island”.'
@@ -531,22 +452,15 @@ function move(step) {
   document.getElementById(itemDomId(next))?.scrollIntoView({ block: 'nearest' })
 }
 
-function runSuggestion(item) {
-  if (!item?.tab) return
-  activeTab.value = item.tab
-  activeKey.value = itemKey(item)
-  confirmed.value = true
-  runNow()
-  document.querySelector('[data-smart-search-input]')?.focus?.()
+function toggleTab(id) {
+  // Default search is across everything (no "All" tab shown).
+  // Click a module to filter; click it again to clear the filter.
+  activeTab.value = activeTab.value === id ? 'all' : id
 }
 
 function activate(item) {
   const row = item || flat.value.find((entry) => itemKey(entry) === activeKey.value)
   if (!row || row.action === 'choose_place') return
-  if (row.action === 'run_tab') {
-    runSuggestion(row)
-    return
-  }
   close()
   if (row.action === 'open_lead') {
     openLeadView(row.id, { id: row.id, lead_name: row.label })
@@ -808,16 +722,6 @@ function escapeHtml(value) {
 .oia-search__group {
   animation: oia-search-rise 180ms var(--oia-ease) both;
   animation-delay: calc(var(--g, 0) * 28ms);
-}
-
-.oia-search__group--suggest {
-  margin-bottom: 4px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--oia-line);
-}
-
-.oia-search__result--suggest .oia-search__meta {
-  white-space: normal;
 }
 
 .oia-search__group-label {
