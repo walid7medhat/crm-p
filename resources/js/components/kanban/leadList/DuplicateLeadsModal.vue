@@ -22,12 +22,11 @@
                 <!-- Header -->
                 <div class="modal-header-custom d-flex justify-content-between align-items-center py-3 border-bottom">
                     <picture class="modal-title mb-0">Duplicate Leads ({{ duplicateLeads.length }})</picture>
-                    <button v-if="mergeableCount" type="button" class="merge-btn" @click.stop="startMerge">
-                        <iconify-icon icon="lucide:git-merge"></iconify-icon> Merge
-                    </button>
-                    <button class="close-btn" @click="show = false">
-                        <iconify-icon icon="lucide:x"></iconify-icon>
-                    </button>
+                    <div class="header-actions d-flex align-items-center gap-2">
+                        <button class="close-btn" @click="show = false">
+                            <iconify-icon icon="lucide:x"></iconify-icon>
+                        </button>
+                    </div>
                 </div>
             
                 <!-- Content -->
@@ -65,15 +64,6 @@
                             <!-- NEW: stage + merge status -->
                             <div class="stage-line">
                                 <span class="stage-chip">{{ lead.stage_name || '—' }}</span>
-
-                                <span v-if="lead.merge_blocked_reason" class="blocked-reason">
-                                    <iconify-icon icon="lucide:ban"></iconify-icon>
-                                    {{ lead.merge_blocked_reason }}
-                                </span>
-                                <span v-else-if="lead.can_merge" class="ok-reason">
-                                    <iconify-icon icon="lucide:check"></iconify-icon>
-                                    Can be merged
-                                </span>
                             </div>
                            
                             
@@ -137,10 +127,6 @@ const loading = ref(false)
 const error = ref(null)
 const popupRef = ref(null)
 const popupStyle = ref({})
-const startMerge = () => {
-    emit('merge', props.leadId)
-    show.value = false
-}
 // Phones: a positioned dropdown doesn't fit (it was placed as if 500px wide and ended up
 // off-screen), so show a full-width bottom sheet instead.
 const MOBILE_MAX = 768
@@ -228,9 +214,6 @@ const calculatePosition = async () => {
         }
     })
 }
-const mergeableCount = computed(
-    () => duplicateLeads.value.some((l) => l.group_can_merge === true)
-)
 const handleClickOutside = (event) => {
     if (!show.value) return
     
