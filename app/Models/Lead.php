@@ -865,8 +865,18 @@ public function mergedLeads()
 /** Branch key: lead_branch_source, otherwise the responsible/adding user's branch. */
 public function branchKey(): string
 {
-    $branch =($this->responsiblePerson ?? $this->addedBy)?->admin_parent?->name;
+    $owner  = $this->responsiblePerson ?? $this->addedBy;
+    $branch = $owner?->admin_parent?->name ?: $this->lead_branch_source;
 
     return mb_strtolower(trim((string) $branch));
+}
+
+/** Same branch, or at least one side has no branch yet (e.g. owned by super admin). */
+public function sameBranchAs(Lead $other): bool
+{
+    $a = $this->branchKey();
+    $b = $other->branchKey();
+
+    return $a === '' || $b === '' || $a === $b;
 }
 }

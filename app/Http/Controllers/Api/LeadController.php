@@ -2114,9 +2114,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $byBranch = (bool) config('lead_merge.group_by_branch');
         $leadKey  = $byBranch ? $lead->branchKey() : '';
 
-        $sameBranch = fn ($l) => ! $byBranch || ($leadKey !== '' && $l->branchKey() === $leadKey);
 
-        $group = $duplicates->concat([$lead])->filter($sameBranch);
+        $group = $duplicates->concat([$lead])
+                  ->filter(fn ($l) => $l->id === $lead->id || ! $byBranch || $lead->sameBranchAs($l));
 
         $groupCanMerge = $group->count() >= 2
             && $group->contains(fn ($l) =>

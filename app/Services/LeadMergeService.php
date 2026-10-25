@@ -29,7 +29,7 @@ class LeadMergeService
                 ->orderBy('id')->get()
                 ->filter(function ($l) use ($lead, $user, $byBranch, $key) {
                     if ($l->id === $lead->id) return true;
-                    if ($byBranch && $l->branchKey() !== $key) return false;
+                    if ($byBranch && ! $lead->sameBranchAs($l)) return false;
                     return $user->canViewLead($l);
                 })
                 ->values();
@@ -59,7 +59,7 @@ class LeadMergeService
             $reason = match (true) {
                 $digits === '' || Lead::phoneDigits($l->work_phone) !== $digits
                     => 'Not a duplicate of the default lead.',
-                $byBranch && $l->branchKey() !== $defKey
+                $byBranch && ! $default->sameBranchAs($l)
                      => 'Lead belongs to a different branch.',
                 (int) $default->stage_id === $pool
                     => 'Lead Pool leads are merged automatically (daily) and only with other Lead Pool leads.',
