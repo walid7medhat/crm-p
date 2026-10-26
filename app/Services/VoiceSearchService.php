@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Area;
 use App\Models\PropertyType;
+use App\Support\SearchText;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -123,20 +124,7 @@ class VoiceSearchService
      */
     public function normalizeText(string $text): string
     {
-        $text = mb_strtolower(trim($text), 'UTF-8');
-
-        // Normalize Arabic alef / yaa / taa marbuta variants.
-        $text = str_replace(
-            ['أ', 'إ', 'آ', 'ى', 'ة', 'ؤ', 'ئ'],
-            ['ا', 'ا', 'ا', 'ي', 'ه', 'و', 'ي'],
-            $text
-        );
-
-        // Collapse punctuation / extra spaces.
-        $text = preg_replace('/[^\p{L}\p{N}\s\.\+]/u', ' ', $text) ?? $text;
-        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
-
-        return trim($text);
+        return SearchText::normalize($text);
     }
 
     /**

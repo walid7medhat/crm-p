@@ -28,6 +28,19 @@ class VoiceSearchServiceTest extends TestCase
         $this->assertSame('mixed', $service->detectLanguage('عايز apartment في Yas Island'));
     }
 
+    public function test_parses_compact_bedroom_aliases_including_bhk(): void
+    {
+        $service = new VoiceSearchService();
+        $one = $service->parse('1BR apartment');
+        $this->assertSame(1, $one['filters']['number_of_bedrooms']);
+
+        $two = $service->parse('2BHK villa');
+        $this->assertSame(2, $two['filters']['number_of_bedrooms']);
+
+        $arabicDigits = $service->parse('٢ bedroom yas');
+        $this->assertSame(2, $arabicDigits['filters']['number_of_bedrooms']);
+    }
+
     public function test_parses_arabic_reem_island_example(): void
     {
         $service = new VoiceSearchService();
@@ -76,5 +89,16 @@ class VoiceSearchServiceTest extends TestCase
         $this->assertSame('sale', $params['listing_status']);
         // area_id may be null if DB has no matching area; search fallback is OK for Phase 1
         $this->assertTrue(isset($params['area_ids']) || isset($params['search']));
+    }
+
+    public function test_parses_bedroom_aliases_and_arabic_indic_digits(): void
+    {
+        $service = new VoiceSearchService();
+
+        $this->assertSame(1, $service->parse('1BR apartment')['filters']['number_of_bedrooms']);
+        $this->assertSame(2, $service->parse('2BHK')['filters']['number_of_bedrooms']);
+        $this->assertSame(1, $service->parse('one BHK')['filters']['number_of_bedrooms']);
+        $this->assertSame(2, $service->parse('٢ غرف')['filters']['number_of_bedrooms']);
+        $this->assertSame(2, $service->parse('غرفتين في ياس آيلاند')['filters']['number_of_bedrooms']);
     }
 }

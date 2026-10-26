@@ -638,6 +638,8 @@ class LeadController extends Controller
             //     ['action' => 'view']
             // );
 
+            // Keep the first paint light: one parent level + area name is enough for the
+            // modal shell. Deep parent chains were multi-join and slowed every lead open.
             $data = (new LeadResource($lead->load([
                 'stage',
                 'addedBy.roles:id,name',
@@ -645,14 +647,15 @@ class LeadController extends Controller
                 'addedBy.employeeProfile.companyBranch:id,name',
                 'addedBy.employeeProfile.designation:id,name',
                 'responsiblePerson.roles:id,name',
-                'responsiblePerson.parent.parent.parent.parent:id,name,display_name,avatar,parent_id',
+                'responsiblePerson.parent:id,name,display_name,avatar,parent_id',
                 'responsiblePerson.employeeProfile.companyBranch:id,name',
                 'responsiblePerson.employeeProfile.designation:id,name',
                 'participants',
                 'observers.user:id,name,display_name,avatar,email',
                 'integration:id,project_id',
                 'propertyType:id,name',
-                'area' => fn ($q) => $q->with(['parent.parent.parent.parent']),
+                'area:id,name,parent_id,type',
+                'area.parent:id,name,parent_id,type',
                 'createdHistory',
             ])))->resolve();
 
