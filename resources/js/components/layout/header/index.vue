@@ -1264,10 +1264,16 @@ const listingsSidebarSections = computed(() =>
     unit_views: filteredUnitViewsItems.value,
     layout_types: filteredLayoutTypesItems.value,
     areas: filteredAreasItems.value,
-  }).map((section) => ({
-    ...section,
-    iconSrc: listingsSectionIcon(section.iconKey || section.key),
-  })),
+  })
+    .map((section) => ({
+      ...section,
+      iconSrc: listingsSectionIcon(section.iconKey || section.key),
+    }))
+    .filter((section) =>
+      isAdmin.value || isBranchAdmin.value
+        ? true
+        : ['listings', 'projects'].includes(section.key),
+    ),
 );
 
 const poppedCountPaths = ref(Object.create(null));
@@ -1314,9 +1320,13 @@ function listingsSectionIcon(key) {
   return map[key] || listingsIcon.value;
 }
 
-/** Listings nested submenu — admins + branch admins (inventory links under CRM → Listings) */
+// Sales (or any non-admin) with the projects permission also gets the Listings dropdown.
+// filteredProjectsItems is already permission-filtered ('projects-list').
+const hasProjectsAccess = computed(() => filteredProjectsItems.value.length > 0);
+
+/** Listings nested submenu — admins + branch admins + anyone with projects permission */
 const isListingsDropdownAdmin = computed(() =>
-  (isAdmin.value || isBranchAdmin.value) && !isShowOnlyListing.value,
+  (isAdmin.value || isBranchAdmin.value || hasProjectsAccess.value) && !isShowOnlyListing.value,
 );
 const showCrmListingsDropdown = computed(() =>
   isListingsDropdownAdmin.value &&
