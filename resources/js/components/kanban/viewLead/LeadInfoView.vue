@@ -107,6 +107,34 @@
                     </span>
                 </div>
             </div>
+            <div class="info-group" v-if="lead?.whatsapp_username">
+                <label class="form-label-custom">WhatsApp Username</label>
+                <div class="phone-field-row">
+                    <div class="info-value">
+                        <a
+                            v-if="canView"
+                            :href="whatsappUsernameUrl(lead.whatsapp_username)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >@{{ lead.whatsapp_username }}</a>
+                        <span v-else>
+                            @{{ lead.whatsapp_username.slice(0,3) }}
+                            <span class="blurred-stars">{{ maskValue(lead.whatsapp_username.slice(3)) }}</span>
+                        </span>
+                    </div>
+                    <a
+                        v-if="canView"
+                        :href="whatsappUsernameUrl(lead.whatsapp_username)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="whatsapp-chat-btn"
+                        title="Chat on WhatsApp"
+                        aria-label="Chat on WhatsApp"
+                    >
+                        <iconify-icon icon="logos:whatsapp-icon" width="18" height="18"></iconify-icon>
+                    </a>
+                </div>
+            </div>
             </div>
             
         </div>
@@ -1011,6 +1039,12 @@ const canView = computed(() => {
 const whatsappUrl = (phone) => {
     const digits = String(phone || '').replace(/\D/g, '')
     return digits ? `https://wa.me/${digits}` : ''
+}
+// WhatsApp usernames have no documented link format that I could verify.
+// Change this one line if the format below doesn't open the chat.
+const whatsappUsernameUrl = (username) => {
+    const clean = String(username || '').trim().replace(/^@/, '')
+    return clean ? `https://wa.me/${encodeURIComponent(clean)}` : ''
 }
 
 // Filter persons based on search query

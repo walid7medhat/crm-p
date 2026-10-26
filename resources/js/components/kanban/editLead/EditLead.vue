@@ -147,6 +147,18 @@
                 {{ validationErrors.secondary_email[0] }}
             </div>
         </div>
+        <div class="info-group">
+            <label class="form-label-custom">WhatsApp Username</label>
+            <b-form-input
+                v-model="form.whatsapp_username"
+                placeholder="Enter WhatsApp Username"
+                class="custom-input"
+                :class="{ 'is-invalid': validationErrors.whatsapp_username }"
+            />
+            <div v-if="validationErrors.whatsapp_username" class="invalid-feedback d-block">
+                {{ validationErrors.whatsapp_username[0] }}
+            </div>
+        </div>
 
         <!--<div class="info-group">-->
         <!--    <label class="form-label-custom">Comment</label>-->
@@ -800,6 +812,7 @@ const form = ref({
     work_phone: '',
     email: '',
     secondary_email:'',
+    whatsapp_username: '',
     work_phone_2: '',
     comment: '',
     budget_from: null,
@@ -1085,6 +1098,7 @@ const initializeForm = () => {
         email: props.lead?.email || '',
         work_phone_2: props.lead?.work_phone_2 || '',
         secondary_email:props.lead?.secondary_email || '',
+        whatsapp_username: props.lead?.whatsapp_username || '',
         comment: props.lead?.comment || '',
         budget_from: budgetFrom,
         budget_to: budgetTo,
@@ -1108,7 +1122,7 @@ const initializeForm = () => {
 }
 
 const EDIT_DRAFT_FIELDS = [
-    'lead_name', 'salutation', 'first_name', 'last_name', 'work_phone', 'email', 'secondary_email',
+    'lead_name', 'salutation', 'first_name', 'last_name', 'work_phone', 'email', 'secondary_email', 'whatsapp_username', 
     'work_phone_2', 'comment', 'budget_from', 'budget_to', 'currency', 'bedrooms', 'purpose_buying',
     'lead_source', 'source_information', 'area_id', 'property_type_id', 'status_lead', 'available_date',
     'branch', 'lost_reason', 'lead_type', 'property_status',
@@ -1288,6 +1302,12 @@ watch(() => form.value.email, () => {
     }
 })
 
+watch(() => form.value.whatsapp_username, () => {
+    if (validationErrors.value.whatsapp_username) {
+        delete validationErrors.value.whatsapp_username
+        clearErrorMessageIfNeeded()
+    }
+})
 watch(() => form.value.secondary_email, () => {
     if (validationErrors.value.secondary_email) {
         delete validationErrors.value.secondary_email

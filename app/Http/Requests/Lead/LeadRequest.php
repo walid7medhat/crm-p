@@ -38,6 +38,7 @@ class LeadRequest extends FormRequest
             
             // Contact Details
             'whatsapp_number' => 'nullable|string|max:20',
+            'whatsapp_username' => 'nullable|string|max:100',
             'work_phone' => [
                 'required',
                 'max:20',
@@ -182,7 +183,7 @@ class LeadRequest extends FormRequest
             'email' => 'Primary Email',
             'secondary_email' => 'Secondary Email',
             'website' => 'link',
-            // الحقول الجديدة
+            'whatsapp_username' => 'WhatsApp Username',
             'source_client_name' => 'Source Client Name',
             'source_client_phone' => 'Source Client Phone',
             'source_client_email' => 'Source Client Email',

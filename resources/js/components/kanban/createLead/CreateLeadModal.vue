@@ -171,6 +171,18 @@
                                                 {{ validationErrors.secondary_email[0] }}
                                             </div>
                                         </div>
+                                        <div class="col">
+                                            <label class="form-label-custom">WhatsApp Username</label>
+                                            <b-form-input
+                                                v-model="form.whatsapp_username"
+                                                placeholder="Enter WhatsApp Username"
+                                                class="custom-input"
+                                                :class="{ 'is-invalid': validationErrors.whatsapp_username }"
+                                            />
+                                            <div v-if="validationErrors.whatsapp_username" class="invalid-feedback d-block">
+                                                {{ validationErrors.whatsapp_username[0] }}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
     
@@ -1089,6 +1101,7 @@ watch(selectedExistingClient, (client) => {
         work_phone: '',
         email: '',
         secondary_email: '',
+        whatsapp_username: '',
         work_phone_2: '',
         website: '',
         comment: '',
@@ -1192,7 +1205,7 @@ watch(selectedExistingClient, (client) => {
 
     const CREATE_DRAFT_FIELDS = [
         'lead_name', 'stage_id', 'salutation', 'first_name', 'last_name', 'work_phone', 'email',
-        'secondary_email', 'work_phone_2', 'website', 'comment', 'lead_source', 'source_information',
+        'secondary_email','whatsapp_username', 'work_phone_2', 'website', 'comment', 'lead_source', 'source_information',
         'bedrooms', 'purpose_buying', 'responsible_person_id', 'budget_from', 'budget_to', 'currency',
         'area_id', 'property_type_id', 'status_lead', 'available_date', 'lead_type', 'property_status',
         'branch', 'lost_reason', 'source_client_name', 'source_client_phone', 'referral_type',
@@ -1312,6 +1325,7 @@ watch(selectedExistingClient, (client) => {
             ['Email', form.value.email],
             ['Secondary Phone', form.value.work_phone_2],
             ['Secondary Email', form.value.secondary_email],
+            ['WhatsApp Username', form.value.whatsapp_username],
             ['Source', previewOptionLabel(dynamicSourceOptions.value, form.value.lead_source)],
             ['Location', area ? locationFirstLine(area) : ''],
             ['Property Type', previewOptionLabel(propertyTypeOptions.value, form.value.property_type_id)],
@@ -1655,7 +1669,12 @@ watch(selectedExistingClient, (client) => {
             clearErrorMessageIfNeeded()
         }
     })
-    
+    watch(() => form.value.whatsapp_username, () => {
+        if (validationErrors.value.whatsapp_username) {
+            delete validationErrors.value.whatsapp_username
+            clearErrorMessageIfNeeded()
+        }
+    })
     watch(() => form.value.work_phone, () => {
         if (validationErrors.value.work_phone) {
             delete validationErrors.value.work_phone
@@ -1868,6 +1887,7 @@ watch(selectedExistingClient, (client) => {
             work_phone: '',
             email: '',
             secondary_email:'',
+            whatsapp_username: '',
             work_phone_2: '',
             website: '',
             comment: '',

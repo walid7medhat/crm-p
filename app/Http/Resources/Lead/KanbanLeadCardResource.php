@@ -296,6 +296,7 @@ class KanbanLeadCardResource extends JsonResource
             'second_name' => $this->second_name,
             'last_name' => $this->last_name,
             'whatsapp_number' => $this->whatsapp_number,
+            'whatsapp_username' => $this->whatsapp_username,
             'work_phone' => $this->work_phone,
             'work_phone_2' => $this->work_phone_2,
             'email' => $this->email,

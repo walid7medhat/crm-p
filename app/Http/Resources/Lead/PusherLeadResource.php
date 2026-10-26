@@ -55,6 +55,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Contact Details
             'whatsapp_number' => $this->whatsapp_number,
+            'whatsapp_username' => $this->whatsapp_username,
             'work_phone' => $this->work_phone,
             'work_phone_2' => $this->work_phone_2,
             'email' => $this->email,
