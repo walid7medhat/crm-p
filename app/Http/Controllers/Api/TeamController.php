@@ -18,16 +18,19 @@ class TeamController extends Controller
         try {
             $user = $request->user();
             $currentUser = $user;
-        $branchUserIds = $user->hasRole('branch_admin') ? $user->getBranchUserIds() : null;
+            $scopedIds = $this->branchScopedIds($user);
 
-                    $users = User::query()
-                        ->with(['roles:id,name'])
-                        ->withCount('children')
-                        ->when(! ($user->hasRole('super_admin') || $user->hasRole('admin') ), function ($qq) use ($currentUser, $branchUserIds) {
-                                if ($branchUserIds) {
-                                    $qq->whereIn('id', $branchUserIds) ->orWhereNull('parent_id');
-                                    return;
-                                }
+            $users = User::query()
+                ->with(['roles:id,name'])
+                ->withCount('children')
+                ->when(! $user->hasRole('super_admin') && $user->id !=30 && $user->id !=33, function ($qq) use ($currentUser, $scopedIds) {
+                    if ($scopedIds !== null) {
+                        $qq->where(function ($q) use ($scopedIds) {
+                            $q->whereIn('id', $scopedIds)
+                            ->orWhere(fn ($u) => $u->unassignedPool());
+                        });
+                        return;
+                    }
 
                                 $qq->where(function ($q) use ($currentUser) {
                                     $q->where('id', $currentUser->id)
@@ -223,7 +226,7 @@ class TeamController extends Controller
             $user=auth()->user();
             // Get users that report to current user or are in the same hierarchy
                         $branchUserIds = $user->hasRole('branch_admin') ? $user->getBranchUserIds() : null;
-
+            $scopedIds = $this->branchScopedIds($user);
             $users = User::with([
                 'roles',
                 'parent',
@@ -232,11 +235,14 @@ class TeamController extends Controller
                 }
             ])
 
-            ->when(!($user->hasRole('super_admin') || $user->hasRole('admin')), function ($qq) use ($currentUser, $branchUserIds) {
-                if ($branchUserIds) {
-                    $qq->whereIn('id', $branchUserIds) ->orWhereNull('parent_id');;
-                    return;
-                }
+            ->when(! $user->hasRole('super_admin') && $user->id !=30 && $user->id !=33, function ($qq) use ($currentUser, $scopedIds) {
+                    if ($scopedIds !== null) {
+                        $qq->where(function ($q) use ($scopedIds) {
+                            $q->whereIn('id', $scopedIds)
+                            ->orWhere(fn ($u) => $u->unassignedPool());
+                        });
+                        return;
+                    }
 
                 $qq->where(function ($q) use ($currentUser) {
                     $q->where('id', $currentUser->id)
@@ -468,5 +474,19 @@ class TeamController extends Controller
         }
 
         return $resolved;
+    }
+    private function branchScopedIds(User $user): ?array
+    {
+        if ($user->hasRole('super_admin') || ! $user->hasAnyRole(['admin', 'branch_admin'])) {
+            return null;
+        }
+
+        $branch = $user->getBranchNode();
+
+        $ids = $branch
+            ? $branch->getAllSubordinatesIds()
+            : $user->getAllSubordinatesIds();
+
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 }

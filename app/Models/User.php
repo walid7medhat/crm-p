@@ -898,4 +898,12 @@ public function getEmployeeDocumentsAttribute()
     {
         return 'user.'.$this->getKey();
     }
+
+    public function scopeUnassignedPool($query)
+    {
+        return $query->whereNull('parent_id')
+            ->whereDoesntHave('roles', fn ($r) => $r->whereIn(
+                'name', ['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead']
+            ));
+    }
 }
