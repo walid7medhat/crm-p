@@ -904,6 +904,6 @@ public function getEmployeeDocumentsAttribute()
         return $query->whereNull('parent_id')
             ->whereDoesntHave('roles', fn ($r) => $r->whereIn(
                 'name', ['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead']
-            ));
+            ))->where('id', '!=', 1);
     }
 }

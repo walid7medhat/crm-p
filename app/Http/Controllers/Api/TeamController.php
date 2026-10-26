@@ -39,7 +39,7 @@ class TeamController extends Controller
                                             $parentQuery->where('parent_id', $currentUser->id);
                                         });
                                 });
-                            })
+                            })->where('id', '!=', 1)
                 ->get();
 
             $branches = $this->branchNodesFor($users);
@@ -251,7 +251,7 @@ class TeamController extends Controller
                             $parentQuery->where('parent_id', $currentUser->id);
                         });
                 });
-            })
+            })->where('id', '!=', 1)
             // ->where('status', 'active')
             ->get()
             ->map(function ($user) {
