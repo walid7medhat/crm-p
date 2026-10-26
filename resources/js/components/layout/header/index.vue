@@ -1272,7 +1272,7 @@ const listingsSidebarSections = computed(() =>
     .filter((section) =>
       isAdmin.value || isBranchAdmin.value
         ? true
-        : ['listings', 'projects'].includes(section.key),
+        : ['listings', 'projects', 'areas'].includes(section.key),
     ),
 );
 
