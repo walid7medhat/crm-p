@@ -2045,6 +2045,7 @@ const paymentPlanOptions = [
   { label: '45/55', initial_percent: 45, handover_percent: 55 },
   { label: '46/54', initial_percent: 46, handover_percent: 54 },
   { label: '66/34', initial_percent: 66, handover_percent: 34 },
+  { label: '67/33', initial_percent: 67, handover_percent: 33 },
   { label: '70/30', initial_percent: 70, handover_percent: 30 },
   { label: '71/29', initial_percent: 71, handover_percent: 29 },
   { label: '72/28', initial_percent: 72, handover_percent: 28 },
@@ -2279,10 +2280,7 @@ const fetchDealCosts = async () => {
 
 // ✅ إضافة التكاليف الثابتة تلقائياً (في صفحة الإنشاء)
 const addDefaultDealCosts = () => {
-  console.log('📝 Adding default deal costs. Settings:', dealCostSettings.value);
-  console.log('📍 Current area in create form:', form.value.area);
-  
-  // ✅ استخدام المفاتيح النصية
+
   const fees = {
     dariAdminFee: dealCostSettings.value['dari_admin_fee'] || dealCostSettings.value['1'] || 0,
     adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0,
@@ -2292,7 +2290,9 @@ const addDefaultDealCosts = () => {
   
   // ✅ 1. Agency Fee (2% من سعر البيع)
   const agencyFeeValue = Number(fees.agencyFee) || 2;
-   const transferFeeValue = Number(fees.transferFee) || 2;
+  const transferFeeValue = isAlReefArea(form.value.area)
+  ? AL_REEF_TRANSFER_FEE_PERCENT
+  : (Number(fees.transferFee) || 2);
   console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
   
   const existingAgency = assignmentExpenseLines.value.find(
@@ -2389,7 +2389,25 @@ const addDefaultDealCosts = () => {
   
   console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
 };
+const AL_REEF_TRANSFER_FEE_PERCENT = 1;
 
+// True if the area itself, or any of its parents, is "Al Reef".
+// Area names are often the full parent chain (area_parents_title), so a child
+// like "Al Reef Villas" or "Al Reef Downtown" also matches.
+const isAlReefArea = (areaData) => {
+  if (!areaData) return false;
+  const re = /\bal[\s-]*reef\b/i;
+
+  const names = [
+    areaData.name,
+    areaData.area_title,
+    areaData.area_parents_title,
+    ...(Array.isArray(areaData.all_names) ? areaData.all_names : []),
+    ...(Array.isArray(areaData.hierarchy) ? areaData.hierarchy.map((h) => h?.name) : []),
+  ];
+
+  return names.some((n) => n && re.test(String(n)));
+};
 // ✅ دالة لتحديد نوع التكلفة بناءً على المنطقة
 const getAdminFeeTypeFromArea = (areaData) => {
   if (!areaData) return 'dari';

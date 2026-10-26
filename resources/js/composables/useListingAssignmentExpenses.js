@@ -26,7 +26,25 @@ export function parseAssignmentExpenseLines(raw) {
   }
   return [];
 }
+const AL_REEF_TRANSFER_FEE_PERCENT = 1;
 
+// True if the area itself, or any of its parents, is "Al Reef".
+// Area names are often the full parent chain (area_parents_title), so a child
+// like "Al Reef Villas" or "Al Reef Downtown" also matches.
+const isAlReefArea = (areaData) => {
+  if (!areaData) return false;
+  const re = /\bal[\s-]*reef\b/i;
+
+  const names = [
+    areaData.name,
+    areaData.area_title,
+    areaData.area_parents_title,
+    ...(Array.isArray(areaData.all_names) ? areaData.all_names : []),
+    ...(Array.isArray(areaData.hierarchy) ? areaData.hierarchy.map((h) => h?.name) : []),
+  ];
+
+  return names.some((n) => n && re.test(String(n)));
+};
 export function useListingAssignmentExpenses({
   originalPriceNum,
   sellingPriceNum,
@@ -94,7 +112,6 @@ export function useListingAssignmentExpenses({
     return Number(cleaned) || 0;
   };
 
-  // ✅ دالة حساب المبلغ مع التحقق من القيم
   // ✅ دالة حساب المبلغ مع التحقق من القيم
 const assignmentExpenseLineAmount = (line) => {
   if (!line) return 0;
@@ -173,14 +190,8 @@ const assignmentExpenseLineAmount = (line) => {
 
   // ✅ دالة لإضافة التكاليف الافتراضية
   const addDefaultDealCosts = () => {
-    console.log('📝 Adding default deal costs. Settings:', dealCostSettings?.value);
-    console.log('📍 Area data:', area?.value);
 
-     console.log('🔍🔍🔍 SELLING PRICE NUM:', sellingPriceNum.value);
-  console.log('🔍🔍🔍 ORIGINAL PRICE NUM:', originalPriceNum.value);
-  console.log('🔍🔍🔍 PREMIUM AMOUNT:', premiumAmountForm.value);
     
-    // ✅ قراءة القيم مع التصحيح التلقائي
     const fees = {
       dariAdminFee: parseNumber(dealCostSettings?.value?.dari_admin_fee || dealCostSettings?.value?.['1'] || 0),
       adgmAdminFee: parseNumber(dealCostSettings?.value?.adgm_admin_fee || dealCostSettings?.value?.['2'] || 0),
@@ -197,14 +208,12 @@ const assignmentExpenseLineAmount = (line) => {
       console.log(`⚠️ Agency Fee corrected from ${fees.agencyFee} to ${agencyFeeValue}`);
     }
     
-    if (transferFeeValue > 100) {
+    if (isAlReefArea(area?.value)) {
+      transferFeeValue = AL_REEF_TRANSFER_FEE_PERCENT;
+    } else if (transferFeeValue > 100) {
       transferFeeValue = transferFeeValue / 100;
-      console.log(`⚠️ Transfer Fee corrected from ${fees.transferFee} to ${transferFeeValue}`);
     }
 
-    console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
-    console.log(`✅ Transfer Fee: ${transferFeeValue}% of Selling Price`);
-    
     // ✅ 1. Agency Fee
     const existingAgency = assignmentExpenseLines.value.find(
       line => (line.label === 'Agency Fees' || line.label === 'Agency Fee') && line.isDefault
