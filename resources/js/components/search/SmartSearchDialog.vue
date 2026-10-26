@@ -207,9 +207,12 @@ const tabs = computed(() => {
 let timer = null
 let seq = 0
 let abortController = null
+/** @type {Promise<void>|null} */
+let inFlight = null
 let unbindShortcut = null
 let unbindNav = null
 let suppressWatch = false
+let openListenersBound = false
 
 const chips = computed(() => payload.value?.interpretation?.chips || [])
 const summary = computed(() => payload.value?.interpretation?.summary || '')
@@ -237,18 +240,23 @@ const emptyText = computed(() => {
   return 'Nothing matches yet.'
 })
 
-watch(open, async (isOpen) => {
-  if (!isOpen) {
-    window.removeEventListener('keydown', onEscape, true)
-    window.removeEventListener('resize', updatePanelPosition)
-    window.removeEventListener('scroll', updatePanelPosition, true)
-    abortController?.abort()
-    clearTimeout(timer)
-    loading.value = false
-    return
-  }
-  // Warm the lead modal chunk so a result click opens without waiting on download.
-  import('@/components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
+function bindOpenListeners() {
+  if (openListenersBound || typeof window === 'undefined') return
+  window.addEventListener('keydown', onEscape, true)
+  window.addEventListener('resize', updatePanelPosition)
+  window.addEventListener('scroll', updatePanelPosition, true)
+  openListenersBound = true
+}
+
+function unbindOpenListeners() {
+  if (!openListenersBound || typeof window === 'undefined') return
+  window.removeEventListener('keydown', onEscape, true)
+  window.removeEventListener('resize', updatePanelPosition)
+  window.removeEventListener('scroll', updatePanelPosition, true)
+  openListenersBound = false
+}
+
+async function enterOpenState() {
   suppressWatch = true
   payload.value = null
   structured.value = {}
@@ -258,13 +266,30 @@ watch(open, async (isOpen) => {
   error.value = ''
   activeKey.value = ''
   loading.value = false
-  window.addEventListener('keydown', onEscape, true)
-  window.addEventListener('resize', updatePanelPosition)
-  window.addEventListener('scroll', updatePanelPosition, true)
+  bindOpenListeners()
   await nextTick()
   updatePanelPosition()
   suppressWatch = false
-})
+  // Query may already be set if the user typed while the async chunk loaded.
+  if (hasSearchInput()) schedule()
+}
+
+function leaveOpenState() {
+  unbindOpenListeners()
+  abortController?.abort()
+  clearTimeout(timer)
+  inFlight = null
+  loading.value = false
+}
+
+// immediate: covers async mount when openSmartSearch() already set open=true.
+watch(open, async (isOpen) => {
+  if (!isOpen) {
+    leaveOpenState()
+    return
+  }
+  await enterOpenState()
+}, { immediate: true })
 
 watch(query, () => {
   if (suppressWatch) return
@@ -289,6 +314,10 @@ onMounted(() => {
     move,
     activate: () => activate(),
   })
+  // Panel position may need a second pass once the header anchor is ready.
+  if (open.value) {
+    nextTick(() => updatePanelPosition())
+  }
 })
 
 onUnmounted(() => {
@@ -296,11 +325,7 @@ onUnmounted(() => {
   unbindShortcut = null
   unbindNav?.()
   unbindNav = null
-  abortController?.abort()
-  clearTimeout(timer)
-  window.removeEventListener('keydown', onEscape, true)
-  window.removeEventListener('resize', updatePanelPosition)
-  window.removeEventListener('scroll', updatePanelPosition, true)
+  leaveOpenState()
   closeSmartSearch()
 })
 
@@ -370,13 +395,27 @@ function schedule() {
     activeKey.value = ''
     return
   }
-  timer = setTimeout(runNow, 400)
+  // 500ms debounce + single-flight below cuts overlapping /smart-search work.
+  timer = setTimeout(runNow, 500)
+}
+
+function isPhoneOrEmailQuery(value) {
+  const q = String(value || '').trim()
+  if (!q) return false
+  if (q.includes('@')) return true
+  const digits = q.replace(/\D+/g, '')
+  return digits.length >= 4 && /^[\d\s+\-().]+$/.test(q)
 }
 
 function runNow() {
   if (!hasSearchInput()) {
     loading.value = false
     payload.value = null
+    return
+  }
+  const q = query.value.trim()
+  // Mirror server MIN_TEXT_LENGTH for plain text; phones/emails keep digit rules.
+  if (q && !isPhoneOrEmailQuery(q) && q.length < 2) {
     return
   }
   const current = ++seq
@@ -393,12 +432,15 @@ function runNow() {
   }
   if (suppress.value.length) params.suppress = suppress.value.join(',')
 
-  api.get('/smart-search', { params, signal: abortController.signal })
+  const request = api.get('/smart-search', { params, signal: abortController.signal })
     .then((response) => {
       if (current !== seq) return
       payload.value = response.data?.data || null
       if (!flat.value.some((row) => itemKey(row) === activeKey.value)) {
         activeKey.value = flat.value[0] ? itemKey(flat.value[0]) : ''
+      }
+      if (flat.value.some((row) => row.action === 'open_lead')) {
+        warmLeadModalIfIdle()
       }
     })
     .catch((err) => {
@@ -412,8 +454,23 @@ function runNow() {
       payload.value = null
     })
     .finally(() => {
-      if (current === seq) loading.value = false
+      if (current === seq) {
+        loading.value = false
+        inFlight = null
+      }
     })
+
+  inFlight = request.then(() => {}, () => {})
+}
+
+function warmLeadModalIfIdle() {
+  // Do not compete with dashboard stats/charts for bandwidth during first paint.
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(() => {
+      import('@/components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
+    }, { timeout: 4000 })
+  }
 }
 
 function confirmSearch() {
@@ -476,7 +533,8 @@ function activate(item) {
   if (!row || row.action === 'choose_place') return
   close()
   if (row.action === 'open_lead') {
-    // Seed enough fields for an instant modal shell while GET /leads/{id} finishes.
+    // Kick chunk fetch now (do not block open); seed paints the shell immediately.
+    import('@/components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
     const meta = row.meta || {}
     openLeadView(row.id, {
       id: row.id,

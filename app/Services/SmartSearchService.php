@@ -12,7 +12,7 @@ use App\Support\SearchText;
 use App\Support\UaeDateRange;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Read-only global search. Visibility matches the existing lead, deal, and listing rules.
@@ -34,6 +34,9 @@ class SmartSearchService
         $raw = trim((string) ($input['q'] ?? ''));
         $suppress = $this->suppressSet($input['suppress'] ?? '');
         $types = $this->typesAllowedFor($user, $this->types($input['types'] ?? null));
+        // Newer search from the same user supersedes this one between modules (client
+        // already dropped the response). Does not truncate the winning request.
+        $generation = $this->beginSearchGeneration($user);
         $intent = $this->intent($raw, $suppress);
         $filters = $this->filters($input, $intent, $suppress);
         $confirmed = filter_var($input['confirmed'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -72,6 +75,9 @@ class SmartSearchService
 
         $groups = [];
         if (in_array('leads', $types, true)) {
+            if (! $this->searchStillCurrent($user, $generation)) {
+                return $this->payload($raw, $limit, $intent, $filters, $groups, true, null);
+            }
             $groups[] = [
                 'type' => 'leads',
                 'label' => 'Leads',
@@ -81,6 +87,9 @@ class SmartSearchService
             ];
         }
         if (in_array('deals', $types, true)) {
+            if (! $this->searchStillCurrent($user, $generation)) {
+                return $this->payload($raw, $limit, $intent, $filters, $groups, true, null);
+            }
             $groups[] = [
                 'type' => 'deals',
                 'label' => 'Deals',
@@ -90,6 +99,9 @@ class SmartSearchService
             ];
         }
         if (in_array('listings', $types, true)) {
+            if (! $this->searchStillCurrent($user, $generation)) {
+                return $this->payload($raw, $limit, $intent, $filters, $groups, true, null);
+            }
             $groups[] = [
                 'type' => 'listings',
                 'label' => 'Listings',
@@ -99,6 +111,9 @@ class SmartSearchService
             ];
         }
         if (in_array('places', $types, true)) {
+            if (! $this->searchStillCurrent($user, $generation)) {
+                return $this->payload($raw, $limit, $intent, $filters, $groups, true, null);
+            }
             $groups[] = $this->places($user, $raw, $intent, $filters, $limit);
         }
 
@@ -175,9 +190,16 @@ class SmartSearchService
         $parsed = null;
         $area = null;
         if (! $phoneShaped && ! $email && mb_strlen($normalized) >= LeadTextSearch::MIN_TEXT_LENGTH) {
-            $parsed = $this->voice->parse($raw);
-            if (! isset($suppress['area']) && ! empty($parsed['matched_areas'][0])) {
-                $area = $parsed['matched_areas'][0];
+            // Full voice parse only for property / listing natural language.
+            // Ordinary name queries skip it; area-only confirmation uses a cheap cache match.
+            if ($this->shouldRunVoiceParse($normalized)) {
+                $parsed = $this->voice->parse($raw);
+                if (! isset($suppress['area']) && ! empty($parsed['matched_areas'][0])) {
+                    $area = $parsed['matched_areas'][0];
+                }
+            } elseif (! isset($suppress['area'])) {
+                $area = $this->voice->resolveAreaMatch($raw)
+                    ?? $this->voice->resolveAreaMatch($normalized);
             }
         }
 
@@ -194,6 +216,43 @@ class SmartSearchService
             'needs_confirmation' => false,
             'bare' => $normalized !== '' && in_array($normalized, $bareWords, true),
         ];
+    }
+
+    /**
+     * True when the query looks like listing / property natural language
+     * (beds, baths, sale/rent, listing words) — not a plain person name.
+     */
+    private function shouldRunVoiceParse(string $normalized): bool
+    {
+        if ($this->containsAny($normalized, config('smart_search.listing_words', []))) {
+            return true;
+        }
+        if (preg_match('/\b\d+\s*(bed|beds|bedroom|bedrooms|br|bath|baths|bathroom|bathrooms)\b/u', $normalized) === 1) {
+            return true;
+        }
+        if (preg_match('/\b(sale|rent|for\s+sale|for\s+rent)\b/u', $normalized) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(bed|bedroom|غرفة|غرف|حمام|سعر|للإيجار|للبيع)\b/u', $normalized) === 1;
+    }
+
+    private function searchGenerationKey(User $user): string
+    {
+        return 'smart_search:gen:'.(int) $user->id;
+    }
+
+    private function beginSearchGeneration(User $user): string
+    {
+        $token = bin2hex(random_bytes(8));
+        Cache::put($this->searchGenerationKey($user), $token, 20);
+
+        return $token;
+    }
+
+    private function searchStillCurrent(User $user, string $token): bool
+    {
+        return Cache::get($this->searchGenerationKey($user)) === $token;
     }
 
     /**
@@ -512,19 +571,14 @@ class SmartSearchService
             });
         } else {
             $exact = (clone $query)->where('lead_number', $raw)->with($this->leadWith())->limit($limit)->get();
-            // Lean + admin field set (name/phone/email/source/agent) — same as kanban text
-            // search. Non-lean ORs starved MySQL and slowed dashboard + lead open.
-            // Visibility still enforced by constrainLeads / canViewLead.
-            $like = '%'.addcslashes($intent['normalized'] !== '' ? $intent['normalized'] : $raw, '%_\\').'%';
-            $query->where(function ($text) use ($raw, $like) {
-                LeadTextSearch::apply($text, $raw, [
-                    'comments' => false,
-                    'relations' => true,
-                    'admin' => true,
-                    'lean' => true,
-                ]);
-                $text->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like));
-            });
+            // Same options as LeadController kanban text search: lean + role-gated admin.
+            // Area names stay available via places / listings / requirement_area_id — not a lead OR.
+            LeadTextSearch::apply($query, $raw, [
+                'comments' => false,
+                'relations' => true,
+                'admin' => $user->hasRole(['admin', 'super_admin']),
+                'lean' => true,
+            ]);
             $rows = $query->with($this->leadWith())->orderByDesc('id')->limit($limit + count($exact))->get();
             $merged = $exact->concat($rows)->unique('id')->take($limit + 8);
 
@@ -683,8 +737,9 @@ class SmartSearchService
             });
         } else {
             $exact = (clone $query)->where('deal_number', $raw)->with($this->dealWith())->limit($limit)->get();
-            $request = Request::create('/api/smart-search', 'GET', ['search' => $raw]);
-            $query->filter($request);
+            // Same coverage as Deal::scopeFilter($request->search), without Request::create.
+            // Visibility remains constrainDeals + canViewDeal.
+            $this->applyDealTextSearch($query, $raw);
             $rows = $query->with($this->dealWith())->orderByDesc('id')->limit($limit + count($exact))->get();
             $merged = $exact->concat($rows)->unique('id')->take($limit + 8);
 
@@ -752,6 +807,40 @@ class SmartSearchService
                 $q->without('listing')->select('id', 'deal_id', 'unit_no', 'area_id')->with('area:id,name');
             },
         ];
+    }
+
+    /**
+     * Mirrors Deal::scopeFilter search coverage (deal fields, agent, property, parties, lead).
+     */
+    private function applyDealTextSearch(Builder $query, string $raw): void
+    {
+        $like = '%'.addcslashes($raw, '%_\\').'%';
+        $query->where(function ($q) use ($like) {
+            $q->where('deal_number', 'like', $like)
+                ->orWhere('deal_name', 'like', $like)
+                ->orWhere('source', 'like', $like)
+                ->orWhere('currency', 'like', $like)
+                ->orWhere('lost_reason', 'like', $like)
+                ->orWhereHas('responsiblePerson', function ($u) use ($like) {
+                    $u->where('name', 'like', $like)->orWhere('email', 'like', $like);
+                })
+                ->orWhereHas('properties', function ($p) use ($like) {
+                    $p->where('unit_no', 'like', $like)
+                        ->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like))
+                        ->orWhereHas('propertyType', fn ($pt) => $pt->where('name', 'like', $like));
+                })
+                ->orWhereHas('parties', function ($p) use ($like) {
+                    $p->where('first_name', 'like', $like)
+                        ->orWhere('last_name', 'like', $like)
+                        ->orWhere('email', 'like', $like)
+                        ->orWhere('phone', 'like', $like);
+                })
+                ->orWhereHas('lead', function ($l) use ($like) {
+                    $l->where('lead_name', 'like', $like)
+                        ->orWhere('email', 'like', $like)
+                        ->orWhere('work_phone', 'like', $like);
+                });
+        });
     }
 
     /**

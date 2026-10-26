@@ -255,6 +255,67 @@ class SmartSearchEndpointTest extends TestCase
         $this->assertTrue($res->json('data.interpretation.needs_confirmation'));
     }
 
+    public function test_name_query_keeps_response_contract_without_requiring_voice_parse(): void
+    {
+        $mine = $this->insertLead($this->sales->id, [
+            'lead_name' => 'SmartSearch NameOnly Zebra',
+            'lead_number' => 'SS-NAME-'.uniqid(),
+        ]);
+
+        $res = $this->asUser($this->sales)->getJson('/api/smart-search?q=Zebra&types=leads');
+        $res->assertOk();
+        $this->assertTrue($res->json('data.executed'));
+        $this->assertIsArray($res->json('data.groups'));
+        $this->assertSame('leads', $res->json('data.groups.0.type'));
+        $ids = collect($res->json('data.groups.0.results'))->pluck('id')->all();
+        $this->assertContains($mine, $ids);
+        $this->assertArrayHasKey('interpretation', $res->json('data'));
+        $this->assertArrayHasKey('chips', $res->json('data.interpretation'));
+    }
+
+    public function test_property_phrase_still_searches_listings(): void
+    {
+        if (! $this->listingTemplate) {
+            $this->markTestSkipped('No listing template row');
+        }
+
+        $res = $this->asUser($this->superAdmin)->getJson(
+            '/api/smart-search?q='.urlencode('2 bedroom apartment').'&types=listings&confirmed=1'
+        );
+        $res->assertOk();
+        $this->assertSame('listings', $res->json('data.groups.0.type'));
+        // Contract: groups array present whether or not inventory matches the phrase.
+        $this->assertIsArray($res->json('data.groups.0.results'));
+    }
+
+    public function test_deal_visibility_hides_other_agents_deal(): void
+    {
+        if (! $this->dealTemplate) {
+            $this->markTestSkipped('No deal template row');
+        }
+
+        $number = 'SS-DEAL-VIS-'.strtoupper(substr(uniqid(), -6));
+        $theirs = $this->insertDeal($this->otherSales->id, [
+            'deal_number' => $number,
+            'deal_name' => 'SmartSearch Hidden Deal',
+        ]);
+
+        $res = $this->asUser($this->sales)->getJson('/api/smart-search?q='.urlencode($number).'&types=deals');
+        $res->assertOk();
+        $ids = collect($res->json('data.groups.0.results') ?? [])->pluck('id')->all();
+        $this->assertNotContains($theirs, $ids);
+    }
+
+    public function test_all_types_response_includes_expected_group_keys(): void
+    {
+        $res = $this->asUser($this->superAdmin)->getJson('/api/smart-search?q=test&types=all');
+        $res->assertOk();
+        $types = collect($res->json('data.groups'))->pluck('type')->all();
+        foreach (['leads', 'deals', 'listings', 'places'] as $expected) {
+            $this->assertContains($expected, $types);
+        }
+    }
+
     private function asUser(User $user)
     {
         return $this->withHeader('Authorization', 'Bearer '.JWTAuth::fromUser($user));

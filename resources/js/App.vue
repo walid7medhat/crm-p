@@ -83,7 +83,6 @@ import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
 import PropertyCompareDock from './components/listings/PropertyCompareDock.vue'
 import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
-import SmartSearchDialog from './components/search/SmartSearchDialog.vue'
 const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
 const LeadOpeningLoader = {
   name: 'LeadOpeningLoader',
@@ -95,6 +94,7 @@ const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layo
 const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-motivation/DailyEdgeLayer.vue'))
 const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
+const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
 const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
   delay: 80,
@@ -212,11 +212,12 @@ export default {
       if (!showLayout.value) {
         resetSidebarLayout()
       }
-      // Preload early so dashboard / search lead clicks open without a chunk wait.
+      // Idle preload only — avoid competing with dashboard stats on first paint.
+      // Search / ?lead= paths still warm the chunk when a lead is about to open.
       if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(preloadViewLeadModal, { timeout: 1200 })
+        requestIdleCallback(preloadViewLeadModal, { timeout: 6000 })
       } else {
-        setTimeout(preloadViewLeadModal, 400)
+        setTimeout(preloadViewLeadModal, 3500)
       }
       // Auto-open the lead modal on a hard refresh with ?lead= in the URL.
       // Done once here (page-agnostic) instead of per-page, so tabs like
