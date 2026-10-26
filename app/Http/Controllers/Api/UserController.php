@@ -544,7 +544,7 @@ public function show(User $user): JsonResponse
             $user = Auth::user();
             
             $query = User::whereHas('roles', function($q) {
-                $q->whereIn('name', ['super_admin','admin', 'manager', 'team_lead', 'hr']);
+                $q->whereIn('name', ['super_admin','admin', 'manager', 'team_lead', 'hr','branch_admin']);
             })->where('status', 'active');
             
             // Apply hierarchical filtering
