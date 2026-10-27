@@ -8146,9 +8146,11 @@ const loadPdfLogo = () => new Promise((resolve) => {
   img.src = pnglogo;
 });
 
-// Installment data rows that fit with Other Costs on one Payment Details page.
-// More than this → first N on page 1; remaining rows + Other Costs on page 2.
-const PAYMENT_INSTALLMENT_PAGE1_MAX = 7;
+// ≤7 rows → installments + Other Costs on one page.
+// 8–12 rows → all installments on page 1; Other Costs alone on page 2.
+// >12 rows → first 12 on page 1; remaining + Other Costs on page 2.
+const PAYMENT_INSTALLMENT_WITH_COSTS_MAX = 7;
+const PAYMENT_INSTALLMENT_PAGE1_MAX = 12;
 
 const paintPaymentDetailsPage = async (pdf, container) => {
   const model = paymentSlideModel;
@@ -8808,10 +8810,12 @@ const createPaymentDetailsSlide = () => {
   }));
 
   // Page split:
-  // - ≤7 installment rows → everything (installments + Other Costs) on one page
-  // - >7 installment rows → first 7 on page 1; remaining + Other Costs on page 2
+  // - ≤7 rows → installments + Other Costs on one page
+  // - 8–12 rows → all installments on page 1; Other Costs on page 2
+  // - >12 rows → first 12 on page 1; remaining + Other Costs on page 2
   const pages = [];
-  if (showInstallments && allInstallments.length > PAYMENT_INSTALLMENT_PAGE1_MAX) {
+  const installmentCount = allInstallments.length;
+  if (showInstallments && installmentCount > PAYMENT_INSTALLMENT_PAGE1_MAX) {
     pages.push({
       slideId: 'payment-details-slide',
       showCards: true,
@@ -8828,6 +8832,25 @@ const createPaymentDetailsSlide = () => {
       showInstallmentTotal: true,
       showExpenses: hasExpenses,
     });
+  } else if (showInstallments && installmentCount > PAYMENT_INSTALLMENT_WITH_COSTS_MAX) {
+    pages.push({
+      slideId: 'payment-details-slide',
+      showCards: true,
+      showInstallments: true,
+      installments: allInstallments,
+      showInstallmentTotal: true,
+      showExpenses: false,
+    });
+    if (hasExpenses) {
+      pages.push({
+        slideId: 'payment-details-slide-2',
+        showCards: false,
+        showInstallments: false,
+        installments: [],
+        showInstallmentTotal: false,
+        showExpenses: true,
+      });
+    }
   } else if (showInstallments) {
     pages.push({
       slideId: 'payment-details-slide',
