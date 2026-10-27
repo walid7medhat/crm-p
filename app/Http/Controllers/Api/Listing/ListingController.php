@@ -886,7 +886,8 @@ public function getMatchingListings(Request $request)
     ])->where('is_active', true)
       ->where('status', '!=', 'draft')
       ->where('status', '!=', 'converted')
-      ->where('is_archived', false);
+      ->where('status', '!=', 'rented')
+      ->where('is_archived', false)->where('approved',true);
 
     $projectId = $request->project_id;
     $areaId    = $request->area_id;
