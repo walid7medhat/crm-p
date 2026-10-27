@@ -10590,7 +10590,7 @@ margin-top: 20px;
 
 .owner-name {
   margin: 0 0 12px 0;
-  font-size: 28px;
+  font-size: 28px !important;
   font-weight: 600;
   color: #2c3e50;
 }
