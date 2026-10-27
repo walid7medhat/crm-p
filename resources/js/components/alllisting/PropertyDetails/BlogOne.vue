@@ -7821,20 +7821,18 @@ const createSlide5 = () => {
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
-    <div style="width:100% !important; height:90% !important; padding:10mm 14mm 7mm 14mm !important; box-sizing:border-box !important;">
-      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:8mm !important;">
+    <div style="width:100% !important; height:137mm !important; padding:10mm 14mm 0 14mm !important; box-sizing:border-box !important; position:relative !important;">
+      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:6mm !important;">
         <h1 style="color:#0B0736 !important;  font-size:6mm !important; font-weight:700 !important;  margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Floor Plan</h1>
         <img src="${logo}" style="width:18mm !important; display:block !important;" />
       </div>
-      <div style="display:flex !important; gap:6mm !important; height:72% !important;">
+      <div style="display:flex !important; gap:6mm !important; height:95mm !important;">
         <div style="flex:1 !important; background-image:url('${floorPlan1}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
         ${floorPlan2 ? `
         <div style="flex:1 !important; background-image:url('${floorPlan2}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
         ` : ''}
       </div>
-      <p style="margin-top:4mm;font-size:9px !important;color:#9ca3af !important;line-height:1.4 !important;">Floor plans, sizes, dimensions, and layouts are approximate and for illustrative purposes only.
-        </br>
-        Final details may vary and are subject to the developer's confirmation.</p>
+      <p style="position:absolute !important; left:14mm !important; right:14mm !important; bottom:4mm !important; width:auto !important; margin:0 !important; padding:0 !important; box-sizing:border-box !important; font-size:2.4mm !important; color:#9ca3af !important; line-height:1.45 !important; font-family:Arial, Helvetica, sans-serif !important;">Floor plans, sizes, dimensions, and layouts are approximate and for illustrative purposes only. Final details may vary and are subject to the developer's confirmation.</p>
     </div>
     ${createFooter()}
   </div>
