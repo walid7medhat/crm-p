@@ -33,7 +33,7 @@ class TaskController extends MarketingBaseController
         $task->load(MarketingPresenter::TASK_RELATIONS)
             ->loadCount(MarketingPresenter::taskCounts())
             ->load([
-                'comments' => fn ($q) => $q->with('user:id,name,avatar')->latest('id'),
+                'comments' => fn ($q) => $q->with('user:id,name,display_name,avatar')->latest('id'),
                 'posts' => fn ($q) => $q->with(['link', 'poster:id,name'])->orderBy('scheduled_date'),
                 'stage',
             ]);

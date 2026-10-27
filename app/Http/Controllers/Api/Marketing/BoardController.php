@@ -109,7 +109,7 @@ class BoardController extends MarketingBaseController
     {
         $members = $this->memberQuery()
             ->orderBy('name')
-            ->get(['id', 'name', 'avatar'])
+            ->get(['id', 'name', 'display_name', 'avatar'])
             ->map(fn ($u) => MarketingPresenter::user($u))
             ->values();
 

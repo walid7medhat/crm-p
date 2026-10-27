@@ -101,6 +101,7 @@ class MarketingPresenter
             'id' => $comment->id,
             'body' => $comment->body,
             'user' => self::user($comment->user),
+            'mentions' => $comment->mentions ?? [],
             'created_at' => $comment->created_at?->toIso8601String(),
         ];
     }
