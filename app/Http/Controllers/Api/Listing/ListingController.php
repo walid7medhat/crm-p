@@ -494,7 +494,7 @@ SQL;
         // Team lead's extra pending/draft visibility within their own hierarchy is
         // only surfaced via "Need Approval Listings" (getPendingApprovals()) and the
         // listing detail page (getListingData()), never mixed into this shared grid.
-        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') ) && ! $closedSeeAll && ! $closedBranchOnly){
+        if(!$request->boolean('my_listings') && !$request->sold_by_agent_id &&  !($user->hasRole('super_admin') ) && $user->id==30 && ! $closedSeeAll && ! $closedBranchOnly){
             $query->activeUnit();
         }
 
