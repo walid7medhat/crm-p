@@ -1,13 +1,16 @@
 <template>
   <article
     class="mk-card"
-    :class="{ 'is-done': stageDone, 'is-scheduled': scheduled }"
     :data-task-id="task.id"
     tabindex="0"
     @click="$emit('open', task)"
     @keydown.enter="$emit('open', task)"
+    :class="{ 'is-done': stageDone, 'is-scheduled': scheduled, 'is-mentioned': task.mentioned_me }"
   >
     <div class="mk-card__top">
+      <span v-if="task.mentioned_me" class="mk-card__mention" title="You were mentioned in a comment">
+        <iconify-icon icon="lucide:at-sign" /> Mentioned
+      </span>
       <span class="mk-card__check" :class="{ 'is-on': stageDone }" aria-hidden="true">
         <iconify-icon v-if="stageDone" icon="lucide:check" />
       </span>
@@ -246,5 +249,70 @@ const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(pr
 @media (prefers-reduced-motion: reduce) {
   .mk-card { transition: none; }
   .mk-card:hover { transform: none; }
+}
+/* ───── Mentioned card: one color, 3D "button" look ───── */
+.mk-card.is-mentioned {
+  --edge: color-mix(in srgb, var(--color-primary) 72%, #000);
+  border: 1.5px solid var(--color-primary);
+  background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--color-primary) 8%, #fff) 100%);
+  transform: perspective(800px) rotateX(2deg);
+  transform-origin: 50% 100%;
+  box-shadow:
+    inset 0 1px 0 #fff,                       /* top highlight */
+    0 4px 0 var(--edge),                      /* solid thickness */
+    0 14px 22px -8px rgba(28, 20, 48, 0.40);  /* soft drop shadow */
+  transition: transform .22s cubic-bezier(.2,.8,.2,1.2), box-shadow .22s;
+}
+.mk-card.is-mentioned:hover,
+.mk-card.is-mentioned:focus-visible {
+  transform: perspective(800px) rotateX(0) translateY(-4px);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 7px 0 var(--edge),
+    0 22px 28px -10px rgba(28, 20, 48, 0.45);
+}
+/* pressed = the card sinks into its edge */
+.mk-card.is-mentioned:active {
+  transform: perspective(800px) translateY(3px);
+  box-shadow: inset 0 1px 0 #fff, 0 1px 0 var(--edge), 0 6px 10px -6px rgba(28, 20, 48, .4);
+}
+
+/* one gentle sheen on hover (no looping animation) */
+.mk-card.is-mentioned::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.7) 50%, transparent 62%);
+  background-size: 250% 100%;
+  background-position: 160% 0;
+  transition: background-position .7s ease;
+}
+.mk-card.is-mentioned:hover::after { background-position: -60% 0; }
+
+/* floating tag that pops out of the top-right corner */
+.mk-card.is-mentioned .mk-card__mention {
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  color: var(--color-on-primary, #fff);
+  background: var(--color-primary);
+  box-shadow: 0 2px 0 var(--edge), 0 6px 10px -4px rgba(28, 20, 48, .5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-card.is-mentioned,
+  .mk-card.is-mentioned:hover,
+  .mk-card.is-mentioned:active { transform: none; }
+  .mk-card.is-mentioned::after { transition: none; }
 }
 </style>

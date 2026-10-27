@@ -468,4 +468,5 @@ function onChange(evt, stage) {
   .mk-col__icon :deep(svg),
   .mk-col:has(.mk-ghost) .mk-col__icon { animation: none !important; }
 }
+:deep(.mk-dragging.is-mentioned) { transform: rotate(2.5deg) scale(1.02) !important; }
 </style>

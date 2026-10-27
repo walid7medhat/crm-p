@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-
+use App\Notifications\MarketingMention;
 class TaskController extends MarketingBaseController
 {
     /** Fields each category is allowed to keep; everything else is cleared on save. */
@@ -41,9 +41,16 @@ class TaskController extends MarketingBaseController
         if ($canSeeHistory) {
             $task->load(['histories' => fn ($q) => $q->with('user:id,name,avatar')->latest('id')]);
         }
+       $unreadMentions = Auth::user()->unreadNotifications()
+            ->where('type', MarketingMention::class)
+            ->get()
+            ->filter(fn ($n) => (int) ($n->data['marketing_task_id'] ?? 0) === $task->id);
 
+        $hadMention = $unreadMentions->isNotEmpty();
+        $unreadMentions->each->markAsRead();
         return response()->json([
             'task' => MarketingPresenter::task($task) + [
+                 'mentioned_me' => $hadMention,
                 'stage' => $task->stage ? ['id' => $task->stage->id, 'name' => $task->stage->name, 'color' => $task->stage->color, 'is_done' => $task->stage->is_done] : null,
                 'comments' => $task->comments->map(fn ($c) => MarketingPresenter::comment($c))->values(),
                 'histories' => $canSeeHistory

@@ -8,6 +8,7 @@ use App\Models\MarketingTaskComment;
 use App\Models\MarketingTaskHistory;
 use App\Models\MarketingTaskLink;
 use App\Models\User;
+use App\Notifications\MarketingMention;
 
 /** Single JSON shape for marketing records, shared by every endpoint. */
 class MarketingPresenter
@@ -79,6 +80,7 @@ class MarketingPresenter
             'comments_count' => (int) ($task->comments_count ?? 0),
             'posts_count' => (int) ($task->posts_count ?? 0),
             'posted_count' => (int) ($task->posted_count ?? 0),
+            'mentioned_me' => in_array($task->id, self::mentionedTaskIds(), true),
         ];
     }
 
@@ -128,5 +130,25 @@ class MarketingPresenter
             'posted_by' => User::resolveDisplayName($post->poster),
             'posted_at' => $post->posted_at?->toIso8601String(),
         ];
+    }
+    /** Task ids with an unread mention for the current user (cached for the request). */
+    public static function mentionedTaskIds(): array
+    {
+        $req = request();
+        if ($req->attributes->has('mk_mentioned')) {
+            return $req->attributes->get('mk_mentioned');
+        }
+
+        $ids = [];
+        if ($user = $req->user()) {
+            $ids = $user->unreadNotifications()
+                ->where('type', MarketingMention::class)
+                ->get()
+                ->map(fn ($n) => (int) ($n->data['marketing_task_id'] ?? 0))
+                ->filter()->unique()->values()->all();
+        }
+        $req->attributes->set('mk_mentioned', $ids);
+
+        return $ids;
     }
 }

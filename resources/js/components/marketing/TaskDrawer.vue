@@ -201,10 +201,14 @@
                   </button>
                 </form>
                 <ul v-if="task.comments?.length">
-                  <li v-for="(c, i) in task.comments" :key="c.id" class="mk-rise" :style="{ '--i': Math.min(i, 10) }">
+                  <li v-for="(c, i) in task.comments" :key="c.id" class="mk-rise"
+                      :class="{ 'is-mentioned-me': mentionsMe(c) }" :style="{ '--i': Math.min(i, 10) }">
                     <MkAvatar :user="c.user" :size="34" />
                     <div class="mk-comments__bubble">
-                      <header><b>{{ c.user?.name }}</b><small>{{ timeAgo(c.created_at) }}</small></header>
+                      <header>
+                        <b>{{ c.user?.name }}</b><small>{{ timeAgo(c.created_at) }}</small>
+                        <!-- <span v-if="mentionsMe(c)" class="mk-mention-tag"><iconify-icon icon="lucide:at-sign" /> Mentioned you</span> -->
+                      </header>
                       <p v-html="renderComment(c)" />
                     </div>
                   </li>
@@ -304,6 +308,7 @@ const tabs = computed(() => [
 const commentEl = ref(null)
 const picked = ref([]) // members chosen via the picker
 const mention = reactive({ open: false, query: '', start: -1, index: 0 })
+let deleted = false
 
 const mentionOptions = computed(() => {
   const q = mention.query.toLowerCase()
@@ -341,6 +346,7 @@ async function refresh() {
 
 watch(() => [props.modelValue, props.taskId], ([open, id], [wasOpen, oldId] = []) => {
   if (open && (!wasOpen || id !== oldId)) {
+      deleted = false
     task.value = null
     tab.value = props.canManage || props.initialTab !== 'history' ? props.initialTab : 'details'
     newLink.url = ''
@@ -351,10 +357,15 @@ watch(() => [props.modelValue, props.taskId], ([open, id], [wasOpen, oldId] = []
   }
 })
 
+
 function close() {
+  // The notification was marked read when the card was opened,
+  // so the board card should drop its "mentioned" style on close.
+  if (props.modelValue && task.value && !deleted) {
+    emit('updated', { ...task.value, mentioned_me: false })
+  }
   emit('update:modelValue', false)
 }
-
 function onKey(e) {
   if (e.key === 'Escape' && props.modelValue && !document.querySelector('.mk-modal')) close()
 }
@@ -463,6 +474,7 @@ async function remove() {
   try {
     await api.delete(`/marketing/tasks/${task.value.id}`)
     emit('deleted', task.value.id)
+    deleted = true
     toast('Card deleted', 'deleted')
     close()
   } catch (err) {
@@ -504,6 +516,7 @@ function onCommentKeyup(e) {
 function onCommentKeydown(e) {
   if (!mention.open || !mentionOptions.value.length) return
   const n = mentionOptions.value.length
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !mention.open) { addComment(); return }
   if (e.key === 'ArrowDown') { e.preventDefault(); mention.index = (mention.index + 1) % n }
   else if (e.key === 'ArrowUp') { e.preventDefault(); mention.index = (mention.index - 1 + n) % n }
   else if (e.key === 'Enter' || e.key === 'Tab') {
@@ -523,18 +536,40 @@ function pickMention(m) {
   const pos = mention.start + m.name.length + 2
   requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(pos, pos) })
 }
-
-function renderComment(c) {
-  let html = escapeHtml(c.body)
-  for (const m of c.mentions || []) {
-    const tag = escapeHtml('@' + m.name)
-    html = html.split(tag).join(`<span class="mk-mention">${tag}</span>`)
-  }
-  return html
-}
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 }
+const me = (() => {
+  try { return JSON.parse(localStorage.getItem('user') || 'null') } catch { return null }
+})()
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Mentions from the API, plus any @Member name found in the text. */
+function mentionList(c) {
+  const byId = new Map()
+  for (const m of c.mentions || []) byId.set(m.id, m)
+  for (const m of props.members) {
+    if (!byId.has(m.id) && c.body.includes('@' + m.name)) byId.set(m.id, m)
+  }
+  return [...byId.values()]
+}
+
+const mentionsMe = (c) => !!me && mentionList(c).some((m) => m.id === me.id)
+
+function renderComment(c) {
+  const html = escapeHtml(c.body)
+  const list = mentionList(c).sort((a, b) => b.name.length - a.name.length)
+  if (!list.length) return html
+  const byTag = new Map(list.map((m) => [escapeHtml('@' + m.name).toLowerCase(), m]))
+  const re = new RegExp(list.map((m) => escapeRe(escapeHtml('@' + m.name))).join('|'), 'g')
+  return html.replace(re, (tag) => {
+    const m = byTag.get(tag.toLowerCase())
+    const cls = me && m?.id === me.id ? 'mk-mention is-me' : 'mk-mention'
+    return `<span class="${cls}">${tag}</span>`
+  })
+}
+
+
 defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 </script>
 
@@ -800,4 +835,38 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   color: var(--color-primary); font-weight: 650; background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   padding: 0 4px; border-radius: 6px;
 }
+
+
+/* @someone: soft chip with a small 3D edge */
+.mk-comments__bubble :deep(.mk-mention) {
+  display: inline-block;
+  padding: 1px 9px;
+  margin: 0 2px;
+  border-radius: 8px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--color-primary);
+  background: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--color-primary) 14%, #fff) 100%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, #fff);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 2px 0 color-mix(in srgb, var(--color-primary) 30%, #fff);
+}
+
+/* @you: solid chip, same 3D style, stronger color */
+.mk-comments__bubble :deep(.mk-mention.is-me) {
+  color: var(--color-on-primary, #fff);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--color-primary) 85%, #fff) 0%,
+    var(--color-primary) 100%);
+  border-color: var(--color-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .35),
+    0 2px 0 color-mix(in srgb, var(--color-primary) 70%, #000),
+    0 5px 8px -3px rgba(28, 20, 48, .35);
+  transform: translateY(-1px);
+}
+
+
 </style>
