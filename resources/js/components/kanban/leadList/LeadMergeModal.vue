@@ -458,7 +458,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     left: 20%;
     right: 20%;
     height: 55%;
-    background: radial-gradient(ellipse, rgba(124, 58, 237, 0.08), transparent 70%);
+    background: radial-gradient(ellipse, rgba(var(--color-primary-rgb), 0.08), transparent 70%);
     pointer-events: none;
 }
 
@@ -481,7 +481,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #7c3aed;
+    color: var(--color-primary);
     margin-bottom: 2px;
 }
 .lm-head h6 {
@@ -582,10 +582,10 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     box-shadow: 0 4px 14px rgba(76, 29, 149, 0.08);
 }
 .lm-card.is-selected {
-    border-color: var(--color-primary, #7c3aed);
+    border-color: var(--color-primary);
     background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
     box-shadow:
-        0 0 0 1px rgba(124, 58, 237, 0.2),
+        0 0 0 1px rgba(var(--color-primary-rgb), 0.2),
         0 8px 20px rgba(76, 29, 149, 0.1);
 }
 .lm-radio {
@@ -609,8 +609,8 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     transform: scale(0.6);
 }
 .lm-card.is-selected .lm-radio {
-    border-color: var(--color-primary, #7c3aed);
-    background: var(--color-primary, #7c3aed);
+    border-color: var(--color-primary);
+    background: var(--color-primary);
 }
 .lm-card.is-selected .lm-radio__dot {
     background: #fff;
@@ -667,7 +667,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     width: 13px;
     height: 13px;
     font-size: 13px;
-    color: #7c3aed;
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -704,7 +704,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     text-transform: uppercase;
 }
 .lm-pill--primary {
-    background: var(--gradient-primary, linear-gradient(135deg, #7c3aed, #4c1d95));
+    background: var(--gradient-primary);
     color: #fff;
 }
 
@@ -713,7 +713,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     flex-direction: column;
     gap: 4px;
     padding: 14px;
-    border: 2px solid var(--color-primary, #7c3aed);
+    border: 2px solid var(--color-primary);
     border-radius: 14px;
     background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
     font-size: 12px;
@@ -723,7 +723,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
 .lm-default strong { color: #0B0736; font-size: 14px; }
 .lm-badge {
     align-self: flex-start;
-    background: var(--gradient-primary, linear-gradient(135deg, #7c3aed, #4c1d95));
+    background: var(--gradient-primary);
     color: #fff;
     font-size: 10px;
     font-weight: 800;
@@ -786,7 +786,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     justify-content: center;
     font-size: 28px;
     color: #fff;
-    background: var(--gradient-primary, linear-gradient(135deg, #7c3aed, #4c1d95));
+    background: var(--gradient-primary);
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.25) inset,
         0 8px 18px rgba(76, 29, 149, 0.3);
@@ -821,7 +821,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
 .lm-btn--ghost:hover:not(:disabled) { background: #e2e8f0; }
 .lm-btn--3d {
     overflow: hidden;
-    background: var(--gradient-primary, linear-gradient(135deg, #7c3aed, #4c1d95));
+    background: var(--gradient-primary);
     color: #fff;
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.22) inset,
@@ -860,7 +860,7 @@ watch(show, (v) => { if (v) load() }, { immediate: true })
     width: 18px;
     height: 18px;
     border: 2px solid #e2e8f0;
-    border-top-color: #7c3aed;
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: lmSpin 0.7s linear infinite;
 }

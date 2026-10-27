@@ -276,7 +276,7 @@ watch(() => [props.modelValue, props.mergedId], ([open]) => {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #7c3aed;
+    color: var(--color-primary);
 }
 
 .mv-dialog .mv-header__title {
@@ -385,13 +385,13 @@ watch(() => [props.modelValue, props.mergedId], ([open]) => {
 }
 .mv-tab.is-active {
     color: #0B0736;
-    border-bottom-color: #7c3aed;
+    border-bottom-color: var(--color-primary);
 }
 .mv-tab__n {
     font-size: 10px;
     font-weight: 700;
-    color: #7c3aed;
-    background: #f5f3ff;
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
     border-radius: 999px;
     padding: 0 5px;
     min-width: 16px;

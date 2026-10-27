@@ -615,10 +615,14 @@ class LeadMergeTest extends TestCase
         $this->assertNotNull(Lead::find($emptyPool->id));
     }
 
-    public function test_rule_b_does_not_absorb_dubai_or_empty_into_abu_dhabi_new_lead(): void
+    public function test_rule_b_absorbs_abu_dhabi_and_empty_but_skips_dubai(): void
     {
-        $dubaiPool = $this->lead(10, [
+        $abuPool = $this->lead(10, [
             'created_at' => now()->subDay(),
+            'lead_branch_source' => 'Abu Dhabi',
+        ]);
+        $dubaiPool = $this->lead(10, [
+            'created_at' => now()->subHours(18),
             'lead_branch_source' => 'Dubai',
         ]);
         $emptyPool = $this->lead(10, [
@@ -628,9 +632,34 @@ class LeadMergeTest extends TestCase
         $svc = app(\App\Services\EligibleStagesAutoMergeService::class);
         $neu = $this->lead(1, ['lead_branch_source' => 'Abu Dhabi']);
 
-        $this->assertSame([], $svc->absorbEligibleIntoNewLead($neu->fresh()));
+        $merged = $svc->absorbEligibleIntoNewLead($neu->fresh());
+
+        $this->assertEqualsCanonicalizing([$abuPool->id, $emptyPool->id], $merged);
+        $this->assertSame($neu->id, $this->raw($abuPool->id)->merged_into_lead_id);
+        $this->assertSame($neu->id, $this->raw($emptyPool->id)->merged_into_lead_id);
         $this->assertNull($this->raw($dubaiPool->id)->merged_into_lead_id);
-        $this->assertNull($this->raw($emptyPool->id)->merged_into_lead_id);
+    }
+
+    public function test_empty_branch_new_lead_absorbs_abu_dhabi_unqualified_live(): void
+    {
+        $unq = $this->lead(11, [
+            'created_at' => now()->subDay(),
+            'lead_branch_source' => 'Abu Dhabi',
+        ]);
+        $lost = $this->lead(2, [
+            'created_at' => now()->subHours(6),
+            'lead_branch_source' => 'Abu Dhabi',
+        ]);
+        $svc = app(\App\Services\EligibleStagesAutoMergeService::class);
+        // Super Admin create often has null lead_branch_source.
+        $neu = $this->lead(1, ['lead_branch_source' => null]);
+
+        $merged = $svc->afterLeadCreated($neu->fresh());
+
+        $this->assertEqualsCanonicalizing([$unq->id, $lost->id], $merged);
+        $this->assertSame(1, $this->raw($neu->id)->stage_id);
+        $this->assertNull(Lead::find($unq->id));
+        $this->assertNull(Lead::find($lost->id));
     }
 
     public function test_dubai_new_lead_never_auto_merges(): void

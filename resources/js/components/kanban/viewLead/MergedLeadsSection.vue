@@ -118,8 +118,8 @@ defineExpose({ reload: load })
     flex: 0 0 auto;
     font-size: 10px;
     font-weight: 700;
-    color: #7c3aed;
-    background: #f5f3ff;
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
     border-radius: 999px;
     min-width: 16px;
     height: 16px;
@@ -156,12 +156,12 @@ defineExpose({ reload: load })
 }
 
 .ml__name:hover {
-    color: #7c3aed;
+    color: var(--color-primary);
     text-decoration: underline;
 }
 
 .ml__name:focus-visible {
-    outline: 2px solid #c4b5fd;
+    outline: 2px solid var(--color-primary-muted);
     outline-offset: 2px;
     border-radius: 4px;
 }

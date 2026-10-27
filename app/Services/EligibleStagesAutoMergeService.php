@@ -60,7 +60,7 @@ class EligibleStagesAutoMergeService
 
     /**
      * After create (or a real phone-digit change): Rule B for New Lead, Rule A for eligible stages.
-     * Returns soft-merged lead ids (empty if none). Abu Dhabi only — Dubai is never auto-merged.
+     * Returns soft-merged lead ids (empty if none). Dubai is never auto-merged.
      *
      * @return int[]
      */
@@ -71,13 +71,15 @@ class EligibleStagesAutoMergeService
         }
 
         $lead->loadMissing(['responsiblePerson', 'addedBy']);
-        if (! $this->isAutoMergeAllowedBranch($lead)) {
-            return [];
-        }
 
         $newId = $this->newLeadStageId();
         if ($newId && (int) $lead->stage_id === $newId) {
+            // Rule B: Super Admin / empty-branch New Leads may still absorb Abu Dhabi Unq/Lost.
             return $this->absorbEligibleIntoNewLead($lead);
+        }
+
+        if (! $this->isAutoMergeAllowedBranch($lead)) {
+            return [];
         }
 
         if (in_array((int) $lead->stage_id, $this->eligibleStageIds(), true)) {
@@ -248,7 +250,8 @@ class EligibleStagesAutoMergeService
         }
 
         $newLead->loadMissing(['responsiblePerson', 'addedBy']);
-        if (! $this->isAutoMergeAllowedBranch($newLead)) {
+        // Dubai New Leads never absorb. Abu Dhabi + empty-branch (e.g. Super Admin) may.
+        if ($this->isDubaiBranch($newLead) || ! $this->canBeAutoMergePrimary($newLead)) {
             return [];
         }
 
@@ -269,7 +272,7 @@ class EligibleStagesAutoMergeService
                 }
 
                 $default->loadMissing(['responsiblePerson', 'addedBy']);
-                if (! $this->isAutoMergeAllowedBranch($default)) {
+                if ($this->isDubaiBranch($default) || ! $this->canBeAutoMergePrimary($default)) {
                     return;
                 }
 
@@ -286,8 +289,11 @@ class EligibleStagesAutoMergeService
                     return;
                 }
 
+                $allowEmptyCandidates = $this->isAutoMergeAllowedBranch($default)
+                    || $this->hasEmptyBranch($default);
+
                 $candidates = $candidates->load(['responsiblePerson', 'addedBy'])
-                    ->filter(fn (Lead $l) => $this->isAutoMergeAllowedBranch($l))
+                    ->filter(fn (Lead $l) => $this->canAbsorbCandidate($l, $allowEmptyCandidates))
                     ->values();
 
                 if (config('lead_merge.group_by_branch')) {
@@ -339,12 +345,43 @@ class EligibleStagesAutoMergeService
         return $merged;
     }
 
+    /** @return string[] lowercased non-empty branch labels for a lead */
+    private function branchHaystacks(Lead $lead): array
+    {
+        $lead->loadMissing(['responsiblePerson', 'addedBy']);
+
+        return array_values(array_filter([
+            mb_strtolower(trim((string) $lead->lead_branch_source)),
+            mb_strtolower(trim((string) ($lead->branch ?? ''))),
+            mb_strtolower(trim($lead->branchKey())),
+        ], static fn ($v) => $v !== ''));
+    }
+
+    public function hasEmptyBranch(Lead $lead): bool
+    {
+        return $this->branchHaystacks($lead) === [];
+    }
+
+    public function isDubaiBranch(Lead $lead): bool
+    {
+        foreach ($this->branchHaystacks($lead) as $hay) {
+            if (str_contains($hay, 'dubai')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
-     * Automatic merge only for configured branches (default: Abu Dhabi).
-     * Dubai / empty / other sources are excluded so they never soft-merge automatically.
+     * Automatic merge preferred branches (default: Abu Dhabi). Dubai never matches.
      */
     public function isAutoMergeAllowedBranch(Lead $lead): bool
     {
+        if ($this->isDubaiBranch($lead)) {
+            return false;
+        }
+
         $allowed = config('lead_merge.auto_merge_branch_keys', ['abu dhabi']);
         if (! is_array($allowed) || $allowed === []) {
             return false;
@@ -358,28 +395,51 @@ class EligibleStagesAutoMergeService
             return false;
         }
 
-        $haystacks = array_filter([
-            mb_strtolower(trim((string) $lead->lead_branch_source)),
-            mb_strtolower(trim($lead->branchKey())),
-        ], static fn ($v) => $v !== '');
-
+        $haystacks = $this->branchHaystacks($lead);
         if ($haystacks === []) {
             return false;
         }
 
         foreach ($haystacks as $hay) {
-            // Never auto-merge Dubai sources.
-            if (str_contains($hay, 'dubai')) {
-                return false;
-            }
+            $compact = str_replace([' ', '-', '_'], '', $hay);
             foreach ($allowed as $needle) {
-                if ($needle !== '' && str_contains($hay, $needle)) {
+                if ($needle === '') {
+                    continue;
+                }
+                if (str_contains($hay, $needle)) {
+                    return true;
+                }
+                $needleCompact = str_replace([' ', '-', '_'], '', $needle);
+                if ($needleCompact !== '' && str_contains($compact, $needleCompact)) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    /** New Lead primary may absorb when Abu Dhabi or branch still empty (not Dubai / other cities). */
+    public function canBeAutoMergePrimary(Lead $lead): bool
+    {
+        if ($this->isDubaiBranch($lead)) {
+            return false;
+        }
+
+        return $this->isAutoMergeAllowedBranch($lead) || $this->hasEmptyBranch($lead);
+    }
+
+    /** Eligible Unq/Lost/Pool candidate for Rule B absorb into a New Lead. */
+    public function canAbsorbCandidate(Lead $lead, bool $allowEmpty = false): bool
+    {
+        if ($this->isDubaiBranch($lead)) {
+            return false;
+        }
+        if ($this->isAutoMergeAllowedBranch($lead)) {
+            return true;
+        }
+
+        return $allowEmpty && $this->hasEmptyBranch($lead);
     }
 
     /**

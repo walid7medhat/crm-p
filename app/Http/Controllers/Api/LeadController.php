@@ -609,8 +609,15 @@ class LeadController extends Controller
                 'area:id,name',
             ]);
 
+            $card = (new KanbanLeadCardResource($lead))->resolve();
+            // Embed merge meta on data so create UI drops Unq/Lost cards live
+            // even if a client ignores response.meta.
+            if (is_array($autoMergeMeta)) {
+                $card = array_merge($card, $autoMergeMeta);
+            }
+
             return ApiResponse::success(
-                new KanbanLeadCardResource($lead),
+                $card,
                 'Lead created successfully',
                 201,
                 $autoMergeMeta
