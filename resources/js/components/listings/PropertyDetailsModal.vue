@@ -103,7 +103,7 @@ body.property-details-modal-open .mobile-tab-bar {
   /* Above the View Lead popup (.modal 2000) — e.g. opened from a lead's Matching
      Properties — but below what the property page opens on top of itself (mobile
      sheets 12500, owner details 105000, SweetAlert 1000000). Was 1055 → opened under it. */
-  z-index: 2100;
+  z-index: 12201 !important;
   background: rgba(15, 23, 42, 0.6);
   display: flex;
   align-items: flex-start;
