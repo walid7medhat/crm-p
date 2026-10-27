@@ -150,7 +150,12 @@ public function resetPassword(Request $request): JsonResponse
         // Create token
         $token = auth()->login($user);
 
-        // $this->recordSignInLocation($user, $request);
+        // Always stamp last login time/IP (location/geolocation stays optional via auth/location).
+        $user->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ])->save();
+
         $user->refresh();
         $user->load('roles', 'permissions');
 

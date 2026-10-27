@@ -31,7 +31,11 @@
                                      alt="User Avatar" 
                                      class="profile-avatar  "
                                      @error="handleImageError">
-                                <!-- <div class="online-status" :class="user.status"></div> -->
+                                <div
+                                    v-if="isSuperAdminViewer && isUserOnline"
+                                    class="online-status active"
+                                    title="Online"
+                                ></div>
                             </div>
                         </div>
                         <div class="col-md-5">
@@ -44,6 +48,10 @@
                                         <span class="user-status" :class="user.status">
                                             {{ user.status === 'active' ? 'Active' : 'Inactive' }}
                                         </span>
+                                        <span
+                                            v-if="isSuperAdminViewer && isUserOnline"
+                                            class="user-online-badge"
+                                        >Online</span>
                                     </div>
                                     </div>
                                     <div class="user-contact">
@@ -75,6 +83,12 @@
                                                 <label class="col-3">Branch:</label>
                                                 <span v-if="user.admin_parent_name" class=" text-muted col-6 mb-0">
                                                     {{ user.admin_parent_name }}
+                                                </span>
+                                        </div>
+                                        <div class="col-12">
+                                                <label class="col-3">Last Login:</label>
+                                                <span class="text-muted col-6 mb-0">
+                                                    {{ formatLastLoginDetail(user.last_login_at) }}
                                                 </span>
                                         </div>
                                         <div class="col-12" v-if="isAdminOrSuperAdmin">
@@ -665,6 +679,27 @@ export default {
             }
         },
 
+        isSuperAdminViewer() {
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                return (me?.roles || []).includes('super_admin');
+            } catch {
+                return false;
+            }
+        },
+
+        /** Active in the last 15 minutes (from last_login_at / presence touch). */
+        isUserOnline() {
+            if (!this.user?.last_login_at) return false;
+            const raw = String(this.user.last_login_at).trim();
+            let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+            if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) normalized += '+04:00';
+            const lastLogin = new Date(normalized);
+            if (Number.isNaN(lastLogin.getTime())) return false;
+            const diffMinutes = (Date.now() - lastLogin.getTime()) / (1000 * 60);
+            return diffMinutes >= 0 && diffMinutes <= 15;
+        },
+
         /** Current logged-in user can manage vacation for the viewed user.
          *  Allowed: admin / super_admin, OR manager with listing_team=1 (the
          *  backend additionally verifies the viewed user is in their hierarchy).
@@ -742,6 +777,28 @@ export default {
     methods: {
         hidesBedsBaths,
         openPropertyDetailsFromClick,
+        formatLastLoginDetail(timestamp) {
+            if (!timestamp) return 'Never';
+            const raw = String(timestamp).trim();
+            let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+            if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) normalized += '+04:00';
+            const loginTime = new Date(normalized);
+            if (Number.isNaN(loginTime.getTime())) return 'Never';
+            const now = new Date();
+            const diffMins = Math.floor((now - loginTime) / 60000);
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return loginTime.toLocaleString('en-US', {
+                timeZone: 'Asia/Dubai',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+            });
+        },
         async fetchUser() {
             try {
                 this.loading = true;
@@ -1212,11 +1269,31 @@ export default {
 }
 
 .online-status.active {
-    background-color: #28a745;
+    background-color: #22c55e;
 }
 
 .online-status.inactive {
     background-color: #dc3545;
+}
+
+.user-online-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.user-online-badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
 }
 
 .user-name {

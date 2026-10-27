@@ -77,6 +77,7 @@
                         @click="toggleStatusShortcut('in_active')"
                     >Inactive</button>
                     <button
+                        v-if="hasSuperAdminRole()"
                         type="button"
                         class="agents-mobile__chip"
                         :class="{ 'is-on': onlineOnly }"
@@ -123,7 +124,7 @@
                                 height="44"
                                 @error="handleImageError"
                             />
-                            <span v-if="isUserOnline(user)" class="agents-mobile__online"></span>
+                            <span v-if="canSeeOnlineStatus(user)" class="agents-mobile__online"></span>
                         </span>
                         <div class="agents-mobile__body">
                             <div class="agents-mobile__name">{{ user.name }}</div>
@@ -132,9 +133,9 @@
                                 <span v-if="user.role_name" class="agents-mobile__role">{{ user.role_name.replace(/_/g, ' ') }}</span>
                                 <span class="agents-mobile__branch">{{ user.branch || user.department || user.office_name || '—' }}</span>
                             </div>
-                            <div class="agents-mobile__login" :class="{ 'is-online': isUserOnline(user) }">
-                                <span v-if="isUserOnline(user)" class="agents-mobile__login-dot" aria-hidden="true"></span>
-                                {{ isUserOnline(user) ? 'Online' : 'Last login ' + formatLastLoginClock(user.last_login_at) }}
+                            <div class="agents-mobile__login" :class="{ 'is-online': canSeeOnlineStatus(user) }">
+                                <span v-if="canSeeOnlineStatus(user)" class="agents-mobile__login-dot" aria-hidden="true"></span>
+                                {{ canSeeOnlineStatus(user) ? 'Online' : 'Last login ' + formatLastLoginClock(user.last_login_at) }}
                             </div>
                         </div>
                         <div class="agents-mobile__side" @click.stop>
@@ -249,7 +250,7 @@
                                                 height="32"
                                                 @error="handleImageError"
                                             />
-                                            <span v-if="isUserOnline(user)" class="user-name-link__online"></span>
+                                            <span v-if="canSeeOnlineStatus(user)" class="user-name-link__online"></span>
                                         </span>
                                         <span class="user-name-link__name">{{ user.name }}</span>
                                     </div>
@@ -319,8 +320,12 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span v-if="user.last_login_at" class="text-sm">
-                                        {{ formatLastLogin (user.last_login_at) }}
+                                    <span v-if="canSeeOnlineStatus(user)" class="text-sm text-success fw-semibold d-inline-flex align-items-center gap-1">
+                                        <span class="user-online-pill-dot" aria-hidden="true"></span>
+                                        Online
+                                    </span>
+                                    <span v-else-if="user.last_login_at" class="text-sm">
+                                        {{ formatLastLogin(user.last_login_at) }}
                                     </span>
                                     <span v-else class="text-muted text-sm">Never</span>
                                 </td>
@@ -790,7 +795,7 @@ export default {
                 if (this.statusFilter) {
                     params.set('status', this.statusFilter);
                 }
-                if (this.onlineOnly) {
+                if (this.onlineOnly && this.hasSuperAdminRole()) {
                     params.set('online', '1');
                 }
 
@@ -1123,6 +1128,11 @@ export default {
             return diffMinutes >= 0 && diffMinutes <= 15;
         },
 
+        /** Online highlight is super_admin only. */
+        canSeeOnlineStatus(user) {
+            return this.hasSuperAdminRole() && this.isUserOnline(user);
+        },
+
         /**
          * Laravel UserResource uses asset('storage/...'), which often points at APP_URL
          * (e.g. http://127.0.0.1:8001) while the SPA runs on another host. Use the same
@@ -1321,6 +1331,15 @@ export default {
     border-radius: 50%;
     background: #22c55e;
     border: 2px solid #fff;
+}
+
+.users-list .user-online-pill-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .users-list .user-name-link__name {
