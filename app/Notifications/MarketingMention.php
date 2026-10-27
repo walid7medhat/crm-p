@@ -6,6 +6,7 @@ use App\Models\MarketingTask;
 use App\Models\MarketingTaskComment;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
@@ -21,21 +22,44 @@ class MarketingMention extends Notification
 
     public function via($notifiable): array
     {
-        return ['database']; // add 'broadcast' / 'mail' if you use them
+        return ['database', 'broadcast'];
     }
 
-   public function toArray($notifiable): array
+    public function toDatabase($notifiable): array
+    {
+        return $this->payload();
+    }
+
+    public function toArray($notifiable): array
+    {
+        return $this->payload();
+    }
+
+    public function toBroadcast($notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->payload());
+    }
+
+    private function payload(): array
     {
         return [
-            // shown in the bell and on the notifications page
+            // bell + notifications page
             'message' => "{$this->by->name} mentioned you in \"{$this->task->title}\": " . Str::limit($this->comment->body, 100),
 
-            // routing: must match marketingFromNotification()
+            // same keys as MarketingTaskNotification, so the live pop-up can handle it
             'type'               => 'marketing',
+            'action_type'        => 'mentioned',
             'marketing_task_id'  => $this->task->id,
             'marketing_category' => $this->task->category,
-            'drawer_tab'         => 'comments',
-            'comment_id'         => $this->comment->id,
+            'title'              => $this->task->title,
+            'user_id'            => $this->by->id,
+            'user_name'          => $this->by->name,
+            'changes'            => [],
+            'timestamp'          => now()->toISOString(),
+
+            // routing: must match marketingFromNotification()
+            'drawer_tab' => 'comments',
+            'comment_id' => $this->comment->id,
 
             // notifications page: avatar, name pill, type chip
             'notification_type'         => 'marketing_mention',
