@@ -8146,7 +8146,9 @@ const loadPdfLogo = () => new Promise((resolve) => {
   img.src = pnglogo;
 });
 
-const PAYMENT_INSTALLMENT_PAGE1_MAX = 12;
+// Installment data rows that fit with Other Costs on one Payment Details page.
+// More than this → first N on page 1; remaining rows + Other Costs on page 2.
+const PAYMENT_INSTALLMENT_PAGE1_MAX = 7;
 
 const paintPaymentDetailsPage = async (pdf, container) => {
   const model = paymentSlideModel;
@@ -8806,8 +8808,8 @@ const createPaymentDetailsSlide = () => {
   }));
 
   // Page split:
-  // - ≤12 installments → slide 1 installments; Other Costs on next slide
-  // - >12 installments → first 12 on slide 1; remaining + Other Costs on slide 2
+  // - ≤7 installment rows → everything (installments + Other Costs) on one page
+  // - >7 installment rows → first 7 on page 1; remaining + Other Costs on page 2
   const pages = [];
   if (showInstallments && allInstallments.length > PAYMENT_INSTALLMENT_PAGE1_MAX) {
     pages.push({
@@ -8833,18 +8835,8 @@ const createPaymentDetailsSlide = () => {
       showInstallments: true,
       installments: allInstallments,
       showInstallmentTotal: true,
-      showExpenses: false,
+      showExpenses: hasExpenses,
     });
-    if (hasExpenses) {
-      pages.push({
-        slideId: 'payment-details-slide-2',
-        showCards: false,
-        showInstallments: false,
-        installments: [],
-        showInstallmentTotal: false,
-        showExpenses: true,
-      });
-    }
   } else {
     pages.push({
       slideId: 'payment-details-slide',
