@@ -15,7 +15,6 @@
          @hidden="handleClose"
     >
         <div
-            v-if="show"
             ref="leadModalRoot"
             class="view-lead-modal-content"
             :class="{ 'lead-detail-motion': detailAnimating }"
@@ -1592,6 +1591,10 @@ const handleClose = () => {
   detailExitGuard = false
   detailAnimating.value = false
   show.value = false
+  if (leadModalRoot.value?.style) {
+    leadModalRoot.value.style.opacity = ''
+    leadModalRoot.value.style.transform = ''
+  }
   if (props.syncUrl && route.query.lead) {
     // No `path` — this modal is embedded on more than one page (Kanban, Lead Pool inside
     // kanban_deal, …), so pushing a query-only location keeps whichever page it's actually
@@ -1702,6 +1705,29 @@ async function askEditGuard() {
   return (await ask()) !== false
 }
 
+function forceHideStuckLeadModal() {
+    const modal = document.getElementById('view-lead-modal')
+    if (!modal || show.value) return
+    // After @hide preventDefault, bootstrap-vue can leave .modal.show with an empty
+    // white shell when content was torn down or opacity animated to 0.
+    if (modal.classList.contains('show') || modal.style.display === 'block') {
+        modal.classList.remove('show')
+        modal.style.display = 'none'
+        modal.setAttribute('aria-hidden', 'true')
+        document.body.classList.remove('modal-open')
+        document.body.style.removeProperty('padding-right')
+        document.body.style.removeProperty('overflow')
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+            // Only remove orphaned backdrops once no other bootstrap modal is open.
+            if (!document.querySelector('.modal.show')) backdrop.remove()
+        })
+    }
+    if (leadModalRoot.value?.style) {
+        leadModalRoot.value.style.opacity = ''
+        leadModalRoot.value.style.transform = ''
+    }
+}
+
 async function closeWithMotion() {
     if (detailExitGuard) return
     if (!(await askEditGuard())) return
@@ -1709,11 +1735,21 @@ async function closeWithMotion() {
     detailExitGuard = true
     entranceToken += 1
     detailAnimating.value = false
-    await playLeadDetailExit(leadModalRoot.value)
+    try {
+        await playLeadDetailExit(leadModalRoot.value)
+    } catch (_) {
+        /* still force-close below */
+    }
     show.value = false
+    await nextTick()
+    requestAnimationFrame(() => {
+        forceHideStuckLeadModal()
+        detailExitGuard = false
+    })
 }
 
 function onDetailHide(event) {
+    // Second hide (after closeWithMotion sets show=false) must proceed.
     if (detailExitGuard) return
     if (!event || typeof event.preventDefault !== 'function') return
     event.preventDefault()
