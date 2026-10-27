@@ -90,6 +90,7 @@
             hide-footer
             size="md"
             class="person-modal"
+            :z-index="14500"
             @hidden="resetPersonModal"
         >
             <div class="person-modal-content">

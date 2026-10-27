@@ -82,6 +82,7 @@
             hide-footer
             size="md"
             class="person-modal"
+            :z-index="14500"
             @hidden="resetPersonModal"
         >
             <div class="person-modal-content">
@@ -699,6 +700,20 @@ const updateResponsiblePerson = async () => {
 
 <style>
 /* Global override because bootstrap modal is teleported outside scoped root */
+/* Above ViewLeadModal (12200) so Change Responsible is not trapped behind it. */
+.modal.person-modal,
+.person-modal.modal {
+    z-index: 14500 !important;
+}
+.modal.person-modal .modal-backdrop,
+.person-modal.modal .modal-backdrop {
+    z-index: 1 !important;
+}
+.modal.person-modal .modal-dialog,
+.person-modal.modal .modal-dialog {
+    position: relative;
+    z-index: 2 !important;
+}
 .person-modal .modal-header h5.modal-title {
     font-size: 17px !important;
     line-height: 1.2 !important;
