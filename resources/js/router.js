@@ -31,6 +31,12 @@ const baseRoutes = [
         component: () => import('./pages/system-overview/SystemOverview.vue'),
         meta: { requiresAuth: true, requiresAdmin: true },
       },
+      {
+        path: '/system-explorer',
+        name: 'system-explorer',
+        component: () => import('./pages/system-explorer/index.vue'),
+        meta: { requiresAuth: true, requiresSuperAdmin: true },
+      },
 
       { path: '/attendance-monthly-reports', component: () => import('./pages/hr/attendance-monthly-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Kanban Route — Leads tab requires the 'show-leads' permission (or admin)

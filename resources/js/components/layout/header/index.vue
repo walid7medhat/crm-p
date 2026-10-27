@@ -1388,6 +1388,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/system-overview', label: 'System Map', iconSrc: dashboardIcon.value });
   }
   if (isSuperAdmin.value) {
+    system.push({ path: '/system-explorer', label: 'System Explorer', icon: 'lucide:map' });
     system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });
     system.push({ path: '/agent-performance', label: 'Agent Performance', iconSrc: agentsIcon.value });
     system.push({ path: '/import-pitrix', label: 'Import Leads', iconSrc: leadsIcon.value });

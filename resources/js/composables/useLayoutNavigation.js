@@ -119,6 +119,7 @@ const LISTINGS_PREFIXES = [
 const SETTINGS_PREFIXES = [
   '/logs',
   '/system-overview',
+  '/system-explorer',
   '/attendance-monthly-reports',
   '/roles',
   '/add-role',
@@ -356,7 +357,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
         label: 'System & Logs',
         type: 'route',
         path: '/system-overview',
-        matchPaths: ['/system-overview', '/logs', '/agent-performance', '/attendance-monthly-reports', '/project-map', '/import-pitrix', '/area-coordinates'],
+        matchPaths: ['/system-overview', '/system-explorer', '/logs', '/agent-performance', '/attendance-monthly-reports', '/project-map', '/import-pitrix', '/area-coordinates'],
       });
     }
 

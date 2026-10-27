@@ -5449,13 +5449,26 @@ ${owner.address ? `Address: ${owner.address}` : ''}
       window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
-    // Image functions
+    // Image functions — relative /storage/ paths (Laravel asset() host can disagree with the SPA origin)
     const getImageUrl = (path) => {
       if (!path) return '/default-property.jpg';
-      if (path.startsWith('http://') || path.startsWith('https://')) return path;
       if (path.includes('/storage/http://') || path.includes('/storage/https://')) {
         const urlParts = path.split('/storage/');
         return urlParts[1] || urlParts[0];
+      }
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        try {
+          const parsed = new URL(path);
+          // Keep watermark / API image routes as-is; only rewrite public disk URLs to this origin
+          if (parsed.pathname.includes('/storage/')) {
+            const pageOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+            const badLocal = /^(127\.0\.0\.1|localhost)$/i.test(parsed.hostname);
+            if (pageOrigin && (badLocal || parsed.origin !== pageOrigin)) {
+              return `${pageOrigin}${parsed.pathname}${parsed.search}`;
+            }
+          }
+        } catch { /* keep original */ }
+        return path;
       }
       if (path.startsWith('/storage/')) return path;
       return `/storage/${path}`;
@@ -5749,7 +5762,7 @@ const collectOfferImageUrls = () => {
   const push = (u) => { if (u) urls.add(u); };
 
   push(getMainImage());
-  (property.value?.gallery_images || []).slice(0, OFFER_GALLERY_MAX).forEach((img) => push(getImageUrl(img.image_url)));
+  (property.value?.gallery_images || []).slice(0, OFFER_GALLERY_MAX).forEach((img) => push(getImageUrl(img.image_url || img.image_url_final)));
   (property.value?.floor_plans || []).slice(0, 2).forEach((img) => push(getImageUrl(img.image_url)));
 
   const project = property.value?.project;
@@ -5960,13 +5973,18 @@ const tryAddOfferImage = (pdf, dataUrl, x, y, w, h) => {
 };
 
 const drawOfferFooter = (pdf) => {
+  const footerTop = 137;
+  const footerH = 11;
   pdf.setFillColor(11, 7, 54);
-  pdf.rect(0, 133, 210, 15, 'F');
+  pdf.rect(0, footerTop, 210, footerH, 'F');
+  pdf.setFillColor(200, 157, 110); // #C89D6E
+  pdf.rect(0, footerTop, 210, 0.55, 'F'); // gold line above footer content
+  pdf.rect(8, footerTop + 3.2, 0.65, 4.6, 'F');
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
   pdf.setTextColor(255, 255, 255);
-  pdf.text('Powered By altcrm', 8, 142);
-  pdf.text('Oia Properties', 202, 142, { align: 'right' });
+  pdf.text('Oia Properties', 11.5, footerTop + footerH / 2, { baseline: 'middle' });
+  pdf.text('Powered by Altcrm', 202, footerTop + footerH / 2, { align: 'right', baseline: 'middle' });
 };
 
 const darkenOfferImage = (dataUrl, amount) => new Promise((resolve) => {
@@ -6102,37 +6120,56 @@ const offerCoverFields = () => {
 };
 
 const drawMobileCover = async (pdf, logo) => {
+  // Same Figma cover as createSlide1: white left panel + photo right + navy footer.
   const fields = offerCoverFields();
-  coverBadgeLabel = fields.badge;
-  paintOfferPhoto(pdf, await darkenOfferJpeg(fields.background, 0.45));
-  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
+  coverBadgeLabel = '';
+  const gold = [200, 157, 110]; // #C89D6E
+  const navy = [11, 7, 54];
   pdf.setFillColor(255, 255, 255);
-  pdf.roundedRect(10, 70, 112, 56, 4, 4, 'F');
-  pdf.setFillColor(1, 6, 45);
+  pdf.rect(0, 0, 210, 148, 'F');
+  const photo = fields.background;
+  if (photo) {
+    const cropped = await cropOfferImageToBox(photo, 109, 133);
+    tryAddOfferImage(pdf, cropped, 101, 0, 109, 133);
+  } else {
+    pdf.setFillColor(...navy);
+    pdf.rect(101, 0, 109, 133, 'F');
+  }
+  if (logo) tryAddOfferImage(pdf, logo, 186, 6, 16, 11);
+
+  pdf.setTextColor(...navy);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(9);
-  const badgeTextWidth = typeof pdf.getTextWidth === 'function' ? pdf.getTextWidth(fields.badge) : fields.badge.length * 2.2;
-  const badgeW = Math.max(28, badgeTextWidth + 8);
-  pdf.roundedRect(18, 66, badgeW, 8, 1.5, 1.5, 'F');
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
+  pdf.text('PROPERTY OFFER', 12, 22, { charSpace: 0.6 });
+  pdf.setFillColor(...gold);
+  pdf.roundedRect(12, 24.2, 16, 0.85, 0.3, 0.3, 'F');
+
+  pdf.setFontSize(8);
+  const badgeW = Math.max(28, (typeof pdf.getTextWidth === 'function' ? pdf.getTextWidth(fields.badge) : fields.badge.length * 2) + 8);
+  pdf.roundedRect(12, 30, badgeW, 7.2, 1.4, 1.4, 'F');
   pdf.setTextColor(255, 255, 255);
-  pdf.text(fields.badge, 18 + badgeW / 2, 71.2, { align: 'center' });
-  pdf.setTextColor(11, 7, 54);
-  pdf.setFontSize(15);
-  pdf.text(pdf.splitTextToSize(String(fields.projectTitle).toUpperCase(), 96).slice(0, 2), 16, 84);
-  pdf.setFont('helvetica', 'bold');
+  pdf.text(fields.badge, 12 + badgeW / 2, 30 + 7.2 / 2, { align: 'center', baseline: 'middle' });
+
+  pdf.setTextColor(...navy);
+  pdf.setFontSize(18);
+  const titleLines = pdf.splitTextToSize(String(fields.projectTitle).toUpperCase(), 80).slice(0, 2);
+  pdf.text(titleLines, 12, 54);
+  const afterTitleY = 54 + (titleLines.length - 1) * 7 + 8;
   pdf.setFontSize(11);
-  pdf.setTextColor(1, 6, 45);
-  pdf.text(pdf.splitTextToSize(fields.subtitle || '', 96).slice(0, 1), 16, 100);
+  pdf.setTextColor(31, 41, 55);
+  pdf.text(pdf.splitTextToSize(fields.subtitle || '', 80).slice(0, 1), 12, afterTitleY);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
-  pdf.setTextColor(107, 114, 128);
-  pdf.text(pdf.splitTextToSize(fields.location, 96).slice(0, 1), 16, 108);
+  pdf.setTextColor(156, 163, 175);
+  pdf.text(pdf.splitTextToSize(fields.location, 80).slice(0, 1), 12, afterTitleY + 7);
+  pdf.setFillColor(232, 214, 190); // soft gold divider
+  pdf.rect(12, afterTitleY + 12, 78, 0.35, 'F');
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.setTextColor(1, 6, 45);
-  pdf.text(fields.priceText, 16, 118);
+  pdf.setFontSize(8);
+  pdf.setTextColor(...navy);
+  pdf.text('PRICE', 12, afterTitleY + 20, { charSpace: 0.5 });
+  pdf.setFontSize(16);
+  pdf.text(fields.priceText, 12, afterTitleY + 28);
   drawOfferFooter(pdf);
 };
 
@@ -6422,7 +6459,22 @@ const drawMobileThanks = async (pdf, currentUser) => {
   pdf.text(String(currentUser?.name || ''), 150, 120);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(11);
-  pdf.text(String(currentUser?.phone || ''), 150, 128);
+  const phone = String(currentUser?.phone || '').trim();
+  const tel = phone.replace(/[^\d+]/g, '');
+  const phoneY = 128;
+  const phoneX = 150;
+  if (phone) {
+    const iconUri = offerIconUri(OFFER_ICON_PATHS.phone, { color: OFFER_GOLD, sizeAttr: '48' });
+    const iconPng = await offerIconPng(iconUri, 96);
+    if (iconPng) tryAddOfferImage(pdf, iconPng, phoneX, phoneY - 3.2, 4, 4);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(phone, phoneX + 5.5, phoneY);
+    try {
+      pdf.link(phoneX - 1, phoneY - 5, Math.max(pdf.getTextWidth(phone) + 8, 40), 10, { url: `tel:${tel}` });
+    } catch {
+      // ignore link failures on older pdf engines
+    }
+  }
   drawOfferFooter(pdf);
 };
 
@@ -6454,7 +6506,7 @@ const buildMobileOfferPdf = async (currentUser) => {
   const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
   const logo = await imgUrlToPng(OiaLogo, 160);
   const paymentHtml = createPaymentDetailsSlide();
-  const hasPayment = Boolean(paymentHtml);
+  const paymentPageCount = paymentSlideModel?.pages?.length || (paymentHtml ? 1 : 0);
   const hasFloor = Array.isArray(property.value?.floor_plans) && property.value.floor_plans.length > 0;
   const hasProject = Boolean(property.value?.project?.id);
   const hasAmenities = rememberAmenitiesModel();
@@ -6463,7 +6515,8 @@ const buildMobileOfferPdf = async (currentUser) => {
   for (let index = 0; index < gallery.length; index += OFFER_GALLERY_PER_SLIDE) galleryChunks.push(gallery.slice(index, index + OFFER_GALLERY_PER_SLIDE));
 
   const pages = ['cover', 'details'];
-  if (hasPayment) pages.push('payment');
+  if (paymentPageCount >= 1) pages.push('payment');
+  if (paymentPageCount >= 2) pages.push('payment-2');
   if (hasFloor) pages.push('floor');
   galleryChunks.forEach((chunk) => pages.push({ type: 'gallery', images: chunk }));
   if (hasProject) pages.push('about');
@@ -6478,6 +6531,7 @@ const buildMobileOfferPdf = async (currentUser) => {
     const marker = document.createElement('div');
     if (kind === 'cover') marker.id = 'cover-slide';
     if (kind === 'payment') marker.id = 'payment-details-slide';
+    if (kind === 'payment-2') marker.id = 'payment-details-slide-2';
     if (kind === 'amenities') marker.id = 'amenities-features-slide';
     container.appendChild(marker);
 
@@ -6567,11 +6621,16 @@ const showMobileOfferReady = ({ blob, filename, offerNumber, creatorName }) => {
   } catch {
     pdfFile = null;
   }
+  const callTel = offerThankYouTel || offerTelHref(offerThankYouPhone);
+  const callBtn = callTel
+    ? `<a id="mobile-offer-call" href="tel:${escapeOfferHtml(callTel)}" style="${mobileOfferButtonStyle(false)};text-decoration:none;margin-top:10px;">Call ${escapeOfferHtml(offerThankYouPhone || callTel)}</a>`
+    : '';
   const root = renderMobileOfferPanel(`
     <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Offer ready</p>
     <p style="margin:0 0 4px;font-size:14px;color:#334155;"><strong>Offer number:</strong> ${escapeOfferHtml(offerNumber)}</p>
     <p style="margin:0 0 16px;font-size:14px;color:#334155;"><strong>Created by:</strong> ${escapeOfferHtml(creatorName || 'You')}</p>
     <button type="button" id="mobile-offer-download" style="${mobileOfferButtonStyle(true)}">Download PDF</button>
+    ${callBtn}
     <button type="button" id="mobile-offer-close" style="${mobileOfferButtonStyle(false)}">Close</button>
   `);
   const release = () => setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
@@ -6794,6 +6853,7 @@ const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}) => {
   await paintPaymentDetailsPage(pdf, pdfContent);
   await paintAmenitiesPage(pdf, pdfContent);
   paintCoverBadge(pdf, pdfContent);
+  await paintThankYouCallLink(pdf, pdfContent);
   return pdf;
 };
 
@@ -6998,16 +7058,15 @@ const createNewDesignContent = (currentUser) => {
   return container;
 };
 
-// Offer gallery: up to 8 photos, 2 per slide side by side (50/50).
+// Offer gallery: up to 4 slides × 2 photos (Figma GALLERY layout).
 const OFFER_GALLERY_MAX = 8;
 const OFFER_GALLERY_PER_SLIDE = 2;
+const OFFER_GALLERY_SLIDES_MAX = 4;
 
 const createGallerySlides = () => {
   const images = (property.value?.gallery_images || []).slice(0, OFFER_GALLERY_MAX);
-
-  const chunks = chunkArray(images, OFFER_GALLERY_PER_SLIDE);
-
-  return chunks.map(chunk => createGallerySlide(chunk)).join('');
+  const chunks = chunkArray(images, OFFER_GALLERY_PER_SLIDE).slice(0, OFFER_GALLERY_SLIDES_MAX);
+  return chunks.map((chunk) => createGallerySlide(chunk)).join('');
 };
 const chunkArray = (arr, size = 3) => {
   const result = [];
@@ -7017,25 +7076,26 @@ const chunkArray = (arr, size = 3) => {
   return result;
 };
 const createGallerySlide = (imagesChunk) => {
-  // 2 photos side by side (50/50); a lone last photo fills the slide. Logo on the last one.
-  const urls = imagesChunk.map((img) => pdfImg(getImageUrl(img.image_url)));
-  const panels = urls.map((url, index) => {
-    const logo = index === urls.length - 1 ? `
-        <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
-        </div>` : '';
-    return `
-      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${url}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">${logo}
-      </div>`;
-  }).join('');
+  // Figma: white page, GALLERY title + gold underline, dark logo, 2 photos side-by-side, navy footer.
+  const urls = imagesChunk
+    .map((img) => pdfImg(getImageUrl(img.image_url || img.image_url_final)))
+    .filter(Boolean);
+  while (urls.length < 2) urls.push('');
+  const panels = urls.slice(0, 2).map((url) => `
+      <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background:#f3f4f6 !important; ${url ? `background-image:url('${url}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;` : ''}"></div>`).join('');
+  const heading = makeOfferSectionHeadingImg('GALLERY', { fontMm: 3.6, marginBottomMm: 0 });
 
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important; display:flex !important; flex-direction:column !important;">
-
-    <div style="width:100% !important; height:90% !important; padding:4mm !important; box-sizing:border-box !important; display:flex !important; gap:3mm !important; overflow:hidden !important;">
-      ${panels}
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#ffffff !important; position:relative !important; overflow:hidden !important; font-family:Arial, Helvetica, sans-serif !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; box-sizing:border-box !important; padding:8mm 8mm 5mm 8mm !important; display:flex !important; flex-direction:column !important;">
+      <div style="display:flex !important; align-items:flex-start !important; justify-content:space-between !important; flex-shrink:0 !important; margin:0 0 5mm 0 !important;">
+        <div>${heading}</div>
+        <img src="${pnglogo}" alt="Oia Properties" style="width:16mm !important; height:auto !important; display:block !important;" />
+      </div>
+      <div style="flex:1 !important; min-height:0 !important; display:flex !important; flex-direction:row !important; gap:3mm !important; overflow:hidden !important;">
+        ${panels}
+      </div>
     </div>
-
     ${createFooter()}
   </div>
   `;
@@ -7082,6 +7142,124 @@ const listingImageUrlBySlot = (slot) => {
 };
 const getListingImageBySlot = (slot) => pdfImg(listingImageUrlBySlot(slot));
 
+const OFFER_GOLD = '#C89D6E';
+const OFFER_COVER_PX = 12; // px per mm — crisp bitmaps so html2canvas cannot clip these chrome bits
+
+const offerRoundRectPath = (ctx, x, y, w, h, r) => {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+};
+
+/** Section title + gold underline under the first word — rasterised (html2canvas clips live text). */
+const makeOfferSectionHeadingImg = (label, { fontMm = 3.1, marginBottomMm = 4.5 } = {}) => {
+  const px = OFFER_COVER_PX;
+  const fontPx = fontMm * px;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const text = String(label || '').toUpperCase();
+  const underlineWord = text.split(/\s+/)[0] || text;
+  ctx.font = `700 ${fontPx}px Arial, Helvetica, sans-serif`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${0.55 * px}px`;
+  const textW = Math.ceil(ctx.measureText(text).width);
+  const propW = Math.ceil(ctx.measureText(underlineWord).width);
+  const lineH = Math.round(0.9 * px);
+  const gap = Math.round(1.7 * px);
+  const padX = 2;
+  canvas.width = textW + padX * 2;
+  canvas.height = Math.ceil(fontPx * 1.15) + gap + lineH;
+  ctx.font = `700 ${fontPx}px Arial, Helvetica, sans-serif`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${0.55 * px}px`;
+  ctx.fillStyle = '#0B0736';
+  ctx.textBaseline = 'top';
+  ctx.fillText(text, padX, 0);
+  ctx.fillStyle = OFFER_GOLD;
+  offerRoundRectPath(ctx, padX, Math.ceil(fontPx * 1.05) + gap - lineH, Math.max(propW * 0.92, 8 * px), lineH, lineH / 2);
+  ctx.fill();
+  const wMm = canvas.width / px;
+  const hMm = canvas.height / px;
+  const src = canvas.toDataURL('image/png');
+  canvas.width = 0;
+  canvas.height = 0;
+  return `<img src="${src}" alt="${text}" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; display:block !important; margin:0 0 ${marginBottomMm}mm 0 !important;" />`;
+};
+const makePropertyOfferHeadingImg = () => makeOfferSectionHeadingImg('PROPERTY OFFER', { marginBottomMm: 4.5 });
+
+/** Gold FOR SALE (or FOR RENT) pill — rasterised so corners never clip the label. */
+const makeOfferStatusBadgeImg = (label) => {
+  const px = OFFER_COVER_PX;
+  const fontPx = 2.7 * px;
+  const padX = Math.round(5 * px);
+  const padY = Math.round(2.3 * px);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `700 ${fontPx}px Arial, Helvetica, sans-serif`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${0.35 * px}px`;
+  const textW = Math.ceil(ctx.measureText(label).width);
+  canvas.width = textW + padX * 2;
+  canvas.height = Math.ceil(fontPx) + padY * 2;
+  ctx.fillStyle = OFFER_GOLD;
+  offerRoundRectPath(ctx, 0, 0, canvas.width, canvas.height, Math.round(1.6 * px));
+  ctx.fill();
+  ctx.font = `700 ${fontPx}px Arial, Helvetica, sans-serif`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${0.35 * px}px`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, canvas.width / 2, canvas.height / 2 + 0.5);
+  const wMm = canvas.width / px;
+  const hMm = canvas.height / px;
+  const src = canvas.toDataURL('image/png');
+  canvas.width = 0;
+  canvas.height = 0;
+  return `<img src="${src}" alt="${label}" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; display:block !important; margin:0 0 6mm 0 !important;" />`;
+};
+
+/** Full-width navy footer strip + gold top hairline — rasterised for every slide. */
+const makeOfferFooterImg = () => {
+  const px = OFFER_COVER_PX;
+  const w = Math.round(210 * px);
+  const h = Math.round(11 * px);
+  const topLine = Math.max(2, Math.round(0.55 * px));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0B0736';
+  ctx.fillRect(0, 0, w, h);
+  // Gold line across the top edge of the footer (Figma).
+  ctx.fillStyle = OFFER_GOLD;
+  ctx.fillRect(0, 0, w, topLine);
+  const accentX = Math.round(8 * px);
+  const accentY = Math.round(3.2 * px);
+  const accentW = Math.max(2, Math.round(0.65 * px));
+  const accentH = Math.round(4.6 * px);
+  ctx.fillRect(accentX, accentY, accentW, accentH);
+  const fontPx = 2.7 * px;
+  ctx.font = `400 ${fontPx}px Arial, Helvetica, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillText('Oia Properties', accentX + accentW + Math.round(2.6 * px), h / 2);
+  ctx.textAlign = 'right';
+  ctx.fillText('Powered by Altcrm', w - Math.round(8 * px), h / 2);
+  const src = canvas.toDataURL('image/png');
+  canvas.width = 0;
+  canvas.height = 0;
+  return src;
+};
+
+let offerFooterImgCache = '';
+const getOfferFooterImgSrc = () => {
+  if (!offerFooterImgCache) offerFooterImgCache = makeOfferFooterImg();
+  return offerFooterImgCache;
+};
+
 const createSlide1 = (currentUser) => {
   const propertyTypeName = property.value?.property_type?.name || '';
   const bedrooms = property.value?.number_of_bedrooms;
@@ -7097,25 +7275,39 @@ const createSlide1 = (currentUser) => {
   const location = locationParts.join(', ') || 'Abu Dhabi, UAE';
   const price = formatPrice(property.value?.price) || '';
   const priceText = `AED ${price}`;
-  const priceSize = priceText.length > 18 ? '15px' : priceText.length > 14 ? '18px' : '22px';
+  const priceSize = priceText.length > 18 ? '5.2mm' : priceText.length > 14 ? '6.2mm' : '7mm';
   const listingStatus = property.value?.listing_status || 'Sale';
-  coverBadgeLabel = `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`;
-  const projectTitle = property.value?.project?.title || property.value?.project?.name || '';
-  const project = property.value?.project;
-  // Slide 1 (cover): the listing's first photo.
+  const badgeLabel = `FOR ${String(listingStatus).replace(/^for\s+/i, '').toUpperCase()}`;
+  coverBadgeLabel = '';
+  const projectTitle = (
+    property.value?.project?.title
+    || property.value?.project?.name
+    || property.value?.title
+    || 'Property'
+  ).toUpperCase();
+  const titleSize = projectTitle.length > 24 ? '5.4mm' : projectTitle.length > 16 ? '6.2mm' : '7.2mm';
+  const headingImg = makePropertyOfferHeadingImg();
+  const badgeImg = makeOfferStatusBadgeImg(badgeLabel);
+  // Slide 1 — match Figma cover (white left / photo right / navy footer).
   const bgImage = getListingImageBySlot(1);
   return `
-  <div id="cover-slide" style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.40) !important;"></div>
-    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
-      <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
-    </div>
-    <div id="cover-offer-card" style="position:absolute !important; bottom:18mm !important; left:10mm !important; width:108mm !important; background:#fff !important; border-radius:5mm !important; padding:8mm 8mm 6mm 8mm !important; box-sizing:border-box !important;">
-      <h1 style="color:#0B0736 !important; font-size:22px !important; font-weight:700 !important; margin:0 0 6px 0 !important; padding:1px 0 !important; line-height:28px !important; text-transform:uppercase !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</h1>
-      <p style="font-size:15px; line-height:20px; color:#01062D; font-weight:600; margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif;">${subtitle}</p>
-      <p style="font-size:12px; line-height:16px; color:#6b7280; margin:0 0 10px 0; font-family:Arial, Helvetica, sans-serif;">&#9679;&nbsp;&nbsp;${location}</p>
-      <h2 style="font-size:${priceSize} !important; line-height:26px !important; color:#01062D !important; font-weight:700 !important; margin:0 !important; white-space:nowrap !important; font-family:Arial, Helvetica, sans-serif !important;">${priceText}</h2>
+  <div id="cover-slide" style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; font-family:Arial, Helvetica, sans-serif !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; display:flex !important; flex-direction:row !important; box-sizing:border-box !important;">
+      <div id="cover-offer-card" style="width:100mm !important; height:100% !important; background:#ffffff !important; box-sizing:border-box !important; padding:16mm 9mm 10mm 12mm !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important;">
+        ${headingImg}
+        ${badgeImg}
+        <div style="color:#0B0736 !important; font-size:${titleSize} !important; font-weight:700 !important; line-height:1.12 !important; text-transform:uppercase !important; margin:0 0 3.2mm 0 !important; word-break:break-word !important;">${projectTitle}</div>
+        <div style="color:#0B0736 !important; font-size:3.8mm !important; font-weight:600 !important; line-height:1.3 !important; margin:0 0 1.6mm 0 !important;">${subtitle}</div>
+        <div style="color:#9ca3af !important; font-size:3mm !important; font-weight:400 !important; line-height:1.35 !important; margin:0 0 7mm 0 !important;">${location}</div>
+        <div style="width:100% !important; height:0.3mm !important; background:#E8D6BE !important; margin:0 0 5mm 0 !important;"></div>
+        <div style="color:#0B0736 !important; font-size:2.5mm !important; font-weight:700 !important; letter-spacing:0.5mm !important; text-transform:uppercase !important; margin:0 0 2mm 0 !important;">PRICE</div>
+        <div style="color:#0B0736 !important; font-size:${priceSize} !important; font-weight:700 !important; line-height:1.15 !important; white-space:nowrap !important;">${priceText}</div>
+      </div>
+      <div style="flex:1 !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+        <div style="position:absolute !important; top:6mm !important; right:7mm !important; z-index:10 !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+        </div>
+      </div>
     </div>
     ${createFooter()}
   </div>
@@ -7218,6 +7410,7 @@ const OFFER_ICON_PATHS = {
   balcony: '<path d="M3 21h18M3 11h18M5 11v10M9 11v10M15 11v10M19 11v10M7 11V5a5 5 0 0 1 10 0v6"/>',
   trees: '<path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/>',
   car: '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',
 };
 
 /** Pick an icon for a feature name by keyword (falls back to a star). */
@@ -7274,171 +7467,242 @@ const offerTextImg = (text, {
   return `<img src="${data}" alt="${shown.replace(/"/g, '&quot;')}" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; max-width:none !important; display:block !important; flex-shrink:0 !important;" />`;
 };
 
+/** Star + "Features" on one baseline — html2canvas mis-aligns live flex+SVG. */
+const makeFeaturesTitleImg = () => {
+  const px = OFFER_COVER_PX;
+  const fontPx = 3.2 * px;
+  const star = 3.4 * px;
+  const gap = 1.8 * px;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `700 ${fontPx}px Arial, Helvetica, sans-serif`;
+  const textW = Math.ceil(ctx.measureText('Features').width);
+  const h = Math.ceil(Math.max(star, fontPx) + 4);
+  canvas.width = Math.ceil(star + gap + textW + 4);
+  canvas.height = h;
+  // filled gold star
+  const cx = star / 2 + 1;
+  const cy = h / 2;
+  const spikes = 5;
+  const outer = star / 2;
+  const inner = outer * 0.45;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? outer : inner;
+    const a = (Math.PI / 2) * -1 + (i * Math.PI) / spikes;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = OFFER_GOLD;
+  ctx.fill();
+  ctx.font = `700 ${fontPx}px Arial, Helvetica, sans-serif`;
+  ctx.fillStyle = '#0B0736';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Features', star + gap + 1, h / 2);
+  const wMm = canvas.width / px;
+  const hMm = canvas.height / px;
+  const src = canvas.toDataURL('image/png');
+  canvas.width = 0;
+  canvas.height = 0;
+  return `<img src="${src}" alt="Features" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; display:block !important; margin:0 0 2.2mm 0 !important;" />`;
+};
+
+/** Feature pill with icon + label perfectly centred (canvas). */
+const makeFeaturePillImg = (label) => {
+  const px = OFFER_COVER_PX;
+  const fontPx = 2.15 * px;
+  const iconSize = 2.6 * px;
+  const padX = 2.4 * px;
+  const padY = 1.35 * px;
+  const gap = 1.2 * px;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `500 ${fontPx}px Arial, Helvetica, sans-serif`;
+  const textW = Math.ceil(ctx.measureText(label).width);
+  const w = Math.ceil(padX + iconSize + gap + textW + padX);
+  const h = Math.ceil(Math.max(iconSize, fontPx) + padY * 2);
+  canvas.width = w;
+  canvas.height = h;
+  // pill border
+  ctx.fillStyle = '#ffffff';
+  offerRoundRectPath(ctx, 0.5, 0.5, w - 1, h - 1, h / 2);
+  ctx.fill();
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = Math.max(1, 0.25 * px);
+  offerRoundRectPath(ctx, 0.5, 0.5, w - 1, h - 1, h / 2);
+  ctx.stroke();
+  const iconX = padX;
+  const iconY = (h - iconSize) / 2;
+  ctx.save();
+  ctx.translate(iconX, iconY);
+  ctx.strokeStyle = OFFER_GOLD;
+  ctx.fillStyle = OFFER_GOLD;
+  ctx.lineWidth = Math.max(1.2, iconSize / 14);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const s = iconSize / 24;
+  const n = String(label || '').toLowerCase();
+  // icon mark (sync canvas — no async SVG decode)
+  if (/park|garden|green|tree/.test(n)) {
+    ctx.beginPath();
+    ctx.arc(12 * s, 10 * s, 5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(12 * s, 14 * s);
+    ctx.lineTo(12 * s, 22 * s);
+    ctx.stroke();
+  } else if (/sea|water|wave|marina|beach|pool/.test(n)) {
+    ctx.beginPath();
+    ctx.moveTo(3 * s, 10 * s); ctx.quadraticCurveTo(7 * s, 6 * s, 11 * s, 10 * s); ctx.quadraticCurveTo(15 * s, 14 * s, 21 * s, 10 * s);
+    ctx.moveTo(3 * s, 15 * s); ctx.quadraticCurveTo(7 * s, 11 * s, 11 * s, 15 * s); ctx.quadraticCurveTo(15 * s, 19 * s, 21 * s, 15 * s);
+    ctx.stroke();
+  } else if (/floor|tower|building|high|mid|low/.test(n)) {
+    ctx.strokeRect(6 * s, 3 * s, 12 * s, 18 * s);
+    ctx.strokeRect(9 * s, 18 * s, 6 * s, 3 * s);
+  } else if (/balcony|terrace/.test(n)) {
+    ctx.beginPath();
+    ctx.moveTo(3 * s, 12 * s); ctx.lineTo(21 * s, 12 * s);
+    ctx.moveTo(3 * s, 21 * s); ctx.lineTo(21 * s, 21 * s);
+    ctx.moveTo(6 * s, 12 * s); ctx.lineTo(6 * s, 21 * s);
+    ctx.moveTo(12 * s, 12 * s); ctx.lineTo(12 * s, 21 * s);
+    ctx.moveTo(18 * s, 12 * s); ctx.lineTo(18 * s, 21 * s);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    const cx = 12 * s; const cy = 12 * s; const outer = 8 * s; const inner = 3.5 * s;
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? outer : inner;
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.font = `500 ${fontPx}px Arial, Helvetica, sans-serif`;
+  ctx.fillStyle = '#0B0736';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, padX + iconSize + gap, h / 2);
+  const wMm = w / px;
+  const hMm = h / px;
+  const src = canvas.toDataURL('image/png');
+  canvas.width = 0;
+  canvas.height = 0;
+  return `<img src="${src}" alt="${String(label).replace(/"/g, '&quot;')}" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; display:block !important;" />`;
+};
+
 const createSlide2 = () => {
-  // Slide 2 (Property Details): the listing's second photo (falls back to the first).
+  // Figma Property Details — icon ABOVE label/value, no column rules, features close under stats.
   const bgImage = getListingImageBySlot(2);
   const propertyType = property.value?.property_type?.name || 'N/A';
-  const bedrooms = property.value?.number_of_bedrooms === 0 ? 'Studio' : (property.value?.number_of_bedrooms ?? 'N/A');
-  const bathrooms = property.value?.number_of_bathrooms ?? 'N/A';
+  const bedrooms = property.value?.number_of_bedrooms === 0
+    ? 'Studio'
+    : String(property.value?.number_of_bedrooms ?? 'N/A');
+  const bathrooms = String(property.value?.number_of_bathrooms ?? 'N/A');
+  const noBedsBaths = hidesBedsBaths(property.value?.property_type);
   const isBuildingOffer = isBuildingType(property.value?.property_type);
   const floorsCount = Number(property.value?.number_of_floors);
-  const floorsColumn = (isBuildingOffer && floorsCount > 0) ? `
-    <div style="flex:1 !important; padding-left:5mm !important;">
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Number of Floors</p>
-      <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${floorsCount}</p>
-    </div>` : '';
-  // Plot / land / office: no Bedrooms / Bathrooms columns.
-  const noBedsBaths = hidesBedsBaths(property.value?.property_type);
-  const areaSize = property.value?.size_sqft ? `${property.value.size_sqft} SQFT` : 'N/A';
-  const plotSize = plotSizeLabel.value ? plotSizeLabel.value.replace('Sq Ft', 'SQFT') : '';
-  const plotSizeColumn = plotSize ? `
-          <div style="flex:1 !important; padding-left:5mm !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Plot Size</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${plotSize}</p>
-          </div>` : '';
+  const unitSize = property.value?.size_sqft
+    ? `${formatPrice(property.value.size_sqft)} Sq Ft`
+    : 'N/A';
   const completionStatus = property.value?.completion_status || 'Under Construction';
-  const features = additionalFeaturesList.value || [];
-  const featuresBlock = features.length > 0 ? `
-    <div style="margin-top:auto !important; width:100% !important; padding-top:4mm !important; border-top:0.3mm solid rgba(255,255,255,0.22) !important; box-sizing:border-box !important;">
-      <p style="color:rgba(255,255,255,0.85) !important; font-size:2.4mm !important; margin:0 0 4.5mm 0 !important; font-family:'Montserrat', sans-serif !important; line-height:1 !important;">Features</p>
-      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.8mm 4.5mm !important; align-items:flex-start !important;">
-          ${features.map((feature) => `
-            <span style="display:inline-block !important; color:rgba(255,255,255,0.9) !important; font-size:2.5mm !important; font-weight:400 !important; font-family:'Montserrat', sans-serif !important; line-height:2.5mm !important; height:5.2mm !important; padding:0 3mm !important; border:0.2mm solid rgba(255,255,255,0.35) !important; border-radius:5mm !important; background:rgba(255,255,255,0.08) !important;"><span style="display:inline-block !important; position:relative !important; top:-1.15mm !important;">${feature}</span></span>
-          `).join('')}
-        </div>
-    </div>
-  ` : '';
+  const statusIconPaths = /complet|ready/i.test(completionStatus)
+    ? OFFER_ICON_PATHS.check
+    : OFFER_ICON_PATHS.hardHat;
+  const goldIcon = (paths, size = 5.2) => offerIcon(paths, { color: OFFER_GOLD, size });
 
-  return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(0,0,0,0.68) !important;"></div>
-    <div style="position:relative !important; z-index:5 !important; width:100% !important; height:90% !important; box-sizing:border-box !important; padding:10mm 14mm 8mm 14mm !important; display:flex !important; flex-direction:column !important;">
-      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; flex-shrink:0 !important;">
-        <h1 style="color:#fff !important; font-size:7mm !important; font-weight:700 !important; margin:0 !important; line-height:1.1 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">Property<br>Details</h1>
-        <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
-      </div>
-
-      <div style="width:100% !important; margin-top:7mm !important; flex-shrink:0 !important;">
-        <div style="display:flex !important; padding-bottom:4mm !important; margin-bottom:4mm !important; border-bottom:0.3mm solid rgba(255,255,255,0.22) !important;">
-          <div style="flex:1 !important; padding-right:5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important; font-family:'Montserrat', sans-serif !important;">Property Type</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${propertyType}</p>
-          </div>${noBedsBaths ? '' : `
-          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bedrooms</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${bedrooms}</p>
-          </div>
-          <div style="flex:1 !important; padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Bathrooms</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${bathrooms}</p>
-          </div>`}
-          <div style="flex:1 !important; ${(plotSize || floorsColumn) ? 'padding:0 5mm !important; border-right:0.3mm solid rgba(255,255,255,0.3) !important;' : 'padding-left:5mm !important;'}">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Area Size</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important;font-family:'Montserrat', sans-serif !important;">${areaSize}</p>
-          </div>${plotSizeColumn}${floorsColumn}
-        </div>
-        <div style="display:flex !important;">
-          <div style="flex:1 !important; max-width:25% !important;">
-            <p style="color:rgba(255,255,255,0.85) !important; font-size:2.7mm !important; margin:0 0 1.5mm 0 !important;font-family:'Montserrat', sans-serif !important;">Completion Status</p>
-            <p style="color:#fff !important; font-size:4.2mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important;font-family:'Montserrat', sans-serif !important;">${completionStatus}</p>
-          </div>
-        </div>
-      </div>
-
-      ${featuresBlock}
-    </div>
-    ${createFooter()}
-  </div>
-  `;
-};
-
-const createSlide3 = () => {
-  const project = property.value?.project;
-  const features = Array.isArray(project?.features)
-  ? project.features
-      .map(f => ({
-        name: f?.name || f?.title || f,
-        image: f?.img || f?.icon || null
-      }))
-      .filter(f => f.name)
-  : [];
-  const half = Math.ceil(features.length / 2);
-  const col1 = features.slice(0, half);
-  const col2 = features.slice(half);
-  // Slide 3 uses the project's multi-image at order 3 (fallback to current image).
-  const projectImage = getProjectImageBySlot(2); // Amenities: project photo 2 (else 1)
-  amenitiesSlideModel = {
-    items: features.map((feature) => ({
-      name: feature.name,
-      imageUrl: feature.image ? getImageUrl(feature.image) : null,
-    })),
-  };
-  const iconCell = (feature) => {
-    if (!feature) return `<td style="display:table-cell !important; width:16px !important; padding:0 !important; border:none !important;"></td><td style="display:table-cell !important; border:none !important;"></td>`;
-    const imageUrl = feature.image ? getImageUrl(feature.image) : null;
-    const icon = imageUrl
-      ? `<img src="${imageUrl}" width="13" height="13" style="width:13px !important; height:13px !important; max-width:13px !important; max-height:13px !important; display:block !important;" />`
-      : `<span style="display:block !important; width:6px !important; height:6px !important; margin:3px !important; border-radius:50% !important; background: var(--gradient-primary) !important;"></span>`;
+  // Figma cell: icon stacked on top, then grey label, then navy value. No vertical lines.
+  const detailTd = (item, { widthPct = 33.33 } = {}) => {
+    if (!item) {
+      return `<td style="width:${widthPct}% !important; padding:0 !important; vertical-align:top !important; border:none !important;"></td>`;
+    }
+    const long = String(item.value).length > 14;
+    const valueSize = String(item.value).length > 20 ? '2.5mm' : long ? '2.8mm' : '3.1mm';
+    const wrap = long ? 'white-space:normal !important;' : 'white-space:nowrap !important;';
     return `
-      <td style="display:table-cell !important; width:18px !important; vertical-align:middle !important; padding:5px 6px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; line-height:0 !important;">${icon}</td>
-      <td style="display:table-cell !important; vertical-align:middle !important; padding:5px 10px 5px 0 !important; border-bottom:1px solid #eef1f5 !important; font-family:Arial, Helvetica, sans-serif !important; font-size:11px !important; line-height:14px !important; color:#1e293b !important; white-space:nowrap !important;">${feature.name}</td>
-    `;
-  };
-  const rowCount = Math.max(col1.length, col2.length);
-  const amenityRows = Array.from({ length: rowCount }, (_, index) => `
-    <tr style="display:table-row !important;">
-      ${iconCell(col1[index])}
-      ${iconCell(col2[index])}
-    </tr>
-  `).join('');
-  return `
-  <div id="amenities-features-slide" style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; display:flex !important; flex-direction:column !important;">
-    <div style="width:100% !important; height:90% !important; display:flex !important; overflow:hidden !important;">
-      <div style="width:50% !important; height:100% !important; background:#fff !important; padding:8mm 7mm 6mm 8mm !important; box-sizing:border-box !important;">
-        <h1 style="color:#0B0736 !important; font-size:6.2mm !important; font-weight:700 !important; margin:0 0 5mm 0 !important; padding:0.5mm 0 !important; line-height:7.4mm !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">Amenities &amp;<br>Features</h1>
-        <table style="display:table !important; width:100% !important; table-layout:fixed !important; border-collapse:collapse !important; border-spacing:0 !important;">
-          ${amenityRows}
-        </table>
-      </div>
-      <div style="width:50% !important; height:100% !important; position:relative !important;">
-        <div style="width:100% !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
-        <div style="position:absolute !important; top:7mm !important; right:7mm !important;">
-          <img src="${OiaLogo}" style="width:18mm !important; display:block !important;" />
+      <td style="width:${widthPct}% !important; padding:0 3mm 0 0 !important; vertical-align:top !important; border:none !important; box-sizing:border-box !important;">
+        <div style="padding:0 2.2mm 0 0 !important; box-sizing:border-box !important;">
+          <div style="margin:0 0 1.4mm 0 !important; line-height:0 !important;">${item.icon}</div>
+          <div style="color:#9ca3af !important; font-size:2mm !important; font-weight:400 !important; line-height:1.15 !important; margin:0 0 0.6mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">${item.label}</div>
+          <div style="color:#0B0736 !important; font-size:${valueSize} !important; font-weight:700 !important; line-height:1.2 !important; font-family:Arial, Helvetica, sans-serif !important; ${wrap} word-break:keep-all !important;">${item.value}</div>
         </div>
+      </td>`;
+  };
+
+  const row1 = noBedsBaths
+    ? [
+        { icon: goldIcon(OFFER_ICON_PATHS.building), label: 'Property type', value: propertyType },
+        { icon: goldIcon(OFFER_ICON_PATHS.area), label: 'Unit Size', value: unitSize },
+        { icon: goldIcon(statusIconPaths), label: 'Completion Status', value: completionStatus },
+      ]
+    : [
+        { icon: goldIcon(OFFER_ICON_PATHS.building), label: 'Property type', value: propertyType },
+        { icon: goldIcon(OFFER_ICON_PATHS.bed), label: 'Bedrooms', value: bedrooms },
+        { icon: goldIcon(OFFER_ICON_PATHS.shower), label: 'Bathrooms', value: bathrooms },
+      ];
+
+  const row2Items = noBedsBaths
+    ? [
+        plotSizeLabel.value
+          ? { icon: goldIcon(OFFER_ICON_PATHS.plot), label: 'Plot Size', value: plotSizeLabel.value }
+          : null,
+        (isBuildingOffer && floorsCount > 0)
+          ? { icon: goldIcon(OFFER_ICON_PATHS.building), label: 'Number of Floors', value: String(floorsCount) }
+          : null,
+      ].filter(Boolean)
+    : [
+        { icon: goldIcon(OFFER_ICON_PATHS.area), label: 'Unit Size', value: unitSize },
+        { icon: goldIcon(statusIconPaths), label: 'Completion Status', value: completionStatus },
+        plotSizeLabel.value
+          ? { icon: goldIcon(OFFER_ICON_PATHS.plot), label: 'Plot Size', value: plotSizeLabel.value }
+          : ((isBuildingOffer && floorsCount > 0)
+            ? { icon: goldIcon(OFFER_ICON_PATHS.building), label: 'Number of Floors', value: String(floorsCount) }
+            : null),
+      ].filter(Boolean);
+
+  // Keep listing feature order (not alpha) — same order as the property page / Figma.
+  const features = (additionalFeaturesList.value || []).slice(0, 8);
+  const featuresBlock = features.length ? `
+    <div style="width:100% !important; margin:7mm 0 0 0 !important; padding:0 !important; box-sizing:border-box !important;">
+      ${makeFeaturesTitleImg()}
+      <div style="display:flex !important; flex-wrap:wrap !important; gap:1.4mm 1.6mm !important; align-items:center !important;">
+        ${features.map((feature) => makeFeaturePillImg(feature)).join('')}
       </div>
-    </div>
-    ${createFooter()}
-  </div>
-  `;
-};
+    </div>` : '';
 
-
-          
-const createSlide4 = () => {
-  const project = property.value?.project;
-  const projectTitle    = project?.title || project?.name || '';
-  const projectAbout = project?.about || '';
-  // Slide 4 uses the project's multi-image at order 2 (fallback to current image).
-  const projectImage = getProjectImageBySlot(1); // About Project: project photo 1
-  const aboutLimited = limitText(projectAbout, 720);
-  const aboutHtml = String(aboutLimited).replace(/\s+/g, ' ').trim().split(' ').reduce((lines, word) => {
-    const current = lines[lines.length - 1];
-    if (!current || `${current} ${word}`.length > 52) lines.push(word);
-    else lines[lines.length - 1] = `${current} ${word}`;
-    return lines;
-  }, []).join('<br>');
+  const headingImg = makeOfferSectionHeadingImg('PROPERTY DETAILS', { fontMm: 3.2, marginBottomMm: 5.5 });
+  const row2Cols = row2Items.length;
+  const row2Width = row2Cols === 2 ? 33.33 : (row2Cols === 1 ? 50 : 33.33);
 
   return `
-  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#01062c !important; position:relative !important;">
-    <div style="width:100% !important; height:90% !important; background:#fff !important; border-radius:0mm !important; overflow:hidden !important; display:flex !important;">
-      <div style="width:50% !important; padding:8mm 10mm 6mm 8mm !important; box-sizing:border-box !important;">
-        <h1 style="color:#01062C !important; font-size:5.2mm !important; font-weight:700 !important; margin:0 0 4mm 0 !important; padding:0.6mm 0 !important; line-height:7mm !important; white-space:nowrap !important; text-transform:uppercase !important;font-family:Arial, Helvetica, sans-serif !important;">About the Project</h1>
-        <p style="font-size:4.2mm !important; font-weight:700 !important; line-height:6mm !important; padding:1mm 0 1.5mm 0 !important; color:#01062C !important; margin:0 0 2mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</p>
-        <p style="font-size:11px !important; line-height:16px !important; padding:0 0 2mm 0 !important; color:#3f3f46 !important; margin:0 !important; word-break:keep-all !important; font-family:Arial, Helvetica, sans-serif !important;">${aboutHtml}</p>
+  <div id="property-details-slide" style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; font-family:Arial, Helvetica, sans-serif !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; display:flex !important; flex-direction:row !important; box-sizing:border-box !important;">
+      <div style="width:100mm !important; height:100% !important; background:#ffffff !important; box-sizing:border-box !important; padding:8mm 5mm 5mm 8mm !important; display:flex !important; flex-direction:column !important; justify-content:flex-start !important;">
+        ${headingImg}
+        <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important; table-layout:fixed !important; margin:0 0 6.5mm 0 !important;">
+          <tr>
+            ${detailTd(row1[0])}
+            ${detailTd(row1[1])}
+            ${detailTd(row1[2])}
+          </tr>
+        </table>
+        ${row2Cols ? `
+        <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important; table-layout:fixed !important; margin:0 !important;">
+          <tr>
+            ${row2Items.map((item) => detailTd(item, { widthPct: row2Width })).join('')}
+            ${row2Cols < 3 ? detailTd(null, { widthPct: 100 - row2Width * row2Cols }) : ''}
+          </tr>
+        </table>` : ''}
+        ${featuresBlock}
       </div>
-      <div style="width:50% !important;position:relative !important; height:100% !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
-       <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
+      <div style="flex:1 !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+        <div style="position:absolute !important; top:0 !important; right:0 !important; width:42mm !important; height:30mm !important; background:linear-gradient(225deg, rgba(11,7,54,0.5) 0%, rgba(11,7,54,0) 72%) !important;"></div>
+        <div style="position:absolute !important; top:6mm !important; right:7mm !important; z-index:10 !important;">
           <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
         </div>
       </div>
@@ -7448,6 +7712,104 @@ const createSlide4 = () => {
   `;
 };
 
+/** Pick a gold line icon for project amenities by name. */
+const amenityOfferIcon = (name) => {
+  const n = String(name || '').toLowerCase();
+  if (/play|kids|child|park|garden|green/.test(n)) return OFFER_ICON_PATHS.trees;
+  if (/masjid|mosque|pray/.test(n)) return OFFER_ICON_PATHS.building;
+  if (/school|educat|university|college/.test(n)) return OFFER_ICON_PATHS.star;
+  if (/sport|tennis|court|gym|fitness|pool/.test(n)) return OFFER_ICON_PATHS.star;
+  if (/restaurant|dining|cafe|food|bowl/.test(n)) return OFFER_ICON_PATHS.star;
+  if (/market|shop|retail|mall|store|supermarket/.test(n)) return OFFER_ICON_PATHS.star;
+  if (/sea|water|beach|marina|lagoon/.test(n)) return OFFER_ICON_PATHS.waves;
+  if (/parking|car|garage/.test(n)) return OFFER_ICON_PATHS.car;
+  return offerFeatureIcon(name);
+};
+
+const createSlide3 = () => {
+  // Figma Amenities & Features: photo LEFT, white panel RIGHT, 3-col gold icon grid.
+  const project = property.value?.project;
+  const features = Array.isArray(project?.features)
+    ? project.features
+      .map((f) => ({
+        name: f?.name || f?.title || f,
+        image: f?.img || f?.icon || null,
+      }))
+      .filter((f) => f.name)
+    : [];
+  // HTML slide is the source of truth — skip the old jsPDF list overlay.
+  amenitiesSlideModel = null;
+  const projectImage = getProjectImageBySlot(2);
+  const heading = makeOfferSectionHeadingImg('AMENITIES & FEATURES', { fontMm: 3.3, marginBottomMm: 0 });
+  const cells = features.slice(0, 12).map((feature) => {
+    const imageUrl = feature.image ? getImageUrl(feature.image) : null;
+    const icon = imageUrl
+      ? `<img src="${pdfImg(imageUrl)}" alt="" style="width:9mm !important; height:9mm !important; object-fit:contain !important; display:block !important; margin:0 auto 2.5mm auto !important;" />`
+      : `<div style="display:flex !important; justify-content:center !important; margin:0 0 2.5mm 0 !important;">${offerIcon(amenityOfferIcon(feature.name), { color: OFFER_GOLD, size: 8 })}</div>`;
+    return `
+      <td style="width:33.33% !important; vertical-align:top !important; text-align:center !important; padding:3.5mm 2mm !important; border:none !important; box-sizing:border-box !important;">
+        ${icon}
+        <div style="color:#0B0736 !important; font-size:2.4mm !important; font-weight:500 !important; line-height:1.25 !important; font-family:Arial, Helvetica, sans-serif !important;">${feature.name}</div>
+      </td>`;
+  });
+  while (cells.length % 3 !== 0) {
+    cells.push(`<td style="width:33.33% !important; border:none !important; padding:3.5mm 2mm !important;"></td>`);
+  }
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 3) {
+    rows.push(`<tr>${cells[i]}${cells[i + 1]}${cells[i + 2]}</tr>`);
+  }
+
+  return `
+  <div id="amenities-features-slide" style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; font-family:Arial, Helvetica, sans-serif !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; display:flex !important; flex-direction:row !important; box-sizing:border-box !important;">
+      <div style="width:95mm !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+      <div style="flex:1 !important; height:100% !important; background:#ffffff !important; box-sizing:border-box !important; padding:10mm 8mm 8mm 9mm !important; display:flex !important; flex-direction:column !important;">
+        <div style="display:flex !important; align-items:flex-start !important; justify-content:space-between !important; margin:0 0 8mm 0 !important; flex-shrink:0 !important;">
+          <div>${heading}</div>
+          <img src="${pnglogo}" alt="Oia Properties" style="width:15mm !important; height:auto !important; display:block !important;" />
+        </div>
+        <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important; table-layout:fixed !important;">
+          ${rows.join('')}
+        </table>
+      </div>
+    </div>
+    ${createFooter()}
+  </div>
+  `;
+};
+
+const createSlide4 = () => {
+  // Figma About the Project: white LEFT (title + name + about), photo RIGHT + white logo, navy footer.
+  const project = property.value?.project;
+  const projectTitle = String(project?.title || project?.name || '').toUpperCase();
+  const projectAbout = project?.about || '';
+  const projectImage = getProjectImageBySlot(1);
+  const aboutLimited = limitText(projectAbout, 780);
+  const aboutText = String(aboutLimited).replace(/\s+/g, ' ').trim();
+  const heading = makeOfferSectionHeadingImg('ABOUT THE PROJECT', { fontMm: 3.2, marginBottomMm: 0 });
+  const titleSize = projectTitle.length > 22 ? '5.2mm' : projectTitle.length > 14 ? '6.2mm' : '7mm';
+
+  return `
+  <div style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; font-family:Arial, Helvetica, sans-serif !important;">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; display:flex !important; flex-direction:row !important; box-sizing:border-box !important;">
+      <div style="width:100mm !important; height:100% !important; background:#ffffff !important; box-sizing:border-box !important; padding:12mm 9mm 10mm 11mm !important; display:flex !important; flex-direction:column !important;">
+        <div style="flex-shrink:0 !important; margin:0 0 8mm 0 !important;">${heading}</div>
+        <div style="flex:1 !important; display:flex !important; flex-direction:column !important; justify-content:center !important; min-height:0 !important;">
+          <div style="color:#0B0736 !important; font-size:${titleSize} !important; font-weight:700 !important; line-height:1.15 !important; text-transform:uppercase !important; margin:0 0 4mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">${projectTitle}</div>
+          <div style="color:#3f3f46 !important; font-size:3mm !important; font-weight:400 !important; line-height:1.55 !important; font-family:Arial, Helvetica, sans-serif !important;">${aboutText}</div>
+        </div>
+      </div>
+      <div style="flex:1 !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
+        <div style="position:absolute !important; top:6mm !important; right:7mm !important; z-index:10 !important;">
+          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+        </div>
+      </div>
+    </div>
+    ${createFooter()}
+  </div>
+  `;
+};
 
 
 
@@ -7538,24 +7900,133 @@ const formatOfferDate = (value) => {
   });
 };
 
+/** Normalise a displayed phone into a dialable tel: target (+digits). */
+const offerTelHref = (phone) => {
+  let digits = String(phone || '').replace(/[^\d+]/g, '');
+  if (!digits) return '';
+  if (!digits.startsWith('+')) digits = `+${digits.replace(/^0+/, '')}`;
+  return digits;
+};
+
+let offerThankYouTel = '';
+let offerThankYouPhone = '';
+
+/** One image: gold call icon + phone on the same baseline (under the name). */
+const makeThankYouPhoneImg = (phone) => {
+  const px = OFFER_COVER_PX;
+  const fontPx = 3.4 * px;
+  const iconSize = 3.2 * px;
+  const gap = 2.4 * px;
+  const padY = 0.8 * px;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `400 ${fontPx}px Arial, Helvetica, sans-serif`;
+  const textW = Math.ceil(ctx.measureText(String(phone)).width);
+  const w = Math.ceil(iconSize + gap + textW + 2);
+  const h = Math.ceil(Math.max(iconSize, fontPx) + padY * 2);
+  canvas.width = w;
+  canvas.height = h;
+
+  // Gold handset centred with the digits (same Path2D as other offer icons)
+  const iy = (h - iconSize) / 2;
+  ctx.save();
+  ctx.translate(0, iy);
+  const s = iconSize / 24;
+  ctx.scale(s, s);
+  ctx.strokeStyle = OFFER_GOLD;
+  ctx.lineWidth = 1.7;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  try {
+    ctx.stroke(new Path2D('M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'));
+  } catch {
+    ctx.strokeRect(4, 4, 16, 16);
+  }
+  ctx.restore();
+
+  ctx.font = `400 ${fontPx}px Arial, Helvetica, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(phone), iconSize + gap, h / 2);
+
+  const wMm = w / px;
+  const hMm = h / px;
+  const src = canvas.toDataURL('image/png');
+  canvas.width = 0;
+  canvas.height = 0;
+  return `<img id="offer-thank-you-call" src="${src}" alt="${String(phone).replace(/"/g, '&quot;')}" style="width:${wMm.toFixed(2)}mm !important; height:${hMm.toFixed(2)}mm !important; display:block !important; margin:4.5mm 0 0 0 !important;" />`;
+};
+
 const createSlide9 = (currentUser) => {
+  // Figma thank-you: Contact → name → phone (under name). Phone is one raster image so it never overlaps.
+  const name = String(currentUser?.name || '').toUpperCase();
+  const phone = String(currentUser?.phone || '').trim();
+  offerThankYouPhone = phone;
+  offerThankYouTel = offerTelHref(phone);
+  const dateLabel = offerDateLabel || formatOfferDate();
+  const phoneRow = phone ? makeThankYouPhoneImg(phone) : '';
 
   return `
-  <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important;">
-    <img src="${LastSlide_bg}" crossorigin="anonymous" style="position:absolute !important; top:0 !important; left:0 !important; width:130% !important; height:100% !important; object-fit:cover !important; display:block !important;" />
-    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(1,6,44,0.65) !important;"></div>
-     <div style="position:relative !important; z-index:5 !important; width:100% !important; height:100% !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:flex-start !important; padding-top:15mm !important;">      
-      <h1 style="color:#fff !important; font-size:9mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; text-align:center !important; letter-spacing:0.5mm !important; font-family:'Montserrat', sans-serif !important;margin-top:20mm  !important;">Thank You!</h1>
-      <div style="position:absolute !important; bottom:20mm !important; right:14mm !important; text-align:left !important;">
-        <p style="color:rgba(255,255,255,0.7) !important; font-size:3.5mm !important; margin:0 0 1.5mm 0 !important;">Contact</p>
-        <p style="color:#fff !important; font-size:5mm !important; font-weight:700 !important; margin:0 !important; text-transform:uppercase !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.name || ''}</p>
-        <p style="color:#fff !important; font-size:4.5mm !important; font-weight:500 !important; margin:1mm 0 0 0 !important; font-family:'Montserrat', sans-serif !important;">${currentUser?.phone || ''}</p>
-        <p style="color:rgba(255,255,255,0.65) !important; font-size:2.2mm !important; font-weight:400 !important; margin:1.5mm 0 0 0 !important; font-family:'Montserrat', sans-serif !important;">${offerDateLabel || formatOfferDate()}</p>
+  <div id="thank-you-slide" style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; font-family:Arial, Helvetica, sans-serif !important;" data-offer-tel="${offerThankYouTel}">
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${LastSlide_bg}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(11,7,54,0.62) !important;"></div>
+    <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
+      <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+    </div>
+    <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; z-index:5 !important; box-sizing:border-box !important; display:flex !important; align-items:center !important; justify-content:center !important;">
+      <div style="color:#ffffff !important; font-size:11mm !important; font-weight:700 !important; letter-spacing:0.8mm !important; text-transform:uppercase !important; line-height:1 !important; font-family:Arial, Helvetica, sans-serif !important;">THANK YOU !</div>
+      <div style="position:absolute !important; left:10mm !important; bottom:6mm !important; color:#ffffff !important; font-size:3mm !important; font-weight:400 !important; font-family:Arial, Helvetica, sans-serif !important;">${dateLabel}</div>
+      <div style="position:absolute !important; right:10mm !important; bottom:6mm !important; text-align:left !important;">
+        <div style="color:rgba(255,255,255,0.75) !important; font-size:2.8mm !important; font-weight:400 !important; margin:0 0 1.8mm 0 !important; font-family:Arial, Helvetica, sans-serif !important;">Contact</div>
+        <div style="color:#ffffff !important; font-size:4.2mm !important; font-weight:700 !important; text-transform:uppercase !important; margin:0 0 1mm 0 !important; letter-spacing:0.15mm !important; font-family:Arial, Helvetica, sans-serif !important; line-height:1.25 !important; padding:0 !important;">${name}</div>
+        ${phoneRow}
       </div>
     </div>
-    ${createFooter2()}
+    ${createFooter()}
   </div>
   `;
+};
+
+/** Add a tappable tel: hit-area over the phone image (do NOT redraw the phone). */
+const paintThankYouCallLink = async (pdf, container) => {
+  const tel = offerThankYouTel || offerTelHref(offerThankYouPhone);
+  if (!tel) return;
+
+  const slide = container?.querySelector?.('#thank-you-slide');
+  const phoneImg = slide?.querySelector?.('#offer-thank-you-call');
+  const pageIndex = [...(container?.children || [])].findIndex((el) => el.id === 'thank-you-slide');
+  const page = pageIndex >= 0 ? pageIndex + 1 : pdf.internal.getNumberOfPages();
+  if (page < 1 || page > pdf.internal.getNumberOfPages()) return;
+  pdf.setPage(page);
+
+  let x = 150;
+  let y = 125;
+  let w = 50;
+  let h = 8;
+
+  if (phoneImg) {
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:0;top:0;width:210mm;height:148mm;visibility:hidden;pointer-events:none;z-index:-1;';
+    const clone = slide.cloneNode(true);
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+    const slideRect = clone.getBoundingClientRect();
+    const rowRect = clone.querySelector('#offer-thank-you-call')?.getBoundingClientRect();
+    document.body.removeChild(holder);
+    if (slideRect.width && rowRect?.width) {
+      const pxToMm = 210 / slideRect.width;
+      x = Math.max(0, (rowRect.left - slideRect.left) * pxToMm - 1);
+      y = Math.max(0, (rowRect.top - slideRect.top) * pxToMm - 1);
+      w = Math.min(210 - x, rowRect.width * pxToMm + 2);
+      h = Math.min(148 - y, Math.max(rowRect.height * pxToMm + 2, 7));
+    }
+  }
+
+  try {
+    pdf.link(x, y, w, h, { url: `tel:${tel}` });
+  } catch (err) {
+    console.warn('Could not add thank-you call link:', err);
+  }
 };
 
  
@@ -7643,47 +8114,8 @@ const loadPdfImage = (src) => new Promise((resolve) => {
   img.src = src;
 });
 
-const paintAmenitiesPage = async (pdf, container) => {
-  const model = amenitiesSlideModel;
-  if (!model?.items?.length) return;
-  const slides = [...container.children];
-  const pageIndex = slides.findIndex((el) => el.id === 'amenities-features-slide');
-  if (pageIndex < 0 || pageIndex + 1 > pdf.internal.getNumberOfPages()) return;
-
-  pdf.setPage(pageIndex + 1);
-  pdf.setFillColor(255, 255, 255);
-  pdf.rect(0, 27, 105, 106, 'F');
-
-  const icons = await Promise.all(model.items.map((item) => loadPdfImage(item.imageUrl)));
-  const half = Math.ceil(model.items.length / 2);
-  const columns = [
-    { items: model.items.slice(0, half), icons: icons.slice(0, half), x: 8 },
-    { items: model.items.slice(half), icons: icons.slice(half), x: 56 },
-  ];
-  const rowH = 7.1;
-  const startY = 29;
-  const iconSize = 4.2;
-
-  columns.forEach((column) => {
-    column.items.forEach((item, index) => {
-      const y = startY + index * rowH;
-      const icon = column.icons[index];
-      const iconY = y + (rowH - iconSize) / 2;
-      if (icon) {
-        try { pdf.addImage(icon, 'PNG', column.x, iconY, iconSize, iconSize); } catch { /* skip a broken icon */ }
-      } else {
-        pdf.setFillColor(11, 7, 54);
-        pdf.circle(column.x + iconSize / 2, y + rowH / 2, 0.7, 'F');
-      }
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(30, 41, 59);
-      pdf.text(String(item.name || ''), column.x + iconSize + 2, y + rowH / 2, { baseline: 'middle' });
-      pdf.setDrawColor(226, 232, 240);
-      pdf.setLineWidth(0.12);
-      pdf.line(column.x, y + rowH - 0.3, column.x + 42, y + rowH - 0.3);
-    });
-  });
+const paintAmenitiesPage = async () => {
+  // Amenities & Features is fully drawn in createSlide3 (Figma HTML) — no jsPDF overlay.
 };
 
 const loadPdfLogo = () => new Promise((resolve) => {
@@ -7714,19 +8146,30 @@ const loadPdfLogo = () => new Promise((resolve) => {
   img.src = pnglogo;
 });
 
+const PAYMENT_INSTALLMENT_PAGE1_MAX = 12;
+
 const paintPaymentDetailsPage = async (pdf, container) => {
   const model = paymentSlideModel;
-  if (!model) return;
+  if (!model?.pages?.length) return;
   const slides = [...container.children];
-  const pageIndex = slides.findIndex((el) => el.id === 'payment-details-slide');
-  if (pageIndex < 0 || pageIndex + 1 > pdf.internal.getNumberOfPages()) return;
-
-  pdf.setPage(pageIndex + 1);
   const logo = await loadPdfLogo();
 
-  const ink = [30, 41, 59];
-  const muted = [100, 116, 139];
-  const navy = [15, 31, 58];
+  // Figma palette (Create Offer → Payment Details)
+  const navy = [1, 16, 66];          // #011042 Primary Blue
+  const ink = [7, 27, 61];           // #071B3D body text
+  const muted = [120, 120, 120];
+  const gold = [200, 157, 110];      // #C89D6E
+  const goldSoft = [236, 221, 204];  // ≈ #ECDDCC
+  const goldSoftHero = [228, 206, 180];
+  const cream = [249, 246, 242];
+  const footerH = 12;
+  const contentBottom = 148 - footerH;
+  const margin = 8;
+  const innerW = 210 - margin * 2;
+  const DESIGN_TABLE_W_PX = 158 + 148 + 153 + 153 + 152;
+  const DESIGN_ROW_H_PX = 26;
+  const pxToMm = innerW / DESIGN_TABLE_W_PX;
+
   const write = (text, x, y, w, h, opts = {}) => {
     const value = String(text ?? '');
     if (!value) return;
@@ -7734,148 +8177,218 @@ const paintPaymentDetailsPage = async (pdf, container) => {
     pdf.setFontSize(opts.size || 7);
     pdf.setTextColor(...(opts.color || ink));
     const align = opts.align || 'center';
-    const textX = align === 'left' ? x : x + w / 2;
+    const textX = align === 'left' ? x : align === 'right' ? x + w : x + w / 2;
     pdf.text(value, textX, y + h / 2, { align, baseline: 'middle' });
   };
   const badgeFill = (status) => {
-    if (status === 'Paid') return { bg: [34, 197, 94], fg: [255, 255, 255] };
-    if (status === 'Due on transfer') return { bg: [186, 230, 253], fg: [7, 89, 133] };
-    if (status === 'Selling below original price') return { bg: [254, 202, 202], fg: [185, 28, 28] };
-    return { bg: [254, 205, 211], fg: [159, 18, 57] };
+    if (status === 'Paid') return { bg: [220, 242, 228], fg: navy };
+    if (status === 'Due on transfer') return { bg: [224, 242, 254], fg: navy };
+    if (status === 'Selling below original price') return { bg: [254, 226, 226], fg: navy };
+    return { bg: [232, 214, 190], fg: navy };
   };
 
-  pdf.setFillColor(243, 245, 250);
-  pdf.rect(0, 0, 210, 148, 'F');
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.setTextColor(...navy);
-  pdf.text('PAYMENT DETAILS', 6, 8, { baseline: 'middle' });
-  pdf.setFillColor(232, 93, 28);
-  pdf.roundedRect(6, 11, 12, 1, 0.4, 0.4, 'F');
-  if (logo) {
-    try { pdf.addImage(logo, 'PNG', 188, 4, 16, 11); } catch { /* logo is optional */ }
-  }
-
-  const margin = 6;
-  const innerW = 210 - margin * 2;
-  let y = 15;
-
-  write('SUMMARY', margin, y, innerW, 4, { size: 7, bold: true, color: muted, align: 'left' });
-  y += 5;
-
-  const cards = model.cards;
-  const gap = 2;
-  // Keep each card at its "4-up" width even when fewer cards render (e.g. Original
-  // price / Premium hidden for completed listings), instead of stretching the
-  // remaining cards to fill the full row.
-  const cardW = (innerW - gap * 3) / 4;
-  const cardH = 12;
-  cards.forEach((card, i) => {
-    const x = margin + i * (cardW + gap);
-    if (card.hero) pdf.setFillColor(...navy);
-    else pdf.setFillColor(232, 236, 242);
-    pdf.roundedRect(x, y, cardW, cardH, 1.6, 1.6, 'F');
-    if (card.hero) {
-      pdf.setFillColor(232, 93, 28);
-      pdf.rect(x, y + cardH - 1, cardW, 1, 'F');
-    }
-    write(card.label, x, y + 0.6, cardW, 4.2, { size: 6.5, bold: true, color: card.hero ? [255, 255, 255] : muted });
-    write(card.value, x, y + 4.6, cardW, 6, {
-      size: 8,
-      bold: true,
-      color: card.hero ? [255, 255, 255] : (card.negative ? [185, 28, 28] : navy),
-    });
-  });
-  y += cardH + 3;
-
-  const drawTable = (title, headers, rows, totalCells) => {
-    write(title, margin, y, innerW, 4, { size: 7, bold: true, color: muted, align: 'left' });
-    y += 4.5;
-    const weights = headers.map((h) => h.w);
-    const weightSum = weights.reduce((s, n) => s + n, 0);
-    const cols = weights.map((w) => (w / weightSum) * (innerW - 3));
-    const rowH = 5.2;
-    const headH = 5.6;
+  const paintChrome = () => {
     pdf.setFillColor(255, 255, 255);
-    const bodyH = headH + (rows.length + (totalCells ? 1 : 0)) * rowH + 2;
-    pdf.roundedRect(margin, y, innerW, bodyH, 2, 2, 'F');
-    pdf.setDrawColor(226, 232, 240);
-    pdf.roundedRect(margin, y, innerW, bodyH, 2, 2, 'S');
+    pdf.rect(0, 0, 210, 148, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(...navy);
+    pdf.text('PAYMENT DETAILS', 8, 9, { baseline: 'middle' });
+    pdf.setFillColor(...gold);
+    pdf.roundedRect(8, 12.2, 18, 1.1, 0.4, 0.4, 'F');
+    if (logo) {
+      try { pdf.addImage(logo, 'PNG', 186, 3.5, 16, 11); } catch { /* optional */ }
+    }
+  };
 
-    let x = margin + 1.5;
-    headers.forEach((header, i) => {
-      pdf.setFillColor(...navy);
-      pdf.roundedRect(x, y + 1.1, cols[i] - 1, headH - 1.6, (headH - 1.6) / 2, (headH - 1.6) / 2, 'F');
-      write(header.label, x, y + 1.1, cols[i] - 1, headH - 1.6, { size: 6.5, bold: true, color: [255, 255, 255] });
-      x += cols[i];
+  const paintFooter = () => {
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(5.8);
+    pdf.setTextColor(...muted);
+    const note =
+      "Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.";
+    const noteLines = pdf.splitTextToSize(note, innerW);
+    const noteY = contentBottom - 3.5 - (noteLines.length - 1) * 2.4;
+    pdf.text(noteLines, margin, noteY);
+
+    pdf.setFillColor(...navy);
+    pdf.rect(0, contentBottom, 210, footerH, 'F');
+    pdf.setFillColor(...gold);
+    pdf.rect(0, contentBottom, 210, 0.55, 'F');
+    pdf.setFillColor(...gold);
+    pdf.rect(margin, contentBottom + 3.4, 0.7, footerH - 6.6, 'F');
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('Oia Properties', margin + 3.5, contentBottom + footerH / 2 + 0.6, { baseline: 'middle' });
+    pdf.text('Powered by Altcrm', 210 - margin, contentBottom + footerH / 2 + 0.6, {
+      align: 'right',
+      baseline: 'middle',
     });
-    y += headH;
+  };
 
-    const paintRow = (cells, status, bold) => {
-      let cx = margin + 1.5;
-      cells.forEach((cell, i) => {
-        if (i === cells.length - 1 && status) {
-          const colors = badgeFill(status);
-          const text = String(status);
-          const badgeW = Math.min(cols[i] - 1.2, Math.max(14, text.length * 1.25 + 4));
-          const bx = cx + (cols[i] - 1 - badgeW) / 2;
-          const by = y + 0.7;
-          const bh = rowH - 1.4;
-          pdf.setFillColor(...colors.bg);
-          pdf.roundedRect(bx, by, badgeW, bh, bh / 2, bh / 2, 'F');
-          write(text, bx, by, badgeW, bh, { size: 6, bold: true, color: colors.fg });
-        } else {
-          write(cell, cx, y, cols[i] - 1, rowH, { size: 7, bold: !!bold, color: ink });
+  const paintOnePage = (page) => {
+    paintChrome();
+    let y = 16.5;
+
+    if (page.showCards) {
+      const cards = model.cards || [];
+      const cardCount = Math.max(1, cards.length);
+      const gap = 2.4;
+      const cardW = (innerW - gap * (cardCount - 1)) / cardCount;
+      const cardH = 14;
+      const cardPadX = 3.2;
+      cards.forEach((card, i) => {
+        const x = margin + i * (cardW + gap);
+        pdf.setFillColor(255, 255, 255);
+        pdf.setDrawColor(...goldSoft);
+        pdf.setLineWidth(0.22);
+        pdf.roundedRect(x, y, cardW, cardH, 1.6, 1.6, 'FD');
+        if (card.hero) {
+          pdf.setFillColor(...goldSoftHero);
+          pdf.rect(x + 0.6, y + cardH - 0.7, cardW - 1.2, 0.45, 'F');
         }
-        cx += cols[i];
+        write(card.label, x + cardPadX, y + 1.2, cardW - cardPadX * 2, 4.4, {
+          size: 6, bold: false, color: navy, align: 'left',
+        });
+        write(card.value, x + cardPadX, y + 6.2, cardW - cardPadX * 2, 6.4, {
+          size: 8, bold: true, color: card.negative ? [153, 27, 27] : navy, align: 'left',
+        });
       });
-      y += rowH;
+      y += cardH + 4.5;
+    }
+
+    const drawTable = (title, headers, rows, totalCells) => {
+      write(title, margin, y, innerW, 4, { size: 7.5, bold: true, color: navy, align: 'left' });
+      y += 5;
+
+      const cols = headers.map((h) => (h.px != null ? h.px * pxToMm : (h.w / headers.reduce((s, x) => s + (x.w || 0), 0)) * innerW));
+      const rowH = DESIGN_ROW_H_PX * pxToMm;
+      const headH = rowH;
+      const cellPad = 1.5;
+      const totalRows = rows.length + (totalCells ? 1 : 0);
+      const bodyH = headH + totalRows * rowH;
+      const tableTop = y;
+
+      pdf.setFillColor(255, 255, 255);
+      pdf.setDrawColor(...goldSoft);
+      pdf.setLineWidth(0.22);
+      pdf.roundedRect(margin, y, innerW, bodyH, 1.2, 1.2, 'FD');
+
+      pdf.setFillColor(...cream);
+      pdf.roundedRect(margin, y, innerW, headH, 1.2, 1.2, 'F');
+      pdf.rect(margin, y + headH - 1.2, innerW, 1.2, 'F');
+
+      const headerStartX = [];
+      const isStatusHeader = (label) => /^status$/i.test(String(label || '').trim());
+      {
+        let hx = margin;
+        headers.forEach((header, i) => {
+          const label = String(header.label ?? '');
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7);
+          const titleW = typeof pdf.getTextWidth === 'function' ? pdf.getTextWidth(label) : label.length * 1.6;
+          const colInnerLeft = hx + cellPad;
+          const colInnerW = cols[i] - cellPad * 2;
+          headerStartX[i] = Math.max(colInnerLeft, hx + (cols[i] - titleW) / 2);
+          write(label, colInnerLeft, y, colInnerW, headH, {
+            size: 7, bold: true, color: navy, align: 'center',
+          });
+          hx += cols[i];
+        });
+      }
+      y += headH;
+
+      {
+        let vx = margin;
+        pdf.setDrawColor(...goldSoft);
+        pdf.setLineWidth(0.18);
+        for (let i = 0; i < cols.length - 1; i += 1) {
+          vx += cols[i];
+          pdf.line(vx, tableTop, vx, tableTop + bodyH);
+        }
+      }
+
+      const paintRow = (cells, status, isTotal) => {
+        if (isTotal) {
+          pdf.setFillColor(...cream);
+          pdf.rect(margin, y, innerW, rowH, 'F');
+        }
+        pdf.setDrawColor(...goldSoft);
+        pdf.setLineWidth(0.18);
+        pdf.line(margin, y + rowH, margin + innerW, y + rowH);
+
+        let cx = margin;
+        cells.forEach((cell, i) => {
+          const valueStart = headerStartX[i] ?? (cx + cellPad);
+          const valueW = Math.max(2, cx + cols[i] - cellPad - valueStart);
+          const statusCol = isStatusHeader(headers[i]?.label) || (i === cells.length - 1 && status);
+          if (statusCol && status) {
+            const colors = badgeFill(status);
+            const text = String(status);
+            const badgeH = Math.min(rowH - 2.4, 5);
+            const badgeW = Math.min(cols[i] - cellPad * 2, Math.max(16, text.length * 1.3 + 5));
+            const bx = cx + (cols[i] - badgeW) / 2;
+            const by = y + (rowH - badgeH) / 2;
+            pdf.setFillColor(...colors.bg);
+            pdf.roundedRect(bx, by, badgeW, badgeH, badgeH / 2, badgeH / 2, 'F');
+            write(text, bx, by, badgeW, badgeH, { size: 6.2, bold: false, color: colors.fg });
+          } else {
+            write(cell, valueStart, y, valueW, rowH, {
+              size: 6.5, bold: !!isTotal, color: navy, align: 'left',
+            });
+          }
+          cx += cols[i];
+        });
+        y += rowH;
+      };
+
+      rows.forEach((row) => paintRow(row.cells, row.status, false));
+      if (totalCells) paintRow(totalCells, null, true);
+      y += 4;
     };
 
-    rows.forEach((row) => paintRow(row.cells, row.status, false));
-    if (totalCells) paintRow(totalCells, null, true);
-    y += 3;
+    if (page.showInstallments && page.installments?.length) {
+      drawTable(
+        'INSTALLMENT BREAKDOWN',
+        [
+          { label: 'Payment Type', px: 158 },
+          { label: 'Percentage (%)', px: 148 },
+          { label: 'Amount (AED)', px: 153 },
+          { label: 'Date', px: 153 },
+          { label: 'Status', px: 152 },
+        ],
+        page.installments,
+        page.showInstallmentTotal
+          ? ['Total', model.installmentPercentTotal, model.installmentTotal, '', '']
+          : null
+      );
+    }
+
+    if (page.showExpenses && model.expenses?.length) {
+      drawTable(
+        'OTHER COSTS',
+        [
+          { label: 'Fee Type', px: 158 },
+          { label: 'Detail (%)', px: 148 },
+          { label: 'Amount (AED)', px: 153 },
+          { label: 'VAT (AED)', px: 153 },
+          { label: 'Total (AED)', px: 152 },
+        ],
+        model.expenses,
+        ['Total', '', ...model.expenseTotals]
+      );
+    }
+
+    paintFooter();
   };
 
-  if (model.showInstallments) {
-    drawTable(
-      'INSTALLMENT BREAKDOWN',
-      [
-        { label: 'Payment type', w: 22 },
-        { label: 'Percentage', w: 16 },
-        { label: 'Amount', w: 24 },
-        { label: 'Date', w: 16 },
-        { label: 'Status', w: 22 },
-      ],
-      model.installments,
-      ['Total', model.installmentPercentTotal, model.installmentTotal, '', '']
-    );
+  for (const page of model.pages) {
+    const pageIndex = slides.findIndex((el) => el.id === page.slideId);
+    if (pageIndex < 0 || pageIndex + 1 > pdf.internal.getNumberOfPages()) continue;
+    pdf.setPage(pageIndex + 1);
+    paintOnePage(page);
   }
-
-  if (model.showExpenses) {
-    drawTable(
-      'OTHER COSTS',
-      [
-        { label: 'Label', w: 22 },
-        { label: 'Detail', w: 16 },
-        { label: 'Amount', w: 22 },
-        { label: 'VAT', w: 18 },
-        { label: 'Total', w: 22 },
-      ],
-      model.expenses,
-      ['Total', '', ...model.expenseTotals]
-    );
-  }
-
-  write(
-    "Please note that all fees mentioned are indicative and may change based on the developer's policy, government authority requirements, or applicable regulations at the time of purchase.",
-    margin,
-    138,
-    innerW,
-    6,
-    { size: 6, color: muted }
-  );
 };
 
 const createPaymentDetailsSlide = () => {
@@ -7970,6 +8483,9 @@ const createPaymentDetailsSlide = () => {
 
   const fmtAed = (v) =>
     new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', maximumFractionDigits: 0 }).format(toNum(v));
+  // PDF design shows plain figures (currency lives in the column / card labels).
+  const fmtNum = (v) =>
+    new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 }).format(toNum(v));
 
   const fmtDate = (d) => {
     if (!d) return '—';
@@ -7979,10 +8495,11 @@ const createPaymentDetailsSlide = () => {
   };
 
   const badgeStyle = (status) => {
-    if (status === 'Paid') return 'background:#22c55e;color:#fff;';
-    if (status === 'Due on transfer') return 'background:#bae6fd;color:#075985;';
-    if (status === 'Selling below original price') return 'background:#fecaca;color:#b91c1c;';
-    return 'background:#fecdd3;color:#9f1239;';
+    // Text always Primary Blue (#011042); background varies by status.
+    if (status === 'Paid') return 'background:#dcf2e4;color:#011042;';
+    if (status === 'Due on transfer') return 'background:#e0f2fe;color:#011042;';
+    if (status === 'Selling below original price') return 'background:#fee2e2;color:#011042;';
+    return 'background:#C89D6E;color:#011042;';
   };
 
   const sorted = installments.slice().sort((a, b) => new Date(a?.date || 0) - new Date(b?.date || 0));
@@ -8237,46 +8754,135 @@ const createPaymentDetailsSlide = () => {
     return '';
   }
 
+  // Re-derive clean PDF cell values from source amounts (plain numbers, no AED prefix).
+  const toPdfInstallmentModels = (models, amountsByIndex) =>
+    models.map((row, i) => {
+      const amount = amountsByIndex?.[i];
+      return {
+        ...row,
+        cells: [
+          row.cells[0],
+          row.cells[1],
+          amount !== undefined ? fmtNum(amount) : String(row.cells[2]).replace(/^AED\s*/i, '').trim(),
+          row.cells[3],
+          row.cells[4],
+        ],
+      };
+    });
+
+  const paidAmounts = [];
+  const unpaidAmounts = [];
+  sorted.forEach((entry) => {
+    const amount = installmentAmount(entry);
+    if (isPaid(entry?.date)) paidAmounts.push(amount);
+    else unpaidAmounts.push(amount);
+  });
+
+  const allInstallments = [
+    ...toPdfInstallmentModels(paidModels, paidAmounts),
+    ...(hasPremiumRow ? [{ cells: ['Premium', '—', fmtNum(premium), '—', ''], status: premiumStatus, negative: premium < 0 }] : []),
+    ...toPdfInstallmentModels(unpaidModels, unpaidAmounts),
+    ...(hasHandoverRow ? [{
+      cells: [
+        `Handover (${handoverPct.toFixed(0)}%)`,
+        handoverIsFull ? '—' : `${handoverPct.toFixed(2)}%`,
+        handoverIsFull ? '—' : fmtNum(handoverAmount),
+        fmtDate(p.handover_date),
+        '',
+      ],
+      status: handoverStatus,
+    }] : []),
+  ];
+  const showInstallments = Boolean(installmentTable) && allInstallments.length > 0;
+  const hasExpenses = expenseModels.length > 0;
+  const expenseRowsPdf = expenseModels.map((row) => ({
+    ...row,
+    cells: row.cells.map((cell, i) => {
+      if (i === 0 || i === 1) return cell;
+      if (cell === '—' || cell === '') return cell;
+      const n = toNum(String(cell).replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) && String(cell).match(/\d/) ? fmtNum(n) : cell;
+    }),
+  }));
+
+  // Page split:
+  // - ≤12 installments → slide 1 installments; Other Costs on next slide
+  // - >12 installments → first 12 on slide 1; remaining + Other Costs on slide 2
+  const pages = [];
+  if (showInstallments && allInstallments.length > PAYMENT_INSTALLMENT_PAGE1_MAX) {
+    pages.push({
+      slideId: 'payment-details-slide',
+      showCards: true,
+      showInstallments: true,
+      installments: allInstallments.slice(0, PAYMENT_INSTALLMENT_PAGE1_MAX),
+      showInstallmentTotal: false,
+      showExpenses: false,
+    });
+    pages.push({
+      slideId: 'payment-details-slide-2',
+      showCards: false,
+      showInstallments: true,
+      installments: allInstallments.slice(PAYMENT_INSTALLMENT_PAGE1_MAX),
+      showInstallmentTotal: true,
+      showExpenses: hasExpenses,
+    });
+  } else if (showInstallments) {
+    pages.push({
+      slideId: 'payment-details-slide',
+      showCards: true,
+      showInstallments: true,
+      installments: allInstallments,
+      showInstallmentTotal: true,
+      showExpenses: false,
+    });
+    if (hasExpenses) {
+      pages.push({
+        slideId: 'payment-details-slide-2',
+        showCards: false,
+        showInstallments: false,
+        installments: [],
+        showInstallmentTotal: false,
+        showExpenses: true,
+      });
+    }
+  } else {
+    pages.push({
+      slideId: 'payment-details-slide',
+      showCards: true,
+      showInstallments: false,
+      installments: [],
+      showInstallmentTotal: false,
+      showExpenses: hasExpenses,
+    });
+  }
+
   paymentSlideModel = {
     cards: [
-      { label: 'Selling price', value: fmtAed(sellingPrice), hero: true },
-      ...(isUnderConstruction ? [{ label: 'Original price', value: fmtAed(originalPrice) }] : []),
-      ...(planLabel ? [{ label: 'Payment plan', value: planLabel }] : []),
-      ...(isUnderConstruction ? [{ label: 'Premium', value: fmtAed(premium), negative: premium < 0 }] : []),
+      { label: 'Selling Price (AED)', value: fmtNum(sellingPrice), hero: true },
+      ...(isUnderConstruction ? [{ label: 'Original Price (AED)', value: fmtNum(originalPrice) }] : []),
+      ...(planLabel ? [{ label: 'Payment Plan (%)', value: planLabel }] : []),
+      ...(isUnderConstruction ? [{ label: 'Premium (AED)', value: fmtNum(premium), negative: premium < 0 }] : []),
+      ...(hasNocPercentage ? [{ label: 'NOC (%)', value: `${nocPercentage}%` }] : []),
     ],
-    showInstallments: Boolean(installmentTable),
-    installments: [
-      ...paidModels,
-      ...(hasPremiumRow ? [{ cells: ['Premium', '—', fmtAed(premium), '—', ''], status: premiumStatus, negative: premium < 0 }] : []),
-      ...unpaidModels,
-      ...(hasHandoverRow ? [{
-        cells: [
-          `Handover (${handoverPct.toFixed(0)}%)`,
-          handoverIsFull ? '—' : `${handoverPct.toFixed(2)}%`,
-          handoverIsFull ? '—' : fmtAed(handoverAmount),
-          fmtDate(p.handover_date),
-          '',
-        ],
-        status: handoverStatus,
-      }] : []),
-    ],
-    installmentTotal: fmtAed(totalAmount),
+    installmentTotal: fmtNum(totalAmount),
     installmentPercentTotal: percentTotalDisplay,
-    showExpenses: expenseModels.length > 0,
-    expenses: expenseModels,
-    expenseTotals: [fmtAed(expSubtotal), fmtAed(expVatTotal), fmtAed(expGrand)],
+    expenses: expenseRowsPdf,
+    expenseTotals: [fmtNum(expSubtotal), fmtNum(expVatTotal), fmtNum(expGrand)],
+    pages,
   };
 
-  return `
-  <div id="payment-details-slide" style="width:210mm;height:148mm;margin:0;padding:0;overflow:hidden;background:#f3f5fa;page-break-inside:avoid;"></div>
-  `;
+  const emptySlide = (id) =>
+    `<div id="${id}" style="width:210mm;height:148mm;margin:0;padding:0;overflow:hidden;background:#ffffff;page-break-inside:avoid;"></div>`;
+
+  return pages.map((page) => emptySlide(page.slideId)).join('\n');
 };
 
 const createFooter = () => {
+  // Pre-rasterised footer strip — avoids html2canvas clipping live text / thin accents.
+  const src = getOfferFooterImgSrc();
   return `
-  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:100% !important; height:10% !important; background:#0B0736 !important; display:flex !important; align-items:center !important; justify-content:space-between !important; padding:0 5mm !important; box-sizing:border-box !important; z-index:100 !important;">
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Oia Properties</p>
-    <p style="color:#fff !important; font-size:2.8mm !important; font-family:Arial, sans-serif !important; font-weight:400 !important; margin:0 !important; opacity:0.9 !important;">Powered By altcrm</p>
+  <div style="position:absolute !important; bottom:0 !important; left:0 !important; width:210mm !important; height:11mm !important; z-index:100 !important; overflow:hidden !important;">
+    <img src="${src}" alt="" style="width:210mm !important; height:11mm !important; display:block !important; border:0 !important;" />
   </div>
   `;
 };

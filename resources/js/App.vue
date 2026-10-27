@@ -56,6 +56,7 @@
       :initialLead="leadViewModalSeed"
       :disableStageChange="leadViewModalDisableStageChange"
       :openSection="leadViewOpenSection"
+      :z-index="12200"
       @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
