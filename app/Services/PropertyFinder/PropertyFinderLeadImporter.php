@@ -182,6 +182,7 @@ class PropertyFinderLeadImporter
             'pf_lead_id' => (string) $pf['id'],
             'pf_channel' => $pf['channel'] ?? null,
         ]);
+        app(\App\Services\EligibleStagesAutoMergeService::class)->afterLeadCreated($lead->fresh());
         broadcast(new LeadUpdated($lead, 'created'));
 
         Log::channel('propertyfinder')->info('PF lead created', [

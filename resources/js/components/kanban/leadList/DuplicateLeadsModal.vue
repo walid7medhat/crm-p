@@ -23,7 +23,17 @@
                 <div class="modal-header-custom d-flex justify-content-between align-items-center py-3 border-bottom">
                     <picture class="modal-title mb-0">Duplicate Leads ({{ duplicateLeads.length }})</picture>
                     <div class="header-actions d-flex align-items-center gap-2">
-                        <button class="close-btn" @click="show = false">
+                        <button
+                            v-if="showMergeAction"
+                            type="button"
+                            class="merge-btn-3d"
+                            @click.stop="startMerge"
+                        >
+                            <span class="merge-btn-3d__shine" aria-hidden="true"></span>
+                            <iconify-icon icon="lucide:git-merge" class="merge-btn-3d__icon"></iconify-icon>
+                            <span>Merge</span>
+                        </button>
+                        <button class="close-btn" @click="show = false" aria-label="Close">
                             <iconify-icon icon="lucide:x"></iconify-icon>
                         </button>
                     </div>
@@ -61,9 +71,17 @@
                                 With another branch<span v-if="lead.branch_name"> ({{ lead.branch_name }})</span>
                             </div>
 
-                            <!-- NEW: stage + merge status -->
+                            <!-- Stage + merge eligibility -->
                             <div class="stage-line">
                                 <span class="stage-chip">{{ lead.stage_name || '—' }}</span>
+                                <span v-if="lead.merge_blocked_reason" class="blocked-reason">
+                                    <iconify-icon icon="lucide:ban"></iconify-icon>
+                                    {{ lead.merge_blocked_reason }}
+                                </span>
+                                <span v-else-if="lead.can_merge" class="ok-reason">
+                                    <iconify-icon icon="lucide:check"></iconify-icon>
+                                    Can be merged
+                                </span>
                             </div>
                            
                             
@@ -127,6 +145,36 @@ const loading = ref(false)
 const error = ref(null)
 const popupRef = ref(null)
 const popupStyle = ref({})
+
+const MERGE_ROLES = ['super_admin', 'admin', 'branch_admin']
+
+function currentUserRoles() {
+    try {
+        const raw = localStorage.getItem('user')
+        const parsed = raw ? JSON.parse(raw) : null
+        return Array.isArray(parsed?.roles) ? parsed.roles : []
+    } catch {
+        return []
+    }
+}
+
+const canMergeByRole = computed(() =>
+    currentUserRoles().some((r) => MERGE_ROLES.includes(r))
+)
+
+const mergeableGroup = computed(
+    () => duplicateLeads.value.some((l) => l.group_can_merge === true)
+)
+
+const showMergeAction = computed(
+    () => canMergeByRole.value && mergeableGroup.value
+)
+
+const startMerge = () => {
+    emit('merge', props.leadId)
+    show.value = false
+}
+
 // Phones: a positioned dropdown doesn't fit (it was placed as if 500px wide and ended up
 // off-screen), so show a full-width bottom sheet instead.
 const MOBILE_MAX = 768
@@ -540,13 +588,78 @@ onUnmounted(() => {
 .modal-body-custom::-webkit-scrollbar-thumb:hover {
     background-color: #9CA3AF;
 }
-.merge-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    border: 0; border-radius: 999px; padding: 6px 16px;
-    background: var(--gradient-primary); color: #fff;
-    font-size: 12px; font-weight: 700; cursor: pointer;
+.merge-btn-3d {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 10px;
+    padding: 7px 14px;
+    background: var(--gradient-primary, linear-gradient(135deg, #5b21b6 0%, #4c1d95 55%, #312e81 100%));
+    color: #fff;
+    font-family: Montserrat, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.22) inset,
+        0 -2px 0 rgba(15, 23, 42, 0.22) inset,
+        0 4px 10px rgba(49, 46, 129, 0.28),
+        0 1px 2px rgba(15, 23, 42, 0.12);
+    transform: translateY(0);
+    transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease,
+        filter 0.16s ease;
 }
-.merge-btn:hover { filter: brightness(1.06); }
+.merge-btn-3d__shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.16) 42%,
+        transparent 58%
+    );
+    pointer-events: none;
+}
+.merge-btn-3d__icon {
+    font-size: 14px;
+    line-height: 1;
+}
+.merge-btn-3d:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.28) inset,
+        0 -2px 0 rgba(15, 23, 42, 0.2) inset,
+        0 6px 14px rgba(49, 46, 129, 0.34),
+        0 2px 4px rgba(15, 23, 42, 0.14);
+}
+.merge-btn-3d:active {
+    transform: translateY(1px);
+    filter: brightness(0.97);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.12) inset,
+        0 2px 0 rgba(15, 23, 42, 0.28) inset,
+        0 2px 4px rgba(49, 46, 129, 0.2);
+}
+.merge-btn-3d:focus-visible {
+    outline: 2px solid #c4b5fd;
+    outline-offset: 2px;
+}
+.merge-btn-3d:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.1) inset,
+        0 1px 3px rgba(15, 23, 42, 0.12);
+}
 .duplicate-lead-card--locked { opacity: .75; cursor: not-allowed; }
 .duplicate-lead-card--locked:hover { transform: none; box-shadow: none !important; }
 .other-branch-badge {

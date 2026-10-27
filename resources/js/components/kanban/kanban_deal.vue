@@ -1061,9 +1061,17 @@ const handleLeadCreated = async (lead) => {
     await nextTick()
 
     // Insert the new lead into the board locally — no full refetch/refresh.
+    // Soft-merged duplicates leave their columns via auto_merged_lead_ids meta.
     // Pusher will also deliver a 'created' event for other viewers, but
     // handleNewLead() dedupes by id so this is safe either way.
     const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
+    if (leadsComponent && typeof leadsComponent.applyAutoMergeVisibility === 'function') {
+        leadsComponent.applyAutoMergeVisibility({
+            auto_merged_lead_ids: lead?.auto_merged_lead_ids || [],
+            auto_merge_primary_id: lead?.auto_merge_primary_id,
+            auto_merge_primary_stage_id: lead?.auto_merge_primary_stage_id,
+        }, lead)
+    }
     if (leadsComponent && lead?.id && typeof leadsComponent.handleNewLead === 'function') {
         leadsComponent.handleNewLead(lead)
     } else if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {

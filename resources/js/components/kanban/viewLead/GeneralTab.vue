@@ -605,11 +605,18 @@ const handleLeadUpdated = (responseData) => {
     try {
         console.log('✅ Lead updated successfully, received data:', responseData)
         
-        // Extract the lead data from response
+        // Extract the lead data from response; keep auto-merge meta for Kanban visibility
         const updatedLead = responseData?.data || responseData
+        const meta = responseData?.meta || {}
         
         // Emit update event to parent with the latest lead data
-        emit('update:lead', updatedLead)
+        emit('update:lead', {
+            ...updatedLead,
+            auto_merged_lead_ids: meta.auto_merged_lead_ids || updatedLead?.auto_merged_lead_ids || [],
+            auto_merge_primary_id: meta.auto_merge_primary_id ?? updatedLead?.auto_merge_primary_id ?? null,
+            auto_merge_primary_stage_id: meta.auto_merge_primary_stage_id ?? updatedLead?.auto_merge_primary_stage_id ?? null,
+            lead_absorbed: !!(meta.lead_absorbed || updatedLead?.lead_absorbed),
+        })
         
         // Switch back to view mode
         isEditMode.value = false

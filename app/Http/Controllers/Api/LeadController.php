@@ -594,7 +594,9 @@ class LeadController extends Controller
                 $lead->id,
                 ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
             );
-        $this->broadcastLeadUpdated($lead, 'created');
+        $autoMergedIds = app(\App\Services\EligibleStagesAutoMergeService::class)->afterLeadCreated($lead->fresh());
+        $autoMergeMeta = $this->autoMergeResponseMeta($autoMergedIds, (int) $lead->id, (int) $lead->stage_id);
+        $this->broadcastLeadUpdated($lead, 'created', $autoMergeMeta);
 
 
             // Lightweight kanban card payload so the frontend can insert the new lead
@@ -610,7 +612,8 @@ class LeadController extends Controller
             return ApiResponse::success(
                 new KanbanLeadCardResource($lead),
                 'Lead created successfully',
-                201
+                201,
+                $autoMergeMeta
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to create lead: ' . $e->getMessage());
@@ -831,6 +834,7 @@ class LeadController extends Controller
                 }
 
                 $old = $lead->getAttributes();
+                $oldPhoneDigits = Lead::phoneDigits($old['work_phone'] ?? null);
 
                 $lead->update($leadData);
 
@@ -852,11 +856,6 @@ class LeadController extends Controller
                     }
                 }
 
-                if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
-                    $this->broadcastLeadUpdated($lead, 'assigned', $changes);
-                } else {
-                    $this->broadcastLeadUpdated($lead, 'updated');
-                }
                 // ===================history==============
                 $new = $lead->getAttributes();
                 $ignoreKeys = ['stage_id', 'last_stage_change_at', 'responsible_person_id', 'updated_at'];
@@ -909,6 +908,20 @@ class LeadController extends Controller
                         'fields' => $fields
                     ]
                 );
+
+                $autoMergeMeta = $this->autoMergeMetaAfterPhoneDigitChange($lead, $oldPhoneDigits);
+
+                $broadcastPayload = !empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned'
+                    ? array_merge($changes, $autoMergeMeta ?? [])
+                    : $autoMergeMeta;
+                if (!empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned') {
+                    $this->broadcastLeadUpdated($lead, 'assigned', $broadcastPayload);
+                } else {
+                    $this->broadcastLeadUpdated($lead, 'updated', $broadcastPayload);
+                }
+
+                $lead = $lead->fresh() ?? $lead;
+
                 return ApiResponse::success(
                     new LeadResource($lead->load([
                         'responsiblePerson',
@@ -916,7 +929,9 @@ class LeadController extends Controller
                         'observers.user',
                         'integration:id,project_id',
                     ])),
-                    'Lead updated successfully'
+                    'Lead updated successfully',
+                    200,
+                    $autoMergeMeta
                 );
             } catch (\Exception $e) {
                 return ApiResponse::error('Failed to update lead: ' . $e->getMessage());
@@ -1988,6 +2003,41 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             );
         }
 
+        $autoMergeMeta = null;
+        if (! \App\Services\EligibleStagesAutoMergeService::isRunning()) {
+            $summary = app(\App\Services\EligibleStagesAutoMergeService::class)
+                ->afterStageChanged($lead->fresh(), (int) $newStage->id);
+            $autoMergeMeta = $this->autoMergeResponseMeta(
+                $summary['merged_ids'] ?? [],
+                $summary['primary_id'] ?? null,
+                $summary['primary_stage_id'] ?? null
+            );
+
+            $raw = Lead::withoutGlobalScope('notMerged')->find($lead->id);
+            if ($raw && $raw->merged_into_lead_id) {
+                $absorbedIds = array_values(array_unique(array_merge(
+                    $summary['merged_ids'] ?? [],
+                    [(int) $raw->id]
+                )));
+                $primaryId = (int) $raw->merged_into_lead_id;
+                $primaryStageId = (int) (Lead::query()->where('id', $primaryId)->value('stage_id')
+                    ?? ($summary['primary_stage_id'] ?? config('lead_merge.lead_pool_stage_id')));
+
+                return ApiResponse::success(
+                    null,
+                    'Lead soft-merged into primary duplicate',
+                    200,
+                    $this->autoMergeResponseMeta($absorbedIds, $primaryId, $primaryStageId, true)
+                );
+            }
+
+            $lead = $lead->fresh() ?? $lead;
+            if ($autoMergeMeta && ($summary['primary_id'] ?? null) === (int) $lead->id
+                && ($summary['primary_stage_id'] ?? null)) {
+                $lead->stage_id = (int) $summary['primary_stage_id'];
+            }
+        }
+
         // Lightweight kanban card payload (avoids LeadResource history/duplicate queries)
         $lead->loadMissing([
             'stage:id,name,order,color',
@@ -1999,7 +2049,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         
         return ApiResponse::success(
             new KanbanLeadCardResource($lead),
-            'Lead stage and data updated successfully'
+            'Lead stage and data updated successfully',
+            200,
+            $autoMergeMeta
         );
 
     } catch (\Illuminate\Validation\ValidationException $e) {
@@ -2071,9 +2123,18 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 $lead->id,
                 ['action' => 'created','name'=>$lead->lead_name,'lead_branch_source'=>$lead->responsiblePerson?->admin_parent?->name]
             );
-        $this->broadcastLeadUpdated($lead, 'created');
+        $autoMergedIds = app(\App\Services\EligibleStagesAutoMergeService::class)->afterLeadCreated($lead->fresh());
+        $this->broadcastLeadUpdated(
+            $lead,
+            'created',
+            $this->autoMergeResponseMeta($autoMergedIds, (int) $lead->id, (int) $lead->stage_id)
+        );
 
-        return  ApiResponse::success('success' );
+        return ApiResponse::success('success', 'Success', 200, $this->autoMergeResponseMeta(
+            $autoMergedIds,
+            (int) $lead->id,
+            (int) $lead->stage_id
+        ));
 
     } catch (\Throwable $e) {
     return response()->json([
@@ -2595,6 +2656,91 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     private function broadcastLeadUpdated(Lead $lead, string $actionType, ?array $changes = null): void
     {
         broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
+    }
+
+    /**
+     * Meta for Kanban clients: drop soft-merged cards without a full board refetch.
+     *
+     * @param  int[]  $mergedIds
+     */
+    private function autoMergeResponseMeta(
+        array $mergedIds,
+        ?int $primaryId = null,
+        ?int $primaryStageId = null,
+        bool $leadAbsorbed = false
+    ): ?array {
+        $mergedIds = array_values(array_unique(array_map('intval', $mergedIds)));
+        if ($mergedIds === [] && ! $leadAbsorbed) {
+            return null;
+        }
+
+        $meta = ['auto_merged_lead_ids' => $mergedIds];
+        if ($primaryId) {
+            $meta['auto_merge_primary_id'] = $primaryId;
+        }
+        if ($primaryStageId) {
+            $meta['auto_merge_primary_stage_id'] = $primaryStageId;
+        }
+        if ($leadAbsorbed) {
+            $meta['lead_absorbed'] = true;
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Rule B / Rule A after a real work_phone digit change (formatting-only = no-op).
+     */
+    private function autoMergeMetaAfterPhoneDigitChange(Lead $lead, string $oldPhoneDigits): ?array
+    {
+        if (\App\Services\EligibleStagesAutoMergeService::isRunning()) {
+            return null;
+        }
+
+        $fresh = $lead->fresh();
+        if (! $fresh) {
+            return null;
+        }
+
+        $newDigits = Lead::phoneDigits($fresh->work_phone);
+        if ($oldPhoneDigits === $newDigits) {
+            return null;
+        }
+
+        $svc = app(\App\Services\EligibleStagesAutoMergeService::class);
+        $newStageId = $svc->newLeadStageId();
+
+        if ($newStageId && (int) $fresh->stage_id === $newStageId) {
+            $mergedIds = $svc->absorbEligibleIntoNewLead($fresh);
+
+            return $this->autoMergeResponseMeta($mergedIds, (int) $fresh->id, (int) $fresh->stage_id);
+        }
+
+        if (! in_array((int) $fresh->stage_id, $svc->eligibleStageIds(), true)) {
+            return null;
+        }
+
+        $summary = $svc->afterStageChanged($fresh, (int) $fresh->stage_id);
+        $meta = $this->autoMergeResponseMeta(
+            $summary['merged_ids'] ?? [],
+            $summary['primary_id'] ?? null,
+            $summary['primary_stage_id'] ?? null
+        );
+
+        $raw = Lead::withoutGlobalScope('notMerged')->find($fresh->id);
+        if ($raw && $raw->merged_into_lead_id) {
+            $absorbedIds = array_values(array_unique(array_merge(
+                $summary['merged_ids'] ?? [],
+                [(int) $raw->id]
+            )));
+            $primaryId = (int) $raw->merged_into_lead_id;
+            $primaryStageId = (int) (Lead::query()->where('id', $primaryId)->value('stage_id')
+                ?? ($summary['primary_stage_id'] ?? config('lead_merge.lead_pool_stage_id')));
+
+            return $this->autoMergeResponseMeta($absorbedIds, $primaryId, $primaryStageId, true);
+        }
+
+        return $meta;
     }
 
     /**

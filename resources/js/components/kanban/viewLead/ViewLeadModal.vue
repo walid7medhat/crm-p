@@ -253,10 +253,11 @@ const props = defineProps({
         type: Object,
         default: null
     },
-    /** Use a higher value when opening on top of another modal (e.g. view deal). */
+    /** Use a higher value when opening on top of another modal (e.g. view deal).
+     *  Default sits above LeadMergeModal (12100) so leads are never trapped under its wash. */
     zIndex: {
         type: Number,
-        default: 1040
+        default: 12200
     },
     /**
      * This component is mounted twice at once in the app — globally in App.vue, and
@@ -934,11 +935,33 @@ const executeStageChange = async (newStageId, oldStageId) => {
             stage_id: newStageId
         })
         const updatedLeadData = response.data?.data || response.data
+        const mergeMeta = response.data?.meta || {}
+        if (mergeMeta.lead_absorbed) {
+            emit('lead-updated', {
+                id: lead.value.id,
+                auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids || [lead.value.id],
+                lead_absorbed: true,
+                auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+                auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+            })
+            $showNotification('Lead merged into primary duplicate', 'success')
+            return
+        }
         if (updatedLeadData) {
             lead.value = { ...lead.value, ...updatedLeadData }
         }
-        leadStageId.value = newStageId
-        emit('lead-updated', lead.value)
+        if (mergeMeta.auto_merge_primary_stage_id) {
+            lead.value.stage_id = mergeMeta.auto_merge_primary_stage_id
+            leadStageId.value = mergeMeta.auto_merge_primary_stage_id
+        } else {
+            leadStageId.value = newStageId
+        }
+        emit('lead-updated', {
+            ...lead.value,
+            auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids || [],
+            auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+            auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+        })
         $showNotification('Stage updated successfully', 'success')
         if (motionArmed) {
             void playLeadMotion(lead.value.id).catch(() => cancelLeadMotion(lead.value?.id))
@@ -1021,6 +1044,18 @@ const moveQualifiedLeadToPool = async (additionalData) => {
             status_lead_pool: additionalData.lead_status,
         })
         const savedLead = response.data?.data || response.data
+        const mergeMeta = response.data?.meta || {}
+        if (mergeMeta.lead_absorbed) {
+            emit('lead-updated', {
+                id: lead.value.id,
+                auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids || [lead.value.id],
+                lead_absorbed: true,
+                auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+                auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+            })
+            $showNotification('Lead merged into primary duplicate', 'success')
+            return true
+        }
         const poolStage = leadPoolStage.value
         if (savedLead && typeof savedLead === 'object') {
             lead.value = {
@@ -1039,7 +1074,12 @@ const moveQualifiedLeadToPool = async (additionalData) => {
             }
             if (lead.value.stage_id) leadStageId.value = lead.value.stage_id
         }
-        emit('lead-updated', lead.value)
+        emit('lead-updated', {
+            ...lead.value,
+            auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids || [],
+            auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+            auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+        })
         $showNotification('Lead moved to Lead Pool', 'success')
         return true
     } catch (error) {
@@ -1188,9 +1228,33 @@ const handleStageChangeWithReason = async ({ leadId, targetStageId, reason, ...a
                 ...(additionalData.activity_reminders && { activity_reminders: additionalData.activity_reminders }),
             })
 
+            const mergeMeta = response.data?.meta || {}
+            if (mergeMeta.lead_absorbed) {
+                emit('lead-updated', {
+                    id: leadId,
+                    auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids || [leadId],
+                    lead_absorbed: true,
+                    auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+                    auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+                })
+                if (motionArmed || converting) cancelLeadMotion(leadId)
+                return
+            }
             if (response.data?.data) {
                 lead.value = { ...lead.value, ...response.data.data }
-                emit('lead-updated', lead.value)
+                emit('lead-updated', {
+                    ...lead.value,
+                    auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids || [],
+                    auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+                    auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+                })
+            } else if (mergeMeta.auto_merged_lead_ids?.length) {
+                emit('lead-updated', {
+                    ...(lead.value || { id: leadId }),
+                    auto_merged_lead_ids: mergeMeta.auto_merged_lead_ids,
+                    auto_merge_primary_id: mergeMeta.auto_merge_primary_id,
+                    auto_merge_primary_stage_id: mergeMeta.auto_merge_primary_stage_id,
+                })
             }
             if (motionArmed) {
                 void playLeadMotion(leadId).catch(() => cancelLeadMotion(leadId))
@@ -2318,13 +2382,11 @@ defineExpose({
     padding-left: 44px;
 }
 
-.modal-backdrop {
-    z-index: 1040 !important;
-}
-
-.modal {
-    z-index: 1050 !important;
-}
+/*
+ * Do NOT raise .modal-backdrop above .modal-dialog here.
+ * bootstrap-vue-3 nests the backdrop INSIDE .modal (after the dialog), so a high
+ * backdrop z-index covers the lead content and makes every lead look dimmed/blurred.
+ */
 
 .stage-change-modal-overlay {
     z-index: 14000 !important;
@@ -2589,12 +2651,9 @@ textarea, input, select {
         padding: 10px !important;
     }
 }
+/* Outer shell only — dialog/backdrop stacking is fixed in the unscoped block below. */
 .modal {
-    z-index: 2000 !important;
-}
-
-.modal-backdrop {
-    z-index: 1999 !important;
+    z-index: 12200 !important;
 }
 
 :deep(.view-lead-modal) {
@@ -2710,7 +2769,17 @@ textarea, input, select {
 }
 </style>
 <style>
+/* bootstrap-vue-3: backdrop is a sibling AFTER .modal-dialog inside #view-lead-modal.
+   Keep the dialog above that nested backdrop or the lead looks permanently dimmed. */
+.modal#view-lead-modal {
+    z-index: 12200 !important;
+}
+.modal#view-lead-modal .modal-backdrop {
+    z-index: 1 !important;
+}
 .modal#view-lead-modal .modal-dialog {
+    position: relative;
+    z-index: 2 !important;
     max-width: min(1180px, 96vw) !important;
     width: min(1180px, 96vw) !important;
     max-height: 88vh !important;

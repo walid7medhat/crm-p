@@ -1,33 +1,19 @@
 <?php
 namespace App\Console\Commands;
 
-use App\Models\Lead;
-use App\Services\LeadPoolMergeService;
+use App\Services\EligibleStagesAutoMergeService;
 use Illuminate\Console\Command;
 
 class MergePoolDuplicates extends Command
 {
     protected $signature = 'leads:merge-pool-duplicates';
-    protected $description = 'Merge duplicate Lead Pool leads (newest lead becomes the default)';
+    protected $description = 'Auto-merge duplicate leads across Lead Pool, Unqualified, and Lost (newest → Lead Pool)';
 
-    public function handle(LeadPoolMergeService $service): int
+    public function handle(EligibleStagesAutoMergeService $service): int
     {
-        $merged = 0;
-
-        Lead::query()
-            ->where('stage_id', config('lead_merge.lead_pool_stage_id'))
-            ->where('work_phone_digits', '!=', '')
-            ->whereNull('converted_to_deal_id')
-            ->groupBy('work_phone_digits')
-            ->havingRaw('COUNT(*) > 1')
-            ->pluck('work_phone_digits')
-            ->each(function ($digits) use ($service, &$merged) {
-                foreach ($service->mergeDigits($digits) as $ids) {
-                    $merged += count($ids);
-                }
-            });
-
+        $merged = $service->mergeAllEligibleDuplicates();
         $this->info("Merged {$merged} lead(s).");
+
         return self::SUCCESS;
     }
 }

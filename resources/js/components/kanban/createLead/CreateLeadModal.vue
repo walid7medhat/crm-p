@@ -2017,7 +2017,14 @@ watch(selectedExistingClient, (client) => {
             show.value = false
 
             console.log('📤 Emitting lead-created event to parent')
-            emit('lead-created', response.data?.data || response.data)
+            const created = response.data?.data || response.data || {}
+            const meta = response.data?.meta || {}
+            emit('lead-created', {
+                ...created,
+                auto_merged_lead_ids: meta.auto_merged_lead_ids || [],
+                auto_merge_primary_id: meta.auto_merge_primary_id ?? created?.id ?? null,
+                auto_merge_primary_stage_id: meta.auto_merge_primary_stage_id ?? created?.stage_id ?? null,
+            })
             
             // Show success notification
             $showNotification('Lead created successfully!', 'success')

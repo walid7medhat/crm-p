@@ -1009,7 +1009,12 @@
         @view-lead="handleViewDuplicateLead"
         @merge="openMergeModal"
     />
-    <LeadMergeModal v-model="showMergeModal" :leadId="mergeLeadId" @merged="onLeadsMerged" />
+    <LeadMergeModal
+        v-if="showMergeModal"
+        v-model="showMergeModal"
+        :leadId="mergeLeadId"
+        @merged="onLeadsMerged"
+    />
  <StageChangeReasonModal
         ref="stageChangeReasonModal"
         v-model="showStageChangeModal"
@@ -1273,7 +1278,7 @@ convertLeadModalLoader()
 import api, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { peekLeadBoardPrefetchPromise, peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
-import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
+import { openLeadView, onLeadViewUpdated, closeLeadView, showLeadViewModal } from '@/composables/useLeadViewModal.js'
 import { rememberLeadDetailOrigin } from '@/motion/leadDetailMotion'
 import {
     clearLeadDragImage,
@@ -1668,7 +1673,9 @@ function clearLeadSelection() {
 }
 
 function removeLeadsFromBoard(ids) {
-    const drop = new Set(ids.map(Number))
+    const list = (Array.isArray(ids) ? ids : []).map(Number).filter(Boolean)
+    if (!list.length) return
+    const drop = new Set(list)
     columns.value.forEach((column) => {
         const before = column.leads?.length || 0
         column.leads = (column.leads || []).filter((lead) => !drop.has(Number(lead.id)))
@@ -1678,6 +1685,34 @@ function removeLeadsFromBoard(ids) {
             page.total = Math.max(0, page.total - removed)
         }
     })
+}
+
+/**
+ * Soft-merged leads stay in DB but leave active Kanban columns immediately.
+ * Uses API meta from create / change-stage (and realtime create payloads).
+ */
+function applyAutoMergeVisibility(meta, currentLead = null) {
+    const info = meta && typeof meta === 'object' ? meta : {}
+    const mergedIds = info.auto_merged_lead_ids || []
+    if (mergedIds.length) removeLeadsFromBoard(mergedIds)
+
+    if (info.lead_absorbed) {
+        if (currentLead?.id) removeLeadsFromBoard([currentLead.id])
+        return { absorbed: true, meta: info }
+    }
+
+    const primaryId = info.auto_merge_primary_id != null ? Number(info.auto_merge_primary_id) : null
+    const primaryStageId = info.auto_merge_primary_stage_id != null
+        ? Number(info.auto_merge_primary_stage_id)
+        : null
+    if (currentLead?.id && primaryId === Number(currentLead.id) && primaryStageId) {
+        currentLead.stage_id = primaryStageId
+        if (typeof settleLeadOnBoard === 'function') {
+            settleLeadOnBoard(currentLead, primaryStageId)
+        }
+    }
+
+    return { absorbed: false, meta: info }
 }
 
 async function archiveLeadIds(ids) {
@@ -3588,6 +3623,8 @@ defineExpose({
     // further down the script — a direct reference here would hit the
     // temporal dead zone before setup() finishes running.
     handleNewLead: (lead) => handleNewLead(lead),
+    applyAutoMergeVisibility: (meta, currentLead) => applyAutoMergeVisibility(meta, currentLead),
+    removeLeadsFromBoard: (ids) => removeLeadsFromBoard(ids),
 })
 
 // Initialize real-time updates with Echo/Pusher
@@ -3746,15 +3783,21 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
 
     switch (payload.action_type) {
         case 'created':
+            applyAutoMergeVisibility(payload.changes || {})
             handleNewLead(leadData)
             break
-        case 'updated':
+        case 'updated': {
+            const updateMerge = applyAutoMergeVisibility(payload.changes || {}, leadData)
+            if (updateMerge.absorbed) break
             handleUpdatedLead(leadData, 'updated')
             break
-        case 'assigned':
+        }
+        case 'assigned': {
+            applyAutoMergeVisibility(payload.changes || {}, leadData)
             handleAssignedLead(leadData, payload.changes)
 
             break
+        }
         case 'deleted':
             handleDeletedLead(leadData)
             break
@@ -3955,18 +3998,27 @@ function sortAllColumnLeads() {
 }
 
 const handleLeadUpdatedFromModal = (updatedLead) => {
-    if (updatedLead?.id) {
-        handleUpdatedLead(
-            {
-                ...updatedLead,
-                updated_at: updatedLead.updated_at || new Date().toISOString(),
-            },
-            'updated',
-        )
-        showLeadNotification(
-            buildCrmLeadNotificationEvent(updatedLead, 'updated', user.value),
-        )
-    }
+    if (!updatedLead?.id) return
+
+    const mergeResult = applyAutoMergeVisibility({
+        auto_merged_lead_ids: updatedLead.auto_merged_lead_ids || [],
+        auto_merge_primary_id: updatedLead.auto_merge_primary_id,
+        auto_merge_primary_stage_id: updatedLead.auto_merge_primary_stage_id,
+        lead_absorbed: !!updatedLead.lead_absorbed,
+    }, updatedLead)
+
+    if (mergeResult.absorbed) return
+
+    handleUpdatedLead(
+        {
+            ...updatedLead,
+            updated_at: updatedLead.updated_at || new Date().toISOString(),
+        },
+        'updated',
+    )
+    showLeadNotification(
+        buildCrmLeadNotificationEvent(updatedLead, 'updated', user.value),
+    )
 }
 
 const columnScrollEls = new Map()
@@ -4970,6 +5022,9 @@ function handleViewDuplicateLead(leadId) {
 
 function openMergeModal(leadId) {
     mergeLeadId.value = leadId || selectedLeadForDuplicates.value
+    showDuplicateModal.value = false
+    // Lead modal sits under the merge overlay; close it so merge is not "hidden".
+    closeLeadView()
     showMergeModal.value = true
 }
 
@@ -5050,11 +5105,26 @@ async function startEditingStage(column) {
         stageTitleInput.value.select()
     }
 }
-async function onLeadsMerged(defaultLeadId) {
+async function onLeadsMerged(payload) {
+    const id = typeof payload === 'object' && payload !== null
+        ? payload.default_lead_id
+        : payload
+    const shouldOpen = typeof payload === 'object' && payload !== null
+        ? payload.open !== false
+        : true
     showMergeModal.value = false
+    await nextTick()
     await fetchLeads(true, undefined, { silent: true })   // merged leads leave the board
-    openLeadView(defaultLeadId)                           // opens the existing lead modal
+    if (shouldOpen && id) openLeadView(id)
 }
+
+// If a lead opens while merge/duplicate overlays are still mounted, tear them down
+// so the lead is not trapped under the purple high-z-index wash.
+watch(showLeadViewModal, (open) => {
+    if (!open) return
+    showMergeModal.value = false
+    showDuplicateModal.value = false
+})
 function cancelEditingStage() {
     editingStageId.value = null
     editingStageTitle.value = ''
@@ -5197,9 +5267,11 @@ async function moveSelectedLeadsToAssign(draggedLead, sourceColumn, targetColumn
     const results = await Promise.all(moving.map(async (lead) => {
         try {
             const response = await api.post(`/leads/${lead.id}/change-stage`, { stage_id: targetColumn.status })
+            const mergeResult = applyAutoMergeVisibility(response?.data?.meta, lead)
+            if (mergeResult.absorbed) return true
             const fresh = response?.data?.data
             if (fresh) Object.assign(lead, fresh)
-            lead.stage_id = targetColumn.status
+            lead.stage_id = Number(lead.stage_id) || targetColumn.status
             return true
         } catch {
             return false
@@ -5511,15 +5583,21 @@ async function moveLeadWithStageChange(lead, newStageId, moveToken = null) {
             return
         }
         consumeSupersededStage(lead.id)
+        const mergeResult = applyAutoMergeVisibility(response?.data?.meta, lead)
+        if (mergeResult.absorbed) {
+            if (motionArmed) cancelLeadMotion(lead.id)
+            return
+        }
         const freshLead = response?.data?.data
         if (freshLead) {
             Object.assign(lead, freshLead)
         }
-        lead.stage_id = newStageId
+        const landedStageId = Number(lead.stage_id) || newStageId
+        lead.stage_id = landedStageId
         adjustInteractionAnalytics(oldLeadSnapshot, lead)
         // Just-moved card must land on top of its new column, sorted by the same
         // "activity time" shown on the card rather than being appended at the end.
-        settleLeadOnBoard(lead, newStageId)
+        settleLeadOnBoard(lead, landedStageId)
         // Motion started before the server answered — show the fresh card while it flies.
         if (motionPlayed) nextTick(() => refreshLeadMotionCard(lead.id))
         showLeadNotification(
@@ -5688,6 +5766,11 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
                 return
             }
             consumeSupersededStage(leadId)
+            const mergeResult = applyAutoMergeVisibility(response?.data?.meta, lead)
+            if (mergeResult.absorbed) {
+                if (motionArmed || converting) cancelLeadMotion(leadId)
+                return
+            }
             const freshLead = response.data?.data
             if (freshLead && lead) {
                 const preserve = {
@@ -5697,7 +5780,8 @@ async function handleStageChangeWithReason({ leadId, targetStageId, reason, ...a
                 }
                 Object.assign(lead, freshLead, preserve)
             }
-            const landed = settleLeadOnBoard(lead, targetStageId)
+            const landedStageId = Number(lead?.stage_id) || targetStageId
+            const landed = settleLeadOnBoard(lead, landedStageId)
             // Motion started before the server answered — show the fresh card while it flies.
             if (landed && motionPlayed) nextTick(() => refreshLeadMotionCard(leadId))
             if (!landed && motionArmed) cancelLeadMotion(leadId)

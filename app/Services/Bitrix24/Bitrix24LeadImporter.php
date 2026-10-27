@@ -230,6 +230,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             'bitrix24_id' => $b24Id,
         ]);
 
+        app(\App\Services\EligibleStagesAutoMergeService::class)->afterLeadCreated($lead->fresh());
+
         $this->importComments($lead, $b24Id);
         $this->importActivities($lead, $b24Id);
         $this->importTimelineItems($lead, $b24Id);
@@ -304,6 +306,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             'source'      => 'bitrix24',
             'bitrix24_id' => $b24Id,
         ]);
+
+        app(\App\Services\EligibleStagesAutoMergeService::class)->afterLeadCreated($lead->fresh());
 
         // New lead → import its comments + activities (skip the heavy timeline).
         if ($withComments) {
@@ -1152,6 +1156,11 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             'created_at' => $movedAt ?? now(),
             'updated_at' => $movedAt ?? now(),
         ]);
+
+        if (! \App\Services\EligibleStagesAutoMergeService::isRunning()) {
+            app(\App\Services\EligibleStagesAutoMergeService::class)
+                ->afterStageChanged($existing->fresh(), (int) $newStageId);
+        }
     }
 
     /**
