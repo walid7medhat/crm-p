@@ -10486,7 +10486,7 @@ margin-top: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999 !important;
+  z-index: 99999 !important;
   padding: 20px;
   animation: fadeIn 0.3s ease;
 }

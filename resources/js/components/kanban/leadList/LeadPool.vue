@@ -364,10 +364,11 @@ const lastPage = ref(1)
 const total = ref(0)
 // ---- Lead type filter (Rent / Sale) ----
 const leadTypeFilter = ref(null) // 'rent' | 'sale' | null
-const typeCounts = ref({ rent: 0, sale: 0 })
+const typeCounts = ref({ rent: 0, sale: 0, none: 0 })
 const leadTypeChips = [
     { value: 'rent', label: 'Rent', icon: 'lucide:key-round' },
     { value: 'sale', label: 'Sale', icon: 'lucide:tag' },
+    { value: 'none', label: 'Not specified', icon: 'lucide:help-circle' },
 ]
 
 async function fetchTypeCounts() {
@@ -376,7 +377,7 @@ async function fetchTypeCounts() {
         const response = await api.get('/leads', {
             params: { ...filters, stage_id: 10, paginate: 1, type_counts_only: 1 },
         })
-        typeCounts.value = response?.data?.data ?? typeCounts.value
+        typeCounts.value = { rent: 0, sale: 0, none: 0, ...(response?.data?.data ?? {}) }
     } catch (e) {
         console.error('Failed to load lead type counts', e)
     }
@@ -1567,4 +1568,6 @@ defineExpose({
 .type-chip--sale { color: #0891b2; }
 .type-chip--rent.active { background: #f3e8ff; border-color: #7c3aed; }
 .type-chip--sale.active { background: #e0f7fa; border-color: #0891b2; }
+.type-chip--none { color: #64748b; }
+.type-chip--none.active { background: #f1f5f9; border-color: #64748b; }
 </style>
