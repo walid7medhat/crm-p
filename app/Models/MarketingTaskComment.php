@@ -10,7 +10,7 @@ class MarketingTaskComment extends Model
     use SoftDeletes;
 
     protected $guarded = [];
-
+    protected $casts = ['mentions' => 'array'];
     public function task()
     {
         return $this->belongsTo(MarketingTask::class, 'task_id');

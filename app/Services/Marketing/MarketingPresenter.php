@@ -40,7 +40,7 @@ class MarketingPresenter
 
         return [
             'id' => $user->id,
-            'name' => $user->name,
+            'name' =>User::resolveDisplayName( $user),
             'avatar_url' => asset('storage/' . $user->avatar),
         ];
     }
@@ -68,11 +68,11 @@ class MarketingPresenter
             'reference_image_url' => $task->reference_image ? asset('storage/'.$task->reference_image) : null,
             'notes' => $task->notes,
             'is_approved' => $task->is_approved,
-            'approved_by' => $task->approver?->name,
+            'approved_by' =>User::resolveDisplayName( $task->approver),
             'approved_at' => $task->approved_at?->toIso8601String(),
             'due_date' => $task->due_date?->format('Y-m-d'),
             'completed_at' => $task->completed_at?->toIso8601String(),
-            'created_by' => $task->creator?->name,
+            'created_by' => User::resolveDisplayName($task->creator),
             'created_at' => $task->created_at?->toIso8601String(),
             'updated_at' => $task->updated_at?->toIso8601String(),
             'links' => $task->relationLoaded('links') ? $task->links->map(fn ($l) => self::link($l))->values() : [],
@@ -125,7 +125,7 @@ class MarketingPresenter
             'platform' => $post->platform,
             'scheduled_date' => $post->scheduled_date?->format('Y-m-d'),
             'is_posted' => $post->is_posted,
-            'posted_by' => $post->poster?->name,
+            'posted_by' => User::resolveDisplayName($post->poster),
             'posted_at' => $post->posted_at?->toIso8601String(),
         ];
     }

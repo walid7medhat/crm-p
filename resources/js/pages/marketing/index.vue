@@ -127,6 +127,7 @@
       ref="drawer"
       v-model="drawerOpen"
       :task-id="drawerTaskId"
+      :initial-tab="drawerTab"
       :stages="drawerStages"
       :members="members"
       :can-manage="canManage"
@@ -220,6 +221,7 @@ const formStageId = ref(null)
 const drawer = ref(null)
 const drawerOpen = ref(false)
 const drawerTaskId = ref(null)
+const drawerTab = ref('details')
 const drawerStages = ref([])
 const linkOpen = ref(false)
 const linkTask = ref(null)
@@ -395,7 +397,7 @@ async function onSaved(task) {
   }
 }
 
-async function openTask(id, category = null) {
+async function openTask(id, category = null, tab = 'details') {
   const cat = category || activeTab.value
   if (!stagesCache[cat]) {
     try {
@@ -405,10 +407,14 @@ async function openTask(id, category = null) {
       stagesCache[cat] = []
     }
   }
-  drawerStages.value = (isBoard.value && cat === activeTab.value ? stages.value : stagesCache[cat])
+  drawerStages.value = stagesCache[cat]
     .map(({ id: sid, name, color, is_done }) => ({ id: sid, name, color, is_done }))
+
+  const sameCard = drawerOpen.value && drawerTaskId.value === id
+  drawerTab.value = tab
   drawerTaskId.value = id
   drawerOpen.value = true
+  if (sameCard) drawer.value?.openTab(tab)   // drawer's watch won't re-fire for an already-open card
 }
 
 function onDrawerMoved({ task, suggestLink }) {
@@ -451,6 +457,7 @@ function onScheduled() {
  */
 async function applyRouteQuery() {
   const tab = typeof route.query.tab === 'string' ? route.query.tab : ''
+  const drawerQuery = typeof route.query.drawer === 'string' ? route.query.drawer : 'details'
   const task = Number(route.query.task)
   if (!tab && !task) return
   if (MARKETING_TAB_IDS.includes(tab)) setTab(tab)
@@ -458,7 +465,7 @@ async function applyRouteQuery() {
   const booking = Number(route.query.booking)
   if (booking) highlightBookingId.value = booking
   window.dispatchEvent(new CustomEvent('marketing-tab-change', { detail: activeTab.value }))
-  if (task) await openTask(task, BOARD_TABS.includes(tab) ? tab : null)
+  if (task) await openTask(task, BOARD_TABS.includes(tab) ? tab : null, drawerQuery)
   router.replace({ path: route.path })
 }
 watch(() => route.query, applyRouteQuery)

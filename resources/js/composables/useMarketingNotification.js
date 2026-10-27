@@ -16,6 +16,7 @@ export function marketingFromNotification(notification) {
     taskId: Number.isFinite(id) && id > 0 ? id : null,
     category: d.marketing_category || null,
     isReminder: type === 'marketing_reminder',
+    drawerTab: d.drawer_tab || null,
   }
 }
 
@@ -42,7 +43,11 @@ export function openMarketingFromNotification(notification) {
   const query = m.bookingId !== undefined
     ? { tab: 'bookings', ...(m.bookingId ? { booking: String(m.bookingId) } : {}) }
     : m.taskId
-      ? { task: String(m.taskId), ...(m.category ? { tab: m.category } : {}) }
+      ? {
+          task: String(m.taskId),
+          ...(m.category ? { tab: m.category } : {}),
+          ...(m.drawerTab ? { drawer: m.drawerTab } : {}),
+        }
       : { tab: 'calendar' }
 
   import('@/router').then(({ default: router }) => {

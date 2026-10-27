@@ -172,7 +172,30 @@
 
               <section v-else-if="tab === 'comments'" class="mk-comments">
                 <form class="mk-comments__composer" @submit.prevent="addComment">
-                  <textarea v-model="newComment" class="mk-input" rows="2" placeholder="Write a comment…" @keydown.ctrl.enter="addComment" @keydown.meta.enter="addComment" />
+                  <div class="mk-mention-wrap">
+                    <textarea
+                      ref="commentEl"
+                      v-model="newComment"
+                      class="mk-input"
+                      rows="2"
+                      placeholder="Write a comment… use @ to mention"
+                      @input="onCommentInput"
+                      @click="detectMention"
+                      @keyup="onCommentKeyup"
+                      @keydown="onCommentKeydown"
+                      @blur="closeMentionSoon"
+                    />
+                    <ul v-if="mention.open && mentionOptions.length" class="mk-mention-pop">
+                      <li
+                        v-for="(m, i) in mentionOptions"
+                        :key="m.id"
+                        :class="{ 'is-on': i === mention.index }"
+                        @mousedown.prevent="pickMention(m)"
+                      >
+                        <MkAvatar :user="m" :size="22" /> {{ m.name }}
+                      </li>
+                    </ul>
+                  </div>
                   <button type="submit" class="mk-btn mk-btn--primary" :disabled="busy || !newComment.trim()">
                     <iconify-icon icon="lucide:send" />
                   </button>
@@ -182,7 +205,7 @@
                     <MkAvatar :user="c.user" :size="34" />
                     <div class="mk-comments__bubble">
                       <header><b>{{ c.user?.name }}</b><small>{{ timeAgo(c.created_at) }}</small></header>
-                      <p>{{ c.body }}</p>
+                      <p v-html="renderComment(c)" />
                     </div>
                   </li>
                 </ul>
@@ -278,6 +301,14 @@ const tabs = computed(() => [
     : []),
   ...(props.canManage ? [{ id: 'history', label: 'History', icon: 'lucide:history' }] : []),
 ])
+const commentEl = ref(null)
+const picked = ref([]) // members chosen via the picker
+const mention = reactive({ open: false, query: '', start: -1, index: 0 })
+
+const mentionOptions = computed(() => {
+  const q = mention.query.toLowerCase()
+  return props.members.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 6)
+})
 
 /** Same rich top-right toast as lead / deal pop-ups: headline + card title + board chip. */
 const toast = (headline, kind = 'updated', subtitle = null) => showCrmToast({
@@ -405,10 +436,12 @@ async function removeLink(link) {
 async function addComment() {
   const body = newComment.value.trim()
   if (!body || busy.value) return
+  const mentions = picked.value.filter((m) => body.includes('@' + m.name)).map((m) => m.id)
   busy.value = true
   try {
-    await api.post(`/marketing/tasks/${task.value.id}/comments`, { body })
+    await api.post(`/marketing/tasks/${task.value.id}/comments`, { body, mentions })
     newComment.value = ''
+    picked.value = []
     await refresh()
   } catch (err) {
     Swal.fire({ icon: 'error', title: 'Could not post comment', text: apiError(err) })
@@ -450,7 +483,58 @@ function linkify(text) {
   const esc = String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
   return esc.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
 }
+function detectMention() {
+  const el = commentEl.value
+  if (!el) return
+  const before = newComment.value.slice(0, el.selectionStart)
+  const m = before.match(/(?:^|\s)@([^\s@]*)$/)
+  if (m) {
+    mention.open = true
+    mention.query = m[1]
+    mention.start = before.length - m[1].length - 1
+    mention.index = 0
+  } else {
+    mention.open = false
+  }
+}
+const onCommentInput = detectMention
+function onCommentKeyup(e) {
+  if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) detectMention()
+}
+function onCommentKeydown(e) {
+  if (!mention.open || !mentionOptions.value.length) return
+  const n = mentionOptions.value.length
+  if (e.key === 'ArrowDown') { e.preventDefault(); mention.index = (mention.index + 1) % n }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); mention.index = (mention.index - 1 + n) % n }
+  else if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault(); e.stopPropagation()
+    pickMention(mentionOptions.value[mention.index])
+  } else if (e.key === 'Escape') { e.stopPropagation(); mention.open = false }
+}
+function closeMentionSoon() { setTimeout(() => { mention.open = false }, 120) }
 
+function pickMention(m) {
+  const el = commentEl.value
+  const end = el ? el.selectionStart : newComment.value.length
+  const text = newComment.value
+  newComment.value = `${text.slice(0, mention.start)}@${m.name} ${text.slice(end)}`
+  if (!picked.value.some((p) => p.id === m.id)) picked.value.push(m)
+  mention.open = false
+  const pos = mention.start + m.name.length + 2
+  requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(pos, pos) })
+}
+
+function renderComment(c) {
+  let html = escapeHtml(c.body)
+  for (const m of c.mentions || []) {
+    const tag = escapeHtml('@' + m.name)
+    html = html.split(tag).join(`<span class="mk-mention">${tag}</span>`)
+  }
+  return html
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
 defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 </script>
 
@@ -697,5 +781,22 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   .mk-drawer-enter-active .mk-drawer, .mk-drawer-leave-active .mk-drawer { transition: none; }
   .mk-tab-enter-active, .mk-tab-leave-active { transition: none; }
   .mk-rise { animation: none; }
+}
+.mk-comments__composer .mk-mention-wrap { position: relative; flex: 1; min-width: 0; }
+.mk-comments__composer textarea { width: 100%; }
+.mk-mention-pop {
+  position: absolute; left: 0; right: 0; top: 100%; margin: 4px 0 0; padding: 4px;
+  list-style: none; z-index: 5; background: #fff; border: 1px solid #eceaf2;
+  border-radius: 12px; box-shadow: 0 12px 30px -12px rgba(28, 20, 48, .35);
+}
+.mk-mention-pop li {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  border-radius: 8px; font-size: 13.5px !important; font-weight: 600 !important; cursor: pointer;
+}
+.mk-mention-pop li.is-on, .mk-mention-pop li:hover { background: #f6f1fc; }
+.mk-comments__bubble p :deep(.mk-mention),
+.mk-comments__bubble :deep(.mk-mention) {
+  color: var(--color-primary); font-weight: 650; background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  padding: 0 4px; border-radius: 6px;
 }
 </style>
