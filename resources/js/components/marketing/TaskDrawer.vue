@@ -788,6 +788,7 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   position: absolute; left: 0; right: 0; top: 100%; margin: 4px 0 0; padding: 4px;
   list-style: none; z-index: 5; background: #fff; border: 1px solid #eceaf2;
   border-radius: 12px; box-shadow: 0 12px 30px -12px rgba(28, 20, 48, .35);
+  gap:0px !important;
 }
 .mk-mention-pop li {
   display: flex; align-items: center; gap: 8px; padding: 6px 8px;
