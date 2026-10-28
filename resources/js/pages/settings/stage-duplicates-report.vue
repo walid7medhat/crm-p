@@ -6,18 +6,30 @@
           <div class="sdr-title">Stage lead duplicates</div>
           <p class="sdr-hint">Phone or email match · Contacted / Qualified / Assigned · Super Admin only</p>
         </div>
-        <button type="button" class="sdr-btn" @click="fetchReport" :disabled="loading">
-          <iconify-icon icon="lucide:refresh-cw" width="14" height="14" />
-          Refresh
-        </button>
+        <div class="sdr-actions">
+          <button type="button" class="sdr-btn" @click="fetchSummary" :disabled="loading">
+            <iconify-icon icon="lucide:refresh-cw" width="14" height="14" />
+            Refresh counts
+          </button>
+          <button
+            v-if="report && !detailsLoaded"
+            type="button"
+            class="sdr-btn sdr-btn--secondary"
+            @click="fetchDetails"
+            :disabled="loadingDetails"
+          >
+            <iconify-icon icon="lucide:list" width="14" height="14" />
+            {{ loadingDetails ? 'Loading details…' : 'Load full details' }}
+          </button>
+        </div>
       </div>
 
       <div v-if="error" class="sdr-error">
         <span>{{ error }}</span>
-        <button type="button" class="sdr-link" @click="fetchReport">Retry</button>
+        <button type="button" class="sdr-link" @click="fetchSummary">Retry</button>
       </div>
 
-      <div v-if="loading" class="sdr-loading">Loading…</div>
+      <div v-if="loading" class="sdr-loading">Loading counts…</div>
 
       <template v-else-if="!error && report">
         <!-- Key numbers -->
@@ -75,134 +87,72 @@
           </table>
         </div>
 
-        <!-- Matching pairs (only comparisons that have pairs) -->
-        <template v-for="cmp in comparisonsWithPairs" :key="cmp.label">
+        <div v-if="!detailsLoaded" class="sdr-hint sdr-hint--block">
+          Counts only — open “Load full details” if you need lead rows (slower).
+        </div>
+
+        <template v-else>
+          <div v-if="detailsError" class="sdr-error">
+            <span>{{ detailsError }}</span>
+            <button type="button" class="sdr-link" @click="fetchDetails">Retry</button>
+          </div>
+
+          <!-- Matching pairs (only comparisons that have pairs) -->
+          <template v-for="cmp in comparisonsWithPairs" :key="cmp.label">
+            <div class="sdr-label">
+              {{ cmp.label }}
+              <span class="sdr-label__meta">{{ cmp.duplicate_pairs }} pairs</span>
+            </div>
+            <div class="sdr-table-wrap">
+              <table class="sdr-table">
+                <thead>
+                  <tr>
+                    <th>Match</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Stage</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th></th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Stage</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(pair, idx) in cmp.pairs" :key="idx">
+                    <td><span class="sdr-tag" :class="'sdr-tag--' + pair.match">{{ pair.match }}</span></td>
+                    <td class="sdr-mono">#{{ pair.lead_a.id }}</td>
+                    <td class="sdr-clip" :title="pair.lead_a.name">{{ pair.lead_a.name }}</td>
+                    <td>{{ pair.lead_a.stage }}</td>
+                    <td class="sdr-mono">{{ pair.lead_a.phone || '—' }}</td>
+                    <td class="sdr-clip" :title="pair.lead_a.email || ''">{{ pair.lead_a.email || '—' }}</td>
+                    <td class="sdr-vs">↔</td>
+                    <td class="sdr-mono">#{{ pair.lead_b.id }}</td>
+                    <td class="sdr-clip" :title="pair.lead_b.name">{{ pair.lead_b.name }}</td>
+                    <td>{{ pair.lead_b.stage }}</td>
+                    <td class="sdr-mono">{{ pair.lead_b.phone || '—' }}</td>
+                    <td class="sdr-clip" :title="pair.lead_b.email || ''">{{ pair.lead_b.email || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+          <div v-if="!comparisonsWithPairs.length" class="sdr-empty">No cross-stage duplicate pairs.</div>
+
+          <!-- Groups: all 3 -->
           <div class="sdr-label">
-            {{ cmp.label }}
-            <span class="sdr-label__meta">{{ cmp.duplicate_pairs }} pairs</span>
+            In all 3 stages
+            <span class="sdr-label__meta">{{ groups.all_three_stages.length }}</span>
           </div>
-          <div class="sdr-table-wrap">
-            <table class="sdr-table">
-              <thead>
-                <tr>
-                  <th>Match</th>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Stage</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th></th>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Stage</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(pair, idx) in cmp.pairs" :key="idx">
-                  <td><span class="sdr-tag" :class="'sdr-tag--' + pair.match">{{ pair.match }}</span></td>
-                  <td class="sdr-mono">#{{ pair.lead_a.id }}</td>
-                  <td class="sdr-clip" :title="pair.lead_a.name">{{ pair.lead_a.name }}</td>
-                  <td>{{ pair.lead_a.stage }}</td>
-                  <td class="sdr-mono">{{ pair.lead_a.phone || '—' }}</td>
-                  <td class="sdr-clip" :title="pair.lead_a.email || ''">{{ pair.lead_a.email || '—' }}</td>
-                  <td class="sdr-vs">↔</td>
-                  <td class="sdr-mono">#{{ pair.lead_b.id }}</td>
-                  <td class="sdr-clip" :title="pair.lead_b.name">{{ pair.lead_b.name }}</td>
-                  <td>{{ pair.lead_b.stage }}</td>
-                  <td class="sdr-mono">{{ pair.lead_b.phone || '—' }}</td>
-                  <td class="sdr-clip" :title="pair.lead_b.email || ''">{{ pair.lead_b.email || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </template>
-        <div v-if="!comparisonsWithPairs.length" class="sdr-empty">No cross-stage duplicate pairs.</div>
-
-        <!-- Groups: all 3 -->
-        <div class="sdr-label">
-          In all 3 stages
-          <span class="sdr-label__meta">{{ groups.all_three_stages.length }}</span>
-        </div>
-        <div v-if="!groups.all_three_stages.length" class="sdr-empty">None</div>
-        <div v-for="(g, i) in groups.all_three_stages" :key="'t3-' + i" class="sdr-group">
-          <div class="sdr-group__meta">
-            <span class="sdr-tag" :class="'sdr-tag--' + g.match_type">{{ g.match_type }}</span>
-            <span>{{ g.stages.join(' · ') }}</span>
-            <span class="sdr-dim">{{ g.match_key }}</span>
-          </div>
-          <div class="sdr-table-wrap">
-            <table class="sdr-table sdr-table--compact">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Stage</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="l in g.leads" :key="l.id">
-                  <td class="sdr-mono">#{{ l.id }}</td>
-                  <td>{{ l.name }}</td>
-                  <td>{{ l.stage }}</td>
-                  <td class="sdr-mono">{{ l.phone || '—' }}</td>
-                  <td>{{ l.email || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Groups: exactly 2 -->
-        <div class="sdr-label">
-          In exactly 2 stages
-          <span class="sdr-label__meta">{{ groups.exactly_two_stages.length }}</span>
-        </div>
-        <div v-if="!groups.exactly_two_stages.length" class="sdr-empty">None</div>
-        <div v-for="(g, i) in groups.exactly_two_stages" :key="'t2-' + i" class="sdr-group">
-          <div class="sdr-group__meta">
-            <span class="sdr-tag" :class="'sdr-tag--' + g.match_type">{{ g.match_type }}</span>
-            <span>{{ g.stages.join(' · ') }}</span>
-            <span class="sdr-dim">{{ g.match_key }}</span>
-          </div>
-          <div class="sdr-table-wrap">
-            <table class="sdr-table sdr-table--compact">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Stage</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="l in g.leads" :key="l.id">
-                  <td class="sdr-mono">#{{ l.id }}</td>
-                  <td>{{ l.name }}</td>
-                  <td>{{ l.stage }}</td>
-                  <td class="sdr-mono">{{ l.phone || '—' }}</td>
-                  <td>{{ l.email || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Ambiguous -->
-        <template v-if="groups.ambiguous_bridges.length">
-          <div class="sdr-label">
-            Ambiguous (review)
-            <span class="sdr-label__meta">{{ groups.ambiguous_bridges.length }}</span>
-          </div>
-          <p class="sdr-hint">Different phones linked by a shared email — not counted as one client.</p>
-          <div v-for="(g, i) in groups.ambiguous_bridges" :key="'amb-' + i" class="sdr-group sdr-group--warn">
+          <div v-if="!groups.all_three_stages.length" class="sdr-empty">None</div>
+          <div v-for="(g, i) in groups.all_three_stages" :key="'t3-' + i" class="sdr-group">
             <div class="sdr-group__meta">
+              <span class="sdr-tag" :class="'sdr-tag--' + g.match_type">{{ g.match_type }}</span>
               <span>{{ g.stages.join(' · ') }}</span>
-              <span class="sdr-dim">{{ g.distinct_phones }} phones · {{ g.distinct_emails }} emails</span>
+              <span class="sdr-dim">{{ g.match_key }}</span>
             </div>
             <div class="sdr-table-wrap">
               <table class="sdr-table sdr-table--compact">
@@ -227,6 +177,79 @@
               </table>
             </div>
           </div>
+
+          <!-- Groups: exactly 2 -->
+          <div class="sdr-label">
+            In exactly 2 stages
+            <span class="sdr-label__meta">{{ groups.exactly_two_stages.length }}</span>
+          </div>
+          <div v-if="!groups.exactly_two_stages.length" class="sdr-empty">None</div>
+          <div v-for="(g, i) in groups.exactly_two_stages" :key="'t2-' + i" class="sdr-group">
+            <div class="sdr-group__meta">
+              <span class="sdr-tag" :class="'sdr-tag--' + g.match_type">{{ g.match_type }}</span>
+              <span>{{ g.stages.join(' · ') }}</span>
+              <span class="sdr-dim">{{ g.match_key }}</span>
+            </div>
+            <div class="sdr-table-wrap">
+              <table class="sdr-table sdr-table--compact">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Stage</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="l in g.leads" :key="l.id">
+                    <td class="sdr-mono">#{{ l.id }}</td>
+                    <td>{{ l.name }}</td>
+                    <td>{{ l.stage }}</td>
+                    <td class="sdr-mono">{{ l.phone || '—' }}</td>
+                    <td>{{ l.email || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Ambiguous -->
+          <template v-if="groups.ambiguous_bridges.length">
+            <div class="sdr-label">
+              Ambiguous (review)
+              <span class="sdr-label__meta">{{ groups.ambiguous_bridges.length }}</span>
+            </div>
+            <p class="sdr-hint">Different phones linked by a shared email — not counted as one client.</p>
+            <div v-for="(g, i) in groups.ambiguous_bridges" :key="'amb-' + i" class="sdr-group sdr-group--warn">
+              <div class="sdr-group__meta">
+                <span>{{ g.stages.join(' · ') }}</span>
+                <span class="sdr-dim">{{ g.distinct_phones }} phones · {{ g.distinct_emails }} emails</span>
+              </div>
+              <div class="sdr-table-wrap">
+                <table class="sdr-table sdr-table--compact">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Stage</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="l in g.leads" :key="l.id">
+                      <td class="sdr-mono">#{{ l.id }}</td>
+                      <td>{{ l.name }}</td>
+                      <td>{{ l.stage }}</td>
+                      <td class="sdr-mono">{{ l.phone || '—' }}</td>
+                      <td>{{ l.email || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
         </template>
       </template>
     </div>
@@ -238,8 +261,11 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/plugins/axios'
 
 const loading = ref(false)
+const loadingDetails = ref(false)
 const error = ref('')
+const detailsError = ref('')
 const report = ref(null)
+const detailsLoaded = ref(false)
 
 const summary = computed(() => report.value?.summary || {
   comparisons: [],
@@ -259,24 +285,55 @@ const comparisonsWithPairs = computed(() =>
   (report.value?.comparisons || []).filter((c) => (c.pairs || []).length > 0)
 )
 
-const fetchReport = async () => {
+const fetchSummary = async () => {
   loading.value = true
   error.value = ''
+  detailsLoaded.value = false
+  detailsError.value = ''
   try {
-    const response = await api.get('/reports/stage-duplicates')
+    const response = await api.get('/reports/stage-duplicates', {
+      params: { summary: 1 },
+      timeout: 120000,
+    })
     report.value = response?.data?.data || null
     if (!report.value) error.value = 'Empty response'
   } catch (err) {
     error.value = err?.response?.status === 403
       ? 'Forbidden — Super Admin only'
-      : (err?.response?.data?.message || 'Failed to load report')
+      : (err?.code === 'ECONNABORTED'
+        ? 'Timed out loading counts — try again'
+        : (err?.response?.data?.message || 'Failed to load report'))
     report.value = null
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchReport)
+const fetchDetails = async () => {
+  loadingDetails.value = true
+  detailsError.value = ''
+  try {
+    const response = await api.get('/reports/stage-duplicates', {
+      params: { summary: 0 },
+      timeout: 300000,
+    })
+    const data = response?.data?.data || null
+    if (!data) {
+      detailsError.value = 'Empty response'
+      return
+    }
+    report.value = data
+    detailsLoaded.value = true
+  } catch (err) {
+    detailsError.value = err?.code === 'ECONNABORTED'
+      ? 'Timed out loading details — counts above are still valid'
+      : (err?.response?.data?.message || 'Failed to load details')
+  } finally {
+    loadingDetails.value = false
+  }
+}
+
+onMounted(fetchSummary)
 </script>
 
 <style scoped>
@@ -303,6 +360,13 @@ onMounted(fetchReport)
   margin-bottom: 10px;
 }
 
+.sdr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .sdr-title {
   font-size: 13px;
   font-weight: 650;
@@ -316,6 +380,13 @@ onMounted(fetchReport)
   font-size: 11px;
   color: #8b93a7;
   line-height: 1.35;
+}
+.sdr-hint--block {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px dashed #e3e7ef;
+  border-radius: 8px;
+  background: #fafbfd;
 }
 
 .sdr-btn {
@@ -332,6 +403,10 @@ onMounted(fetchReport)
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
+}
+.sdr-btn--secondary {
+  background: #f5f7fb;
+  border-color: #d8dee9;
 }
 .sdr-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 

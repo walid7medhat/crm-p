@@ -17,7 +17,11 @@ class StageDuplicateAnalysisService
 {
     public const STAGE_NAMES = ['Contacted', 'Qualified', 'Assigned'];
 
-    public function analyze(): array
+    /**
+     * @param  bool  $summaryOnly  When true, return counts only (no pair/group lead lists).
+     *                             Much faster and smaller — use for the report landing page.
+     */
+    public function analyze(bool $summaryOnly = false): array
     {
         $stages = $this->resolveStages();
         $stageIds = array_values(array_map(fn ($s) => $s['id'], $stages));
@@ -44,12 +48,12 @@ class StageDuplicateAnalysisService
         }
 
         $comparisons = [
-            $this->comparePair($byStage['Contacted'], $byStage['Qualified'], 'Contacted', 'Qualified', $idToName),
-            $this->comparePair($byStage['Contacted'], $byStage['Assigned'], 'Contacted', 'Assigned', $idToName),
-            $this->comparePair($byStage['Assigned'], $byStage['Qualified'], 'Assigned', 'Qualified', $idToName),
+            $this->comparePair($byStage['Contacted'], $byStage['Qualified'], 'Contacted', 'Qualified', $idToName, $summaryOnly),
+            $this->comparePair($byStage['Contacted'], $byStage['Assigned'], 'Contacted', 'Assigned', $idToName, $summaryOnly),
+            $this->comparePair($byStage['Assigned'], $byStage['Qualified'], 'Assigned', 'Qualified', $idToName, $summaryOnly),
         ];
 
-        $groups = $this->buildIdentityGroups($leads, $idToName);
+        $groups = $this->buildIdentityGroups($leads, $idToName, $summaryOnly);
 
         $stageCounts = [];
         foreach (self::STAGE_NAMES as $name) {
@@ -60,7 +64,7 @@ class StageDuplicateAnalysisService
             ];
         }
 
-        return [
+        $payload = [
             'stages' => $stageCounts,
             'rules' => [
                 'phone' => 'Lead::phoneDigits / work_phone_digits (primary work_phone only); empty/null never match',
@@ -84,9 +88,15 @@ class StageDuplicateAnalysisService
                 'unique_duplicate_groups' => count($groups['exactly_two_stages']) + count($groups['all_three_stages']),
                 'ambiguous_bridges' => count($groups['ambiguous_bridges']),
             ],
-            'comparisons' => $comparisons,
-            'groups' => $groups,
+            'summary_only' => $summaryOnly,
         ];
+
+        if (! $summaryOnly) {
+            $payload['comparisons'] = $comparisons;
+            $payload['groups'] = $groups;
+        }
+
+        return $payload;
     }
 
     /**
@@ -115,24 +125,61 @@ class StageDuplicateAnalysisService
         return $out;
     }
 
-    private function comparePair(Collection $setA, Collection $setB, string $labelA, string $labelB, array $idToName): array
-    {
+    /**
+     * Hash-indexed pair matching (O(n+m) lookups) instead of nested O(n×m) loops.
+     */
+    private function comparePair(
+        Collection $setA,
+        Collection $setB,
+        string $labelA,
+        string $labelB,
+        array $idToName,
+        bool $summaryOnly
+    ): array {
         $pairs = [];
         $unique = [];
         $by = ['phone' => 0, 'email' => 0, 'both' => 0];
         $partnerCounts = [];
 
+        $index = ['phone' => [], 'email' => []];
+        foreach ($setB as $b) {
+            $phone = Lead::phoneDigits($b->work_phone);
+            if ($phone !== '') {
+                $index['phone'][$phone][] = $b;
+            }
+            $email = $this->emailKey($b->email);
+            if ($email !== '') {
+                $index['email'][$email][] = $b;
+            }
+        }
+
         foreach ($setA as $a) {
-            foreach ($setB as $b) {
+            $candidates = [];
+            $phone = Lead::phoneDigits($a->work_phone);
+            if ($phone !== '' && isset($index['phone'][$phone])) {
+                foreach ($index['phone'][$phone] as $b) {
+                    $candidates[$b->id] = $b;
+                }
+            }
+            $email = $this->emailKey($a->email);
+            if ($email !== '' && isset($index['email'][$email])) {
+                foreach ($index['email'][$email] as $b) {
+                    $candidates[$b->id] = $b;
+                }
+            }
+
+            foreach ($candidates as $b) {
                 $kind = $this->classifyPair($a, $b);
                 if ($kind === 'none') {
                     continue;
                 }
-                $pairs[] = [
-                    'match' => $kind,
-                    'lead_a' => $this->serializeLead($a, $idToName),
-                    'lead_b' => $this->serializeLead($b, $idToName),
-                ];
+                if (! $summaryOnly) {
+                    $pairs[] = [
+                        'match' => $kind,
+                        'lead_a' => $this->serializeLead($a, $idToName),
+                        'lead_b' => $this->serializeLead($b, $idToName),
+                    ];
+                }
                 $unique[$a->id] = true;
                 $unique[$b->id] = true;
                 $by[$kind]++;
@@ -152,13 +199,15 @@ class StageDuplicateAnalysisService
             'label' => "{$labelA} vs {$labelB}",
             'stage_a' => $labelA,
             'stage_b' => $labelB,
-            'duplicate_pairs' => count($pairs),
+            'duplicate_pairs' => $summaryOnly
+                ? array_sum($by)
+                : count($pairs),
             'unique_leads_involved' => count($unique),
             'matches_by_phone' => $by['phone'],
             'matches_by_email' => $by['email'],
             'matches_by_both' => $by['both'],
-            'leads_matching_multiple' => $multi,
-            'pairs' => $pairs,
+            'leads_matching_multiple' => $summaryOnly ? count($multi) : $multi,
+            'pairs' => $summaryOnly ? [] : $pairs,
         ];
     }
 
@@ -167,7 +216,7 @@ class StageDuplicateAnalysisService
      * Ambiguous OR-bridged graphs (different phones linked only via a shared email with
      * unrelated phone-only members) are listed separately and not counted as clean groups.
      */
-    private function buildIdentityGroups(Collection $leads, array $idToName): array
+    private function buildIdentityGroups(Collection $leads, array $idToName, bool $summaryOnly): array
     {
         $byPhone = [];
         $byEmail = [];
@@ -187,7 +236,13 @@ class StageDuplicateAnalysisService
         // Fingerprint of sorted lead ids → index into exactlyTwo/allThree bucket.
         $memberIndex = [];
 
-        $consume = function (string $type, string $key, array $members) use (&$exactlyTwo, &$allThree, &$memberIndex, $idToName) {
+        $consume = function (string $type, string $key, array $members) use (
+            &$exactlyTwo,
+            &$allThree,
+            &$memberIndex,
+            $idToName,
+            $summaryOnly
+        ) {
             if (count($members) < 2) {
                 return;
             }
@@ -198,8 +253,10 @@ class StageDuplicateAnalysisService
             foreach ($members as $lead) {
                 $stage = $idToName[$lead->stage_id] ?? (string) $lead->stage_id;
                 $stageSet[$stage] = true;
-                $serialized[] = $this->serializeLead($lead, $idToName);
                 $ids[] = (int) $lead->id;
+                if (! $summaryOnly) {
+                    $serialized[] = $this->serializeLead($lead, $idToName);
+                }
             }
             sort($ids);
             $stageCount = count($stageSet);
@@ -236,8 +293,8 @@ class StageDuplicateAnalysisService
                 'match_keys' => [$key],
                 'stages' => array_values(array_keys($stageSet)),
                 'stage_count' => $stageCount,
-                'lead_count' => count($serialized),
-                'leads' => $serialized,
+                'lead_count' => count($ids),
+                'leads' => $summaryOnly ? [] : $serialized,
             ];
 
             if ($bucket === 'allThree') {
@@ -259,54 +316,72 @@ class StageDuplicateAnalysisService
         return [
             'exactly_two_stages' => $exactlyTwo,
             'all_three_stages' => $allThree,
-            'ambiguous_bridges' => $this->findAmbiguousBridges($leads, $idToName),
+            'ambiguous_bridges' => $this->findAmbiguousBridges($leads, $idToName, $summaryOnly),
         ];
     }
 
     /**
      * Connected components via phone OR email that contain 2+ distinct phones —
      * these are not treated as a single client without manual review.
+     *
+     * Uses union-find over phone/email keys (near-linear) instead of O(n²) pair loops.
      */
-    private function findAmbiguousBridges(Collection $leads, array $idToName): array
+    private function findAmbiguousBridges(Collection $leads, array $idToName, bool $summaryOnly): array
     {
+        $parent = [];
+        $find = function (int $x) use (&$parent, &$find): int {
+            if (! isset($parent[$x])) {
+                $parent[$x] = $x;
+            }
+            if ($parent[$x] !== $x) {
+                $parent[$x] = $find($parent[$x]);
+            }
+
+            return $parent[$x];
+        };
+        $union = function (int $a, int $b) use (&$find, &$parent): void {
+            $ra = $find($a);
+            $rb = $find($b);
+            if ($ra !== $rb) {
+                $parent[$rb] = $ra;
+            }
+        };
+
+        $byPhone = [];
+        $byEmail = [];
+        foreach ($leads as $lead) {
+            $id = (int) $lead->id;
+            $parent[$id] = $id;
+            $phone = Lead::phoneDigits($lead->work_phone);
+            if ($phone !== '') {
+                $byPhone[$phone][] = $id;
+            }
+            $email = $this->emailKey($lead->email);
+            if ($email !== '') {
+                $byEmail[$email][] = $id;
+            }
+        }
+
+        foreach ($byPhone as $ids) {
+            for ($i = 1; $i < count($ids); $i++) {
+                $union($ids[0], $ids[$i]);
+            }
+        }
+        foreach ($byEmail as $ids) {
+            for ($i = 1; $i < count($ids); $i++) {
+                $union($ids[0], $ids[$i]);
+            }
+        }
+
         $nodes = $leads->keyBy('id');
-        $ids = $nodes->keys()->all();
-        $adj = [];
-        foreach ($ids as $id) {
-            $adj[$id] = [];
+        $components = [];
+        foreach ($leads as $lead) {
+            $root = $find((int) $lead->id);
+            $components[$root][] = (int) $lead->id;
         }
 
-        for ($i = 0; $i < count($ids); $i++) {
-            for ($j = $i + 1; $j < count($ids); $j++) {
-                $a = $nodes[$ids[$i]];
-                $b = $nodes[$ids[$j]];
-                if ($this->classifyPair($a, $b) === 'none') {
-                    continue;
-                }
-                $adj[$a->id][] = $b->id;
-                $adj[$b->id][] = $a->id;
-            }
-        }
-
-        $seen = [];
         $bridges = [];
-        foreach ($ids as $id) {
-            if (isset($seen[$id])) {
-                continue;
-            }
-            $stack = [$id];
-            $comp = [];
-            $seen[$id] = true;
-            while ($stack) {
-                $cur = array_pop($stack);
-                $comp[] = $cur;
-                foreach ($adj[$cur] as $n) {
-                    if (! isset($seen[$n])) {
-                        $seen[$n] = true;
-                        $stack[] = $n;
-                    }
-                }
-            }
+        foreach ($components as $comp) {
             if (count($comp) < 2) {
                 continue;
             }
@@ -326,7 +401,9 @@ class StageDuplicateAnalysisService
                     $emails[$e] = true;
                 }
                 $stages[$idToName[$lead->stage_id] ?? (string) $lead->stage_id] = true;
-                $serialized[] = $this->serializeLead($lead, $idToName);
+                if (! $summaryOnly) {
+                    $serialized[] = $this->serializeLead($lead, $idToName);
+                }
             }
 
             if (count($phones) > 1 && count($emails) >= 1 && count($stages) >= 2) {
@@ -335,7 +412,8 @@ class StageDuplicateAnalysisService
                     'distinct_phones' => count($phones),
                     'distinct_emails' => count($emails),
                     'stages' => array_values(array_keys($stages)),
-                    'leads' => $serialized,
+                    'lead_count' => count($comp),
+                    'leads' => $summaryOnly ? [] : $serialized,
                 ];
             }
         }
