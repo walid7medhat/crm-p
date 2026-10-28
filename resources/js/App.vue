@@ -100,6 +100,12 @@ const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
   delay: 80,
   loadingComponent: LeadOpeningLoader,
+  // One failed chunk download (weak mobile network) used to leave lead clicks dead
+  // for the whole session — retry a few times before giving up.
+  onError(error, retry, fail, attempts) {
+    if (attempts <= 3) setTimeout(retry, 600 * attempts)
+    else fail()
+  },
 })
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'

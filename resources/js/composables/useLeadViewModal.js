@@ -11,6 +11,8 @@ export const leadViewModalSeed = ref(null)
 export const leadViewModalDisableStageChange = ref(false)
 /** Section inside the lead modal to reveal after open: activity, requirements, matching, create_deal. */
 export const leadViewOpenSection = ref(null)
+/** Bumped on every openLeadView() — lets the modal cancel a close that a new click overtook. */
+export const leadViewOpenSeq = ref(0)
 const leadUpdatedListeners = new Set()
 
 let router = null
@@ -50,6 +52,7 @@ export function useLeadViewModal() {
 export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
   if (!id) return
+  leadViewOpenSeq.value++
   leadViewOpenSection.value = options.focus || null
 
   // The ?lead= URL sync (and page-mount checks) call this again for a lead that is

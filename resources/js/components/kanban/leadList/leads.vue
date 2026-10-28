@@ -2389,6 +2389,8 @@ function onLeadDragStart(event) {
     noteLeadDragOrigin(event)
     clearTimeout(leadCardClickTimer)
     clearMobileLongPress()
+    // Drop any selection the press already started (e.g. in a column header).
+    window.getSelection?.()?.removeAllRanges()
     isLeadDragging.value = true
     const item = event?.item
     const draggedId = Number(item?.getAttribute?.('data-lead-id'))
@@ -7002,6 +7004,12 @@ const fetchRevertNotifications = async () => {
     margin-top: 12px;
 }
 
+.kanban-outer.is-lead-dragging,
+.kanban-outer.is-lead-dragging * {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 .kanban-card {
     --rx: 0deg;
     --ry: 0deg;
@@ -7011,6 +7019,10 @@ const fetchRevertNotifications = async () => {
     --gx: 50%;
     --gy: 18%;
     color: #1e293b;
+    /* Drag uses Sortable's fallback mode, which only starts after a few px of movement —
+       without this the browser starts a text selection that spreads across other cards. */
+    -webkit-user-select: none;
+    user-select: none;
     border: 1px solid rgba(30, 27, 46, 0.14) !important;
     border-radius: 14px !important;
     background:

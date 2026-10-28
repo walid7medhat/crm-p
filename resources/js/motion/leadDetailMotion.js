@@ -119,3 +119,14 @@ export function stopLeadDetailMotion() {
     activeTween?.kill()
     activeTween = null
 }
+
+/**
+ * Kill any running tween and drop the inline opacity/transform it left behind.
+ * An interrupted entrance leaves every section at opacity 0, so the next lead
+ * "opened" into an invisible modal.
+ */
+export function resetLeadDetailMotion(root) {
+    stopLeadDetailMotion()
+    if (!root) return
+    gsap.set([root, ...groups(root)], { clearProps: 'opacity,transform' })
+}

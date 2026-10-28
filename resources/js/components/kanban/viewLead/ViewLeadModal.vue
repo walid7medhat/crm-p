@@ -226,8 +226,11 @@ import {
     playLeadDetailEntrance,
     playLeadDetailExit,
     stopLeadDetailMotion,
+    resetLeadDetailMotion,
     takeLeadDetailOrigin,
 } from '@/motion/leadDetailMotion'
+import { leadViewOpenSeq } from '@/composables/useLeadViewModal.js'
+import { Modal as BsModal } from 'bootstrap'
 import {
     armLeadMotion,
     beginConversionCelebration,
@@ -297,6 +300,7 @@ let jumpSettleTimer = null
 const detailAnimating = ref(false)
 let detailExitGuard = false
 let entranceToken = 0
+let contentVisibleTimer = null
 const leadStageId = ref(null)
 const activeTab = ref('general')
 const echoListener = ref(null)
@@ -1588,6 +1592,8 @@ onUnmounted(() => {
 })
 
 const handleClose = () => {
+  // A late @hidden from the previous close — a lead was opened again since; don't shut it.
+  if (show.value) return
   detailExitGuard = false
   detailAnimating.value = false
   show.value = false
@@ -1652,6 +1658,12 @@ watch(() => props.modelValue, (val) => {
     show.value = val
 })
 
+// openLeadView() while the app-level flag is already true (it missed the last close) doesn't
+// change modelValue, so the watcher above never fires — open from the request itself.
+watch(leadViewOpenSeq, () => {
+    if (props.syncUrl && props.modelValue && !show.value) show.value = true
+})
+
 // This modal is embedded on more than one page (Kanban, Lead Pool inside kanban_deal, …).
 // Capture whichever path it's actually opened on so the "navigated away entirely" guard
 // below compares against reality instead of an assumed fixed host page.
@@ -1705,9 +1717,47 @@ async function askEditGuard() {
   return (await ask()) !== false
 }
 
+// bootstrap-vue-3 drives the bootstrap Modal instance; show() is a no-op while that instance
+// still thinks it is shown/transitioning. After a DOM-level force-hide (or a hide it ignored,
+// e.g. right after the nested Responsible modal closed) the next open only changed ?lead=
+// in the URL and the modal never appeared.
+function resetBootstrapLeadModal() {
+    const modal = document.getElementById('view-lead-modal')
+    const instance = modal && BsModal.getInstance(modal)
+    if (instance) {
+        instance._isShown = false
+        instance._isTransitioning = false
+    }
+    return instance
+}
+
+function ensureLeadModalVisible() {
+    const modal = document.getElementById('view-lead-modal')
+    if (!show.value || !modal) return
+    if (!(modal.classList.contains('show') && modal.style.display === 'block')) {
+        resetBootstrapLeadModal()?.show()
+    }
+}
+
+// Last-resort check once the entrance should be over: if the content is still hidden by the
+// motion class or a leftover inline opacity, show it.
+function ensureLeadContentVisible() {
+    if (!show.value) return
+    const root = leadModalRoot.value
+    if (!root) return
+    const stuck = detailAnimating.value
+        || Number(getComputedStyle(root).opacity) < 0.5
+        || [...root.querySelectorAll('[data-motion], .lead-view-main, .lead-view-side')]
+            .some((el) => Number(getComputedStyle(el).opacity) < 0.5)
+    if (!stuck) return
+    resetLeadDetailMotion(root)
+    detailAnimating.value = false
+}
+
 function forceHideStuckLeadModal() {
     const modal = document.getElementById('view-lead-modal')
     if (!modal || show.value) return
+    resetBootstrapLeadModal()
     // After @hide preventDefault, bootstrap-vue can leave .modal.show with an empty
     // white shell when content was torn down or opacity animated to 0.
     if (modal.classList.contains('show') || modal.style.display === 'block') {
@@ -1718,14 +1768,15 @@ function forceHideStuckLeadModal() {
         document.body.style.removeProperty('padding-right')
         document.body.style.removeProperty('overflow')
         document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+            // bootstrap-vue-3 renders its backdrop INSIDE .modal and Vue owns that node —
+            // removing it left the lead modal without a backdrop (no dim, outside click
+            // stopped closing it). Only drop orphaned top-level ones.
+            if (backdrop.closest('.modal')) return
             // Only remove orphaned backdrops once no other bootstrap modal is open.
             if (!document.querySelector('.modal.show')) backdrop.remove()
         })
     }
-    if (leadModalRoot.value?.style) {
-        leadModalRoot.value.style.opacity = ''
-        leadModalRoot.value.style.transform = ''
-    }
+    resetLeadDetailMotion(leadModalRoot.value)
 }
 
 async function closeWithMotion() {
@@ -1735,10 +1786,25 @@ async function closeWithMotion() {
     detailExitGuard = true
     entranceToken += 1
     detailAnimating.value = false
+    const openSeq = leadViewOpenSeq.value
+    const closingLeadId = props.leadId
     try {
-        await playLeadDetailExit(leadModalRoot.value)
+        // Capped: a killed tween never resolves, which left the modal "open" but invisible
+        // and every later lead click did nothing.
+        await Promise.race([
+            playLeadDetailExit(leadModalRoot.value),
+            new Promise((resolve) => setTimeout(resolve, 400)),
+        ])
     } catch (_) {
         /* still force-close below */
+    }
+    // A lead was clicked while the exit played — keep the modal open for it instead of
+    // closing over the click.
+    if (leadViewOpenSeq.value !== openSeq || props.leadId !== closingLeadId) {
+        resetLeadDetailMotion(leadModalRoot.value)
+        detailAnimating.value = false
+        detailExitGuard = false
+        return
     }
     show.value = false
     await nextTick()
@@ -1771,6 +1837,11 @@ watch(show, (val, oldVal) => {
     }
     void queueLeadDetailEntrance()
     nextTick(() => bindJumpObserver())
+    // bootstrap-vue-3 shows on its own nextTick — check after that and recover if it didn't.
+    nextTick(() => requestAnimationFrame(ensureLeadModalVisible))
+    // setTimeout, not rAF: also runs if the tab was in the background.
+    clearTimeout(contentVisibleTimer)
+    contentVisibleTimer = setTimeout(ensureLeadContentVisible, 1200)
   } else if (oldVal) {
     jumpScroller?.removeEventListener('scroll', onJumpScroll)
     jumpScroller = null
@@ -1815,6 +1886,8 @@ watch(() => props.leadId, async (newLeadId, oldLeadId) => {
     }
     fetchLead()
     initializeLeadListener()
+    clearTimeout(contentVisibleTimer)
+    contentVisibleTimer = setTimeout(ensureLeadContentVisible, 1200)
 })
 
 watch(lead, (newLead) => {
