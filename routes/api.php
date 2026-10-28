@@ -749,6 +749,11 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/users/reports/non-oia-duplicates', [UserController::class, 'nonOiaDuplicateReport']);
     });
 
+    // Contacted / Qualified / Assigned lead duplicates — super_admin only.
+    Route::middleware('role:super_admin')->group(function () {
+        Route::get('/reports/stage-duplicates', \App\Http\Controllers\Api\StageDuplicateReportController::class);
+    });
+
      // User routes
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);

@@ -14,6 +14,7 @@ const baseRoutes = [
     { path: '/settings/deal-costs', component: () => import('./pages/settings/DealCostSettings.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/settings/evaluations', component: () => import('./pages/settings/EvaluationSettings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/user-duplicates-report', component: () => import('./pages/settings/user-duplicates-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/settings/stage-duplicates-report', component: () => import('./pages/settings/stage-duplicates-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },
     { path: '/import-pitrix', component: () => import('./components/kanban/leadList/ImportPitrix.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/sync-bitrix-leads', component: () => import('./components/kanban/leadList/SyncBitrixLeads.vue'), meta: { requiresAuth: true, requiresAdmin: true } },

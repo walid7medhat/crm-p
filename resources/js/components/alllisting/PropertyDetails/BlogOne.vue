@@ -6592,9 +6592,23 @@ const renderMobileOfferPanel = (html) => {
 };
 
 const showMobileOfferBusy = (text) => {
+  ensureOfferLoadingStyles();
   renderMobileOfferPanel(`
-    <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Creating sales offer</p>
-    <p id="mobile-offer-status-text" style="margin:0;font-size:14px;color:#64748b;">${escapeOfferHtml(text)}</p>
+    <div class="offer-loader" style="border-radius:14px;margin:-6px -2px 0;border:1px solid rgba(var(--color-primary-rgb), 0.12);">
+      <div class="offer-loader__mark" aria-hidden="true">
+        <div class="offer-loader__ring"></div>
+        <div class="offer-loader__core">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 3.5h7.5L19 8v12.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M14.5 3.5V8H19" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M9 12h6M9 15.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="offer-loader__label">Sales Offer</div>
+      <p id="mobile-offer-status-text" class="offer-loader__status">${escapeOfferHtml(text)}</p>
+      <div class="offer-loader__line"></div>
+    </div>
   `);
 };
 
@@ -6857,6 +6871,138 @@ const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}) => {
   return pdf;
 };
 
+const OFFER_LOADING_STYLE_ID = 'offer-3d-loading-styles-v4';
+
+const ensureOfferLoadingStyles = () => {
+  ['offer-3d-loading-styles', 'offer-3d-loading-styles-v2', 'offer-3d-loading-styles-v3'].forEach((id) => {
+    document.getElementById(id)?.remove();
+  });
+  let style = document.getElementById(OFFER_LOADING_STYLE_ID);
+  if (!style) {
+    style = document.createElement('style');
+    style.id = OFFER_LOADING_STYLE_ID;
+    document.head.appendChild(style);
+  }
+  style.textContent = `
+    .offer-loading-popup.swal2-popup {
+      width: min(320px, 88vw) !important;
+      padding: 0 !important;
+      border-radius: 14px !important;
+      background: #ffffff !important;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18) !important;
+      overflow: hidden !important;
+      border: 1px solid rgba(var(--color-primary-rgb), 0.12) !important;
+    }
+    .offer-loading-popup .swal2-html-container {
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: visible !important;
+    }
+    .offer-loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      font-family: Montserrat, Arial, Helvetica, sans-serif;
+      padding: 28px 22px 24px;
+      background: #ffffff;
+      color: var(--color-primary);
+    }
+    .offer-loader__mark {
+      position: relative;
+      width: 56px;
+      height: 56px;
+      margin: 0 0 16px;
+    }
+    .offer-loader__ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(var(--color-primary-rgb), 0.12);
+      border-top-color: var(--color-primary);
+      animation: offerLoaderSpin 0.9s linear infinite;
+    }
+    .offer-loader__core {
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      background: rgba(var(--color-primary-rgb), 0.08);
+      border: 1px solid rgba(var(--color-primary-rgb), 0.16);
+      display: grid;
+      place-items: center;
+      color: var(--color-primary);
+    }
+    .offer-loader__core svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+    }
+    .offer-loader__label {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: var(--color-primary);
+      line-height: 1.25;
+    }
+    .offer-loader__status {
+      margin: 0;
+      min-height: 16px;
+      font-size: 12px;
+      font-weight: 400;
+      color: #64748b;
+      line-height: 1.35;
+    }
+    .offer-loader__line {
+      width: 40px;
+      height: 3px;
+      margin: 14px 0 0;
+      border-radius: 999px;
+      background: var(--gradient-primary);
+    }
+    @keyframes offerLoaderSpin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+};
+
+const buildOfferLoadingHtml = (status = 'Preparing document…') => `
+  <div class="offer-loader">
+    <div class="offer-loader__mark" aria-hidden="true">
+      <div class="offer-loader__ring"></div>
+      <div class="offer-loader__core">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 3.5h7.5L19 8v12.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M14.5 3.5V8H19" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 12h6M9 15.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="offer-loader__label">Sales Offer</div>
+    <p id="offer-loading-status" class="offer-loader__status">${escapeOfferHtml(status)}</p>
+    <div class="offer-loader__line"></div>
+  </div>
+`;
+
+const showOfferLoading = (status = 'Preparing document…') => {
+  ensureOfferLoadingStyles();
+  return Swal.fire({
+    html: buildOfferLoadingHtml(status),
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    showCloseButton: false,
+    customClass: { popup: 'offer-loading-popup' },
+    backdrop: 'rgba(15, 23, 42, 0.45)',
+  });
+};
+
+const setOfferLoadingStatus = (text) => {
+  const node = document.getElementById('offer-loading-status');
+  if (node) node.textContent = text;
+  else showOfferLoading(text);
+};
+
 const generatePDF = async () => {
   offerDateLabel = '';
   if (offerPdfInFlight) return;
@@ -6876,15 +7022,7 @@ const generatePDF = async () => {
     return;
   }
   try {
-    Swal.fire({
-      title: 'Generating Sales Offer...',
-      text: 'Please wait while we prepare your document',
-      allowOutsideClick: false,
-      showConfirmButton: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
+    showOfferLoading('Preparing document…');
 
     const userData = localStorage.getItem('user');
     const currentUser = userData ? JSON.parse(userData) : null;
@@ -6894,7 +7032,7 @@ const generatePDF = async () => {
       generated_at: new Date().toISOString(),
       property_id: property.value.id,
       property_title: property.value.title || property.value.area?.area_title,
-      client_name: 'Potential Client', 
+      client_name: 'Potential Client',
       generated_by: currentUser?.name,
       offer_details: {
         price: property.value.price,
@@ -6921,12 +7059,12 @@ const generatePDF = async () => {
 
     const offerNumber = saveResponse.data.data.offer.offer_number;
     const filename = `sales-offer-${offerNumber}.pdf`;
-        offerDateLabel = formatOfferDate(saveResponse.data.data.offer.created_at);
+    offerDateLabel = formatOfferDate(saveResponse.data.data.offer.created_at);
 
     pdfMobileMode = false;
-    Swal.update({ text: 'Preparing images…' });
+    setOfferLoadingStatus('Preparing images…');
     await imagesReady;
-    const pdf = await renderOfferSlidesPdf(currentUser, (text) => Swal.update({ text }));
+    const pdf = await renderOfferSlidesPdf(currentUser, setOfferLoadingStatus);
 
     const pdfBlob = pdf.output('blob');
 
@@ -7821,20 +7959,18 @@ const createSlide5 = () => {
 
   return `
   <div style="width:210mm !important; height:148mm !important;  padding:0 !important; margin:0 !important; box-sizing:border-box !important; background:#fff !important; position:relative !important;">
-    <div style="width:100% !important; height:90% !important; padding:10mm 14mm 7mm 14mm !important; box-sizing:border-box !important;">
-      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:8mm !important;">
+    <div style="width:100% !important; height:137mm !important; padding:10mm 14mm 0 14mm !important; box-sizing:border-box !important; position:relative !important;">
+      <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:6mm !important;">
         <h1 style="color:#0B0736 !important;  font-size:6mm !important; font-weight:700 !important;  margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Floor Plan</h1>
         <img src="${logo}" style="width:18mm !important; display:block !important;" />
       </div>
-      <div style="display:flex !important; gap:6mm !important; height:72% !important;">
+      <div style="display:flex !important; gap:6mm !important; height:95mm !important;">
         <div style="flex:1 !important; background-image:url('${floorPlan1}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
         ${floorPlan2 ? `
         <div style="flex:1 !important; background-image:url('${floorPlan2}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
         ` : ''}
       </div>
-      <p style="margin-top:4mm;font-size:9px !important;color:#9ca3af !important;line-height:1.4 !important;">Floor plans, sizes, dimensions, and layouts are approximate and for illustrative purposes only.
-        </br>
-        Final details may vary and are subject to the developer's confirmation.</p>
+      <p style="position:absolute !important; left:14mm !important; right:14mm !important; bottom:4mm !important; width:auto !important; margin:0 !important; padding:0 !important; box-sizing:border-box !important; font-size:2.4mm !important; color:#9ca3af !important; line-height:1.45 !important; font-family:Arial, Helvetica, sans-serif !important;">Floor plans, sizes, dimensions, and layouts are approximate and for illustrative purposes only. Final details may vary and are subject to the developer's confirmation.</p>
     </div>
     ${createFooter()}
   </div>
