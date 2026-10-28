@@ -7,15 +7,22 @@ use App\Models\Lead;
 use App\Models\Stage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use App\Notifications\LeadMergedNotification;
 
 /**
- * Automatic soft-merge for eligible stages (Rule A) and New Lead absorption (Rule B).
- * Reuses the existing merged_into_lead_id relationship; never physically deletes leads.
- * Manual merge rules in LeadMergeService remain unchanged.
+ * Automatic soft-merge rules:
+ * - Main stages are Qualified, Contacted, Assigned, and New Lead, in that priority order.
+ * - Eligible stages are Lead Pool, Unqualified, and Lost.
+ * - Eligible leads merge into the highest-priority matching main-stage lead.
+ * - Main-stage leads never merge into one another as part of this automation.
+ * - If no main-stage primary exists, the newest eligible lead becomes primary and is moved to Lead Pool.
+ * - A newly created New Lead keeps the existing special behavior and absorbs matching eligible leads.
+ *
+ * Leads are soft-merged only; no lead is physically deleted. Manual merge rules are unchanged.
  */
 class EligibleStagesAutoMergeService
 {
-    /** Prevents recursive stage-change / create hooks while automation is writing. */
+    /** Prevent recursive stage-change / create hooks while automation is writing. */
     private static bool $running = false;
 
     public static function isRunning(): bool
@@ -31,6 +38,45 @@ class EligibleStagesAutoMergeService
             (int) config('lead_merge.unqualified_stage_id'),
             (int) config('lead_merge.lost_stage_id'),
         ])));
+    }
+
+    /** @return array<int, int> Stage ID => priority (lower number wins). */
+    private function mainStagePriorities(): array
+    {
+        $ids = [
+            $this->resolveStageId('qualified', ['qualified']),
+            $this->resolveStageId('contacted', ['contacted']),
+            $this->resolveStageId('assigned', ['assigned']),
+            $this->newLeadStageId(),
+        ];
+
+        $priorities = [];
+        foreach ($ids as $priority => $id) {
+            if ($id !== null && $id > 0 && ! array_key_exists($id, $priorities)) {
+                $priorities[$id] = $priority;
+            }
+        }
+
+        return $priorities;
+    }
+
+    private function resolveStageId(string $key, array $fallbackNames): ?int
+    {
+        $configured = config("lead_merge.{$key}_stage_id");
+        if ($configured !== null && $configured !== '' && (int) $configured > 0) {
+            return (int) $configured;
+        }
+
+        $query = Stage::query()->where('stage_type', 'lead');
+        $query->where(function ($q) use ($fallbackNames) {
+            foreach ($fallbackNames as $index => $name) {
+                $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
+                $q->{$method}('LOWER(name) = ?', [mb_strtolower($name)]);
+            }
+        });
+
+        $id = $query->orderBy('order')->value('id');
+        return $id ? (int) $id : null;
     }
 
     public function newLeadStageId(): ?int
@@ -53,16 +99,16 @@ class EligibleStagesAutoMergeService
             return (int) $byName;
         }
 
+        // Retains the legacy fallback for installations whose New stage is not named conventionally.
         $id = Stage::query()->where('stage_type', 'lead')->orderBy('order')->value('id');
-
         return $id ? (int) $id : null;
     }
 
     /**
-     * After create (or a real phone-digit change): Rule B for New Lead, Rule A for eligible stages.
-     * Returns soft-merged lead ids (empty if none). Dubai is never auto-merged.
+     * After create (or a real phone-digit change): New Lead uses its special absorption rule;
+     * eligible or main-stage leads can trigger the general eligible-stage merge.
      *
-     * @return int[]
+     * @return int[] IDs of soft-merged leads
      */
     public function afterLeadCreated(Lead $lead): array
     {
@@ -74,46 +120,54 @@ class EligibleStagesAutoMergeService
 
         $newId = $this->newLeadStageId();
         if ($newId && (int) $lead->stage_id === $newId) {
-            // Rule B: Super Admin / empty-branch New Leads may still absorb Abu Dhabi Unq/Lost.
             return $this->absorbEligibleIntoNewLead($lead);
         }
 
-        if (! $this->isAutoMergeAllowedBranch($lead)) {
+        $mainIds = array_keys($this->mainStagePriorities());
+        $canTrigger = in_array((int) $lead->stage_id, $this->eligibleStageIds(), true)
+            || in_array((int) $lead->stage_id, $mainIds, true);
+
+        if (! $canTrigger || ! $this->isAutoMergeAllowedBranch($lead)) {
             return [];
         }
 
-        if (in_array((int) $lead->stage_id, $this->eligibleStageIds(), true)) {
-            $digits = Lead::phoneDigits($lead->work_phone);
-            if ($digits === '') {
-                return [];
-            }
-
-            return $this->summarizeMergeMap($this->mergeEligibleDigits($digits))['merged_ids'];
+        $digits = Lead::phoneDigits($lead->work_phone);
+        if ($digits === '') {
+            return [];
         }
 
-        return [];
+        return $this->summarizeMergeMap($this->mergeEligibleDigits($digits))['merged_ids'];
     }
 
     /**
-     * Rule A hook after a move into an eligible stage.
+     * Hook after a lead changes stage.
      *
      * @return array{merged_ids: int[], primary_id: int|null, primary_stage_id: int|null}
      */
     public function afterStageChanged(Lead $lead, ?int $newStageId = null): array
     {
         $empty = ['merged_ids' => [], 'primary_id' => null, 'primary_stage_id' => null];
-
         if (self::$running) {
             return $empty;
         }
 
         $lead->loadMissing(['responsiblePerson', 'addedBy']);
-        if (! $this->isAutoMergeAllowedBranch($lead)) {
-            return $empty;
+        $stageId = $newStageId ?? (int) $lead->stage_id;
+        $newId = $this->newLeadStageId();
+
+        if ($newId && $stageId === $newId) {
+            $ids = $this->absorbEligibleIntoNewLead($lead);
+            return [
+                'merged_ids' => $ids,
+                'primary_id' => $ids ? (int) $lead->id : null,
+                'primary_stage_id' => $ids ? $stageId : null,
+            ];
         }
 
-        $stageId = $newStageId ?? (int) $lead->stage_id;
-        if (! in_array($stageId, $this->eligibleStageIds(), true)) {
+        $canTrigger = in_array($stageId, $this->eligibleStageIds(), true)
+            || array_key_exists($stageId, $this->mainStagePriorities());
+
+        if (! $canTrigger || ! $this->isAutoMergeAllowedBranch($lead)) {
             return $empty;
         }
 
@@ -126,7 +180,7 @@ class EligibleStagesAutoMergeService
     }
 
     /**
-     * @param  array<int, int[]>  $map  primary_id => merged ids
+     * @param array<int, int[]> $map Primary ID => merged IDs
      * @return array{merged_ids: int[], primary_id: int|null, primary_stage_id: int|null}
      */
     private function summarizeMergeMap(array $map): array
@@ -138,26 +192,27 @@ class EligibleStagesAutoMergeService
         $mergedIds = [];
         $primaryId = null;
         $primaryStageId = null;
-        $pool = (int) config('lead_merge.lead_pool_stage_id');
-
         foreach ($map as $pid => $ids) {
             $primaryId = (int) $pid;
             $mergedIds = array_merge($mergedIds, array_map('intval', $ids));
-            $primaryStageId = (int) (Lead::query()->where('id', $primaryId)->value('stage_id') ?? $pool);
+            $primaryStageId = (int) (Lead::query()->where('id', $primaryId)->value('stage_id') ?? 0);
         }
 
         return [
             'merged_ids' => array_values(array_unique($mergedIds)),
             'primary_id' => $primaryId,
-            'primary_stage_id' => $primaryStageId,
+            'primary_stage_id' => $primaryStageId ?: null,
         ];
     }
 
     /**
-     * Rule A: among Unqualified / Lost / Lead Pool duplicates, newest created_at
-     * becomes primary and ends in Lead Pool.
+     * General rule: merge only eligible-stage leads (Lead Pool / Unqualified / Lost).
+     * If a matching main-stage lead exists, choose by stage priority, then newest created_at/id.
+     * Main-stage leads are never merged into each other. If no main-stage primary exists,
+     * the newest eligible lead becomes primary and is moved to Lead Pool, but only when there
+     * are at least two eligible leads to merge together.
      *
-     * @return array<int,int[]> primary_id => merged ids
+     * @return array<int, int[]> Primary ID => merged eligible lead IDs
      */
     public function mergeEligibleDigits(string $digits): array
     {
@@ -165,52 +220,124 @@ class EligibleStagesAutoMergeService
             return [];
         }
 
-        $eligible = $this->eligibleStageIds();
-        $pool = (int) config('lead_merge.lead_pool_stage_id');
-        $result = [];
+        $eligibleIds = $this->eligibleStageIds();
+        if ($eligibleIds === []) {
+            return [];
+        }
 
+        $pool = (int) config('lead_merge.lead_pool_stage_id');
+        $mainPriorities = $this->mainStagePriorities();
+        $result = [];
+        $mergeEvents = [];
         self::$running = true;
         try {
-            DB::transaction(function () use ($digits, $eligible, $pool, &$result) {
-                $leads = Lead::query()
+            DB::transaction(function () use ($digits, $eligibleIds, $pool, $mainPriorities, &$result,&$mergeEvents) {
+                $eligibleLeads = Lead::query()
                     ->where('work_phone_digits', $digits)
-                    ->whereIn('stage_id', $eligible)
+                    ->whereIn('stage_id', $eligibleIds)
                     ->whereNull('converted_to_deal_id')
+                    ->whereNull('merged_into_lead_id')
                     ->orderByDesc('created_at')
                     ->orderByDesc('id')
                     ->lockForUpdate()
-                    ->get();
-
-                $leads = $leads->load(['responsiblePerson', 'addedBy'])
-                    ->filter(fn (Lead $l) => $this->isAutoMergeAllowedBranch($l))
+                    ->get()
+                    ->load(['responsiblePerson', 'addedBy'])
+                    ->filter(fn (Lead $lead) => $this->isAutoMergeAllowedBranch($lead))
                     ->values();
 
-                if ($leads->count() < 2) {
+                if ($eligibleLeads->isEmpty()) {
                     return;
                 }
 
-                $groups = $this->clusterEligibleLeads($leads);
-
+                $groups = $this->clusterEligibleLeads($eligibleLeads);
                 foreach ($groups as $group) {
+                    if ($group->isEmpty()) {
+                        continue;
+                    }
+
+                    $groupIds = $group->pluck('id')->map(fn ($id) => (int) $id)->all();
+                    $mainCandidates = collect();
+
+                    if ($mainPriorities !== []) {
+                        $mainCandidates = Lead::query()
+                            ->where('work_phone_digits', $digits)
+                            ->whereIn('stage_id', array_keys($mainPriorities))
+                            ->whereNull('converted_to_deal_id')
+                            ->whereNull('merged_into_lead_id')
+                            ->lockForUpdate()
+                            ->get()
+                            ->load(['responsiblePerson', 'addedBy'])
+                            ->filter(function (Lead $candidate) use ($mainPriorities, $group) {
+                                if (! $this->canBeMainStagePrimary($candidate, $mainPriorities)) {
+                                    return false;
+                                }
+
+                                if (! config('lead_merge.group_by_branch')) {
+                                    return true;
+                                }
+
+                                return $group->contains(fn (Lead $eligible) => $candidate->sameBranchAs($eligible));
+                            })
+                            ->sort(function (Lead $a, Lead $b) use ($mainPriorities) {
+                                $priorityA = $mainPriorities[(int) $a->stage_id] ?? PHP_INT_MAX;
+                                $priorityB = $mainPriorities[(int) $b->stage_id] ?? PHP_INT_MAX;
+                                if ($priorityA !== $priorityB) {
+                                    return $priorityA <=> $priorityB;
+                                }
+
+                                $dateCompare = ($b->created_at <=> $a->created_at);
+                                return $dateCompare !== 0 ? $dateCompare : ((int) $b->id <=> (int) $a->id);
+                            })
+                            ->values();
+                    }
+
+                    if ($mainCandidates->isNotEmpty()) {
+                            /** @var Lead $primary */
+                            $primary = $mainCandidates->first();
+
+                            // Only eligible-stage leads merge into the main primary. Other main leads stay untouched.
+                            $idsToMerge = array_values(array_filter(
+                                $groupIds,
+                                fn (int $id) => $id !== (int) $primary->id
+                            ));
+
+                            if ($idsToMerge !== []) {
+                                $affected = $this->softMergeInto($primary, $idsToMerge, 'eligible_auto');
+                                $result[(int) $primary->id] = $idsToMerge;
+
+                                if ($affected > 0) {
+                                    $mergeEvents[] = [
+                                        'primary_id' => (int) $primary->id,
+                                        'merged_ids' => $idsToMerge,
+                                    ];
+                                }
+                            }
+
+                            continue;
+                        }
+
+                    // Without a main-stage primary, only merge if there are at least two eligible leads.
                     if ($group->count() < 2) {
                         continue;
                     }
 
-                    /** @var Lead $default */
-                    $default = $group->first(); // newest created_at, then highest id
-                    $others = $group->skip(1)->values();
-                    $ids = $others->pluck('id')->all();
+                    /** @var Lead $primary */
+                    $primary = $group->first(); // newest created_at, then highest id
+                    $idsToMerge = $group->skip(1)->pluck('id')->map(fn ($id) => (int) $id)->all();
+                    $this->softMergeInto($primary, $idsToMerge, 'eligible_auto');
 
-                    $this->softMergeInto($default, $ids, 'eligible_auto');
+                    if ((int) $primary->stage_id !== $pool && $pool > 0) {
+                        $fromStageId = (int) $primary->stage_id;
+                        Lead::query()
+                            ->where('id', $primary->id)
+                            ->whereNull('merged_into_lead_id')
+                            ->update([
+                                'stage_id' => $pool,
+                                'last_stage_change_at' => now(),
+                            ]);
 
-                    if ((int) $default->stage_id !== $pool) {
-                        $fromStageId = (int) $default->stage_id;
-                        Lead::query()->where('id', $default->id)->whereNull('merged_into_lead_id')->update([
-                            'stage_id' => $pool,
-                            'last_stage_change_at' => now(),
-                        ]);
-                        $default->stage_id = $pool;
-                        LeadHistoryHelper::log($default->id, [
+                        $primary->stage_id = $pool;
+                        LeadHistoryHelper::log($primary->id, [
                             'action' => 'stage_changed',
                             'old_stage_id' => $fromStageId,
                             'new_stage_id' => $pool,
@@ -219,13 +346,13 @@ class EligibleStagesAutoMergeService
                         ], null);
                     }
 
-                    $result[$default->id] = $ids;
+                    $result[(int) $primary->id] = $idsToMerge;
                 }
             });
         } finally {
             self::$running = false;
         }
-
+        $this->dispatchMergeNotifications($mergeEvents);
         if ($result) {
             LeadKanbanHeatCache::bump();
         }
@@ -234,12 +361,13 @@ class EligibleStagesAutoMergeService
     }
 
     /**
-     * Rule B: New Lead stays in New Lead; matching eligible-stage duplicates soft-merge into it.
+     * Rule for a newly created New Lead: it stays in New Lead and absorbs matching eligible leads.
      *
-     * @return int[] merged lead ids
+     * @return int[] merged lead IDs
      */
     public function absorbEligibleIntoNewLead(Lead $newLead): array
     {
+        $mergeEvents = [];
         if (self::$running) {
             return [];
         }
@@ -250,7 +378,7 @@ class EligibleStagesAutoMergeService
         }
 
         $newLead->loadMissing(['responsiblePerson', 'addedBy']);
-        // Dubai New Leads never absorb. Abu Dhabi + empty-branch (e.g. Super Admin) may.
+        // Preserve existing rule: Dubai New Leads never absorb; Abu Dhabi or empty-branch New Leads may.
         if ($this->isDubaiBranch($newLead) || ! $this->canBeAutoMergePrimary($newLead)) {
             return [];
         }
@@ -260,45 +388,46 @@ class EligibleStagesAutoMergeService
             return [];
         }
 
-        $eligible = $this->eligibleStageIds();
+        $eligibleIds = $this->eligibleStageIds();
         $mergedIds = [];
 
         self::$running = true;
         try {
-            DB::transaction(function () use ($newLead, $digits, $eligible, &$mergedIds) {
-                $default = Lead::query()->where('id', $newLead->id)->lockForUpdate()->first();
-                if (! $default || $default->merged_into_lead_id) {
+            DB::transaction(function () use ($newLead, $digits, $eligibleIds, &$mergedIds, &$mergeEvents) {
+                $primary = Lead::query()
+                    ->where('id', $newLead->id)
+                    ->whereNull('merged_into_lead_id')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $primary) {
                     return;
                 }
 
-                $default->loadMissing(['responsiblePerson', 'addedBy']);
-                if ($this->isDubaiBranch($default) || ! $this->canBeAutoMergePrimary($default)) {
+                $primary->loadMissing(['responsiblePerson', 'addedBy']);
+                if ($this->isDubaiBranch($primary) || ! $this->canBeAutoMergePrimary($primary)) {
                     return;
                 }
 
                 $candidates = Lead::query()
                     ->where('work_phone_digits', $digits)
-                    ->whereIn('stage_id', $eligible)
-                    ->where('id', '!=', $default->id)
+                    ->whereIn('stage_id', $eligibleIds)
+                    ->where('id', '!=', $primary->id)
                     ->whereNull('converted_to_deal_id')
+                    ->whereNull('merged_into_lead_id')
                     ->orderBy('id')
                     ->lockForUpdate()
-                    ->get();
-
-                if ($candidates->isEmpty()) {
-                    return;
-                }
-
-                $allowEmptyCandidates = $this->isAutoMergeAllowedBranch($default)
-                    || $this->hasEmptyBranch($default);
-
-                $candidates = $candidates->load(['responsiblePerson', 'addedBy'])
-                    ->filter(fn (Lead $l) => $this->canAbsorbCandidate($l, $allowEmptyCandidates))
+                    ->get()
+                    ->load(['responsiblePerson', 'addedBy'])
+                    ->filter(fn (Lead $candidate) => $this->canAbsorbCandidate(
+                        $candidate,
+                        $this->isAutoMergeAllowedBranch($primary) || $this->hasEmptyBranch($primary)
+                    ))
                     ->values();
 
                 if (config('lead_merge.group_by_branch')) {
                     $candidates = $candidates
-                        ->filter(fn (Lead $l) => $default->sameBranchAs($l))
+                        ->filter(fn (Lead $candidate) => $primary->sameBranchAs($candidate))
                         ->values();
                 }
 
@@ -306,14 +435,20 @@ class EligibleStagesAutoMergeService
                     return;
                 }
 
-                $ids = $candidates->pluck('id')->all();
-                $this->softMergeInto($default, $ids, 'new_lead_auto');
-                $mergedIds = $ids;
+                $mergedIds = $candidates->pluck('id')->map(fn ($id) => (int) $id)->all();
+                    $affected = $this->softMergeInto($primary, $mergedIds, 'new_lead_auto');
+
+                    if ($affected > 0) {
+                        $mergeEvents[] = [
+                            'primary_id' => (int) $primary->id,
+                            'merged_ids' => $mergedIds,
+                        ];
+                    }
             });
         } finally {
             self::$running = false;
         }
-
+        $this->dispatchMergeNotifications($mergeEvents);
         if ($mergedIds) {
             LeadKanbanHeatCache::bump();
         }
@@ -322,19 +457,26 @@ class EligibleStagesAutoMergeService
     }
 
     /**
-     * Daily / backfill: Rule A for every phone with 2+ eligible-stage duplicates.
+     * Daily/backfill processing for all phone numbers represented in eligible stages.
+     * Also catches a single eligible lead that has a matching main-stage primary.
      */
     public function mergeAllEligibleDuplicates(): int
     {
         $merged = 0;
-        $eligible = $this->eligibleStageIds();
+        $eligibleIds = $this->eligibleStageIds();
+
+        if ($eligibleIds === []) {
+            return 0;
+        }
 
         Lead::query()
-            ->whereIn('stage_id', $eligible)
+            ->whereIn('stage_id', $eligibleIds)
             ->where('work_phone_digits', '!=', '')
             ->whereNull('converted_to_deal_id')
-            ->groupBy('work_phone_digits')
-            ->havingRaw('COUNT(*) > 1')
+            ->whereNull('merged_into_lead_id')
+            ->select('work_phone_digits')
+            ->distinct()
+            ->orderBy('work_phone_digits')
             ->pluck('work_phone_digits')
             ->each(function ($digits) use (&$merged) {
                 foreach ($this->mergeEligibleDigits((string) $digits) as $ids) {
@@ -354,7 +496,7 @@ class EligibleStagesAutoMergeService
             mb_strtolower(trim((string) $lead->lead_branch_source)),
             mb_strtolower(trim((string) ($lead->branch ?? ''))),
             mb_strtolower(trim($lead->branchKey())),
-        ], static fn ($v) => $v !== ''));
+        ], static fn ($value) => $value !== ''));
     }
 
     public function hasEmptyBranch(Lead $lead): bool
@@ -364,8 +506,8 @@ class EligibleStagesAutoMergeService
 
     public function isDubaiBranch(Lead $lead): bool
     {
-        foreach ($this->branchHaystacks($lead) as $hay) {
-            if (str_contains($hay, 'dubai')) {
+        foreach ($this->branchHaystacks($lead) as $haystack) {
+            if (str_contains($haystack, 'dubai')) {
                 return true;
             }
         }
@@ -373,9 +515,7 @@ class EligibleStagesAutoMergeService
         return false;
     }
 
-    /**
-     * Automatic merge preferred branches (default: Abu Dhabi). Dubai never matches.
-     */
+    /** Automatic merge preferred branches (default: Abu Dhabi). Dubai never matches. */
     public function isAutoMergeAllowedBranch(Lead $lead): bool
     {
         if ($this->isDubaiBranch($lead)) {
@@ -388,29 +528,24 @@ class EligibleStagesAutoMergeService
         }
 
         $allowed = array_values(array_filter(array_map(
-            static fn ($v) => mb_strtolower(trim((string) $v)),
+            static fn ($value) => mb_strtolower(trim((string) $value)),
             $allowed
         )));
         if ($allowed === []) {
             return false;
         }
 
-        $haystacks = $this->branchHaystacks($lead);
-        if ($haystacks === []) {
-            return false;
-        }
-
-        foreach ($haystacks as $hay) {
-            $compact = str_replace([' ', '-', '_'], '', $hay);
+        foreach ($this->branchHaystacks($lead) as $haystack) {
+            $compactHaystack = str_replace([' ', '-', '_'], '', $haystack);
             foreach ($allowed as $needle) {
                 if ($needle === '') {
                     continue;
                 }
-                if (str_contains($hay, $needle)) {
+                if (str_contains($haystack, $needle)) {
                     return true;
                 }
-                $needleCompact = str_replace([' ', '-', '_'], '', $needle);
-                if ($needleCompact !== '' && str_contains($compact, $needleCompact)) {
+                $compactNeedle = str_replace([' ', '-', '_'], '', $needle);
+                if ($compactNeedle !== '' && str_contains($compactHaystack, $compactNeedle)) {
                     return true;
                 }
             }
@@ -419,7 +554,7 @@ class EligibleStagesAutoMergeService
         return false;
     }
 
-    /** New Lead primary may absorb when Abu Dhabi or branch still empty (not Dubai / other cities). */
+    /** New Lead can be primary for Abu Dhabi or empty-branch leads, but never Dubai. */
     public function canBeAutoMergePrimary(Lead $lead): bool
     {
         if ($this->isDubaiBranch($lead)) {
@@ -429,7 +564,7 @@ class EligibleStagesAutoMergeService
         return $this->isAutoMergeAllowedBranch($lead) || $this->hasEmptyBranch($lead);
     }
 
-    /** Eligible Unq/Lost/Pool candidate for Rule B absorb into a New Lead. */
+    /** Eligible Lost/Unqualified/Lead Pool candidate for absorption. */
     public function canAbsorbCandidate(Lead $lead, bool $allowEmpty = false): bool
     {
         if ($this->isDubaiBranch($lead)) {
@@ -442,10 +577,22 @@ class EligibleStagesAutoMergeService
         return $allowEmpty && $this->hasEmptyBranch($lead);
     }
 
+    private function canBeMainStagePrimary(Lead $lead, array $mainPriorities): bool
+    {
+        if (! array_key_exists((int) $lead->stage_id, $mainPriorities)) {
+            return false;
+        }
+
+        if ((int) $lead->stage_id === (int) $this->newLeadStageId()) {
+            return $this->canBeAutoMergePrimary($lead);
+        }
+
+        return $this->isAutoMergeAllowedBranch($lead);
+    }
+
     /**
-     * Group eligible duplicates for Rule A.
-     * When group_by_branch is on, cluster with sameBranchAs() (empty branch key is compatible)
-     * instead of strict branchKey equality — matches Rule B.
+     * Group eligible leads for Rule A. With branch grouping enabled, use sameBranchAs()
+     * so leads with compatible/empty branch keys follow the existing grouping behavior.
      *
      * @return Collection<int, Collection<int, Lead>>
      */
@@ -462,49 +609,106 @@ class EligibleStagesAutoMergeService
         while ($remaining->isNotEmpty()) {
             /** @var Lead $seed */
             $seed = $remaining->first();
-            $cluster = $remaining->filter(fn (Lead $l) => $seed->sameBranchAs($l))->values();
+            $cluster = $remaining->filter(fn (Lead $lead) => $seed->sameBranchAs($lead))->values();
             $clusters->push($cluster);
             $taken = $cluster->pluck('id')->all();
-            $remaining = $remaining->reject(fn (Lead $l) => in_array($l->id, $taken, true))->values();
+            $remaining = $remaining
+                ->reject(fn (Lead $lead) => in_array($lead->id, $taken, true))
+                ->values();
         }
 
         return $clusters;
     }
 
     /**
-     * Soft-merge $ids into $default. Flattens prior chains. Does not change $default stage.
+     * Soft-merge $ids into $primary. Flattens prior merge chains and never changes primary stage.
      *
-     * @param  int[]  $ids
+     * @param int[] $ids
      */
-    private function softMergeInto(Lead $default, array $ids, string $mergeType): void
+    private function softMergeInto(Lead $primary, array $ids, string $mergeType): int
     {
         $ids = array_values(array_unique(array_map('intval', $ids)));
-        $ids = array_values(array_filter($ids, fn ($id) => $id !== (int) $default->id));
+        $ids = array_values(array_filter($ids, fn ($id) => $id !== (int) $primary->id));
         if ($ids === []) {
-            return;
+            return 0;
         }
 
         Lead::withoutGlobalScope('notMerged')
             ->whereIn('merged_into_lead_id', $ids)
-            ->update(['merged_into_lead_id' => $default->id]);
+            ->update(['merged_into_lead_id' => $primary->id]);
 
         $affected = Lead::query()
             ->whereIn('id', $ids)
             ->whereNull('merged_into_lead_id')
+            ->whereNull('converted_to_deal_id')
             ->update([
-                'merged_into_lead_id'      => $default->id,
-                'merged_at'                => now(),
-                'merged_by'                => null,
+                'merged_into_lead_id' => $primary->id,
+                'merged_at' => now(),
+                'merged_by' => null,
                 'merged_original_stage_id' => DB::raw('stage_id'),
-                'merge_type'               => $mergeType,
+                'merge_type' => $mergeType,
             ]);
 
         if ($affected) {
-            LeadHistoryHelper::log($default->id, [
+            LeadHistoryHelper::log($primary->id, [
                 'action' => 'merged',
                 'merge_type' => $mergeType,
                 'merged_ids' => $ids,
             ], null);
         }
+            return (int) $affected;
+
     }
+    /**
+ * Notify primary lead owners after a successful merge.
+ * Runs after commit; a notification failure never affects the merge.
+ *
+ * @param array<int, array{primary_id: int, merged_ids: int[]}> $events
+ */
+private function dispatchMergeNotifications(array $events): void
+{
+    if ($events === []) {
+        return;
+    }
+
+    DB::afterCommit(function () use ($events) {
+        $poolId = (int) config('lead_merge.lead_pool_stage_id');
+
+        foreach ($events as $event) {
+            try {
+                $primary = Lead::query()->with('responsiblePerson')->find($event['primary_id']);
+                if (! $primary) {
+                    continue;
+                }
+
+                // Never notify when the primary is in Lead Pool (re-read from DB, so the
+                // "primary moved to Lead Pool" case is covered).
+                if ($poolId > 0 && (int) $primary->stage_id === $poolId) {
+                    continue;
+                }
+
+                $owner = $primary->responsiblePerson;
+                if (! $owner) {
+                    continue;
+                }
+
+                $ids = $event['merged_ids'];
+                sort($ids);
+                $key = 'lead_merge:' . $primary->id . ':' . md5(implode(',', $ids));
+
+                $alreadySent = $owner->notifications()
+                    ->where('type', LeadMergedNotification::class)
+                    ->where('data->dedupe_key', $key)
+                    ->exists();
+                if ($alreadySent) {
+                    continue;
+                }
+
+                $owner->notify(new LeadMergedNotification($primary, $key));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+    });
+}
 }

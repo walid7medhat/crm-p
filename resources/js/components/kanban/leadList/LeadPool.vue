@@ -86,7 +86,7 @@
             <LeadPoolCard
                 v-for="lead in leads"
                 :key="lead.id"
-                v-memo="[lead.id, selection.isSelected(lead.id), selectMode]"
+                v-memo="[lead.id, selection.isSelected(lead.id), selectMode, lead.merged_count]"
                 :selected="selection.isSelected(lead.id)"
                 :select-mode="selectMode"
                 @toggle="(e) => selection.handleCardClick(lead.id, e)"
@@ -101,6 +101,19 @@
                         >
                             Blacklisted
                         </span>
+                        <button
+                            v-if="Number(lead.merged_count) > 0"
+                            type="button"
+                            class="merged-flag"
+                            aria-label="Show merged leads"
+                            @click.stop="openMergedLeadsModal(lead.id, $event.currentTarget)"
+                            @pointerenter="mergedHoverOpen(lead.id, $event)"
+                            @pointerleave="mergedHoverLeave"
+                            @dblclick.stop
+                        >
+                            <iconify-icon icon="lucide:git-merge" />
+                            <span>{{ lead.merged_count }}</span>
+                        </button>
                         <div 
                             v-if="canSeeDuplicates && lead.duplicate_no > 0"
                             class="duplicate-badge position-relative cursor-pointer"
@@ -320,6 +333,14 @@
         :triggerElement="currentTriggerElement"
         @view-lead="handleViewDuplicateLead"
     />
+    <MergedLeadsModal
+        v-if="showMergedModal"
+        v-model="showMergedModal"
+        :lead-id="mergedModalLeadId"
+        :trigger-element="mergedTrigger"
+        @hover-enter="cancelMergedClose"
+        @hover-leave="mergedHoverLeave"
+    />
     
     <ProfilePopup
         v-if="showProfilePopup && profileUserId"
@@ -330,7 +351,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
@@ -340,6 +361,7 @@ import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadPoolCard from './LeadPoolCard.vue'
 import LeadSourceMark from './LeadSourceMark.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
+import { useMergedLeadsPopover } from './composables/useMergedLeadsPopover.js'
 import { useLeadPoolBulkActions } from './composables/useLeadPoolBulkActions.js'
 import {
     isDefaultLeadPoolParams,
@@ -425,6 +447,18 @@ const hasActivePoolSearch = computed(() => {
     const q = currentQuery.value
     return !!(q && typeof q === 'object' && Object.keys(q).length > 0)
 })
+const MergedLeadsModal = defineAsyncComponent(() => import('./MergedLeadsModal.vue'))
+const {
+    show: showMergedModal,
+    leadId: mergedModalLeadId,
+    trigger: mergedTrigger,
+    open: openMergedLeadsModal,
+    scheduleClose: scheduleMergedClose,
+    cancelClose: cancelMergedClose,
+    hoverOpen: mergedHoverOpen,
+    hoverLeave: mergedHoverLeave,
+} = useMergedLeadsPopover()
+
 const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
@@ -998,6 +1032,39 @@ defineExpose({
 </script>
 
 <style scoped>
+.merged-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px 0 6px;
+    border: 0;
+    border-radius: 8px 8px 8px 3px;
+    background: var(--gradient-primary, var(--color-primary));
+    color: #fff !important;
+    -webkit-text-fill-color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+    cursor: pointer;
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.38),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.16),
+        0 3px 0 color-mix(in srgb, var(--color-primary) 62%, #000),
+        0 7px 10px -4px rgba(var(--color-primary-rgb), 0.5);
+    transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+}
+.merged-flag iconify-icon { font-size: 13px; color: #fff; }
+.merged-flag:hover { filter: brightness(1.06); }
+.merged-flag:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+        0 1px 0 color-mix(in srgb, var(--color-primary) 62%, #000);
+}
 .lead-pool-loading {
     min-height: 280px;
     display: flex;
@@ -1539,8 +1606,14 @@ defineExpose({
     padding: 8px 12px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.6);
+    /* Narrow screens: scroll the chips sideways instead of squeezing/wrapping them. */
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
 }
+.lead-pool-filterbar::-webkit-scrollbar { display: none; }
 .lead-pool-filterbar__label {
+    flex-shrink: 0;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -1548,6 +1621,8 @@ defineExpose({
     margin-right: 4px;
 }
 .type-chip {
+    flex-shrink: 0;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -1570,4 +1645,9 @@ defineExpose({
 .type-chip--sale.active { background: #e0f7fa; border-color: #0891b2; }
 .type-chip--none { color: #64748b; }
 .type-chip--none.active { background: #f1f5f9; border-color: #64748b; }
+
+@media (max-width: 768px) {
+    .lead-pool-filterbar { gap: 6px; padding: 8px 10px; }
+    .type-chip { gap: 4px; padding: 5px 10px; font-size: 12px; }
+}
 </style>

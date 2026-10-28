@@ -163,6 +163,7 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
                 : '',
 
            'api_first_question' => $this->getFirstApiQuestion(),
+           'merged_count' => $this->whenCounted('merged', fn () => (int) $this->merged_count, fn () => $this->resource->mergedLeads()->count()),
 
         ];
     }

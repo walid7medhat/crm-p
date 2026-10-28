@@ -339,6 +339,7 @@ class KanbanLeadCardResource extends JsonResource
             'priority' => $this->priority,
             'intent' => $this->intent,
             'next_action' => $this->next_action,
+            'merged_count' => $this->whenCounted('merged', fn () => (int) $this->merged_count, 0),
         ];
     }
 

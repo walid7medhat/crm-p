@@ -352,6 +352,20 @@
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                        <button
+                                                            v-if="Number(task.merged_count) > 0"
+                                                            type="button"
+                                                            class="merged-flag"
+                                                            aria-label="Show merged leads"
+                                                            @click.stop="openMergedLeadsModal(task.id, $event.currentTarget)"
+                                                            @pointerenter="mergedHoverOpen(task.id, $event)"
+                                                            @pointerleave="mergedHoverLeave"
+                                                            @dblclick.stop
+                                                            @pointerdown.stop
+                                                        >
+                                                            <iconify-icon icon="lucide:git-merge" />
+                                                            <span>{{ task.merged_count }}</span>
+                                                        </button>
                                                     </div>
                                                 </div>
                                                 
@@ -627,6 +641,19 @@
                                             @click.stop="openDuplicateLeadsModal(row.task.id, $event)"
                                         >
                                             {{ row.task.duplicate_no }}
+                                        </button>
+                                        <button
+                                            v-if="Number(row.task.merged_count) > 0"
+                                            type="button"
+                                            class="merged-flag merged-flag--sm"
+                                            aria-label="Show merged leads"
+                                            @click.stop="openMergedLeadsModal(row.task.id, $event.currentTarget)"
+                                            @pointerenter="mergedHoverOpen(row.task.id, $event)"
+                                            @pointerleave="mergedHoverLeave"
+                                            @dblclick.stop
+                                        >
+                                            <iconify-icon icon="lucide:git-merge" />
+                                            <span>{{ row.task.merged_count }}</span>
                                         </button>
                                     </div>
                                     <span v-if="row.task.lead_source || row.task.lead_branch_source" class="lead-list-name__source">
@@ -1009,6 +1036,14 @@
         @view-lead="handleViewDuplicateLead"
         @merge="openMergeModal"
     />
+    <MergedLeadsModal
+        v-if="showMergedModal"
+        v-model="showMergedModal"
+        :lead-id="mergedModalLeadId"
+        :trigger-element="mergedTrigger"
+        @hover-enter="cancelMergedClose"
+        @hover-leave="mergedHoverLeave"
+    />
     <LeadMergeModal
         v-if="showMergeModal"
         v-model="showMergeModal"
@@ -1271,7 +1306,8 @@ const convertLeadModalLoader = () => import('./ConvertLeadModal.vue')
 const ConvertLeadModal = defineAsyncComponent(convertLeadModalLoader)
 const ProfilePopup = defineAsyncComponent(() => import('../shared/ProfilePopup.vue'))
 const LeadMergeModal = defineAsyncComponent(() => import('./LeadMergeModal.vue'))
-
+const MergedLeadsModal = defineAsyncComponent(() => import('./MergedLeadsModal.vue'))
+import { useMergedLeadsPopover } from './composables/useMergedLeadsPopover.js'
 convertLeadModalLoader()
 
 
@@ -1695,7 +1731,14 @@ function applyAutoMergeVisibility(meta, currentLead = null) {
     const info = meta && typeof meta === 'object' ? meta : {}
     const mergedIds = info.auto_merged_lead_ids || []
     if (mergedIds.length) removeLeadsFromBoard(mergedIds)
-
+    
+    const mergedIntoId = info.auto_merge_primary_id != null ? Number(info.auto_merge_primary_id) : null
+    if (mergedIds.length && mergedIntoId) {
+        const primaryOnBoard = findLeadInColumns(mergedIntoId)
+        if (primaryOnBoard) {
+            primaryOnBoard.merged_count = (Number(primaryOnBoard.merged_count) || 0) + mergedIds.length
+        }
+    }
     if (info.lead_absorbed) {
         if (currentLead?.id) removeLeadsFromBoard([currentLead.id])
         return { absorbed: true, meta: info }
@@ -4475,6 +4518,18 @@ const showDuplicateModal = ref(false)
 const selectedLeadForDuplicates = ref(null)
 const currentTriggerElement = ref(null)
 const showMergeModal = ref(false)
+const {
+    show: showMergedModal,
+    leadId: mergedModalLeadId,
+    trigger: mergedTrigger,
+    open: openMergedLeadsModal,
+    scheduleClose: scheduleMergedClose,
+    cancelClose: cancelMergedClose,
+    hoverOpen: mergedHoverOpen,
+    hoverLeave: mergedHoverLeave,
+} = useMergedLeadsPopover()
+
+
 const mergeLeadId = ref(null)
 // Always UAE time — the API sends UTC ("…Z"), and without a timeZone the browser
 // showed it in the viewer's own zone (e.g. an hour early on a computer set to Egypt).
@@ -4493,7 +4548,6 @@ function formatDate(dateString) {
     })
     return `${formattedDate}  |  ${formattedTime}`
 }
-
 /** Activity tile: Bitrix24 LAST_ACTIVITY_TIME (last_activity_at / bitrix24_last_activity_at). */
 function formatActivityDate(task) {
     return formatDate(activityDisplayAt(task))
@@ -9403,4 +9457,38 @@ const fetchRevertNotifications = async () => {
         justify-content: center;
     }
 }
+.merged-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px 0 6px;
+    border: 0;
+    border-radius: 8px 8px 8px 3px;
+    background: var(--gradient-primary, var(--color-primary));
+    color: #fff !important;
+    -webkit-text-fill-color: #fff;
+    font-family: Montserrat, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.38),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.16),
+        0 3px 0 color-mix(in srgb, var(--color-primary) 62%, #000),
+        0 7px 10px -4px rgba(var(--color-primary-rgb), 0.5);
+    transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+}
+.merged-flag iconify-icon { font-size: 13px; color: #fff; }
+.merged-flag:hover { filter: brightness(1.06); }
+.merged-flag:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+        0 1px 0 color-mix(in srgb, var(--color-primary) 62%, #000);
+}
+.merged-flag--sm { height: 20px; font-size: 10px; flex-shrink: 0; }
 </style>

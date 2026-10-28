@@ -109,6 +109,8 @@ class LeadController extends Controller
                         'next_action',
                     ]);
                 }
+                // After select(): select() replaces columns and would drop the count subquery.
+                $leadsQuery->withCount(['mergedLeads as merged_count']);
                 $leadsQuery->with($isPaginatedPool
                     ? [
                         'addedBy:id,name,display_name,avatar,email,parent_id,status',
@@ -2618,35 +2620,55 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
      */
     private function excludeLeadsUserSentToPool($query, int $userId, int $poolStageId): void
     {
-        // The lead's latest entry into the pool: an automatic revert to the pool stage, or a
+        // The lead's entry into the pool: an automatic revert to the pool stage, or a
         // manual stage change into it.
-        $latestEntry = DB::table('lead_histories')
-            ->selectRaw('lead_id, MAX(id) as id')
-            ->where(function ($q) use ($poolStageId) {
-                $q->where(function ($r) use ($poolStageId) {
-                    $r->where('changes->action', 'revert')->where('changes->target_stage_id', $poolStageId);
-                })->orWhere(function ($s) use ($poolStageId) {
-                    $s->where('changes->action', 'stage_changed')->where('changes->new_stage_id', $poolStageId);
-                });
-            })
-            ->groupBy('lead_id');
+        $poolEntry = function ($q) use ($poolStageId) {
+            $q->where(function ($r) use ($poolStageId) {
+                $r->where('changes->action', 'revert')->where('changes->target_stage_id', $poolStageId);
+            })->orWhere(function ($s) use ($poolStageId) {
+                $s->where('changes->action', 'stage_changed')->where('changes->new_stage_id', $poolStageId);
+            });
+        };
 
-        $query->whereNotExists(function ($sub) use ($latestEntry, $userId) {
-            $sub->selectRaw('1')
-                ->fromSub($latestEntry, 'pe')
-                ->join('lead_histories as ph', 'ph.id', '=', 'pe.id')
-                ->whereColumn('pe.lead_id', 'leads.id')
-                ->where(function ($q) use ($userId) {
-                    // Owner at that moment (recorded on reverts, and on manual moves from now on)…
-                    $q->where('ph.changes->old_person_id', $userId)
-                        // …or, for older manual moves without it, whoever moved it.
-                        ->orWhere(function ($w) use ($userId) {
-                            $w->whereNull('ph.changes->old_person_id')
-                                ->where('ph.changes->action', 'stage_changed')
-                                ->where('ph.user_id', $userId);
-                        });
-                });
-        });
+        // Resolved up front as an id list. The old correlated NOT EXISTS re-grouped the whole
+        // lead_histories table per pool row, which is what made the pool slow for every
+        // non-super-admin.
+        // 1. Pool entries made by / released from this user, for leads still in the pool.
+        $candidates = DB::table('lead_histories as ph')
+            ->join('leads', 'leads.id', '=', 'ph.lead_id')
+            ->where('leads.stage_id', $poolStageId)
+            ->where(fn ($q) => $poolEntry($q))
+            ->where(function ($q) use ($userId) {
+                // Owner at that moment (recorded on reverts, and on manual moves from now on)…
+                $q->where('ph.changes->old_person_id', $userId)
+                    // …or, for older manual moves without it, whoever moved it.
+                    ->orWhere(function ($w) use ($userId) {
+                        $w->whereNull('ph.changes->old_person_id')
+                            ->where('ph.changes->action', 'stage_changed')
+                            ->where('ph.user_id', $userId);
+                    });
+            })
+            ->get(['ph.id', 'ph.lead_id']);
+
+        if ($candidates->isEmpty()) {
+            return;
+        }
+
+        // 2. Only counts when that entry is the lead's latest entry into the pool.
+        $candidateIds = array_flip($candidates->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $excludedLeadIds = DB::table('lead_histories')
+            ->selectRaw('lead_id, MAX(id) as id')
+            ->whereIn('lead_id', $candidates->pluck('lead_id')->unique()->values()->all())
+            ->where(fn ($q) => $poolEntry($q))
+            ->groupBy('lead_id')
+            ->get()
+            ->filter(fn ($row) => isset($candidateIds[(int) $row->id]))
+            ->pluck('lead_id')
+            ->all();
+
+        if ($excludedLeadIds !== []) {
+            $query->whereNotIn('leads.id', $excludedLeadIds);
+        }
     }
 
     private function isLeadPoolStage(?Stage $stage): bool

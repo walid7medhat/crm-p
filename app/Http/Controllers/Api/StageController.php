@@ -441,6 +441,7 @@ class StageController extends Controller
                     ->select(KanbanLeadCardResource::cardSelect())
                     ->whereIn('id', $allIds)
                     ->with($kanbanEagerLoads)
+                    ->withCount(['mergedLeads as merged_count'])
                     ->get()
                     ->keyBy('id');
 
@@ -492,6 +493,7 @@ class StageController extends Controller
                     ->select(KanbanLeadCardResource::cardSelect())
                     ->whereIn('id', $allIds)
                     ->with($kanbanEagerLoads)
+                    ->withCount(['mergedLeads as merged_count'])
                     ->get()
                     ->keyBy('id');
 
@@ -845,7 +847,7 @@ class StageController extends Controller
             $perPage = (int) $request->get('per_page', 15);
             $page = $request->get('page', 1);
 
-            $leadsQuery = $stage->leads()->select(KanbanLeadCardResource::cardSelect())->with([
+            $leadsQuery = $stage->leads()->select(KanbanLeadCardResource::cardSelect())->withCount(['mergedLeads as merged_count'])->with([
                 'addedBy:id,name,display_name,avatar,status,parent_id',
                 'responsiblePerson:id,name,display_name,avatar,parent_id',
                 'propertyType:id,name',

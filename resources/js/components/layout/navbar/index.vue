@@ -29,6 +29,18 @@
               <span class="lead-board-id__name">{{ leadBoardFirstName }} <span aria-hidden="true">👋</span></span>
             </button>
             <div class="kanban-mob-toolbar__actions">
+              <!-- The lead-board header replaces the title switcher, so keep a way into Lead Pool. -->
+              <button
+                v-if="moduleHeaderTabs.length > 1"
+                type="button"
+                class="lead-board-switch"
+                aria-label="Switch view (Leads / Lead Pool)"
+                aria-haspopup="menu"
+                :aria-expanded="kanbanSwitchOpen ? 'true' : 'false'"
+                @click="toggleKanbanSwitch"
+              >
+                <iconify-icon icon="lucide:layers" aria-hidden="true" />
+              </button>
               <button type="button" class="lead-board-add" @click="handleKanbanCreateNew">Add Lead</button>
               <NotificationBell
                 ref="notificationBellMob"
@@ -5184,6 +5196,21 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     transform: scale(0.97);
   }
 
+  .lead-board-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 14px;
+    border: 1px solid #ececef;
+    background: #ffffff;
+    color: var(--color-primary);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
   .navbar-header--lead-board .kanban-mob-notification :deep(.notification-bell-btn) {
     width: 40px;
     height: 40px;
@@ -5786,6 +5813,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 .module-tab-select:focus-visible,
 .kanban-mob-title-btn:focus-visible,
 .lead-board-add:focus-visible,
+.lead-board-switch:focus-visible,
 .kanban-switch-option:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
