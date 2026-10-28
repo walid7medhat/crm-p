@@ -53,7 +53,7 @@
                                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                                                       <!-- Salutation, First Name, Last Name, Position -->
                                         <div class="col">
-                                            <label class="form-label-custom">Salutation</label>
+                                            <label class="form-label-custom">Salutation <span v-if="isFieldRequired('salutation')" class="text-danger">*</span></label>
                                             <v-select :append-to-body="true" 
                                                 v-model="form.salutation" 
                                                 :options="salutationOptions" 
@@ -228,14 +228,15 @@
     
                                         <!-- Bedrooms (Stage 4) -->
                                         <div v-if="shouldShowField('bedrooms') && !isPlotsOrLand" class="col-md-4" style="order: 5;">
-                                            <label class="form-label-custom">How Many Bedrooms</label>
-                                            <v-select :append-to-body="true" 
-                                                v-model="form.bedrooms" 
-                                                :options="bedroomOptions" 
+                                            <label class="form-label-custom">How Many Bedrooms <span v-if="isFieldRequired('bedrooms')" class="text-danger">*</span></label>
+                                            <v-select :append-to-body="true"
+                                                v-model="form.bedrooms"
+                                                :options="bedroomOptions"
                                                 :reduce="option => option.value"
                                                 label="text"
                                                 placeholder="Select Bedrooms"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.bedrooms }"
                                             >
                                                 <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -243,11 +244,14 @@
                                                     </span>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.bedrooms" class="invalid-feedback d-block">
+                                                {{ validationErrors.bedrooms[0] }}
+                                            </div>
                                         </div>
     
                                         <!-- Budget (single trigger with From/To dropdown) -->
                                         <div v-if="shouldShowField('budget')" class="col-md-4" style="order: 6;">
-                                            <label class="form-label-custom">Budget (AED)</label>
+                                            <label class="form-label-custom">Budget (AED) <span v-if="isFieldRequired('budget_from') || isFieldRequired('budget_to')" class="text-danger">*</span></label>
                                             <div
                                                 ref="budgetTriggerRef"
                                                 class="budget-field-wrap"
@@ -300,18 +304,22 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div v-if="validationErrors.budget_from || validationErrors.budget_to" class="invalid-feedback d-block">
+                                                {{ (validationErrors.budget_from || validationErrors.budget_to)[0] }}
+                                            </div>
                                         </div>
-    
+
                                         <!-- Purpose (Stage 4) -->
                                         <div v-if="shouldShowField('purpose_buying') && !isRentOnly" class="col-md-4" style="order: 8;">
-                                            <label class="form-label-custom">Purpose Of Purchase</label>
-                                            <v-select :append-to-body="true" 
-                                                v-model="form.purpose_buying" 
-                                                :options="purposeOptions" 
+                                            <label class="form-label-custom">Purpose Of Purchase <span v-if="isFieldRequired('purpose_buying')" class="text-danger">*</span></label>
+                                            <v-select :append-to-body="true"
+                                                v-model="form.purpose_buying"
+                                                :options="purposeOptions"
                                                 :reduce="option => option.value"
                                                 label="text"
                                                 placeholder="Select Purpose"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.purpose_buying }"
                                             >
                                                 <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -319,6 +327,9 @@
                                                     </span>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.purpose_buying" class="invalid-feedback d-block">
+                                                {{ validationErrors.purpose_buying[0] }}
+                                            </div>
                                         </div>
     
                                         <!-- Source (Stage 4) -->
@@ -459,7 +470,7 @@
                                             </div>
                                         <!-- Location / Area (Stage 4) -->
                                         <div v-if="shouldShowField('area_id')" class="col-md-4" style="order: 1;">
-                                            <label class="form-label-custom">Location / Area</label>
+                                            <label class="form-label-custom">Location / Area <span v-if="isFieldRequired('area_id')" class="text-danger">*</span></label>
                                             <v-select :append-to-body="true"
                                                 v-model="form.area_id"
                                                 :options="areas"
@@ -468,6 +479,7 @@
                                                 label="name"
                                                 placeholder="Select area"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.area_id }"
                                             >
                                                  <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -491,18 +503,22 @@
                                                     </div>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.area_id" class="invalid-feedback d-block">
+                                                {{ validationErrors.area_id[0] }}
+                                            </div>
                                         </div>
-    
+
                                         <!-- Property Type (Stage 4) -->
                                         <div v-if="shouldShowField('property_type_id')" class="col-md-4" style="order: 2;">
-                                            <label class="form-label-custom">Property Type</label>
-                                            <v-select :append-to-body="true" 
+                                            <label class="form-label-custom">Property Type <span v-if="isFieldRequired('property_type_id')" class="text-danger">*</span></label>
+                                            <v-select :append-to-body="true"
                                                 v-model="form.property_type_id"
                                                 :options="propertyTypeOptions"
                                                 :reduce="option => option.value"
                                                 label="text"
                                                 placeholder="Select Property Type"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.property_type_id }"
                                             >
                                                 <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -510,11 +526,14 @@
                                                     </span>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.property_type_id" class="invalid-feedback d-block">
+                                                {{ validationErrors.property_type_id[0] }}
+                                            </div>
                                         </div>
-    
+
                                         <!-- Lead Type (Sale/Rent) - جديد -->
                                         <div v-if="shouldShowField('lead_type')" class="col-md-4" style="order: 3;">
-                                            <label class="form-label-custom">Lead Type</label>
+                                            <label class="form-label-custom">Lead Type <span v-if="isFieldRequired('lead_type')" class="text-danger">*</span></label>
                                             <v-select :append-to-body="true" 
                                                 v-model="form.lead_type" 
                                                 :options="leadTypeOptions" 
@@ -537,7 +556,7 @@
                                         
                                         <!-- Property Status (Ready/Off Plan/Both) - جديد -->
                                         <div v-if="shouldShowField('property_status') && !isRentOnly" class="col-md-4" style="order: 4;">
-                                            <label class="form-label-custom">Property Status</label>
+                                            <label class="form-label-custom">Property Status <span v-if="isFieldRequired('property_status')" class="text-danger">*</span></label>
                                             <v-select :append-to-body="true" 
                                                 v-model="form.property_status" 
                                                 :options="propertyStatusOptions" 
@@ -560,14 +579,15 @@
     
                                         <!-- Lead Status (Stages 4, 9, 10) -->
                                         <div v-if="shouldShowField('lead_status') || shouldShowField('lead_status_pool') || shouldShowField('unqualified_status')" class="col-md-4">
-                                            <label class="form-label-custom">Quality Status</label>
-                                            <v-select :append-to-body="true" 
-                                                v-model="form.status_lead" 
-                                                :options="getLeadStatusOptions()" 
+                                            <label class="form-label-custom">Quality Status <span v-if="isFieldRequired('status_lead')" class="text-danger">*</span></label>
+                                            <v-select :append-to-body="true"
+                                                v-model="form.status_lead"
+                                                :options="getLeadStatusOptions()"
                                                 :reduce="option => option.value"
                                                 label="text"
                                                 placeholder="Select Status"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.status_lead }"
                                             >
                                                 <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -575,6 +595,9 @@
                                                     </span>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.status_lead" class="invalid-feedback d-block">
+                                                {{ validationErrors.status_lead[0] }}
+                                            </div>
                                         </div>
     
                                         <!-- Available Date (Stage 5) -->
@@ -859,8 +882,42 @@
         }
         
           const stages = fieldVisibility[fieldKey] || []
-        return stages.includes(order) && order !== 0  
+        return stages.includes(order) && order !== 0
     }
+
+    // Fields that must be filled when the lead is created straight into a stage —
+    // same set the stage-change modal asks for (leads.vue requiredFieldsMap).
+    const stageRequiredFields = {
+        4: ['salutation', 'property_type_id', 'area_id', 'budget_from', 'budget_to',
+            'lead_type', 'property_status', 'purpose_buying', 'bedrooms', 'status_lead'],
+    }
+
+    const requiredFieldMessages = {
+        salutation: 'Please select salutation',
+        property_type_id: 'Please select property type',
+        area_id: 'Please select area',
+        budget_from: 'Please enter minimum budget',
+        budget_to: 'Please enter maximum budget',
+        lead_type: 'Please select lead type (Sale/Rent)',
+        property_status: 'Please select property status',
+        purpose_buying: 'Please select purpose',
+        bedrooms: 'Please select bedrooms',
+        status_lead: 'Please select quality status',
+    }
+
+    // Hidden fields (rent → no property status / purpose, plots/land → no bedrooms) are never required.
+    const isFieldRequired = (field) => {
+        const fields = stageRequiredFields[currentStageOrder.value] || []
+        if (!fields.includes(field)) return false
+        if ((field === 'property_status' || field === 'purpose_buying') && isRentOnly.value) return false
+        if (field === 'bedrooms' && isPlotsOrLand.value) return false
+        return true
+    }
+
+    const isEmptyValue = (value) => value === null || value === undefined || value === ''
+
+    const getMissingRequiredFields = () =>
+        Object.keys(requiredFieldMessages).filter(f => isFieldRequired(f) && isEmptyValue(form.value[f]))
     
     // Lead Type Options
     const leadTypeOptions = [
@@ -1937,6 +1994,17 @@ watch(selectedExistingClient, (client) => {
                 $showNotification(budgetError, 'warning')
                 return false
             }
+            const missingRequired = getMissingRequiredFields()
+            if (missingRequired.length > 0) {
+                missingRequired.forEach(f => { validationErrors.value[f] = [requiredFieldMessages[f]] })
+                $showNotification(
+                    missingRequired.length === 1
+                        ? requiredFieldMessages[missingRequired[0]]
+                        : `Please complete ${missingRequired.length} required fields`,
+                    'warning'
+                )
+                return false
+            }
             console.log('PHONE:', form.value.work_phone)
             if (form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
                 validationErrors.value.work_phone = ['Enter a valid phone number']
@@ -2060,6 +2128,15 @@ watch(selectedExistingClient, (client) => {
         }
     }
     
+    // Clear a required-field error as soon as it's filled (or no longer required, e.g. stage changed).
+    watch([form, currentStageOrder], () => {
+        Object.keys(requiredFieldMessages).forEach(f => {
+            if (validationErrors.value[f] && (!isFieldRequired(f) || !isEmptyValue(form.value[f]))) {
+                delete validationErrors.value[f]
+            }
+        })
+    }, { deep: true })
+
     // Notification helper
     const $showNotification = (message, type = 'info') => {
         if (window.$showNotification) {
@@ -3056,6 +3133,11 @@ watch(selectedExistingClient, (client) => {
     
     .input-group-custom.is-invalid-group {
         border-color: #DC2626 !important;
+    }
+
+    .budget-field-wrap.is-invalid-group .custom-date-trigger {
+        border-color: #DC2626 !important;
+        background-color: #FEF2F2 !important;
     }
     
     .input-group-custom.is-invalid-group .custom-input {

@@ -871,12 +871,14 @@ public function branchKey(): string
     return mb_strtolower(trim((string) $branch));
 }
 
-/** Same branch, or at least one side has no branch yet (e.g. owned by super admin). */
+/**
+ * Same branch only. A lead with no branch (e.g. owned by super admin, or from Meta with no
+ * branch) used to match every branch, which let it be merged into another branch's lead —
+ * now it only groups with other branch-less leads. Used by auto-merge, manual merge and
+ * the duplicates popup.
+ */
 public function sameBranchAs(Lead $other): bool
 {
-    $a = $this->branchKey();
-    $b = $other->branchKey();
-
-    return $a === '' || $b === '' || $a === $b;
+    return $this->branchKey() === $other->branchKey();
 }
 }

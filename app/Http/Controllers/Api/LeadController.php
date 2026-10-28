@@ -2198,8 +2198,6 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         $allowed = [(int) config('lead_merge.unqualified_stage_id'), (int) config('lead_merge.lost_stage_id')];
         $pool    = (int) config('lead_merge.lead_pool_stage_id');
         $byBranch = (bool) config('lead_merge.group_by_branch');
-        $leadKey  = $byBranch ? $lead->branchKey() : '';
-
 
         $group = $duplicates->concat([$lead])
                   ->filter(fn ($l) => $l->id === $lead->id || ! $byBranch || $lead->sameBranchAs($l));

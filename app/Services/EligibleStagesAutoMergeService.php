@@ -378,7 +378,7 @@ class EligibleStagesAutoMergeService
         }
 
         $newLead->loadMissing(['responsiblePerson', 'addedBy']);
-        // Preserve existing rule: Dubai New Leads never absorb; Abu Dhabi or empty-branch New Leads may.
+        // Only Abu Dhabi New Leads absorb; Dubai and branch-less New Leads never do.
         if ($this->isDubaiBranch($newLead) || ! $this->canBeAutoMergePrimary($newLead)) {
             return [];
         }
@@ -419,10 +419,9 @@ class EligibleStagesAutoMergeService
                     ->lockForUpdate()
                     ->get()
                     ->load(['responsiblePerson', 'addedBy'])
-                    ->filter(fn (Lead $candidate) => $this->canAbsorbCandidate(
-                        $candidate,
-                        $this->isAutoMergeAllowedBranch($primary) || $this->hasEmptyBranch($primary)
-                    ))
+                    // Strict: a branch-less pool lead (e.g. added by super admin / from Meta with
+                    // no branch) is never absorbed — only leads that are really Abu Dhabi.
+                    ->filter(fn (Lead $candidate) => $this->canAbsorbCandidate($candidate))
                     ->values();
 
                 if (config('lead_merge.group_by_branch')) {
@@ -554,14 +553,14 @@ class EligibleStagesAutoMergeService
         return false;
     }
 
-    /** New Lead can be primary for Abu Dhabi or empty-branch leads, but never Dubai. */
+    /** New Lead can be primary only when it is really Abu Dhabi — never Dubai or branch-less. */
     public function canBeAutoMergePrimary(Lead $lead): bool
     {
         if ($this->isDubaiBranch($lead)) {
             return false;
         }
 
-        return $this->isAutoMergeAllowedBranch($lead) || $this->hasEmptyBranch($lead);
+        return $this->isAutoMergeAllowedBranch($lead);
     }
 
     /** Eligible Lost/Unqualified/Lead Pool candidate for absorption. */
