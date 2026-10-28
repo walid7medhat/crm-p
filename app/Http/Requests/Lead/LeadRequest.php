@@ -171,8 +171,113 @@ class LeadRequest extends FormRequest
                 if ($stage && ($name === 'lead pool' || $name === 'leadpool' || (int) $stage->order === 9)) {
                     $validator->errors()->add('stage_id', 'Leads cannot be created in the Lead Pool stage.');
                 }
+
+                if ($stage) {
+                    $this->requireStageFields($validator, (int) $stage->order);
+                }
+            }
+
+            if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
+                $this->guardStageFieldsOnEdit($validator);
             }
         });
+    }
+
+    private static function isBlank($value): bool
+    {
+        return $value === null || $value === '';
+    }
+
+    /**
+     * Creating straight into a stage needs that stage's fields — same sets the create form
+     * (CreateLeadModal stageRequiredFields) and the stage-change modal ask for, by stage
+     * order. The form check alone could be skipped (its stage list failed to load → no
+     * stage order → nothing required).
+     */
+    private function requireStageFields($validator, int $order): void
+    {
+        foreach ($this->stageRequiredFields($order, fn ($field) => $this->input($field)) as $field => $message) {
+            if (self::isBlank($this->input($field))) {
+                $validator->errors()->add($field, $message);
+            }
+        }
+    }
+
+    /**
+     * Editing (EditLead sends the whole form, even for a one-section edit):
+     *  - moving to another stage here → that stage's fields must all be filled;
+     *  - same stage → a field the stage requires can't be cleared. Older leads that were
+     *    saved without it stay editable instead of every save bouncing on hidden fields.
+     * Values not sent keep what the lead already has.
+     */
+    private function guardStageFieldsOnEdit($validator): void
+    {
+        $lead = $this->route('lead');
+        if (! $lead instanceof \App\Models\Lead) {
+            return;
+        }
+
+        $value = fn ($field) => $this->has($field) ? $this->input($field) : $lead->getAttribute($field);
+        $stage = $this->filled('stage_id') ? \App\Models\Stage::find($this->input('stage_id')) : $lead->stage;
+        if (! $stage) {
+            return;
+        }
+
+        $stageChanged = (int) $stage->id !== (int) $lead->stage_id;
+        foreach ($this->stageRequiredFields((int) $stage->order, $value) as $field => $message) {
+            if (! self::isBlank($value($field))) {
+                continue;
+            }
+            if ($stageChanged) {
+                $validator->errors()->add($field, $message);
+            } elseif (! self::isBlank($lead->getAttribute($field))) {
+                $validator->errors()->add($field, "{$message} — it is required for the {$stage->name} stage and can't be cleared.");
+            }
+        }
+    }
+
+    /**
+     * Required fields per stage order (field => message) — same lists and messages as the
+     * stage-change popup (StageChangeReasonModal, fed by leads.vue requiredFieldsMap and the
+     * conversion list). $value reads a field's effective value: rent leads skip property
+     * status / purpose, plots/land skip bedrooms.
+     *
+     * @return array<string, string>
+     */
+    private function stageRequiredFields(int $order, callable $value): array
+    {
+        $isRent = strtolower((string) $value('lead_type')) === 'rent';
+        $typeName = strtolower((string) \App\Models\PropertyType::whereKey($value('property_type_id'))->value('name'));
+        $isPlotsOrLand = str_contains($typeName, 'plot') || str_contains($typeName, 'land');
+
+        $salutation = ['salutation' => 'Please select salutation'];
+        $property = [
+            'property_type_id' => 'Please select property type',
+            'area_id' => 'Please select area',
+            'budget_from' => 'Please enter minimum budget',
+            'budget_to' => 'Please enter maximum budget',
+            'lead_type' => 'Please select lead type (Sale/Rent)',
+            'property_status' => $isRent ? null : 'Please select property status',
+            'purpose_buying' => $isRent ? null : 'Please select purpose',
+            'bedrooms' => $isPlotsOrLand ? null : 'Please select bedrooms',
+        ];
+
+        $required = match ($order) {
+            3 => $salutation,                                                            // Contacted
+            4 => $salutation + $property + ['status_lead' => 'Please select lead status (cold/warm/hot)'], // Qualified
+            5 => $salutation + ['available_date' => 'Please select available date'],
+            // Converted: the property details too. Its status ("converted") is filled by the
+            // conversion popup and isn't a field on the create form, so it isn't required here;
+            // deal_name belongs to the deal, not the lead.
+            6 => $salutation + $property + ['lead_source' => 'Please select lead source'],
+            7 => $salutation + ['branch' => 'Please select branch'],                    // Shared Leads
+            8 => ['why_lost_lead' => 'Please select lost reason'],                       // Lost Lead
+            9 => ['status_lead' => 'Please select lead pool status'],                    // Lead Pool
+            10 => ['status_lead' => 'Please select unqualified status'],                 // Unqualified
+            default => [],
+        };
+
+        return array_filter($required);
     }
 
     public function attributes(): array

@@ -1423,8 +1423,69 @@ const validateBudget = () => {
     }
     return null
 }
+// Same per-stage lists as the stage-change popup (StageChangeReasonModal) and
+// LeadRequest::stageRequiredFields(). On edit a required field that the lead already has
+// can't be cleared; older leads saved without it stay editable.
+const EDIT_PROPERTY_FIELDS = ['property_type_id', 'area_id', 'budget_from', 'budget_to',
+    'lead_type', 'property_status', 'purpose_buying', 'bedrooms']
+const EDIT_STAGE_REQUIRED = {
+    3: ['salutation'],
+    4: ['salutation', ...EDIT_PROPERTY_FIELDS, 'status_lead'],
+    5: ['salutation', 'available_date'],
+    6: ['salutation', ...EDIT_PROPERTY_FIELDS, 'lead_source'],
+    7: ['salutation', 'branch'],
+    8: ['lost_reason'],
+    9: ['status_lead'],
+    10: ['status_lead'],
+}
+const EDIT_REQUIRED_MESSAGES = {
+    salutation: 'Please select salutation',
+    property_type_id: 'Please select property type',
+    area_id: 'Please select area',
+    budget_from: 'Please enter minimum budget',
+    budget_to: 'Please enter maximum budget',
+    lead_type: 'Please select lead type (Sale/Rent)',
+    property_status: 'Please select property status',
+    purpose_buying: 'Please select purpose',
+    bedrooms: 'Please select bedrooms',
+    lead_source: 'Please select lead source',
+    available_date: 'Please select available date',
+    branch: 'Please select branch',
+    lost_reason: 'Please select lost reason',
+}
+const EDIT_STATUS_MESSAGES = {
+    4: 'Please select lead status (cold/warm/hot)',
+    9: 'Please select lead pool status',
+    10: 'Please select unqualified status',
+}
+
+function clearedRequiredFields() {
+    const order = currentStageOrder.value
+    const isBlank = (v) => v === null || v === undefined || v === ''
+    const savedValue = (field) => (field === 'lost_reason' ? props.lead?.why_lost_lead : props.lead?.[field])
+    return (EDIT_STAGE_REQUIRED[order] || []).filter((field) => {
+        if ((field === 'property_status' || field === 'purpose_buying') && isRentOnly.value) return false
+        if (field === 'bedrooms' && isPlotsOrLand.value) return false
+        return isBlank(form.value[field]) && !isBlank(savedValue(field))
+    })
+}
+
 const handleSave = async () => {
     if (isSubmitting.value) return false
+    const cleared = clearedRequiredFields()
+    if (cleared.length) {
+        const stageName = props.lead?.stage?.name || 'this'
+        const message = (field) => (field === 'status_lead' && EDIT_STATUS_MESSAGES[currentStageOrder.value])
+            || EDIT_REQUIRED_MESSAGES[field]
+        validationErrors.value = Object.fromEntries(cleared.map((field) => [field, [message(field)]]))
+        window.$showNotification?.(
+            cleared.length === 1
+                ? `${message(cleared[0])} — it is required for the ${stageName} stage`
+                : `${cleared.length} fields are required for the ${stageName} stage and can't be cleared`,
+            'warning'
+        )
+        return false
+    }
     try {
         isSubmitting.value = true
         errorMessage.value = ''
@@ -1459,7 +1520,11 @@ const handleSave = async () => {
             responsible_person_id: form.value.responsible_person_id,
             stage_id: form.value.stage_id
         }
-        
+        // The leads column is why_lost_lead — "lost_reason" alone was dropped by the API,
+        // so editing a Lost lead's reason never saved.
+        payload.why_lost_lead = form.value.lost_reason || null
+        delete payload.lost_reason
+
         console.log('Updating lead with data:', payload)
         const response = await api.put(`/leads/${props.lead.id}`, payload)
         
@@ -1487,12 +1552,16 @@ const handleSave = async () => {
         // Check if it's a validation error (422 status)
         if (error.response && error.response.status === 422) {
             // Laravel validation errors format: { field: ["error message"] }
-            const errors = error.response.data.errors || error.response.data
+            const errors = { ...(error.response.data.errors || error.response.data) }
+            if (errors.why_lost_lead && !errors.lost_reason) errors.lost_reason = errors.why_lost_lead
             validationErrors.value = errors
-            
+
             errorMessage.value = 'Please fix the validation errors below.'
+            // Several stage-required fields (area, type, budget, branch…) have no inline error
+            // slot — show the server's own message so the user knows what to fix.
+            const first = Object.values(errors).find((v) => Array.isArray(v) && v.length)?.[0]
             if (window.$showNotification) {
-                window.$showNotification('Please check the form for errors', 'warning')
+                window.$showNotification(first || 'Please check the form for errors', 'warning')
             }
         } else {
             // General error

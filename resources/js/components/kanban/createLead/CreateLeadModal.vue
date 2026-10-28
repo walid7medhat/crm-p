@@ -602,7 +602,7 @@
     
                                         <!-- Available Date (Stage 5) -->
                                         <div v-if="shouldShowField('available_date')" class="col-md-4">
-                                            <label class="form-label-custom">Available Date</label>
+                                            <label class="form-label-custom">Available Date <span v-if="isFieldRequired('available_date')" class="text-danger">*</span></label>
                                             <AdvancedDatePicker
                                              dob-layout
                                                 v-model="form.available_date"
@@ -610,18 +610,22 @@
                                                 placeholder="Select date"
                                                 class="custom-input"
                                             />
+                                            <div v-if="validationErrors.available_date" class="invalid-feedback d-block">
+                                                {{ validationErrors.available_date[0] }}
+                                            </div>
                                         </div>
     
                                         <!-- Branch (Stage 7) -->
                                         <div v-if="shouldShowField('branch')" class="col-md-4">
-                                            <label class="form-label-custom">Branch</label>
-                                            <v-select :append-to-body="true" 
-                                                v-model="form.branch" 
-                                                :options="branchOptions" 
+                                            <label class="form-label-custom">Branch <span v-if="isFieldRequired('branch')" class="text-danger">*</span></label>
+                                            <v-select :append-to-body="true"
+                                                v-model="form.branch"
+                                                :options="branchOptions"
                                                 :reduce="option => option.value"
                                                 label="text"
                                                 placeholder="Select Branch"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.branch }"
                                             >
                                                 <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -629,18 +633,22 @@
                                                     </span>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.branch" class="invalid-feedback d-block">
+                                                {{ validationErrors.branch[0] }}
+                                            </div>
                                         </div>
-    
+
                                         <!-- Lost Reason (Stage 8) -->
                                         <div v-if="shouldShowField('lost_reason')" class="col-md-4">
-                                            <label class="form-label-custom">Lost Reason</label>
-                                            <v-select :append-to-body="true" 
-                                                v-model="form.lost_reason" 
-                                                :options="lostReasonOptions" 
+                                            <label class="form-label-custom">Lost Reason <span v-if="isFieldRequired('lost_reason')" class="text-danger">*</span></label>
+                                            <v-select :append-to-body="true"
+                                                v-model="form.lost_reason"
+                                                :options="lostReasonOptions"
                                                 :reduce="option => option.value"
                                                 label="text"
                                                 placeholder="Select Lost Reason"
                                                 class="custom-v-select"
+                                                :class="{ 'is-invalid-select': validationErrors.lost_reason || validationErrors.why_lost_lead }"
                                             >
                                                 <template #open-indicator="{ attributes }">
                                                     <span v-bind="attributes">
@@ -648,6 +656,9 @@
                                                     </span>
                                                 </template>
                                             </v-select>
+                                            <div v-if="validationErrors.lost_reason || validationErrors.why_lost_lead" class="invalid-feedback d-block">
+                                                {{ (validationErrors.lost_reason || validationErrors.why_lost_lead)[0] }}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -887,9 +898,25 @@
 
     // Fields that must be filled when the lead is created straight into a stage —
     // same set the stage-change modal asks for (leads.vue requiredFieldsMap).
+    // Keyed by stage order — same lists as the stage-change popup (StageChangeReasonModal);
+    // mirrored server-side in LeadRequest::stageRequiredFields().
+    const propertyRequiredFields = ['property_type_id', 'area_id', 'budget_from', 'budget_to',
+        'lead_type', 'property_status', 'purpose_buying', 'bedrooms']
     const stageRequiredFields = {
-        4: ['salutation', 'property_type_id', 'area_id', 'budget_from', 'budget_to',
-            'lead_type', 'property_status', 'purpose_buying', 'bedrooms', 'status_lead'],
+        3: ['salutation'],
+        4: ['salutation', ...propertyRequiredFields, 'status_lead'],
+        5: ['salutation', 'available_date'],
+        // Converted: property details too (its "converted" status is set by the conversion flow).
+        6: ['salutation', ...propertyRequiredFields, 'lead_source'],
+        7: ['salutation', 'branch'],
+        8: ['lost_reason'],
+        10: ['status_lead'],
+    }
+
+    // Status wording per stage, as in the stage-change popup.
+    const statusRequiredMessages = {
+        4: 'Please select lead status (cold/warm/hot)',
+        10: 'Please select unqualified status',
     }
 
     const requiredFieldMessages = {
@@ -903,7 +930,14 @@
         purpose_buying: 'Please select purpose',
         bedrooms: 'Please select bedrooms',
         status_lead: 'Please select quality status',
+        available_date: 'Please select available date',
+        branch: 'Please select branch',
+        lost_reason: 'Please select lost reason',
+        lead_source: 'Please select lead source',
     }
+
+    const requiredMessage = (field) => (field === 'status_lead' && statusRequiredMessages[currentStageOrder.value])
+        || requiredFieldMessages[field]
 
     // Hidden fields (rent → no property status / purpose, plots/land → no bedrooms) are never required.
     const isFieldRequired = (field) => {
@@ -1340,9 +1374,11 @@ watch(selectedExistingClient, (client) => {
         closeBudgetDropdown()
     }
     
+    // Compare by value: a string/number id mismatch, or a failed /stages load, left this at 0 —
+    // which hid the Qualified fields AND dropped their required check.
     const currentStageOrder = computed(() => {
-        const selectedStage = stages.value.find(s => s.id === form.value.stage_id)
-        return selectedStage?.order || 0
+        const selectedStage = stages.value.find(s => String(s.id) === String(form.value.stage_id))
+        return Number(selectedStage?.order) || 0
     })
     
     const handleStageChangeRequest = ({ stageId, stageName, stageOrder }) => {
@@ -1419,6 +1455,9 @@ watch(selectedExistingClient, (client) => {
     // Watch form.stage_id to see if it gets updated
     watch(() => form.value.stage_id, (newVal) => {
         console.log('Form stage_id changed to:', newVal)
+        // The stage picker loads its own list; if ours failed, load it again so the
+        // stage's fields and required checks apply.
+        if (newVal && !stages.value.length) fetchStages()
     })
     watch(() => form.value.lead_source, () => {
             if (leadDraft.isApplying.value) return
@@ -1988,6 +2027,7 @@ watch(selectedExistingClient, (client) => {
             errorMessage.value = ''
             validationErrors.value = {}
             showPhoneFieldErrors.value = true
+            if (form.value.stage_id && !currentStageOrder.value) await fetchStages()
              const budgetError = validateBudgetRange()
             if (budgetError) {
                 validationErrors.value.budget = [budgetError]
@@ -1996,10 +2036,10 @@ watch(selectedExistingClient, (client) => {
             }
             const missingRequired = getMissingRequiredFields()
             if (missingRequired.length > 0) {
-                missingRequired.forEach(f => { validationErrors.value[f] = [requiredFieldMessages[f]] })
+                missingRequired.forEach(f => { validationErrors.value[f] = [requiredMessage(f)] })
                 $showNotification(
                     missingRequired.length === 1
-                        ? requiredFieldMessages[missingRequired[0]]
+                        ? requiredMessage(missingRequired[0])
                         : `Please complete ${missingRequired.length} required fields`,
                     'warning'
                 )
@@ -2060,6 +2100,10 @@ watch(selectedExistingClient, (client) => {
                 stage_id: form.value.stage_id
             }
             if (!payload.website) delete payload.website
+            // The leads column is why_lost_lead — "lost_reason" alone was dropped by the API,
+            // so a lead created straight into Lost never kept its reason.
+            payload.why_lost_lead = form.value.lost_reason || null
+            delete payload.lost_reason
             if (isSalesUser.value && form.value.lead_source === 'referral') {
                     payload.referral_type = form.value.referral_type
                     payload.source_client_name = form.value.source_client_name
