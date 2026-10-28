@@ -918,8 +918,9 @@ public function getFormFields($formId)
 public function get_from_date(Request $request, $form_id)
 {
     $request->validate([
-        'from' => 'nullable|date',
-        'to'   => 'nullable|date|after_or_equal:from',
+        'from'      => 'nullable|date',
+        'to'        => 'nullable|date|after_or_equal:from',
+        'no_filter' => 'nullable|boolean',
     ]);
 
     $integration = Integration::where('facebook_form_id', $form_id)
@@ -937,30 +938,31 @@ public function get_from_date(Request $request, $form_id)
     ];
 
     $filters = [];
-    if ($request->filled('from')) {
-        $filters[] = [
-            'field'    => 'time_created',
-            'operator' => 'GREATER_THAN',
-            // 1 second before midnight UAE, because GREATER_THAN is exclusive
-            'value'    => Carbon::parse($request->from, $tz)->startOfDay()->subSecond()->timestamp,
-        ];
-    }
-    if ($request->filled('to')) {
-        $filters[] = [
-            'field'    => 'time_created',
-            'operator' => 'LESS_THAN',
-            // 1 second after end of day UAE, because LESS_THAN is exclusive
-            'value'    => Carbon::parse($request->to, $tz)->endOfDay()->addSecond()->timestamp,
-        ];
-    }
-    if ($filters) {
-        $params['filtering'] = json_encode($filters);
+    if (!$request->boolean('no_filter')) {
+        if ($request->filled('from')) {
+            $filters[] = [
+                'field'    => 'time_created',
+                'operator' => 'GREATER_THAN',
+                'value'    => Carbon::parse($request->from, $tz)->startOfDay()->subSecond()->timestamp,
+            ];
+        }
+        if ($request->filled('to')) {
+            $filters[] = [
+                'field'    => 'time_created',
+                'operator' => 'LESS_THAN',
+                'value'    => Carbon::parse($request->to, $tz)->endOfDay()->addSecond()->timestamp,
+            ];
+        }
+        if ($filters) {
+            $params['filtering'] = json_encode($filters);
+        }
     }
 
     $imported = 0;
     $skipped  = 0;
     $total    = 0;
     $failed   = [];
+    $leads    = [];
     $nextUrl  = $url;
 
     do {
@@ -975,8 +977,15 @@ public function get_from_date(Request $request, $form_id)
 
         foreach ($body['data'] ?? [] as $metaLead) {
             $total++;
+            $exists = Lead::where('meta_lead_id', $metaLead['id'])->exists();
 
-            if (Lead::where('meta_lead_id', $metaLead['id'])->exists()) {
+            $leads[] = [
+                'id'     => $metaLead['id'],
+                'uae'    => Carbon::parse($metaLead['created_time'])->setTimezone($tz)->toDateTimeString(),
+                'in_db'  => $exists,
+            ];
+
+            if ($exists) {
                 $skipped++;
                 continue;
             }
@@ -998,6 +1007,7 @@ public function get_from_date(Request $request, $form_id)
         'imported'        => $imported,
         'skipped'         => $skipped,
         'failed'          => $failed,
+        'leads'           => $leads,
     ], 'Backfill completed');
 }
 }
