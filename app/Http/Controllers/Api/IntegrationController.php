@@ -918,14 +918,15 @@ public function getFormFields($formId)
 public function get_from_date(Request $request, $form_id)
 {
     $request->validate([
-        'from' => 'nullable|date',   // e.g. 2026-10-18
-        'to'   => 'nullable|date',   // e.g. 2026-10-19
+        'from' => 'nullable|date',
+        'to'   => 'nullable|date|after_or_equal:from',
     ]);
 
     $integration = Integration::where('facebook_form_id', $form_id)
         ->where('status', 'active')
         ->firstOrFail();
 
+    $tz    = 'Asia/Dubai';
     $token = env('META_ACCESS_TOKEN');
     $url   = self::META_GRAPH_BASE . '/' . self::META_GRAPH_VERSION . "/{$form_id}/leads";
 
@@ -935,20 +936,21 @@ public function get_from_date(Request $request, $form_id)
         'limit'        => 100,
     ];
 
-    // Date filter (Meta expects UNIX timestamps)
     $filters = [];
     if ($request->filled('from')) {
         $filters[] = [
             'field'    => 'time_created',
             'operator' => 'GREATER_THAN',
-            'value'    => Carbon::parse($request->from)->startOfDay()->timestamp,
+            // 1 second before midnight UAE, because GREATER_THAN is exclusive
+            'value'    => Carbon::parse($request->from, $tz)->startOfDay()->subSecond()->timestamp,
         ];
     }
     if ($request->filled('to')) {
         $filters[] = [
             'field'    => 'time_created',
             'operator' => 'LESS_THAN',
-            'value'    => Carbon::parse($request->to)->endOfDay()->timestamp,
+            // 1 second after end of day UAE, because LESS_THAN is exclusive
+            'value'    => Carbon::parse($request->to, $tz)->endOfDay()->addSecond()->timestamp,
         ];
     }
     if ($filters) {
@@ -957,6 +959,8 @@ public function get_from_date(Request $request, $form_id)
 
     $imported = 0;
     $skipped  = 0;
+    $total    = 0;
+    $failed   = [];
     $nextUrl  = $url;
 
     do {
@@ -970,23 +974,30 @@ public function get_from_date(Request $request, $form_id)
         $body = $response->json();
 
         foreach ($body['data'] ?? [] as $metaLead) {
-            // Skip duplicates
+            $total++;
+
             if (Lead::where('meta_lead_id', $metaLead['id'])->exists()) {
                 $skipped++;
                 continue;
             }
 
-            // Reuse the exact same logic as the webhook
-            $this->fetchAndStoreLead($metaLead['id'], $integration);
-            $imported++;
+            try {
+                $this->fetchAndStoreLead($metaLead['id'], $integration);
+                $imported++;
+            } catch (\Throwable $e) {
+                Log::error('Lead store failed', ['id' => $metaLead['id'], 'err' => $e->getMessage()]);
+                $failed[] = $metaLead['id'];
+            }
         }
 
-        $nextUrl = $body['paging']['next'] ?? null; // full URL incl. token & cursor
+        $nextUrl = $body['paging']['next'] ?? null;
     } while ($nextUrl);
 
     return ApiResponse::success([
-        'imported' => $imported,
-        'skipped'  => $skipped,
+        'total_from_meta' => $total,
+        'imported'        => $imported,
+        'skipped'         => $skipped,
+        'failed'          => $failed,
     ], 'Backfill completed');
 }
 }
