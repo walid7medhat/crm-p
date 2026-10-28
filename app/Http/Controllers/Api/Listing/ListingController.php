@@ -1065,7 +1065,7 @@ public function getMatchingListings(Request $request)
             // Check if user is sales agent under listing team
             else  {
                 // Check if there's already a pending request
-                if ($listing->hasPendingHotDealRequest()) {
+                if ($listing->hasPendingHotDealRequest() && $oldHotDealStatus=='No') {
                     throw new \Exception('There is already a pending hot deal request for this property.');
                 }
                 
