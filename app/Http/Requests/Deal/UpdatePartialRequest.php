@@ -27,6 +27,7 @@ class UpdatePartialRequest extends FormRequest
             'deal_commission' => 'nullable|numeric',
             'agent_share' => 'nullable|numeric',
             'company_share' => 'nullable|numeric',
+            'commission_distribution' => 'nullable',
             'currency' => 'nullable|string',
             'buyer_first_name' => 'nullable|string',
             'buyer_last_name' => 'nullable|string',

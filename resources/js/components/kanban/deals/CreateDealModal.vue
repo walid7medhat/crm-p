@@ -967,6 +967,17 @@ async function submitForm() {
             }
           }
         })
+      } else if (key === 'commission_distribution' && typeof value === 'object') {
+        // Admin / super_admin only
+        try {
+          const raw = JSON.parse(localStorage.getItem('user') || '{}')
+          const roles = (raw?.roles || []).map((r) =>
+            String(typeof r === 'string' ? r : r?.name).toLowerCase()
+          )
+          if (roles.includes('super_admin') || roles.includes('admin')) {
+            submitData.append(key, JSON.stringify(value))
+          }
+        } catch (_) { /* skip */ }
       } else if (!key.includes('documents')) {
         submitData.append(key, value)
       }
@@ -1063,6 +1074,7 @@ function resetFormData() {
     deal_commission: null,
     agent_share: null,
     company_share: null,
+    commission_distribution: null,
     responsible_person_id: null,
      deal_total_amount: null,
     // Buyer fields

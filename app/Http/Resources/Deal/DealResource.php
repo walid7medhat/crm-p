@@ -161,6 +161,9 @@ class DealResource extends JsonResource
             'deal_commission' => $this->deal_commission,
             'agent_share' => $this->agent_share,
             'company_share' => $this->company_share,
+            'commission_distribution' => \App\Support\DealCommissionDistribution::viewerCanSee()
+                ? \App\Support\DealCommissionDistribution::fromDeal($this->resource)
+                : null,
 
             // Relationships
             'lead_id' => $this->lead_id,

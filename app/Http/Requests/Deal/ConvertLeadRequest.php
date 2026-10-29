@@ -42,6 +42,8 @@ class ConvertLeadRequest extends FormRequest
             'deal_commission' => 'nullable|numeric',
             'agent_share' => 'nullable|numeric',
             'company_share' => 'nullable|numeric',
+            // Optional JSON string (multipart) or array — stored in deals.metadata only
+            'commission_distribution' => 'nullable',
             'currency' => 'nullable|string|in:AED,USD,EUR,GBP,SAR,QAR,KWD,BHD,OMR,EGP',
             
             // ========== MULTI PROPERTIES ==========

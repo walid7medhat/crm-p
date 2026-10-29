@@ -895,9 +895,13 @@ function dealToFormData(deal) {
     source: deal.source ?? '',
     deal_name: deal.deal_name ?? '',
  
+    deal_total_amount: deal.deal_total_amount ?? null,
     deal_commission: deal.deal_commission ?? null,
     agent_share: deal.agent_share ?? null,
     company_share: deal.company_share ?? null,
+    commission_distribution: deal.commission_distribution
+      ?? deal.metadata?.commission_distribution
+      ?? null,
     responsible_person_id: deal.responsible_person_id ?? deal.responsible_person?.id ?? null,
     lost_reason: deal.lost_reason ?? '',
     buyer_first_name: buyer.first_name ?? '',

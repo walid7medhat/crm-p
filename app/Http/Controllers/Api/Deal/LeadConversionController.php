@@ -18,6 +18,7 @@ use App\Helpers\LeadHistoryHelper;
 use App\Events\DealUpdated;
 use App\Events\LeadUpdated;
 use App\Models\DealProperty;
+use App\Support\DealCommissionDistribution;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -357,16 +358,27 @@ class LeadConversionController extends Controller
                 'listing_id' => $request->listing_id,
                 'responsible_person_id' => $request->responsible_person_id ?? $lead->responsible_person_id ?? 1,
                 'created_by' => auth()->id(),
-                'metadata' => [
-                    'converted_from_lead' => $lead?->id,
-                    'converted_at' => now()->toDateTimeString(),
-                    'lead_data' => [
-                        'id' => $lead?->id,
-                        'name' => $lead?->lead_name,
-                        'email' => $lead?->email,
-                        'phone' => $lead?->phone
+                'metadata' => DealCommissionDistribution::viewerCanSee()
+                    ? DealCommissionDistribution::mergeIntoMetadataArray([
+                        'converted_from_lead' => $lead?->id,
+                        'converted_at' => now()->toDateTimeString(),
+                        'lead_data' => [
+                            'id' => $lead?->id,
+                            'name' => $lead?->lead_name,
+                            'email' => $lead?->email,
+                            'phone' => $lead?->phone
+                        ]
+                    ], $request->input('commission_distribution'))
+                    : [
+                        'converted_from_lead' => $lead?->id,
+                        'converted_at' => now()->toDateTimeString(),
+                        'lead_data' => [
+                            'id' => $lead?->id,
+                            'name' => $lead?->lead_name,
+                            'email' => $lead?->email,
+                            'phone' => $lead?->phone
+                        ]
                     ]
-                ]
             ]);
 
             // ✅ Create multi properties

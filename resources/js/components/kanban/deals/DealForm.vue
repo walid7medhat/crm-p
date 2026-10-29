@@ -761,29 +761,60 @@
     <!-- Deal Financials -->
     <section v-if="isSectionVisible('deal_financials') && isWonStage" class="form-section">
       <h6 class="section-title mb-3">Deal Financials</h6>
-      <div class="form-card p-3 radius-12">
-        <div class="row g-3">
-          <!-- Deal Total Amount -->
-          <div class="col-md-4">
-            <label class="form-label-custom">Deal Total Amount</label>
-            <div class="input-group">
-              
-              <b-form-input v-model="form.deal_total_amount" type="text" inputmode="numeric" placeholder="Enter Total Amount" class="custom-input" @keypress="onMoneyKeypress" />
-              <span class="input-group-text">AED</span>
-            </div>
-            <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">{{ fieldErrors.deal_total_amount }}</div>
+      <div class="form-card p-3 radius-12 deal-financials-shell">
+        <div class="df-base">
+          <div class="df-base__intro">
+            <div class="df-base__eyebrow">Deal value</div>
+            <p class="df-base__help">
+              {{ canManageCommissionDistribution
+                ? 'Enter the deal amount and commission rate. Distribution below is optional.'
+                : 'Enter the deal amount and commission rate.' }}
+            </p>
           </div>
-          
-          <!-- Deal Commission % -->
-          <div class="col-md-4">
-            <label class="form-label-custom">Deal Commission %</label>
-            <div class="input-group">
-              <b-form-input v-model="form.deal_commission" type="number" placeholder="Enter Commission %" class="custom-input" />
-              <span class="input-group-text">%</span>
+          <div class="df-base__grid">
+            <div class="df-base__field">
+              <label class="df-base__label">Deal amount</label>
+              <div class="df-base__affix" :class="{ 'is-invalid': showErrors && fieldErrors.deal_total_amount }">
+                <input
+                  v-model="form.deal_total_amount"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="0"
+                  class="df-base__input"
+                  @keypress="onMoneyKeypress"
+                />
+                <span class="df-base__suffix">AED</span>
+              </div>
+              <div v-if="showErrors && fieldErrors.deal_total_amount" class="invalid-feedback d-block">{{ fieldErrors.deal_total_amount }}</div>
             </div>
-            <div v-if="showErrors && fieldErrors.deal_commission" class="invalid-feedback d-block">{{ fieldErrors.deal_commission }}</div>
+            <div class="df-base__field">
+              <label class="df-base__label">Deal commission</label>
+              <div class="df-base__affix" :class="{ 'is-invalid': showErrors && fieldErrors.deal_commission }">
+                <input
+                  v-model="form.deal_commission"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="e.g. 5"
+                  class="df-base__input"
+                />
+                <span class="df-base__suffix">%</span>
+              </div>
+              <div v-if="showErrors && fieldErrors.deal_commission" class="invalid-feedback d-block">{{ fieldErrors.deal_commission }}</div>
+            </div>
           </div>
         </div>
+
+        <CommissionDistributionSection
+          v-if="canManageCommissionDistribution"
+          :model-value="form.commission_distribution"
+          :deal-amount="form.deal_total_amount"
+          :deal-commission="form.deal_commission"
+          :users="users"
+          :default-user-id="form.responsible_person_id"
+          @update:model-value="onCommissionDistributionUpdate"
+        />
       </div>
     </section>
 
@@ -837,6 +868,8 @@ import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
 import PropertyList from './PropertyList.vue'
+import CommissionDistributionSection from './CommissionDistributionSection.vue'
+import './deal-financials.css'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
@@ -915,6 +948,10 @@ function onMoneyKeypress(e) {
   if (!/^\d$/.test(e.key)) e.preventDefault()
 }
 
+function onCommissionDistributionUpdate(value) {
+  form.value = { ...form.value, commission_distribution: value }
+}
+
 function getBudgetTriggerElement() {
     let el = budgetTriggerRef.value
     if (Array.isArray(el)) el = el.find(Boolean)
@@ -989,6 +1026,15 @@ const showBudgetFields = computed(() => {
 const isWonStage = computed(() => {
   const stageName = props.selectedStageName?.toLowerCase() || ''
   return stageName.includes('won') || stageName.includes('deal won')
+})
+const canManageCommissionDistribution = computed(() => {
+  const raw = currentUser.value || (() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
+  })()
+  const roles = (raw?.roles || []).map((r) =>
+    String(typeof r === 'string' ? r : r?.name).toLowerCase()
+  )
+  return roles.includes('super_admin') || roles.includes('admin')
 })
 const isBudgetRequired = computed(() => {
   const missingFields = props.missingFields || []
