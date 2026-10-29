@@ -111,7 +111,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->runInBackground()
             ->appendOutputTo(storage_path('logs/lead-realtime-assign.log'));
-        // $schedule->command('leads:merge-pool-duplicates')->dailyAt('06:00')->timezone('Asia/Dubai')->withoutOverlapping()->onOneServer();
+        $schedule->command('leads:merge-pool-duplicates')->dailyAt('06:00')->timezone('Asia/Dubai')->withoutOverlapping()->onOneServer();
         // Property Finder: catch leads whose webhook never arrived (no-op until PF_API_KEY is set).
         // $schedule->command('propertyfinder:sync-leads --minutes=60')
         //     ->everyTenMinutes()
