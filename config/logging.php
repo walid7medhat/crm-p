@@ -184,6 +184,12 @@ return [
         'level'  => 'debug',
         'days'   => 30,
     ],
+    'lead_merge' => [
+        'driver' => 'daily',
+        'path'   => storage_path('logs/lead-merge.log'),
+        'level'  => 'info',
+        'days'   => 30,
+    ],
     'endpoint_usage' => [
             'driver' => 'daily',
             'path'   => storage_path('logs/endpoint-usage.log'),

@@ -7,6 +7,7 @@ use App\Models\Lead;
 use App\Models\Stage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Notifications\LeadMergedNotification;
 
 /**
@@ -340,6 +341,10 @@ class EligibleStagesAutoMergeService
                             ]);
 
                         $primary->stage_id = $pool;
+                        $this->mergeLog('Primary moved to Lead Pool', [
+                            'primary_id' => (int) $primary->id,
+                            'from_stage_id' => $fromStageId,
+                        ]);
                         LeadHistoryHelper::log($primary->id, [
                             'action' => 'stage_changed',
                             'old_stage_id' => $fromStageId,
@@ -479,28 +484,68 @@ class EligibleStagesAutoMergeService
             ->whereNull('converted_to_deal_id')
             ->whereNull('merged_into_lead_id');
 
-        $count = function (array $map) use (&$merged) {
-            foreach ($map as $ids) {
-                $merged += count($ids);
-            }
-        };
-
-        $base()->where('work_phone_digits', '!=', '')
+        $startedAt = microtime(true);
+        $phones = $base()->where('work_phone_digits', '!=', '')
             ->distinct()
             ->orderBy('work_phone_digits')
-            ->pluck('work_phone_digits')
-            ->each(fn ($digits) => $count($this->mergeEligibleContact((string) $digits)));
+            ->pluck('work_phone_digits');
 
-        $base()->whereNotNull('email')->where('email', '!=', '')
+        $emails = $base()->whereNotNull('email')->where('email', '!=', '')
             ->distinct()
             ->pluck('email')
             ->map(fn ($email) => Lead::normalizeEmail($email))
             ->filter()
             ->unique()
             ->sort()
-            ->each(fn ($email) => $count($this->mergeEligibleContact('', $email)));
+            ->values();
+
+        $this->mergeLog('Daily merge started', [
+            'phones' => $phones->count(),
+            'emails' => $emails->count(),
+        ]);
+
+        $groups = 0;
+        $errors = 0;
+        $run = function (string $kind, Collection $values, callable $merge) use (&$merged, &$groups, &$errors) {
+            $total = $values->count();
+            foreach ($values->values() as $i => $value) {
+                try {
+                    $map = $merge((string) $value);
+                    $groups += count($map);
+                    foreach ($map as $ids) {
+                        $merged += count($ids);
+                    }
+                } catch (\Throwable $e) {
+                    $errors++;
+                    $this->mergeLog("Merge failed for {$kind}", ['value' => $value, 'error' => $e->getMessage()], 'error');
+                }
+
+                if (($i + 1) % 500 === 0 || $i + 1 === $total) {
+                    $this->mergeLog("Progress {$kind}: " . ($i + 1) . "/{$total}", ['merged_so_far' => $merged]);
+                }
+            }
+        };
+
+        $run('phones', $phones, fn (string $digits) => $this->mergeEligibleContact($digits));
+        $run('emails', $emails, fn (string $email) => $this->mergeEligibleContact('', $email));
+
+        $this->mergeLog('Daily merge finished', [
+            'merged_leads' => $merged,
+            'groups' => $groups,
+            'errors' => $errors,
+            'seconds' => round(microtime(true) - $startedAt, 1),
+        ]);
 
         return $merged;
+    }
+
+    /** Writes to storage/logs/lead-merge-YYYY-MM-DD.log; logging never breaks a merge. */
+    private function mergeLog(string $message, array $context = [], string $level = 'info'): void
+    {
+        try {
+            Log::channel('lead_merge')->log($level, $message, $context);
+        } catch (\Throwable) {
+        }
     }
 
     /** @return string[] lowercased non-empty branch labels for a lead */
@@ -667,6 +712,12 @@ class EligibleStagesAutoMergeService
 
         if ($affected) {
             LeadHistoryHelper::logMerge((int) $primary->id, $ids, $mergeType);
+            $this->mergeLog('Merged', [
+                'primary_id' => (int) $primary->id,
+                'primary_stage_id' => (int) $primary->stage_id,
+                'merged_ids' => $ids,
+                'type' => $mergeType,
+            ]);
         }
             return (int) $affected;
 
