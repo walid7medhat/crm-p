@@ -6635,43 +6635,28 @@ const showMobileOfferReady = ({ blob, filename, offerNumber, creatorName }) => {
   } catch {
     pdfFile = null;
   }
-  const callTel = offerThankYouTel || offerTelHref(offerThankYouPhone);
-  const callBtn = callTel
-    ? `<a id="mobile-offer-call" href="tel:${escapeOfferHtml(callTel)}" style="${mobileOfferButtonStyle(false)};text-decoration:none;margin-top:10px;">Call ${escapeOfferHtml(offerThankYouPhone || callTel)}</a>`
+  let canShareFile = false;
+  try {
+    canShareFile = !!(pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+  } catch {
+    canShareFile = false;
+  }
+  // iOS share sheet has "Save to Files"; Android's share sheet has no save option,
+  // so Android saves straight to Downloads and gets a separate Share button.
+  const isIos = isIosOfferDevice();
+  const shareBtn = !isIos && canShareFile
+    ? `<button type="button" id="mobile-offer-share" style="${mobileOfferButtonStyle(false)};margin-top:10px;">Share PDF</button>`
     : '';
   const root = renderMobileOfferPanel(`
     <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0B0736;">Offer ready</p>
     <p style="margin:0 0 4px;font-size:14px;color:#334155;"><strong>Offer number:</strong> ${escapeOfferHtml(offerNumber)}</p>
     <p style="margin:0 0 16px;font-size:14px;color:#334155;"><strong>Created by:</strong> ${escapeOfferHtml(creatorName || 'You')}</p>
     <button type="button" id="mobile-offer-download" style="${mobileOfferButtonStyle(true)}">Download PDF</button>
-    ${callBtn}
+    ${shareBtn}
     <button type="button" id="mobile-offer-close" style="${mobileOfferButtonStyle(false)}">Close</button>
   `);
   const release = () => setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
-  root.querySelector('#mobile-offer-close').onclick = () => {
-    closeMobileOfferPanel();
-    release();
-  };
-  root.querySelector('#mobile-offer-download').onclick = () => {
-    let canShareFile = false;
-    try {
-      canShareFile = !!(pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] }));
-    } catch {
-      canShareFile = false;
-    }
-    if (canShareFile) {
-      navigator.share({ files: [pdfFile], title: filename }).catch((err) => {
-        if (err?.name === 'AbortError') return;
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.target = '_blank';
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      });
-      return;
-    }
+  const saveFile = () => {
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = filename;
@@ -6681,6 +6666,34 @@ const showMobileOfferReady = ({ blob, filename, offerNumber, creatorName }) => {
     link.click();
     link.remove();
   };
+  const openFile = () => {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+  const shareFile = (onError) => {
+    navigator.share({ files: [pdfFile], title: filename }).catch((err) => {
+      if (err?.name === 'AbortError') return;
+      onError();
+    });
+  };
+  root.querySelector('#mobile-offer-close').onclick = () => {
+    closeMobileOfferPanel();
+    release();
+  };
+  root.querySelector('#mobile-offer-download').onclick = () => {
+    if (isIos && canShareFile) {
+      shareFile(openFile);
+      return;
+    }
+    saveFile();
+  };
+  const shareNode = root.querySelector('#mobile-offer-share');
+  if (shareNode) shareNode.onclick = () => shareFile(saveFile);
 };
 
 const usesMobileOfferFlow = () => Boolean(isMobileViewport.value) || isMobileOfferDevice();
