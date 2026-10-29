@@ -11,6 +11,10 @@ class MergePoolDuplicates extends Command
 
     public function handle(EligibleStagesAutoMergeService $service): int
     {
+        // Backstop for large tables; the service itself reads contacts in batches.
+        ini_set('memory_limit', '512M');
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+
         $merged = $service->mergeAllEligibleDuplicates();
         $this->info("Merged {$merged} lead(s).");
 

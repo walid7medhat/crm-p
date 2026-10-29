@@ -484,36 +484,14 @@ class EligibleStagesAutoMergeService
             return 0;
         }
 
-        $base = fn () => Lead::query()
-            ->whereIn('stage_id', $eligibleIds)
-            ->whereNull('converted_to_deal_id')
-            ->whereNull('merged_into_lead_id');
-
         $startedAt = microtime(true);
-        $phones = $base()->where('work_phone_digits', '!=', '')
-            ->distinct()
-            ->orderBy('work_phone_digits')
-            ->pluck('work_phone_digits');
-
-        $emails = $base()->whereNotNull('email')->where('email', '!=', '')
-            ->distinct()
-            ->pluck('email')
-            ->map(fn ($email) => Lead::normalizeEmail($email))
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
-
-        $this->mergeLog('Daily merge started', [
-            'phones' => $phones->count(),
-            'emails' => $emails->count(),
-        ]);
+        $this->mergeLog('Daily merge started');
 
         $groups = 0;
         $errors = 0;
-        $run = function (string $kind, Collection $values, callable $merge) use (&$merged, &$groups, &$errors) {
-            $total = $values->count();
-            foreach ($values->values() as $i => $value) {
+        $run = function (string $kind, string $column, callable $merge) use ($eligibleIds, &$merged, &$groups, &$errors) {
+            $done = 0;
+            foreach ($this->duplicatedContactValues($column, $eligibleIds) as $value) {
                 try {
                     $map = $merge((string) $value);
                     $groups += count($map);
@@ -525,14 +503,21 @@ class EligibleStagesAutoMergeService
                     $this->mergeLog("Merge failed for {$kind}", ['value' => $value, 'error' => $e->getMessage()], 'error');
                 }
 
-                if (($i + 1) % 500 === 0 || $i + 1 === $total) {
-                    $this->mergeLog("Progress {$kind}: " . ($i + 1) . "/{$total}", ['merged_so_far' => $merged]);
+                if (++$done % 500 === 0) {
+                    $this->mergeLog("Progress {$kind}: {$done}", [
+                        'merged_so_far' => $merged,
+                        'memory_mb' => round(memory_get_usage(true) / 1048576),
+                    ]);
                 }
             }
+            $this->mergeLog("Finished {$kind}: {$done} checked", ['merged_so_far' => $merged]);
         };
 
-        $run('phones', $phones, fn (string $digits) => $this->mergeEligibleContact($digits));
-        $run('emails', $emails, fn (string $email) => $this->mergeEligibleContact('', $email));
+        $run('phones', 'work_phone_digits', fn (string $digits) => $this->mergeEligibleContact($digits));
+        $run('emails', 'email', function (string $email) {
+            $email = Lead::normalizeEmail($email);
+            return $email === '' ? [] : $this->mergeEligibleContact('', $email);
+        });
 
         $this->mergeLog('Daily merge finished', [
             'merged_leads' => $merged,
@@ -542,6 +527,40 @@ class EligibleStagesAutoMergeService
         ]);
 
         return $merged;
+    }
+
+    /**
+     * Phone digits / emails held by 2+ unmerged leads, at least one of them in an eligible stage.
+     * Grouped in MySQL and read 1000 at a time (keyset), so memory stays flat on large tables.
+     *
+     * @param int[] $eligibleIds
+     * @return \Generator<int, string>
+     */
+    private function duplicatedContactValues(string $column, array $eligibleIds): \Generator
+    {
+        $placeholders = implode(',', array_fill(0, count($eligibleIds), '?'));
+        $last = null;
+
+        do {
+            $batch = Lead::query()
+                ->where($column, '!=', '')
+                ->whereNotNull($column)
+                ->when($last !== null, fn ($q) => $q->where($column, '>', $last))
+                ->groupBy($column)
+                ->havingRaw('COUNT(*) > 1')
+                ->havingRaw(
+                    "SUM(CASE WHEN stage_id IN ({$placeholders}) AND converted_to_deal_id IS NULL THEN 1 ELSE 0 END) > 0",
+                    $eligibleIds
+                )
+                ->orderBy($column)
+                ->limit(1000)
+                ->pluck($column);
+
+            foreach ($batch as $value) {
+                yield (string) $value;
+            }
+            $last = $batch->last();
+        } while ($batch->count() === 1000);
     }
 
     /**
