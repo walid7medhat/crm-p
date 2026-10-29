@@ -532,11 +532,13 @@ public function activitiesWithTrashed()
     {
         $ids = collect();
         if ($digits !== '') {
-            $ids = $ids->merge(static::query()->where('work_phone_digits', $digits)->pluck('id'));
+            $ids = $ids->merge(static::query()->where('work_phone_digits', $digits)
+                ->when($limit, fn ($q) => $q->orderBy('id')->limit($limit))->pluck('id'));
         }
         if ($email !== '') {
             // Column collation is case-insensitive, so this also matches mixed-case stored emails.
-            $ids = $ids->merge(static::query()->where('email', $email)->pluck('id'));
+            $ids = $ids->merge(static::query()->where('email', $email)
+                ->when($limit, fn ($q) => $q->orderBy('id')->limit($limit))->pluck('id'));
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->sort()->values();

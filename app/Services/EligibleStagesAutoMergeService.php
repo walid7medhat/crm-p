@@ -231,7 +231,7 @@ class EligibleStagesAutoMergeService
         self::$running = true;
         try {
             DB::transaction(function () use ($digits, $email, $eligibleIds, $pool, $mainPriorities, &$result, &$mergeEvents) {
-                $contactIds = Lead::matchingContactIds($digits, $email);
+                $contactIds = $this->safeContactIds($digits, $email);
                 if ($contactIds === []) {
                     return;
                 }
@@ -420,8 +420,13 @@ class EligibleStagesAutoMergeService
                     return;
                 }
 
+                $contactIds = $this->safeContactIds($digits, $email);
+                if ($contactIds === []) {
+                    return;
+                }
+
                 $candidates = Lead::query()
-                    ->whereIn('id', Lead::matchingContactIds($digits, $email))
+                    ->whereIn('id', $contactIds)
                     ->whereIn('stage_id', $eligibleIds)
                     ->where('id', '!=', $primary->id)
                     ->whereNull('converted_to_deal_id')
@@ -537,6 +542,36 @@ class EligibleStagesAutoMergeService
         ]);
 
         return $merged;
+    }
+
+    /**
+     * Matching ids for auto-merge, or [] when the phone is too short or the phone/email is shared
+     * by so many leads that it must be a placeholder (also keeps memory bounded).
+     *
+     * @return int[]
+     */
+    private function safeContactIds(string $digits, string $email): array
+    {
+        if ($digits !== '' && strlen($digits) < (int) config('lead_merge.min_phone_digits', 7)) {
+            $digits = '';
+        }
+        if ($digits === '' && $email === '') {
+            return [];
+        }
+
+        $max = max(2, (int) config('lead_merge.max_contact_matches', 50));
+        $ids = Lead::matchingContactIds($digits, $email, $max + 1);
+        if (count($ids) > $max) {
+            $this->mergeLog('Skipped placeholder contact (too many matching leads)', [
+                'phone_digits' => $digits,
+                'email' => $email,
+                'limit' => $max,
+            ], 'warning');
+
+            return [];
+        }
+
+        return $ids;
     }
 
     /** Writes to storage/logs/lead-merge-YYYY-MM-DD.log; logging never breaks a merge. */

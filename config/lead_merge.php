@@ -18,6 +18,13 @@ return [
      * Without this, unrelated leads with the same placeholder would be duplicates and auto-merged.
      */
     'ignored_duplicate_emails' => array_filter(array_map('trim', explode(',', (string) env('LEAD_MERGE_IGNORED_EMAILS', '')))),
+    /**
+     * Auto-merge safety: a phone/email shared by more leads than this is treated as a placeholder
+     * (e.g. "0000000") and skipped, instead of loading and merging thousands of unrelated leads.
+     */
+    'max_contact_matches' => (int) env('LEAD_MERGE_MAX_CONTACT_MATCHES', 50),
+    /** Phones with fewer digits than this (e.g. "0", "971") are never used for auto-merge. */
+    'min_phone_digits' => (int) env('LEAD_MERGE_MIN_PHONE_DIGITS', 7),
     'qualified_stage_id' => env('LEAD_MERGE_QUALIFIED_STAGE_ID',6),
     'contacted_stage_id' => env('LEAD_MERGE_CONTACTED_STAGE_ID',5),
     'assigned_stage_id'  => env('LEAD_MERGE_ASSIGNED_STAGE_ID',4),
