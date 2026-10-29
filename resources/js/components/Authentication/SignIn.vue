@@ -129,10 +129,10 @@
 </template>
 
 <script>
-import api, { setAuthToken, clearAuthToken } from '@/plugins/axios';
+import api, { setAuthToken, clearAuthToken, getApiBaseUrl } from '@/plugins/axios';
 import { armLoginWelcome } from '@/composables/useLoginWelcome';
 import { askLeadPushPermission, subscribeLeadPush } from '@/services/offerLeadPush';
-// import { captureDeviceLocation } from '@/utils/deviceLocation.mjs';
+import { captureDeviceLocation } from '@/utils/deviceLocation.mjs';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 import AuthMobileStack from './AuthMobileStack.vue';
@@ -159,7 +159,7 @@ export default {
   },
   mounted() {
     // Start the location request now, so the user answers the prompt while typing
-    // this.locationPromise = this.fetchLocationSafe();
+    this.locationPromise = this.fetchLocationSafe();
     // Why the user was sent here (set by the 401 handler / expired-token guard). Read once.
     try {
       this.authNotice = sessionStorage.getItem('authNotice') || '';
@@ -255,7 +255,9 @@ export default {
         throw { code: 0, message: 'Location needs a secure (HTTPS) connection.' };
       }
 
-      return captureDeviceLocation(navigator.geolocation);
+      // 6s cap: desktops on Wi-Fi rarely reach the precise threshold, so the
+      // default 12s wait would usually run to the end there.
+      return captureDeviceLocation(navigator.geolocation, { maxWait: 6000 });
     },
 
     async fetchLocationSafe() {
@@ -285,39 +287,35 @@ export default {
       this.errorMessage = '';
 
       try {
-        // const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+        const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
-        // // Usually already resolved while the user was typing.
-        // let result = await (this.locationPromise || this.fetchLocationSafe());
-        // if (result?.stale) {
-        //   result = await this.fetchLocationSafe();
-        // }
+        // Usually already resolved while the user was typing.
+        let result = await (this.locationPromise || this.fetchLocationSafe());
+        if (result?.stale) {
+          result = await this.fetchLocationSafe();
+        }
 
-        // // Retry only if the user denied before (they may have just enabled it).
-        // // A timeout or unavailable reading is not retried and is not replaced
-        // // with a network or IP position.
-        // if (!result.coords && result.error?.permissionDenied === true) {
-        //   result = await this.fetchLocationSafe();
-        //   this.locationPromise = Promise.resolve(result);
-        // }
+        // Retry only if the user denied before (they may have just enabled it).
+        // A timeout or unavailable reading is not retried and is not replaced
+        // with a network or IP position.
+        if (!result.coords && result.error?.permissionDenied === true) {
+          result = await this.fetchLocationSafe();
+          this.locationPromise = Promise.resolve(result);
+        }
 
-        // // Block only on denied / unsupported. Timeout or unavailable continues
-        // // without coordinates. The server leaves any previous device fix as-is.
-        // const couldNotLocate = result.error?.permissionDenied === false;
-        // if (!result.coords && !isLocal && !couldNotLocate) {
-        //   this.errorMessage = result.error?.message || 'Location is required to sign in.';
-        //   return; // finally{} resets loading
-        // }
+        // Block only on denied / unsupported. Timeout or unavailable continues
+        // without coordinates. The server leaves any previous device fix as-is.
+        const couldNotLocate = result.error?.permissionDenied === false;
+        if (!result.coords && !isLocal && !couldNotLocate) {
+          this.errorMessage = result.error?.message || 'Location is required to sign in.';
+          return; // finally{} resets loading
+        }
 
-        // const coords = result.coords;
+        const coords = result.coords;
 
         const response = await api.post('/auth/login', {
           email: this.email,
           password: this.password,
-          // latitude: coords?.latitude ?? null,
-          // longitude: coords?.longitude ?? null,
-          // accuracy: coords?.accuracy ?? null,
-          // captured_at: coords?.capturedAt ?? null,
         });
 
         const token = response.data?.data?.token;
@@ -331,6 +329,26 @@ export default {
         const notificationPermission = await askLeadPushPermission(webPush);
 
         setAuthToken(token);
+
+        // Login does not store coordinates; auth/location does. keepalive lets
+        // the request finish after the redirect below, so sign-in never waits on it.
+        if (coords) {
+          fetch(`${getApiBaseUrl()}/auth/location`, {
+            method: 'POST',
+            keepalive: true,
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              accuracy: coords.accuracy,
+              captured_at: coords.capturedAt,
+            }),
+          }).catch(() => { /* ignore */ });
+        }
 
         const userData = response.data.data.user;
 
