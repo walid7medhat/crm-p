@@ -178,7 +178,9 @@ const defaultLeadEventTypeOptions = [
     { label: 'Revert', value: 'revert' },
     { label: 'Responsible Person Changed', value: 'assigned' },
     { label: 'Lead Updated', value: 'updated' },
-    { label: 'Lead Created', value: 'created' }
+    { label: 'Lead Created', value: 'created' },
+    { label: 'Leads Merged', value: 'merged' },
+    { label: 'Merged Into Lead', value: 'merged_into' }
 ]
 const resolvedEventTypeOptions = computed(() =>
     Array.isArray(props.eventTypeOptions) && props.eventTypeOptions.length

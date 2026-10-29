@@ -405,7 +405,9 @@ const getActionLabel = (action) => {
         'stage_changed': 'Status Changed',
         'assigned': 'Responsible Person Changed',
         'updated': 'Lead Updated',
-        'created': 'Lead Created'
+        'created': 'Lead Created',
+        'merged': 'Leads Merged',
+        'merged_into': 'Merged Into Lead'
     }
     return labels[action] || action
 }
@@ -522,6 +524,34 @@ onUnmounted(() => {
     window.removeEventListener('resize', onScrollOrResize)
 })
 
+const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const mergeLeadLabel = (lead) => {
+    if (!lead) return 'a lead'
+    const name = escapeHtml(lead.lead_name || 'Untitled lead')
+    return `<strong>${name}</strong> <span class="change-ref">#${escapeHtml(lead.lead_number || lead.id)}</span>`
+}
+
+/** "merged": which leads were merged in; "merged_into": which lead this one was merged into. */
+const formatMergeChanges = (changes) => {
+    const how = changes.merge_type === 'manual' ? 'Manual' : 'Automatic'
+    const tag = `<span class="change-tag">${how}</span>`
+    if (changes.action === 'merged_into') {
+        const primary = changes.primary_lead || (changes.primary_id ? { id: changes.primary_id } : null)
+        return `<span>Merged into ${mergeLeadLabel(primary)}</span> ${tag}`
+    }
+    const leads = Array.isArray(changes.merged_leads) && changes.merged_leads.length
+        ? changes.merged_leads
+        : (changes.merged_ids || []).map((id) => ({ id }))
+    const list = leads.map(mergeLeadLabel).join(', ')
+    return `<span>Merged in: ${list || '—'}</span> ${tag}`
+}
+
 // Transform API response
 const transformHistoryEntry = (entry) => {
     // Format date and time
@@ -573,8 +603,11 @@ const transformHistoryEntry = (entry) => {
         'stage_changed': 'Status Changed',
         'assigned': 'Responsible Person Changed',
         'updated': 'Lead Updated',
-        'created': 'Lead Created'
+        'created': 'Lead Created',
+        'merged': 'Leads Merged',
+        'merged_into': 'Merged Into Lead'
     }
+    const isMergeEvent = eventType === 'merged' || eventType === 'merged_into'
     const fieldLabels = {
         lead_name: 'Lead Name',
         lead_source: 'Source',
@@ -625,7 +658,9 @@ const transformHistoryEntry = (entry) => {
     let count = null
     
     if (changes) {
-        if (changes.old_stage && changes.new_stage) {
+        if (isMergeEvent) {
+            changesHtml = formatMergeChanges(changes)
+        } else if (changes.old_stage && changes.new_stage) {
             changesHtml = `<span class="change-old">${changes.old_stage}</span> <span class="change-arrow">→</span> <span class="change-new">${changes.new_stage}</span>`
             count = 3
         } else if (changes.old_person && changes.new_person) {
@@ -664,6 +699,8 @@ const transformHistoryEntry = (entry) => {
 
         if (user.name) {
             name = user.name
+        } else if (isMergeEvent) {
+            name = changes.merged_by_name ? escapeHtml(changes.merged_by_name) : 'System'
         } else {
             const responsePerson = entry.response_person || ''
             const source = entry.source || ''
@@ -1238,6 +1275,20 @@ onMounted(async () => {
     color: #9CA3AF;
     font-size: 14px;
     margin: 0 2px;
+}
+
+.changes-content :deep(.change-ref) {
+    color: #6B7280;
+    font-size: 12px;
+}
+
+.changes-content :deep(.change-tag) {
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), 0.12);
 }
 
 .changes-count {

@@ -124,9 +124,7 @@ class LeadMergeService
                 'merge_type'               => 'manual',
             ]);
 
-            LeadHistoryHelper::log($default->id, [
-                'action' => 'merged', 'merge_type' => 'manual', 'merged_ids' => $ids, 'merged_by' => $user->id,
-            ]);
+            LeadHistoryHelper::logMerge((int) $default->id, $ids, 'manual', (int) $user->id);
 
             return [
                 'default' => $default, 'merged_ids' => $ids,

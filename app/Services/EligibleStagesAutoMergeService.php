@@ -344,6 +344,8 @@ class EligibleStagesAutoMergeService
                             'action' => 'stage_changed',
                             'old_stage_id' => $fromStageId,
                             'new_stage_id' => $pool,
+                            'old_stage' => Stage::query()->whereKey($fromStageId)->value('name'),
+                            'new_stage' => Stage::query()->whereKey($pool)->value('name'),
                             'merge_type' => 'eligible_auto',
                             'note' => 'Primary moved to Lead Pool after automatic eligible-stage merge',
                         ], null);
@@ -664,11 +666,7 @@ class EligibleStagesAutoMergeService
             ]);
 
         if ($affected) {
-            LeadHistoryHelper::log($primary->id, [
-                'action' => 'merged',
-                'merge_type' => $mergeType,
-                'merged_ids' => $ids,
-            ], null);
+            LeadHistoryHelper::logMerge((int) $primary->id, $ids, $mergeType);
         }
             return (int) $affected;
 

@@ -2282,7 +2282,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         // ======================history =======================
         public function history(Request $request, $leadId)
     {
-        $lead=Lead::find($leadId);
+        // Merged leads keep their history (incl. "merged_into"), so look them up too.
+        $lead = Lead::withoutGlobalScope('notMerged')->find($leadId);
+        abort_unless($lead, 404);
         $query = LeadHistory::where('lead_id', $leadId)->whereNull('deal_id')
             ->with(['user:id,name,avatar', 'user.employeeProfile.designation']);
                 $user = auth()->user();
@@ -2317,7 +2319,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
 
                 if (! $isAdmin && ! $isManager) {
                     // السيلز: Updated و Stage Changed بس (ده بيشيل View و Created أوتوماتيك)
-                    $query->whereIn('changes->action', ['updated', 'stage_changed']);
+                    $query->whereIn('changes->action', ['updated', 'stage_changed', 'merged', 'merged_into']);
 
                     // بعد آخر Assign بس — سواء كان ده أول تعيين للّيد (مثلاً من Lead Pool، حيث
                     // old_person_id بيبقى null) أو Reassign من سيلز لسيلز. في الحالتين السيلز
@@ -2424,6 +2426,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 return $h;
             });
         }
+
+        $this->enrichMergeHistory($histories->getCollection());
 
         return ApiResponse::success([
             'items' => LeadHistoryResource::collection($histories),
@@ -2737,6 +2741,69 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     private function broadcastLeadUpdated(Lead $lead, string $actionType, ?array $changes = null): void
     {
         broadcast(new LeadUpdated($lead, $actionType, auth()->id(), $changes, 'crm'));
+    }
+
+    /**
+     * Readable merge history (in memory only): lead names for "merged" / "merged_into" rows,
+     * stage names for rows that only stored stage ids, and the user who ran a manual merge.
+     */
+    private function enrichMergeHistory($rows): void
+    {
+        $leadIds = [];
+        $stageIds = [];
+        $userIds = [];
+        foreach ($rows as $h) {
+            $c = is_array($h->changes) ? $h->changes : [];
+            foreach ((array) ($c['merged_ids'] ?? []) as $id) {
+                $leadIds[] = (int) $id;
+            }
+            if (! empty($c['primary_id'])) {
+                $leadIds[] = (int) $c['primary_id'];
+            }
+            foreach (['old_stage', 'new_stage'] as $key) {
+                if (empty($c[$key]) && ! empty($c[$key . '_id'])) {
+                    $stageIds[] = (int) $c[$key . '_id'];
+                }
+            }
+            if (! empty($c['merged_by'])) {
+                $userIds[] = (int) $c['merged_by'];
+            }
+        }
+        if ($leadIds === [] && $stageIds === [] && $userIds === []) {
+            return;
+        }
+
+        $leads = $leadIds === [] ? collect() : Lead::withoutGlobalScope('notMerged')->withTrashed()
+            ->whereIn('id', array_unique($leadIds))->get(['id', 'lead_name', 'lead_number'])->keyBy('id');
+        $stages = $stageIds === [] ? collect() : Stage::whereIn('id', array_unique($stageIds))->pluck('name', 'id');
+        $users = $userIds === [] ? collect() : User::whereIn('id', array_unique($userIds))->get()->keyBy('id');
+
+        $leadRef = fn (int $id) => [
+            'id' => $id,
+            'lead_name' => $leads->get($id)?->lead_name,
+            'lead_number' => $leads->get($id)?->lead_number,
+        ];
+
+        foreach ($rows as $h) {
+            $c = is_array($h->changes) ? $h->changes : [];
+            $action = $c['action'] ?? null;
+
+            if ($action === 'merged') {
+                $c['merged_leads'] = array_map($leadRef, array_map('intval', (array) ($c['merged_ids'] ?? [])));
+            } elseif ($action === 'merged_into' && ! empty($c['primary_id'])) {
+                $c['primary_lead'] = $leadRef((int) $c['primary_id']);
+            }
+            foreach (['old_stage', 'new_stage'] as $key) {
+                if (empty($c[$key]) && ! empty($c[$key . '_id'])) {
+                    $c[$key] = $stages[(int) $c[$key . '_id']] ?? null;
+                }
+            }
+            if (! empty($c['merged_by']) && $users->has((int) $c['merged_by'])) {
+                $c['merged_by_name'] = User::resolveDisplayName($users->get((int) $c['merged_by']));
+            }
+
+            $h->changes = $c;
+        }
     }
 
     /**
