@@ -640,13 +640,42 @@ async function handleBulkAssignTo(agent) {
   const ids = selection.selectedIds.value.map(Number).filter(Boolean)
   if (!ids.length) return
 
+  const leadLabel = ids.length === 1 ? 'lead' : 'leads'
+  const moveLabel = ids.length === 1 ? 'it' : 'them'
+  const agentName = String(agent.name || 'this agent')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
   const confirmed = await Swal.fire({
     title: 'Assign leads?',
-    text: `Assign ${ids.length} lead${ids.length === 1 ? '' : 's'} to ${agent.name} and move ${ids.length === 1 ? 'it' : 'them'} to Assigned?`,
-    icon: 'question',
+    iconHtml:
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
+    html: `
+      <p class="lpa-swal-text">
+        Assign <span class="lpa-swal-count">${ids.length}</span> ${leadLabel} to
+        <strong class="lpa-swal-agent">${agentName}</strong>
+        and move ${moveLabel} to <span class="lpa-swal-stage">Assigned</span>?
+      </p>
+    `,
     showCancelButton: true,
+    showCloseButton: true,
+    reverseButtons: true,
+    focusConfirm: false,
+    heightAuto: false,
     confirmButtonText: 'Assign',
     cancelButtonText: 'Cancel',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'lpa-swal-popup',
+      icon: 'lpa-swal-icon',
+      title: 'lpa-swal-title',
+      htmlContainer: 'lpa-swal-html',
+      actions: 'lpa-swal-actions',
+      confirmButton: 'lpa-swal-confirm',
+      cancelButton: 'lpa-swal-cancel',
+      closeButton: 'lpa-swal-close',
+    },
   })
   if (!confirmed.isConfirmed) return
 
@@ -1738,5 +1767,153 @@ defineExpose({
 @media (max-width: 768px) {
     .lead-pool-filterbar { gap: 6px; padding: 8px 10px; }
     .type-chip { gap: 4px; padding: 5px 10px; font-size: 12px; }
+}
+</style>
+
+<!-- Unscoped: SweetAlert mounts on body, outside this component. -->
+<style>
+.swal2-popup.lpa-swal-popup {
+  width: min(380px, 92vw) !important;
+  padding: 22px 20px 18px !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--color-border) !important;
+  background: var(--color-surface) !important;
+  font-family: Montserrat, Inter, system-ui, sans-serif !important;
+  box-shadow:
+    0 4px 6px rgba(var(--color-primary-rgb), 0.06),
+    0 24px 48px rgba(var(--color-primary-rgb), 0.2) !important;
+}
+
+.lpa-swal-popup .swal2-icon.lpa-swal-icon {
+  width: 48px !important;
+  height: 48px !important;
+  margin: 0 auto 12px !important;
+  border: none !important;
+  border-radius: 12px !important;
+  background: var(--gradient-primary) !important;
+  color: var(--color-on-primary) !important;
+  box-shadow: 0 6px 14px rgba(var(--color-primary-rgb), 0.28);
+}
+
+.lpa-swal-popup .swal2-icon.lpa-swal-icon .swal2-icon-content {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px !important;
+  color: var(--color-on-primary) !important;
+}
+
+.lpa-swal-popup .swal2-title.lpa-swal-title {
+  padding: 0 !important;
+  margin: 0 0 8px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary) !important;
+}
+
+.lpa-swal-popup .swal2-html-container.lpa-swal-html {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.lpa-swal-text {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.lpa-swal-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin: 0 1px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: -1px;
+}
+
+.lpa-swal-agent {
+  color: var(--color-primary-ink);
+  font-weight: 700;
+}
+
+.lpa-swal-stage {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lpa-swal-popup .swal2-actions.lpa-swal-actions {
+  margin: 18px 0 0 !important;
+  gap: 8px !important;
+  width: 100%;
+}
+
+.lpa-swal-popup .lpa-swal-confirm,
+.lpa-swal-popup .lpa-swal-cancel {
+  margin: 0 !important;
+  min-width: 96px;
+  padding: 8px 16px !important;
+  border-radius: 9px !important;
+  border: 0 !important;
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.lpa-swal-popup .lpa-swal-confirm {
+  color: var(--color-on-primary) !important;
+  background: var(--gradient-primary) !important;
+  box-shadow: 0 6px 14px rgba(var(--color-primary-rgb), 0.28);
+}
+
+.lpa-swal-popup .lpa-swal-confirm:hover {
+  background: var(--gradient-primary-hover) !important;
+}
+
+.lpa-swal-popup .lpa-swal-cancel {
+  color: var(--color-text-nav) !important;
+  background: var(--color-surface-muted) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.lpa-swal-popup .lpa-swal-cancel:hover {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary-ink) !important;
+}
+
+.lpa-swal-popup .swal2-close.lpa-swal-close {
+  width: 28px !important;
+  height: 28px !important;
+  top: 12px !important;
+  right: 12px !important;
+  border-radius: 8px !important;
+  font-size: 22px !important;
+  color: var(--color-text-muted) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lpa-swal-popup .swal2-close.lpa-swal-close:hover {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-text-primary) !important;
 }
 </style>
