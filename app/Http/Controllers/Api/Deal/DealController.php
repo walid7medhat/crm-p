@@ -28,6 +28,7 @@ use App\Helpers\ImageHelper;
 use App\Http\Requests\Deal\UpdatePropertyRequest;
 use App\Http\Resources\Deal\PropertyDocumentResource;
 use App\Models\DealProperty;
+use App\Support\DealCommissionDistribution;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Carbon\Carbon;
@@ -744,7 +745,7 @@ class DealController extends Controller
             DB::beginTransaction();
 
             // 1. تحديث الحقول الأساسية
-            $dealData = $request->except(['_token']);
+            $dealData = $request->except(['_token', 'commission_distribution']);
             
             $dealData = array_filter($dealData, function($value, $key) {
                 if (str_starts_with($key, 'buyer_') || 
@@ -759,6 +760,9 @@ class DealController extends Controller
             if (!empty($dealData)) {
                 $deal->update($dealData);
             }
+
+            DealCommissionDistribution::applyFromRequest($deal->fresh(), $request);
+            $deal->refresh();
 
             // 2. تحديث الـ Buyer
             $buyerData = [];
@@ -1026,6 +1030,11 @@ class DealController extends Controller
                 $changes['basic'] = $dealData;
             }
 
+            if (DealCommissionDistribution::applyFromRequest($deal->fresh(), $request)) {
+                $changes['commission_distribution'] = 'updated';
+                $deal->refresh();
+            }
+
             // 3. تحديث الـ Properties
             if ($request->has('properties')) {
                 $this->syncProperties($deal, $request->properties);
@@ -1223,6 +1232,10 @@ class DealController extends Controller
             if (!empty($updateData)) {
                 $deal->update($updateData);
             }
+
+            // Optional commission distribution (metadata only — does not affect base financial fields)
+            DealCommissionDistribution::applyFromRequest($deal->fresh(), $request);
+            $deal->refresh();
 
             // 2. تحديث الأطراف
             $this->updatePartiesFromRequest($deal, $request);

@@ -709,6 +709,9 @@
               <p class="info-value mb-0">{{ val(deal.deal_total_amount) }}</p>
             </div> 
           </div>
+          <div v-if="canManageCommissionDistribution" class="col-12">
+            <CommissionDistributionReadonly :distribution="deal.commission_distribution" />
+          </div>
           <!--<div class="col-md-6">-->
           <!--  <div class="info-group">-->
           <!--    <label class="info-label">Agent Share %</label>-->
@@ -731,6 +734,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
+import CommissionDistributionReadonly from './CommissionDistributionReadonly.vue'
 import { formatLanguageSelection } from '@/composables/useLanguageMultiSelect'
 import PropertyCardReadonly from './PropertyCardReadonly.vue'
 import AddPropertyForm from './AddPropertyForm.vue'
@@ -752,6 +756,18 @@ const props = defineProps({
 const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'refresh-deal'])
 const showInlineAddProperty = ref(false)
 const inlineAddPropertyEl = ref(null)
+
+const canManageCommissionDistribution = computed(() => {
+  try {
+    const raw = JSON.parse(localStorage.getItem('user') || '{}')
+    const roles = (raw?.roles || []).map((r) =>
+      String(typeof r === 'string' ? r : r?.name).toLowerCase()
+    )
+    return roles.includes('super_admin') || roles.includes('admin')
+  } catch {
+    return false
+  }
+})
 
 function openInlineAddProperty() {
   showInlineAddProperty.value = true

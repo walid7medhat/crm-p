@@ -1421,36 +1421,66 @@
                 class="section-content"
                 @focusout="onCollapsibleSectionFocusOut('financials', $event)"
               >
-                <div class="form-card p-3 radius-12">
-                  <div class="row g-3">
-                    <div class="col-md-6" v-if="shouldShowField('deal_total_amount')">
-                      <label class="form-label-custom">Deal amount <span v-if="isRequiredField('deal_total_amount')" class="text-danger">*</span></label>
-                      <div class="input-group">
-                        <input
-                          :value="displayedDealAmount"
-                          type="text"
-                          inputmode="numeric"
-                          autocomplete="off"
-                          placeholder="Enter deal amount"
-                          class="form-control custom-input compact-placeholder-field"
-                          :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }"
-                          @keypress="onMoneyKeypress"
-                          @input="(e) => onDealAmountInput(e.currentTarget.value)"
-                        />
-                        <span class="input-group-text">AED</span>
+                <div class="form-card p-3 radius-12 deal-financials-shell">
+                  <div class="df-base">
+                    <div class="df-base__intro">
+                      <div class="df-base__eyebrow">Deal value</div>
+                      <p class="df-base__help">
+                        {{ canManageCommissionDistribution
+                          ? 'Enter the deal amount and commission rate. Distribution below is optional.'
+                          : 'Enter the deal amount and commission rate.' }}
+                      </p>
+                    </div>
+                    <div class="df-base__grid">
+                      <div class="df-base__field" v-if="shouldShowField('deal_total_amount')">
+                        <label class="df-base__label">
+                          Deal amount
+                          <span v-if="isRequiredField('deal_total_amount')" class="text-danger">*</span>
+                        </label>
+                        <div class="df-base__affix" :class="{ 'is-invalid': isFieldInvalid('deal_total_amount') }">
+                          <input
+                            :value="displayedDealAmount"
+                            type="text"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="0"
+                            class="df-base__input"
+                            @keypress="onMoneyKeypress"
+                            @input="(e) => onDealAmountInput(e.currentTarget.value)"
+                          />
+                          <span class="df-base__suffix">AED</span>
+                        </div>
+                      </div>
+                      <div class="df-base__field" v-if="shouldShowField('deal_commission')">
+                        <label class="df-base__label">
+                          Deal commission
+                          <span v-if="isRequiredField('deal_commission')" class="text-danger">*</span>
+                        </label>
+                        <div class="df-base__affix" :class="{ 'is-invalid': isFieldInvalid('deal_commission') }">
+                          <input
+                            v-model="formData.deal_commission"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="e.g. 5"
+                            class="df-base__input"
+                          />
+                          <span class="df-base__suffix">%</span>
+                        </div>
                       </div>
                     </div>
-                    <div class="col-md-6" v-if="shouldShowField('deal_commission')">
-                      <label class="form-label-custom">Deal Commission % <span v-if="isRequiredField('deal_commission')" class="text-danger">*</span></label>
-                      <b-form-input
-                        v-model="formData.deal_commission"
-                        type="number"
-                        placeholder="Enter Commission %"
-                        class="custom-input compact-placeholder-field"
-                        :class="{ 'is-invalid': isFieldInvalid('deal_commission') }"
-                      />
-                    </div>
                   </div>
+
+                  <CommissionDistributionSection
+                    v-if="canManageCommissionDistribution && (shouldShowField('deal_total_amount') || shouldShowField('deal_commission'))"
+                    :model-value="formData.commission_distribution"
+                    :deal-amount="formData.deal_total_amount"
+                    :deal-commission="formData.deal_commission"
+                    :users="users"
+                    :default-user-id="formData.responsible_person_id || currentDealData?.responsible_person_id"
+                    @update:model-value="(v) => { formData.commission_distribution = v }"
+                  />
                 </div>
               </div>
             </section>
@@ -1489,6 +1519,8 @@ import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
+import CommissionDistributionSection from './CommissionDistributionSection.vue'
+import './deal-financials.css'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import api from '@/plugins/axios'
@@ -2209,6 +2241,14 @@ function getCurrentUserForListings() {
   }
   return currentUser.value
 }
+
+const canManageCommissionDistribution = computed(() => {
+  const raw = getCurrentUserForListings() || {}
+  const roles = (raw?.roles || []).map((r) =>
+    String(typeof r === 'string' ? r : r?.name).toLowerCase()
+  )
+  return roles.includes('super_admin') || roles.includes('admin')
+})
 
 // `keepListingId` (the property's own already-assigned unit) is kept selectable even
 // though it's attached to this deal — otherwise the backend's not_in_deals filter would
@@ -3316,6 +3356,12 @@ async function initializeForm() {
     })
     
     formData.value = { ...initial }
+
+    if (deal?.commission_distribution && typeof deal.commission_distribution === 'object') {
+      formData.value.commission_distribution = deal.commission_distribution
+    } else if (deal?.metadata?.commission_distribution) {
+      formData.value.commission_distribution = deal.metadata.commission_distribution
+    }
     
     if (formData.value.deal_total_amount !== null && formData.value.deal_total_amount !== undefined && formData.value.deal_total_amount !== '') {
       const asStr = String(formData.value.deal_total_amount).replace(/,/g, '')
@@ -4725,6 +4771,7 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
     'deal_name',
     'deal_total_amount',
     'deal_commission',
+    'commission_distribution',
     'property_link',
     'property_reference',
     'lost_reason',
@@ -4756,9 +4803,26 @@ console.log('Unresolved keys:', unresolvedMissingKeys.value)
         }
         return
       }
+      if (key === 'commission_distribution') {
+        if (canManageCommissionDistribution.value) {
+          payload[key] = formData.value[key]
+        }
+        return
+      }
       payload[key] = formData.value[key]
     }
   })
+
+  // Admin / super_admin only — never send for other roles (preserves existing metadata)
+  if (
+    canManageCommissionDistribution.value &&
+    formData.value.commission_distribution &&
+    typeof formData.value.commission_distribution === 'object'
+  ) {
+    payload.commission_distribution = formData.value.commission_distribution
+  } else {
+    delete payload.commission_distribution
+  }
   
   // Collect documents
   const docRefs = [

@@ -156,7 +156,20 @@ export function useStageTransition() {
         return
       }
       if (value !== null && value !== undefined && value !== '') {
-        formData.append(key, value)
+        if (key === 'commission_distribution' && typeof value === 'object') {
+          // Admin / super_admin only — other roles must not overwrite metadata
+          try {
+            const raw = JSON.parse(localStorage.getItem('user') || '{}')
+            const roles = (raw?.roles || []).map((r) =>
+              String(typeof r === 'string' ? r : r?.name).toLowerCase()
+            )
+            if (roles.includes('super_admin') || roles.includes('admin')) {
+              formData.append(key, JSON.stringify(value))
+            }
+          } catch (_) { /* skip */ }
+        } else {
+          formData.append(key, value)
+        }
       }
     })
 
