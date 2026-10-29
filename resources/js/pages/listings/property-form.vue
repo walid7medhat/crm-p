@@ -5200,6 +5200,15 @@ body {
   text-transform: uppercase;
 }
 
+/* .section clips its children, which cut off the v-select dropdowns in the owner modal */
+.owner-modal .section {
+  overflow: visible;
+}
+
+.owner-modal .section-title {
+  border-radius: 13px 13px 0 0;
+}
+
 .section-title::before {
   content: '';
   width: 6px;

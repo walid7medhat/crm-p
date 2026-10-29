@@ -4996,6 +4996,11 @@ onUnmounted(() => {
 .owner-modal .v-select {
   width: 100%;
 }
+
+/* owner modal v-selects use append-to-body; vue-select's default z-index (1000) sits under the modal (1050) */
+:global(body:has(.owner-modal) > .vs__dropdown-menu) {
+  z-index: 1060;
+}
 .modal-body {
   padding: 30px;
   top:30px;
