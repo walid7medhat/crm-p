@@ -278,7 +278,7 @@ class LeadPoolAssignmentService
 
         return $agents->map(fn (User $agent) => [
             'id' => $agent->id,
-            'name' => $agent->display_name ?: $agent->name,
+            'name' => User::resolveDisplayName($agent),
             'email' => $agent->email,
             'avatar' => $agent->avatar,
             'branch' => $agent->admin_parent?->name,
