@@ -53,8 +53,8 @@ class LeadSourceFilter
     private const MICRO_WEBSITE_COLUMNS = ['lead_source', 'source_information', 'more_information'];
 
     private const GROUPS = [
-        'website'   => ['website', 'Oiaproperties.com', 'Allproperties.ae'],
-        'portal'    => ['portal', 'propertyfinder', 'bayut'],
+        'website'   => ['website', 'Oiaproperties.com', 'Allproperties.ae', 'webform'],
+        'portal'    => ['portal', 'propertyfinder', 'bayut', 'dubizzle'],
         'whatsapp'  => ['whatsapp', 'Whatsapp Oia Properties', 'Whatsapp All Properties'],
         // "Meta" in the search UI — Meta leads are stored under both spellings.
         'lead form' => ['Lead Form', 'Meta Ads - Lead Form', 'Social Media-Facebook', 'Social Media - LinkedIn','Meta - Comments and Direct Messages'],
@@ -67,6 +67,7 @@ class LeadSourceFilter
     private const PORTAL_PATTERNS = [
         'propertyfinder' => ['%property%finder%'],
         'bayut'          => ['%bayut%'],
+        'dubizzle'       => ['%dubizzle%'],
     ];
 
     /**
@@ -76,6 +77,13 @@ class LeadSourceFilter
     private const SOURCE_PATTERNS = [
         'snapchat' => ['%snapchat%', '%snap chat%'],
         'tiktok'   => ['%tiktok%', '%tik tok%', '%tik-tok%'],
+        // "Social Media-Facebook", "Social media- Facebook", ...
+        'social media-facebook' => ['social%media%facebook%'],
+        // "WEBFORM", plus Bitrix web-form codes such as "WEBFORM_15".
+        'webform'    => ['webform%'],
+        'self leads' => ['self%lead%'],
+        // "OTHER", "Others ( Comment below )", "Others (Comment Below)".
+        'others'     => ['other', 'others', 'others%comment%below%'],
     ];
 
     public const META_CHILDREN = [

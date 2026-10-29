@@ -3505,6 +3505,8 @@ const sourceOptions = ref([
     // Matched by name on the API side (any lead_source containing it) — App\Support\LeadSourceFilter.
     { value: 'snapchat', text: 'Snapchat' },
     { value: 'tiktok', text: 'TikTok' },
+    { value: 'self leads', text: 'Self Leads' },
+    { value: 'others', text: 'Others' },
 
 ])
 
@@ -3522,6 +3524,8 @@ const websiteSourceOptions = ref([
     { value: 'Allproperties.ae', text: 'Allproperties.ae' },
 
     { value: 'Oiaproperties.com', text: 'Oiaproperties.com' },
+
+    { value: 'webform', text: 'Web Form' },
 
 ])
 
@@ -3556,6 +3560,8 @@ const portalSourceOptions = ref([
 
     { value: 'bayut', text: 'Bayut' },
 
+    { value: 'dubizzle', text: 'Dubizzle' },
+
 ])
 
 
@@ -3566,8 +3572,9 @@ const websiteSourceOptionsForMulti = computed(() =>
 
 )
 const metaSourceOptions = ref([
-    { value: 'Social Media-Facebook', text: 'Social Media-Facebook' },
-    { value: 'Social Media - LinkedIn', text: 'Social Media - LinkedIn' },
+    { value: 'Meta Ads - Lead Form', text: 'Meta Ads - Lead Form' },
+    { value: 'Social Media-Facebook', text: 'Facebook' },
+    { value: 'Social Media - LinkedIn', text: 'LinkedIn' },
 ])
 // ================= Source: ONE multi-select with parents + their children =================
 // form.source is a single list that can mix parents ("website" = every website) and
