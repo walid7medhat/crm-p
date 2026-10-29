@@ -50,40 +50,15 @@ class LeadResource extends JsonResource
 
         $leadIds = $collection->pluck('id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
 
-        // Duplicate phone ids, ignoring formatting (+, spaces…) — limit 200 per lead.
-        $digitsList = $collection->map(fn ($l) => Lead::phoneDigits($l->work_phone))
-            ->filter()->unique()->values()->all();
-        $idsByPhone = [];
-        if ($digitsList !== []) {
-            $rows = Lead::query()
-                ->whereIn('work_phone_digits', $digitsList)
-                ->get(['id', 'work_phone_digits']);
-
-            foreach ($rows as $row) {
-                $idsByPhone[$row->work_phone_digits][] = (int) $row->id;
-            }
-        }
+        // Duplicate ids: same phone (ignoring formatting) or same email — limit 200 per lead.
+        $duplicateMap = Lead::duplicateIdsMap($collection);
         foreach ($collection as $lead) {
-            $phone = Lead::phoneDigits($lead->work_phone);
-            if ($phone === '' || empty($idsByPhone[$phone])) {
-                static::$duplicateIdsByLeadId[(int) $lead->id] = [];
-                continue;
-            }
-            $ids = [];
-            foreach ($idsByPhone[$phone] as $otherId) {
-                if ($otherId === (int) $lead->id) {
-                    continue;
-                }
-                $ids[] = $otherId;
-                if (count($ids) >= 200) {
-                    break;
-                }
-            }
-            static::$duplicateIdsByLeadId[(int) $lead->id] = $ids;
+            static::$duplicateIdsByLeadId[(int) $lead->id] = $duplicateMap[(int) $lead->id] ?? [];
         }
 
         // Service (blacklist) duplicates — same OR phone/email rule as hasServiceDuplicate(),
         // including exclusion of the lead itself (id != current).
+        $phones = $collection->pluck('work_phone')->filter()->unique()->values()->all();
         $emails = $collection->pluck('email')->filter()->unique()->values()->all();
         $blacklistIdsByPhone = [];
         $blacklistIdsByEmail = [];
@@ -689,17 +664,7 @@ protected function resolveOriginalBranch(): ?string
                 return static::$duplicateIdsByLeadId[$leadId];
             }
 
-            $digits = Lead::phoneDigits($this->work_phone);
-            if ($digits === '') {
-                return [];
-            }
-
-            return Lead::query()
-                ->where('id', '!=', $this->id)
-                ->where('work_phone_digits', $digits)
-                ->limit(200)
-                ->pluck('id')
-                ->all();
+            return Lead::duplicateIdsMap([$this->resource])[$leadId] ?? [];
         }
 
     protected function hasServiceDuplicate(): bool

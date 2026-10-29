@@ -857,6 +857,7 @@ class LeadController extends Controller
 
                 $old = $lead->getAttributes();
                 $oldPhoneDigits = Lead::phoneDigits($old['work_phone'] ?? null);
+                $oldEmail = Lead::normalizeEmail($old['email'] ?? null);
 
                 $lead->update($leadData);
 
@@ -931,7 +932,7 @@ class LeadController extends Controller
                     ]
                 );
 
-                $autoMergeMeta = $this->autoMergeMetaAfterPhoneDigitChange($lead, $oldPhoneDigits);
+                $autoMergeMeta = $this->autoMergeMetaAfterContactChange($lead, $oldPhoneDigits, $oldEmail);
 
                 $broadcastPayload = !empty($changes) && isset($changes['action']) && $changes['action'] === 'assigned'
                     ? array_merge($changes, $autoMergeMeta ?? [])
@@ -2248,9 +2249,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             );
 
         $items = collect(DuplicateLeadResource::collection($duplicates)->resolve())
-            ->map(function ($item) use ($byId, $viewer, $reasons, $eligibleIds, $groupCanMerge) {
+            ->map(function ($item) use ($lead, $byId, $viewer, $reasons, $eligibleIds, $groupCanMerge) {
                 $dup     = $byId->get($item['id']);
                 $canView = (bool) ($dup && $viewer->canViewLead($dup));
+
+                $item['match_by'] = $dup ? $lead->matchReasonsWith($dup) : [];
 
                 $item['can_view']  = $canView;
                 $item['can_merge'] = $canView && $eligibleIds->has($item['id']);
@@ -2767,9 +2770,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
     }
 
     /**
-     * Rule B / Rule A after a real work_phone digit change (formatting-only = no-op).
+     * Rule B / Rule A after a real work_phone digit or email change (formatting/case-only = no-op).
      */
-    private function autoMergeMetaAfterPhoneDigitChange(Lead $lead, string $oldPhoneDigits): ?array
+    private function autoMergeMetaAfterContactChange(Lead $lead, string $oldPhoneDigits, string $oldEmail): ?array
     {
         if (\App\Services\EligibleStagesAutoMergeService::isRunning()) {
             return null;
@@ -2780,8 +2783,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             return null;
         }
 
-        $newDigits = Lead::phoneDigits($fresh->work_phone);
-        if ($oldPhoneDigits === $newDigits) {
+        if ($oldPhoneDigits === Lead::phoneDigits($fresh->work_phone)
+            && $oldEmail === Lead::normalizeEmail($fresh->email)) {
             return null;
         }
 
@@ -2835,33 +2838,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
      */
     private function leadPoolDuplicateNosByLeadId($leads): array
     {
-        $digitsList = $leads->map(fn ($lead) => Lead::phoneDigits($lead->work_phone))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        $map = Lead::duplicateIdsMap($leads);
 
         $counts = [];
         foreach ($leads as $lead) {
-            $counts[(int) $lead->id] = 0;
-        }
-
-        if ($digitsList === []) {
-            return $counts;
-        }
-
-        $totals = Lead::query()
-            ->select('work_phone_digits', \DB::raw('COUNT(*) as cnt'))
-            ->whereIn('work_phone_digits', $digitsList)
-            ->groupBy('work_phone_digits')
-            ->pluck('cnt', 'work_phone_digits');
-
-        foreach ($leads as $lead) {
-            $digits = Lead::phoneDigits($lead->work_phone);
-            if ($digits === '') {
-                continue;
-            }
-            $counts[(int) $lead->id] = max(0, (int) ($totals[$digits] ?? 0) - 1);
+            $counts[(int) $lead->id] = count($map[(int) $lead->id] ?? []);
         }
 
         return $counts;

@@ -13,7 +13,11 @@ return [
      * Dubai and any other branch are excluded. Manual merge is unaffected.
      */
     'auto_merge_branch_keys' => ['abu dhabi'],
-    // config/lead_merge.php
+    /**
+     * Emails never used to match duplicates (shared placeholders such as "no@email.com").
+     * Without this, unrelated leads with the same placeholder would be duplicates and auto-merged.
+     */
+    'ignored_duplicate_emails' => array_filter(array_map('trim', explode(',', (string) env('LEAD_MERGE_IGNORED_EMAILS', '')))),
     'qualified_stage_id' => env('LEAD_MERGE_QUALIFIED_STAGE_ID',6),
     'contacted_stage_id' => env('LEAD_MERGE_CONTACTED_STAGE_ID',5),
     'assigned_stage_id'  => env('LEAD_MERGE_ASSIGNED_STAGE_ID',4),

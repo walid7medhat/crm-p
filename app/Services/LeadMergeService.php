@@ -13,8 +13,8 @@ class LeadMergeService
     /** The lead + its visible duplicates (merged leads are excluded by the global scope). */
     public function group(Lead $lead, User $user): Collection
         {
-            $digits = Lead::phoneDigits($lead->work_phone);
-            if ($digits === '') return collect([$lead]);
+            $ids = Lead::matchingContactIds(Lead::phoneDigits($lead->work_phone), Lead::normalizeEmail($lead->email));
+            if ($ids === []) return collect([$lead]);
 
             $byBranch = (bool) config('lead_merge.group_by_branch');
             $key = '';
@@ -25,7 +25,7 @@ class LeadMergeService
 
             return Lead::query()
                 ->with(['stage:id,name', 'responsiblePerson:id,name,display_name,avatar,parent_id', 'addedBy', 'propertyType:id,name', 'area:id,name'])
-                ->where('work_phone_digits', $digits)
+                ->whereIn('id', array_values(array_unique(array_merge($ids, [(int) $lead->id]))))
                 ->orderBy('id')->get()
                 ->filter(function ($l) use ($lead, $user, $byBranch, $key) {
                     if ($l->id === $lead->id) return true;
@@ -40,7 +40,6 @@ class LeadMergeService
     {
         $pool     = (int) config('lead_merge.lead_pool_stage_id');
         $allowed  = [(int) config('lead_merge.unqualified_stage_id'), (int) config('lead_merge.lost_stage_id')];
-        $digits   = Lead::phoneDigits($default->work_phone);
         $byBranch = (bool) config('lead_merge.group_by_branch');
 
         $defKey = '';
@@ -57,7 +56,7 @@ class LeadMergeService
             if ($byBranch) $l->loadMissing(['responsiblePerson', 'addedBy']);
 
             $reason = match (true) {
-                $digits === '' || Lead::phoneDigits($l->work_phone) !== $digits
+                ! $default->sharesContactWith($l)
                     => 'Not a duplicate of the default lead.',
                 $byBranch && ! $default->sameBranchAs($l)
                      => 'Lead belongs to a different branch.',

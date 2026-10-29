@@ -503,18 +503,133 @@ public function activitiesWithTrashed()
         return mb_substr(str_replace(['+', ' ', '-', '(', ')', '.', '/'], '', (string) $phone), 0, 64);
     }
 
-    /** Duplicates = other leads with the same phone, ignoring formatting (+971…, spaces…). */
-     public function getDuplicateLeadsAttribute()
-        {
-            $digits = static::phoneDigits($this->work_phone);
-            if ($digits === '') {
-                return collect();
-            }
-
-            return Lead::where('id', '!=', $this->id)
-                ->where('work_phone_digits', $digits)
-                ->get();
+    /**
+     * Email key for duplicate matching: trimmed + lowercased; '' when missing, not an email,
+     * or listed in lead_merge.ignored_duplicate_emails (shared placeholders).
+     */
+    public static function normalizeEmail(?string $email): string
+    {
+        $email = mb_strtolower(trim((string) $email));
+        if ($email === '' || ! str_contains($email, '@')) {
+            return '';
         }
+
+        $ignored = array_map(
+            static fn ($value) => mb_strtolower(trim((string) $value)),
+            (array) config('lead_merge.ignored_duplicate_emails', [])
+        );
+
+        return in_array($email, $ignored, true) ? '' : $email;
+    }
+
+    /**
+     * Ids of leads with the same primary phone digits OR the same email.
+     * Two single-index lookups merged in PHP; one OR query would scan the table.
+     *
+     * @return int[]
+     */
+    public static function matchingContactIds(string $digits, string $email, ?int $limit = null): array
+    {
+        $ids = collect();
+        if ($digits !== '') {
+            $ids = $ids->merge(static::query()->where('work_phone_digits', $digits)->pluck('id'));
+        }
+        if ($email !== '') {
+            // Column collation is case-insensitive, so this also matches mixed-case stored emails.
+            $ids = $ids->merge(static::query()->where('email', $email)->pluck('id'));
+        }
+
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->sort()->values();
+
+        return ($limit ? $ids->take($limit) : $ids)->all();
+    }
+
+    /**
+     * leadId => ids of other leads sharing its phone or email, for a whole page in two queries.
+     *
+     * @param  iterable<int, Lead>  $leads
+     * @return array<int, int[]>
+     */
+    public static function duplicateIdsMap($leads, int $limit = 200): array
+    {
+        $leads = collect($leads);
+        $digitsList = $leads->map(fn ($l) => static::phoneDigits($l->work_phone))->filter()->unique()->values()->all();
+        $emailList = $leads->map(fn ($l) => static::normalizeEmail($l->email))->filter()->unique()->values()->all();
+
+        $byDigits = [];
+        if ($digitsList !== []) {
+            foreach (static::query()->whereIn('work_phone_digits', $digitsList)->get(['id', 'work_phone_digits']) as $row) {
+                $byDigits[(string) $row->work_phone_digits][] = (int) $row->id;
+            }
+        }
+
+        $byEmail = [];
+        if ($emailList !== []) {
+            foreach (static::query()->whereIn('email', $emailList)->get(['id', 'email']) as $row) {
+                $key = static::normalizeEmail($row->email);
+                if ($key !== '') {
+                    $byEmail[$key][] = (int) $row->id;
+                }
+            }
+        }
+
+        $map = [];
+        foreach ($leads as $lead) {
+            $id = (int) $lead->id;
+            $digits = static::phoneDigits($lead->work_phone);
+            $email = static::normalizeEmail($lead->email);
+
+            $ids = array_merge(
+                $digits !== '' ? ($byDigits[$digits] ?? []) : [],
+                $email !== '' ? ($byEmail[$email] ?? []) : []
+            );
+            $ids = array_values(array_diff(array_unique($ids), [$id]));
+            if ($ids !== []) {
+                $map[$id] = array_slice($ids, 0, $limit);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Which contact details this lead shares with $other.
+     *
+     * @return string[] subset of ['phone', 'email']
+     */
+    public function matchReasonsWith(Lead $other): array
+    {
+        $reasons = [];
+
+        $digits = static::phoneDigits($this->work_phone);
+        if ($digits !== '' && $digits === static::phoneDigits($other->work_phone)) {
+            $reasons[] = 'phone';
+        }
+
+        $email = static::normalizeEmail($this->email);
+        if ($email !== '' && $email === static::normalizeEmail($other->email)) {
+            $reasons[] = 'email';
+        }
+
+        return $reasons;
+    }
+
+    /** True when both leads share the primary phone digits or the email. */
+    public function sharesContactWith(Lead $other): bool
+    {
+        return $this->matchReasonsWith($other) !== [];
+    }
+
+    /** Duplicates = other leads with the same phone (ignoring formatting) or the same email. */
+    public function getDuplicateLeadsAttribute()
+    {
+        $ids = array_values(array_diff(
+            static::matchingContactIds(static::phoneDigits($this->work_phone), static::normalizeEmail($this->email)),
+            [(int) $this->id]
+        ));
+
+        return $ids === [] ? collect() : Lead::query()->whereIn('id', $ids)->orderBy('id')->get();
+    }
 
         public function convertedToDeal()
         {

@@ -56,9 +56,11 @@ class LeadMergeController extends Controller
         return $full ? $v : mb_substr($v, 0, 3).str_repeat('★', max(0, mb_strlen($v) - 3));
     }
 
-    private function slim(Lead $l): array
+    /** @param Lead|null $ref lead to compare against for match_by (phone / email) */
+    private function slim(Lead $l, ?Lead $ref = null): array
     {
         return [
+            'match_by' => $ref && (int) $ref->id !== (int) $l->id ? $ref->matchReasonsWith($l) : [],
             'id' => $l->id, 'lead_name' => $l->lead_name, 'work_phone' => $l->work_phone, 'email' => $l->email,
             'stage_id' => $l->stage_id, 'stage_name' => $l->stage?->name,
             'is_pool' => (int) $l->stage_id === (int) config('lead_merge.lead_pool_stage_id'),
@@ -78,7 +80,7 @@ class LeadMergeController extends Controller
 
             // Lead Pool leads are merged automatically (daily) and never picked manually.
             $leads = $all->reject(fn ($l) => (int) $l->stage_id === $pool)
-                ->map(fn ($l) => $this->slim($l))
+                ->map(fn ($l) => $this->slim($l, $lead))
                 ->values();
 
             return ApiResponse::success([
@@ -99,8 +101,8 @@ class LeadMergeController extends Controller
 
         return ApiResponse::success([
             'default'    => $this->slim($default->loadMissing(['stage:id,name', 'responsiblePerson:id,name', 'propertyType:id,name', 'area:id,name'])),
-            'eligible'   => $e->map(fn ($l) => $this->slim($l))->values(),
-            'ineligible' => $i->map(fn ($x) => $this->slim($x['lead']) + ['reason' => $x['reason']])->values(),
+            'eligible'   => $e->map(fn ($l) => $this->slim($l, $default))->values(),
+            'ineligible' => $i->map(fn ($x) => $this->slim($x['lead'], $default) + ['reason' => $x['reason']])->values(),
         ], 'OK');
     }
 
@@ -164,6 +166,7 @@ class LeadMergeController extends Controller
                     'created_at' => $m->created_at,
                     'merged_at' => $m->merged_at,
                     'merge_type' => $m->merge_type,
+                    'match_by' => $lead->matchReasonsWith($m),
                     'responsible_person' => $m->responsiblePerson ? [
                         'id' => $m->responsiblePerson->id,
                         'name' => User::resolveDisplayName($m->responsiblePerson),

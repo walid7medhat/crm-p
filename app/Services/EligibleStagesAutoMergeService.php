@@ -131,12 +131,10 @@ class EligibleStagesAutoMergeService
             return [];
         }
 
-        $digits = Lead::phoneDigits($lead->work_phone);
-        if ($digits === '') {
-            return [];
-        }
-
-        return $this->summarizeMergeMap($this->mergeEligibleDigits($digits))['merged_ids'];
+        return $this->summarizeMergeMap($this->mergeEligibleContact(
+            Lead::phoneDigits($lead->work_phone),
+            Lead::normalizeEmail($lead->email)
+        ))['merged_ids'];
     }
 
     /**
@@ -171,12 +169,10 @@ class EligibleStagesAutoMergeService
             return $empty;
         }
 
-        $digits = Lead::phoneDigits($lead->work_phone);
-        if ($digits === '') {
-            return $empty;
-        }
-
-        return $this->summarizeMergeMap($this->mergeEligibleDigits($digits));
+        return $this->summarizeMergeMap($this->mergeEligibleContact(
+            Lead::phoneDigits($lead->work_phone),
+            Lead::normalizeEmail($lead->email)
+        ));
     }
 
     /**
@@ -212,11 +208,13 @@ class EligibleStagesAutoMergeService
      * the newest eligible lead becomes primary and is moved to Lead Pool, but only when there
      * are at least two eligible leads to merge together.
      *
+     * Leads match on the same primary phone digits OR the same email.
+     *
      * @return array<int, int[]> Primary ID => merged eligible lead IDs
      */
-    public function mergeEligibleDigits(string $digits): array
+    public function mergeEligibleContact(string $digits, string $email = ''): array
     {
-        if ($digits === '' || self::$running) {
+        if (($digits === '' && $email === '') || self::$running) {
             return [];
         }
 
@@ -231,9 +229,14 @@ class EligibleStagesAutoMergeService
         $mergeEvents = [];
         self::$running = true;
         try {
-            DB::transaction(function () use ($digits, $eligibleIds, $pool, $mainPriorities, &$result,&$mergeEvents) {
+            DB::transaction(function () use ($digits, $email, $eligibleIds, $pool, $mainPriorities, &$result, &$mergeEvents) {
+                $contactIds = Lead::matchingContactIds($digits, $email);
+                if ($contactIds === []) {
+                    return;
+                }
+
                 $eligibleLeads = Lead::query()
-                    ->where('work_phone_digits', $digits)
+                    ->whereIn('id', $contactIds)
                     ->whereIn('stage_id', $eligibleIds)
                     ->whereNull('converted_to_deal_id')
                     ->whereNull('merged_into_lead_id')
@@ -260,7 +263,7 @@ class EligibleStagesAutoMergeService
 
                     if ($mainPriorities !== []) {
                         $mainCandidates = Lead::query()
-                            ->where('work_phone_digits', $digits)
+                            ->whereIn('id', $contactIds)
                             ->whereIn('stage_id', array_keys($mainPriorities))
                             ->whereNull('converted_to_deal_id')
                             ->whereNull('merged_into_lead_id')
@@ -384,7 +387,8 @@ class EligibleStagesAutoMergeService
         }
 
         $digits = Lead::phoneDigits($newLead->work_phone);
-        if ($digits === '') {
+        $email = Lead::normalizeEmail($newLead->email);
+        if ($digits === '' && $email === '') {
             return [];
         }
 
@@ -393,7 +397,7 @@ class EligibleStagesAutoMergeService
 
         self::$running = true;
         try {
-            DB::transaction(function () use ($newLead, $digits, $eligibleIds, &$mergedIds, &$mergeEvents) {
+            DB::transaction(function () use ($newLead, $digits, $email, $eligibleIds, &$mergedIds, &$mergeEvents) {
                 $primary = Lead::query()
                     ->where('id', $newLead->id)
                     ->whereNull('merged_into_lead_id')
@@ -410,7 +414,7 @@ class EligibleStagesAutoMergeService
                 }
 
                 $candidates = Lead::query()
-                    ->where('work_phone_digits', $digits)
+                    ->whereIn('id', Lead::matchingContactIds($digits, $email))
                     ->whereIn('stage_id', $eligibleIds)
                     ->where('id', '!=', $primary->id)
                     ->whereNull('converted_to_deal_id')
@@ -456,7 +460,7 @@ class EligibleStagesAutoMergeService
     }
 
     /**
-     * Daily/backfill processing for all phone numbers represented in eligible stages.
+     * Daily/backfill processing for every phone number and email represented in eligible stages.
      * Also catches a single eligible lead that has a matching main-stage primary.
      */
     public function mergeAllEligibleDuplicates(): int
@@ -468,20 +472,31 @@ class EligibleStagesAutoMergeService
             return 0;
         }
 
-        Lead::query()
+        $base = fn () => Lead::query()
             ->whereIn('stage_id', $eligibleIds)
-            ->where('work_phone_digits', '!=', '')
             ->whereNull('converted_to_deal_id')
-            ->whereNull('merged_into_lead_id')
-            ->select('work_phone_digits')
+            ->whereNull('merged_into_lead_id');
+
+        $count = function (array $map) use (&$merged) {
+            foreach ($map as $ids) {
+                $merged += count($ids);
+            }
+        };
+
+        $base()->where('work_phone_digits', '!=', '')
             ->distinct()
             ->orderBy('work_phone_digits')
             ->pluck('work_phone_digits')
-            ->each(function ($digits) use (&$merged) {
-                foreach ($this->mergeEligibleDigits((string) $digits) as $ids) {
-                    $merged += count($ids);
-                }
-            });
+            ->each(fn ($digits) => $count($this->mergeEligibleContact((string) $digits)));
+
+        $base()->whereNotNull('email')->where('email', '!=', '')
+            ->distinct()
+            ->pluck('email')
+            ->map(fn ($email) => Lead::normalizeEmail($email))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->each(fn ($email) => $count($this->mergeEligibleContact('', $email)));
 
         return $merged;
     }

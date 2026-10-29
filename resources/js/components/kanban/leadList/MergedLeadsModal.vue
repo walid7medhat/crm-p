@@ -29,8 +29,9 @@
 
                 <article v-for="item in items" :key="item.id" class="mlp-row">
                     <strong class="mlp-row__name">{{ item.lead_name || 'Untitled lead' }}</strong>
-                    <div v-if="item.stage_name || ownerName(item) || (isAdmin && item.merged_at)" class="mlp-row__meta">
+                    <div v-if="item.stage_name || item.match_by?.length || ownerName(item) || (isAdmin && item.merged_at)" class="mlp-row__meta">
                         <span v-if="item.stage_name" class="mlp-chip">{{ item.stage_name }}</span>
+                        <MatchByChips :match-by="item.match_by" />
                         <span v-if="ownerName(item)">{{ ownerName(item) }}</span>
                         <span v-if="isAdmin && item.merged_at">Merged {{ fmt(item.merged_at) }}</span>
                     </div>
@@ -43,6 +44,7 @@
 <script setup>
 import { ref, watch, nextTick, onUnmounted } from 'vue'
 import api, { getApiErrorMessage } from '@/plugins/axios'
+import MatchByChips from './MatchByChips.vue'
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },

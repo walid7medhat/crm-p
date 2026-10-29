@@ -132,32 +132,7 @@ class KanbanLeadCardResource extends JsonResource
      */
     public static function duplicateIdsByLeadId($leads): array
     {
-        $leads = collect($leads);
-        $digitsList = $leads->map(fn ($l) => Lead::phoneDigits($l->work_phone))
-            ->filter()->unique()->values()->all();
-        if ($digitsList === []) {
-            return [];
-        }
-
-        $idsByDigits = Lead::query()
-            ->whereIn('work_phone_digits', $digitsList)
-            ->get(['id', 'work_phone_digits'])
-            ->groupBy('work_phone_digits')
-            ->map(fn ($rows) => $rows->pluck('id')->map(fn ($id) => (int) $id)->all());
-
-        $map = [];
-        foreach ($leads as $lead) {
-            $digits = Lead::phoneDigits($lead->work_phone);
-            if ($digits === '') {
-                continue;
-            }
-            $others = array_values(array_diff($idsByDigits->get($digits, []), [(int) $lead->id]));
-            if ($others) {
-                $map[(int) $lead->id] = $others;
-            }
-        }
-
-        return $map;
+        return Lead::duplicateIdsMap($leads);
     }
 
     public static function clearKanbanMeta(): void
@@ -459,18 +434,8 @@ class KanbanLeadCardResource extends JsonResource
         }
 
         // Fallback: no bulk meta was set (e.g. resource used outside the kanban board),
-        // so fall back to a per-lead query (indexed work_phone_digits column).
-        $digits = Lead::phoneDigits($this->work_phone);
-        if ($digits === '') {
-            return [];
-        }
-
-        return Lead::query()
-            ->where('id', '!=', $this->id)
-            ->where('work_phone_digits', $digits)
-            ->limit(200)
-            ->pluck('id')
-            ->all();
+        // so fall back to a per-lead lookup (indexed phone digits / email).
+        return Lead::duplicateIdsMap([$this->resource])[$leadId] ?? [];
     }
 
     protected function hasServiceDuplicate(): bool

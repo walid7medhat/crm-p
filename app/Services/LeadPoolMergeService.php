@@ -12,6 +12,6 @@ class LeadPoolMergeService
     /** @return array<int,int[]> default_id => merged ids */
     public function mergeDigits(string $digits): array
     {
-        return $this->auto->mergeEligibleDigits($digits);
+        return $this->auto->mergeEligibleContact($digits);
     }
 }

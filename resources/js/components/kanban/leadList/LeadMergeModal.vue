@@ -68,6 +68,7 @@
                                 <div class="lm-card__title-row">
                                     <strong>#{{ l.id }} · {{ l.lead_name || 'Untitled' }}</strong>
                                     <span v-if="defaultId === l.id" class="lm-pill lm-pill--primary">Primary</span>
+                                    <MatchByChips :match-by="l.match_by" />
                                 </div>
                                 <div class="lm-facts">
                                     <span class="lm-fact">
@@ -160,6 +161,7 @@
                         >
                             <strong>#{{ l.id }} · {{ l.lead_name }}</strong>
                             <span>{{ l.work_phone || '—' }} · {{ l.stage_name }}</span>
+                            <MatchByChips :match-by="l.match_by" />
                         </div>
 
                         <template v-if="preview.ineligible.length">
@@ -171,6 +173,7 @@
                             >
                                 <strong>#{{ l.id }} · {{ l.lead_name }}</strong>
                                 <span>{{ l.work_phone || '—' }} · {{ l.stage_name }}</span>
+                                <MatchByChips :match-by="l.match_by" />
                                 <em>{{ l.reason }}</em>
                             </div>
                         </template>
@@ -257,6 +260,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import api from '@/plugins/axios'
+import MatchByChips from './MatchByChips.vue'
 
 const props = defineProps({
     modelValue: Boolean,

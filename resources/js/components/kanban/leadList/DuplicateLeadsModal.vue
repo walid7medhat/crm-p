@@ -72,8 +72,16 @@
                             </div>
 
                             <!-- Stage + merge eligibility -->
+                            <div class="dup-labels">
+                                <div class="info-row">
+                                    <span class="info-label">Stage</span>
+                                    <span class="info-value"><span class="stage-chip">{{ lead.stage_name || '—' }}</span></span>
+                                </div>
+                                <div v-if="lead.match_by?.length" class="info-row dup-match">
+                                    <MatchByChips :match-by="lead.match_by" />
+                                </div>
+                            </div>
                             <div class="stage-line">
-                                <span class="stage-chip">{{ lead.stage_name || '—' }}</span>
                                 <span v-if="lead.merge_blocked_reason" class="blocked-reason">
                                     <iconify-icon icon="lucide:ban"></iconify-icon>
                                     {{ lead.merge_blocked_reason }}
@@ -122,6 +130,7 @@
 <script setup>
 import { ref,computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
+import MatchByChips from './MatchByChips.vue'
 
 
 
@@ -668,6 +677,9 @@ onUnmounted(() => {
     background: #FEF3C7; color: #92400E;
     font-size: 11px; font-weight: 600;
 }
+.dup-labels { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 8px; }
+.dup-match { justify-content: flex-end; }
+.stage-line:empty { display: none; }
 .stage-line { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
 .stage-chip {
     display: inline-block; padding: 2px 10px; border-radius: 999px;
