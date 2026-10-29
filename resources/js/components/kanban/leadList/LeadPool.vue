@@ -66,7 +66,7 @@
                 <button
                     type="button"
                     class="lead-pool-toolbar__btn lead-pool-toolbar__btn--assign"
-                    :disabled="!selection.hasSelection || isAssigning"
+                    :disabled="!selection.hasSelection.value || isAssigning"
                     @click="handleBulkAssignToMe"
                 >
                     <iconify-icon
@@ -74,6 +74,17 @@
                         :class="{ 'lead-pool-toolbar__spin': isAssigning }"
                     />
                     <span>{{ isAssigning ? 'Assigning…' : 'Assign To Me' }}</span>
+                </button>
+
+                <button
+                    v-if="canAssignToOthers"
+                    type="button"
+                    class="lead-pool-toolbar__btn lead-pool-toolbar__btn--assign-to"
+                    :disabled="!selection.hasSelection.value || isAssigning"
+                    @click="openAssignToModal"
+                >
+                    <iconify-icon icon="lucide:user-plus" />
+                    <span>Assign To…</span>
                 </button>
             </template>
         </div>
@@ -342,6 +353,13 @@
         @hover-leave="mergedHoverLeave"
     />
     
+    <LeadPoolAssignModal
+        v-if="canAssignToOthers"
+        v-model="showAssignToModal"
+        :count="selection.count.value"
+        @select="handleBulkAssignTo"
+    />
+
     <ProfilePopup
         v-if="showProfilePopup && profileUserId"
         v-model="showProfilePopup"
@@ -359,6 +377,7 @@ import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
 import ProfilePopup from '../shared/ProfilePopup.vue'
 import LeadPoolCard from './LeadPoolCard.vue'
+import LeadPoolAssignModal from './LeadPoolAssignModal.vue'
 import LeadSourceMark from './LeadSourceMark.vue'
 import { useLeadPoolSelection } from './composables/useLeadPoolSelection.js'
 import { useMergedLeadsPopover } from './composables/useMergedLeadsPopover.js'
@@ -470,7 +489,7 @@ const personHoverHideTimer = ref(null)
 const selectMode = ref(false)
 const orderedLeadIds = computed(() => leads.value.map((l) => l.id))
 const selection = useLeadPoolSelection(() => orderedLeadIds.value)
-const { isAssigning, assignToMe } = useLeadPoolBulkActions()
+const { isAssigning, assignToMe, assignTo } = useLeadPoolBulkActions()
 const assignmentStatus = ref({
     today_count: 0,
     daily_limit: 40,
@@ -495,6 +514,11 @@ const isAdminOrSuper = isSuperAdmin || currentUserRoles.includes('admin')
 
 // Duplicate badge: super_admin, admin, branch_admin.
 const canSeeDuplicates = isAdminOrSuper || currentUserRoles.includes('branch_admin')
+
+// "Assign To…" (pick an agent): super_admin and admin — which agents they may pick is
+// decided by the server (LeadPoolAssignmentService::agentsQuery).
+const canAssignToOthers = isAdminOrSuper
+const showAssignToModal = ref(false)
 
 function enterSelectMode() {
   selectMode.value = true
@@ -533,6 +557,7 @@ async function handleBulkAssignToMe() {
   const remainingInHour = assignmentStatus.value?.remaining_in_hour
   if (typeof remainingInHour === 'number' && ids.length > remainingInHour) {
     const status = assignmentStatus.value
+    const roundSize = status?.batch_limit ?? 10
     let msg
     if (remainingInHour > 0) {
       msg = `You can assign only ${remainingInHour} more lead(s) before the one-hour break.`
@@ -540,8 +565,8 @@ async function handleBulkAssignToMe() {
       const at = status?.next_available_at ? new Date(status.next_available_at) : null
       const minutes = at ? Math.max(1, Math.ceil((at.getTime() - Date.now()) / 60000)) : null
       msg = at
-        ? `You have assigned 5 leads. You can assign more leads at ${at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} (in ${minutes} minutes).`
-        : 'You have assigned 5 leads. Please wait one hour.'
+        ? `You have assigned ${roundSize} leads. You can assign more leads at ${at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} (in ${minutes} minutes).`
+        : `You have assigned ${roundSize} leads. Please wait one hour.`
     }
     window.$showNotification?.(msg, 'warning')
     return
@@ -604,7 +629,60 @@ async function handleBulkAssignToMe() {
   }
 }
 
+function openAssignToModal() {
+  if (!selection.hasSelection.value || isAssigning.value) return
+  showAssignToModal.value = true
+}
+
+/** super_admin / admin: assign the selected pool leads to the agent picked in LeadPoolAssignModal. */
+async function handleBulkAssignTo(agent) {
+  if (isAssigning.value || !agent?.id) return
+  const ids = selection.selectedIds.value.map(Number).filter(Boolean)
+  if (!ids.length) return
+
+  const confirmed = await Swal.fire({
+    title: 'Assign leads?',
+    text: `Assign ${ids.length} lead${ids.length === 1 ? '' : 's'} to ${agent.name} and move ${ids.length === 1 ? 'it' : 'them'} to Assigned?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Assign',
+    cancelButtonText: 'Cancel',
+  })
+  if (!confirmed.isConfirmed) return
+
+  showAssignToModal.value = false
+  window.$hideNotification?.()
+
+  try {
+    const { ok, failed } = await assignTo(ids, agent.id)
+    if (ok.length) {
+      window.$showNotification?.(
+        `${ok.length} lead${ok.length === 1 ? '' : 's'} assigned to ${agent.name}`,
+        'success',
+      )
+      exitSelectMode()
+      await fetchLeadPool({ force: true })
+      await fetchTypeCounts()
+    }
+    if (failed.length) {
+      const backendMessage = failed.find((item) => item?.message && item.message.trim())?.message
+      const msg =
+        backendMessage ||
+        (failed.length === 1 ? 'The lead could not be assigned.' : `${failed.length} leads could not be assigned.`)
+      const prefix = ok.length ? `${failed.length} not assigned: ` : ''
+      window.$showNotification?.(prefix + msg, ok.length ? 'warning' : 'error')
+      if (!ok.length) await fetchLeadPool({ force: true })
+    }
+  } catch (err) {
+    window.$showNotification?.(err?.message || 'Assignment failed', 'error')
+  }
+}
+
 function onLeadPoolKeydown(event) {
+  if (showAssignToModal.value) {
+    if (event.key === 'Escape') showAssignToModal.value = false
+    return
+  }
   const tag = event.target?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) {
     return
@@ -1193,7 +1271,18 @@ defineExpose({
     border-color: transparent;
 }
 
-.lead-pool-toolbar__btn--assign:disabled {
+.lead-pool-toolbar__btn--assign-to {
+    color: #0B0736;
+    background: #fff;
+    border-color: rgba(var(--color-primary-rgb), 0.45);
+}
+
+.lead-pool-toolbar__btn--assign-to:hover:not(:disabled) {
+    background: #f6f2f9;
+}
+
+.lead-pool-toolbar__btn--assign:disabled,
+.lead-pool-toolbar__btn--assign-to:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }

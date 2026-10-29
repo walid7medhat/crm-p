@@ -93,18 +93,32 @@ export function useLeadPoolBulkActions() {
    * @returns {Promise<{ ok: number[], failed: { id: number, message: string }[] }>}
    */
   async function assignToMe(leadIds) {
-    if (isAssigning.value) {
-      return { ok: [], failed: [] }
-    }
-
     const userId = getCurrentUserId()
     if (!userId) {
       throw new Error('You must be logged in to assign leads.')
     }
+    return assignLeads(leadIds, userId, true)
+  }
+
+  /**
+   * super_admin / admin: assign leads to an agent and move them to Assigned. No limits —
+   * any number of leads (sent 10 at a time so a big selection doesn't flood the server).
+   */
+  async function assignTo(leadIds, agentId) {
+    if (!agentId) {
+      throw new Error('Choose who to assign the leads to.')
+    }
+    return assignLeads(leadIds, Number(agentId), false)
+  }
+
+  async function assignLeads(leadIds, userId, limited = true) {
+    if (isAssigning.value) {
+      return { ok: [], failed: [] }
+    }
     if (!leadIds?.length) {
       return { ok: [], failed: [] }
     }
-    if (leadIds.length > 10) {
+    if (limited && leadIds.length > 10) {
         throw new Error(
             'You can assign a maximum of 10 leads at a time.'
         )
@@ -122,19 +136,21 @@ export function useLeadPoolBulkActions() {
         throw new Error('Assigned stage is not configured. Set it in Lead Assignment settings.')
       }
 
-      const results = await Promise.allSettled(
-        leadIds.map((id) =>
-          api.post(
-            `/leads/${id}/change-stage`,
-            {
-              stage_id: assignedStageId,
-              responsible_person_id: userId,
-              lead_pool_batch_id: batchId,
-            },
-            { timeout: ASSIGN_REQUEST_TIMEOUT_MS },
-          ),
-        ),
-      )
+      const send = (id) =>
+        api.post(
+          `/leads/${id}/change-stage`,
+          {
+            stage_id: assignedStageId,
+            responsible_person_id: userId,
+            lead_pool_batch_id: batchId,
+          },
+          { timeout: ASSIGN_REQUEST_TIMEOUT_MS },
+        )
+
+      const results = []
+      for (let i = 0; i < leadIds.length; i += 10) {
+        results.push(...(await Promise.allSettled(leadIds.slice(i, i + 10).map(send))))
+      }
 
       results.forEach((result, index) => {
         const id = leadIds[index]
@@ -167,6 +183,7 @@ export function useLeadPoolBulkActions() {
   return {
     isAssigning,
     assignToMe,
+    assignTo,
     getCurrentUserId,
     resolveAssignedStageId,
   }

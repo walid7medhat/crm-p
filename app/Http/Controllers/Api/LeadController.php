@@ -1671,6 +1671,26 @@ class LeadController extends Controller
     }
 
     /**
+     * Lead Pool "Assign To…" picker: super_admin and users 30 / 33 → every agent, other
+     * admins → their own team; each agent with their Lead Pool limits status.
+     *
+     *   GET /api/lead-pool/assignable-agents?search=
+     */
+    public function leadPoolAssignableAgents(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        $service = app(LeadPoolAssignmentService::class);
+        if (! $service->canAssignToOthers($user)) {
+            return ApiResponse::error('Only super admin and admin can assign Lead Pool leads to others', 403);
+        }
+
+        return ApiResponse::success(
+            $service->assignableAgents($user, trim((string) $request->query('search', '')) ?: null),
+            'Assignable agents'
+        );
+    }
+
+    /**
      * Change lead stage
      */
 
@@ -1775,35 +1795,51 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             
         }
 
-        // Lead Pool → assign to me: hide prior comments/activities/history from sales (soft delete).
-        // Admin and super_admin still see them via withTrashed on Lead relations and history().
-        $assigningSelfFromLeadPool = $this->isLeadPoolStage($oldStage)
+        // Lead Pool → assign to me / assign to an agent: hide prior comments/activities/history
+        // from sales (soft delete). Admin and super_admin still see them via withTrashed on
+        // Lead relations and history().
+        $assigningFromLeadPool = $this->isLeadPoolStage($oldStage)
             && ! $this->isLeadPoolStage($newStage)
-            && $request->filled('responsible_person_id')
-            && (int) $request->responsible_person_id === (int) $user->id;
-            $leadPoolBatchId = $request->input('lead_pool_batch_id');
+            && $request->filled('responsible_person_id');
+        $poolAssigneeId = (int) $request->input('responsible_person_id');
+        $leadPoolBatchId = $request->input('lead_pool_batch_id');
 
-                if ($assigningSelfFromLeadPool) {
-                    try {
-                        app(LeadPoolAssignmentService::class)->validateBatch(
-                            $user->id,
-                            1,
-                            $leadPoolBatchId
-                        );
-                    } catch (\RuntimeException $e) {
-                        return ApiResponse::error(
-                            $e->getMessage(),
-                            422
-                        );
-                    }
+        $assigningSelfFromLeadPool = $assigningFromLeadPool && $poolAssigneeId === (int) $user->id;
 
+        if ($assigningFromLeadPool) {
+            $poolService = app(LeadPoolAssignmentService::class);
+
+            if ($assigningSelfFromLeadPool) {
+                // Assign to me: per-user limits (round / cooldown / daily).
+                try {
+                    $poolService->validateBatch(
+                        $user->id,
+                        1,
+                        $leadPoolBatchId
+                    );
+                } catch (\RuntimeException $e) {
+                    return ApiResponse::error(
+                        $e->getMessage(),
+                        422
+                    );
                 }
+            } else {
+                // Assign to someone else: super_admin / admin only, no limits, and only to an
+                // agent they may pick (super_admin & users 30 / 33 → anyone, other admins →
+                // own team).
+                if (! $poolService->canAssignToOthers($user)) {
+                    return ApiResponse::error('Only super admin and admin can assign Lead Pool leads to someone else', 403);
+                }
+                if (! $poolService->canAssignTo($user, $poolAssigneeId)) {
+                    return ApiResponse::error('You can only assign Lead Pool leads to agents in your team', 403);
+                }
+            }
+        }
             $assigningNewPerson = !empty($request->responsible_person_id)
                 && (int) $request->responsible_person_id !== (int) $lead->responsible_person_id;
-        if ($assigningSelfFromLeadPool) {
+        if ($assigningFromLeadPool) {
             $this->softDeleteLeadPriorEngagement($lead->id);
         }
-        $poolMarker = $assigningSelfFromLeadPool ? ['from_lead_pool' => true] : [];
         if($newStage->order == 2 && !is_null($lead->revert)){
             $lead->update([
                 'revert' => null,
@@ -1825,7 +1861,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'old_person_id' => $responsiblePerson?->id,
                     'old_person' => $responsiblePerson?->name,
                     'new_person' => $responsiblePerson?->name,
-                    'from_lead_pool' => $assigningSelfFromLeadPool,
+                    'from_lead_pool' => $assigningFromLeadPool,
                 ], 
             );
         }
@@ -1915,7 +1951,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'action' => 'activity_created',
                     'id' => $activity->id,
                     'title' => $activity->title,
-                    'from_lead_pool' => $assigningSelfFromLeadPool,
+                    'from_lead_pool' => $assigningFromLeadPool,
                 ]
             , );
         } elseif ($request->reason) {
@@ -1967,7 +2003,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     'old_person_id' => $oldPerson?->id,
                     'old_person' => $oldPerson?->name,
                     'new_person' => $newPerson?->name,
-                    'from_lead_pool' => $assigningSelfFromLeadPool,
+                    'from_lead_pool' => $assigningFromLeadPool,
                 ], 
             );
         }
@@ -1981,7 +2017,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 'new_stage' => $newStage->name,
                 'old_stage_id' => $oldStage->id,
                 'new_stage_id' => $newStage->id,
-                'from_lead_pool' => $assigningSelfFromLeadPool,
+                'from_lead_pool' => $assigningFromLeadPool,
             ] + ($this->isLeadPoolStage($newStage) && ! $this->isLeadPoolStage($oldStage)
                 // Who owned it when it entered the pool — they must not see it in the pool.
                 ? ['old_person_id' => $old['responsible_person_id'] ?? null]
@@ -1995,7 +2031,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 [
                     'action' => 'updated',
                     'fields' => $fields,
-                    'from_lead_pool' => $assigningSelfFromLeadPool,
+                    'from_lead_pool' => $assigningFromLeadPool,
                 ]
             );
         }
@@ -2017,6 +2053,8 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         } else {
             $this->broadcastLeadUpdated($lead, 'stage_changed', $broadcastChanges);
         }
+        // Only Assign To Me counts toward the Lead Pool limits; an admin's assignment doesn't
+        // use up the agent's own quota.
         if ($assigningSelfFromLeadPool) {
             app(LeadPoolAssignmentService::class)->createAssignment(
                 $user->id,

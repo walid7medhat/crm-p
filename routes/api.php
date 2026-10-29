@@ -534,6 +534,7 @@ Route::middleware('jwt.auth')->group(function () {
                 'Assignment status'
             );
         });
+        Route::get('/lead-pool/assignable-agents', [LeadController::class, 'leadPoolAssignableAgents']);
     // === Bitrix24 sync (admin-only, batched) ===
     Route::post('/leads/bitrix24/sync', [Bitrix24SyncController::class, 'syncBatch']);
     Route::post('/leads/bitrix24/fetch/{bitrixId}', [Bitrix24SyncController::class, 'fetchOne']);
