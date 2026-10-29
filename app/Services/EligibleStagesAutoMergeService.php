@@ -485,7 +485,7 @@ class EligibleStagesAutoMergeService
         }
 
         $startedAt = microtime(true);
-        $this->mergeLog('Daily merge started');
+        $this->mergeLog('Scheduled merge started');
 
         $groups = 0;
         $errors = 0;
@@ -519,7 +519,7 @@ class EligibleStagesAutoMergeService
             return $email === '' ? [] : $this->mergeEligibleContact('', $email);
         });
 
-        $this->mergeLog('Daily merge finished', [
+        $this->mergeLog('Scheduled merge finished', [
             'merged_leads' => $merged,
             'groups' => $groups,
             'errors' => $errors,
