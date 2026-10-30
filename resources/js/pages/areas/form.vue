@@ -8,7 +8,7 @@
             ]" 
         />
 
-        <div class="card">
+        <div class="card area-form">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{{ isEditMode ? 'Edit Area' : 'Add Area' }}</h5>
                 <button class="btn btn-outline-secondary" @click="$router.back()">
@@ -24,7 +24,7 @@
                             <!-- Edit Mode - Show Current Path -->
                             <div v-if="isEditMode" class="mb-4">
                                 <label class="form-label">Current Path</label>
-                                <div class="border rounded p-3 bg-light">
+                                <div class="area-path border rounded p-3">
                                     <div class="d-flex align-items-center flex-wrap gap-2">
                                         <span v-if="selectedCountry" class="badge bg-primary">
                                             <iconify-icon icon="lucide:globe" class="me-1"></iconify-icon>
@@ -244,8 +244,8 @@
 
                             <!-- Name Field -->
                             <div class="mb-4">
-                                <label class="form-label d-flex gap-4">
-                                 <div>{{!isEditMode?'Add New':'update' }} {{ getFinalLevelLabel }} <span class="text-danger">*</span></div> 
+                                <div class="form-label name-label-row d-flex align-items-center flex-wrap gap-3">
+                                 <div>{{!isEditMode?'Add New':'update' }} {{ getFinalLevelLabel }} <span class="text-danger">*</span></div>
                                     <div class="form-check" v-if="!isEditMode && shouldShowProjectCheckbox">
                                         <input 
                                             type="checkbox" 
@@ -261,18 +261,58 @@
                                             <!--</small>-->
                                         </label>
                                     </div>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    class="form-control" 
-                                    v-model="areaForm.name" 
-                                    :class="{'is-invalid': errors.name}"
-                                    :placeholder="`Enter ${getFinalLevelLabel.toLowerCase()} name`"
-                                    autofocus>
-                                <div class="invalid-feedback" v-if="errors.name">
-                                    {{ errors.name[0] }}
+                                    <button
+                                        v-if="!isEditMode"
+                                        type="button"
+                                        class="btn add-name-btn ms-auto"
+                                        :disabled="loading"
+                                        @click="addNameRow()">
+                                        <iconify-icon icon="lucide:plus"></iconify-icon>
+                                        Add another
+                                    </button>
                                 </div>
-                                <small class="text-muted">
+                                <template v-if="isEditMode">
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        v-model="areaForm.name"
+                                        :class="{'is-invalid': errors.name}"
+                                        :placeholder="`Enter ${getFinalLevelLabel.toLowerCase()} name`"
+                                        autofocus>
+                                    <div class="invalid-feedback" v-if="errors.name">
+                                        {{ errors.name[0] }}
+                                    </div>
+                                </template>
+                                <!-- Create mode: several names under the same parent in one submit -->
+                                <template v-else>
+                                    <div v-for="(row, index) in newNames" :key="row.key" class="mb-2">
+                                        <div class="d-flex gap-2">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                v-model="row.name"
+                                                :ref="el => { if (el) nameInputs[index] = el }"
+                                                :class="{'is-invalid': row.error}"
+                                                :placeholder="`Enter ${getFinalLevelLabel.toLowerCase()} name`"
+                                                :disabled="loading"
+                                                @keydown.enter.prevent="addNameRow(index)"
+                                                autofocus>
+                                            <button
+                                                v-if="newNames.length > 1"
+                                                type="button"
+                                                class="btn btn-outline-danger"
+                                                title="Remove"
+                                                :disabled="loading"
+                                                @click="removeNameRow(index)">
+                                                <iconify-icon icon="lucide:x"></iconify-icon>
+                                            </button>
+                                        </div>
+                                        <div class="invalid-feedback" v-if="row.error">
+                                            {{ row.error }}
+                                        </div>
+                                    </div>
+                                </template>
+                                <small class="text-muted d-block mt-1">
                                     {{ getFinalLevelDescription }}
                                 </small>
                             </div>
@@ -295,7 +335,7 @@
                                     </span>
                                     <span v-else>
                                         <iconify-icon icon="lucide:save" class="me-2"></iconify-icon>
-                                        {{ isEditMode ? 'Update' : 'Create' }}
+                                        {{ isEditMode ? 'Update' : (filledNames.length > 1 ? `Create ${filledNames.length}` : 'Create') }}
                                     </span>
                                 </button>
                             </div>
@@ -308,7 +348,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/plugins/axios";
 import vSelect from "vue-select";
@@ -367,6 +407,24 @@ export default {
             parent_id: null,
             parent_name: null
         });
+
+        // Create mode: one row per name, all saved under the same parent
+        let nameRowKey = 0;
+        const makeNameRow = (name = '') => ({ key: ++nameRowKey, name, error: '' });
+        const newNames = ref([makeNameRow()]);
+        const nameInputs = ref([]);
+        const filledNames = computed(() => newNames.value.filter(row => row.name?.trim()));
+
+        const addNameRow = (afterIndex = null) => {
+            const index = afterIndex === null ? newNames.value.length : afterIndex + 1;
+            newNames.value.splice(index, 0, makeNameRow());
+            nextTick(() => nameInputs.value[index]?.focus());
+        };
+
+        const removeNameRow = (index) => {
+            newNames.value.splice(index, 1);
+            nameInputs.value = [];
+        };
 
         // UAE ID (assuming it's 1, you might need to adjust this)
         const UAE_ID = 1;
@@ -577,8 +635,8 @@ export default {
 
         // Computed: Form validity
         const isFormValid = computed(() => {
-            if (!areaForm.value.name?.trim()) return false;
-            if (isEditMode.value) return true;
+            if (isEditMode.value) return !!areaForm.value.name?.trim();
+            if (!filledNames.value.length) return false;
             if (shouldShowTypeSelection.value && !selectedType.value) return false;
             return true;
         });
@@ -937,6 +995,8 @@ export default {
 
                 if (!isEditMode.value) {
                     areaForm.value.type = determineType.value;
+                    await createAreas();
+                    return;
                 }
 
                 if (!areaForm.value.name?.trim()) {
@@ -994,6 +1054,65 @@ export default {
             }
         };
 
+        // Create mode: save every filled name under the same parent/type. Rows that fail
+        // stay in the form with their error; the rest are removed.
+        const createAreas = async () => {
+            const rows = filledNames.value;
+            if (!rows.length) {
+                showNotification("Please enter area name", "error");
+                return;
+            }
+
+            const type = areaForm.value.type;
+            const parentId = type === 'country' ? null : determineParentId.value;
+            const failed = [];
+
+            for (const row of rows) {
+                row.error = '';
+                const submitData = { name: row.name.trim(), type, parent_id: parentId };
+                if (createAsProject.value) {
+                    submitData.create_project = true;
+                }
+                try {
+                    await api.post("/listings/areas", submitData);
+                } catch (error) {
+                    console.error(`Error saving area "${submitData.name}":`, error);
+                    const fieldErrors = error.response?.data?.errors;
+                    row.error = fieldErrors?.name?.[0]
+                        || (fieldErrors && Object.values(fieldErrors)[0]?.[0])
+                        || error.response?.data?.message
+                        || 'Failed to save.';
+                    failed.push(row);
+                }
+            }
+
+            const createdCount = rows.length - failed.length;
+            const label = formatType(type);
+
+            if (!failed.length) {
+                let successMessage = createdCount > 1
+                    ? `${createdCount} ${label} items created successfully!`
+                    : "Area created successfully!";
+                if (createAsProject.value) {
+                    successMessage += " Projects were created too; you can edit them from the Projects section.";
+                }
+                showNotification(successMessage, "success");
+                setTimeout(() => {
+                    router.push('/areas');
+                }, 1000);
+                return;
+            }
+
+            newNames.value = failed;
+            nameInputs.value = [];
+            showNotification(
+                createdCount
+                    ? `${createdCount} created, ${failed.length} failed. Fix the highlighted names and try again.`
+                    : "Please check the form for errors.",
+                "error"
+            );
+        };
+
         // Helper: Show notification
         const showNotification = (message, type = 'info') => {
             if (window.$showNotification) {
@@ -1030,6 +1149,11 @@ export default {
             loadingClusters,
             loadingBuildings,
             areaForm,
+            newNames,
+            nameInputs,
+            filledNames,
+            addNameRow,
+            removeNameRow,
             errors,
             countries,
             cities,
@@ -1131,5 +1255,279 @@ export default {
     border-color: #b6effb;
     color: #055160;
     border-radius: 0.375rem;
+}
+
+/* ============ Theme ============ */
+.area-form {
+    border: 1px solid var(--color-primary-border);
+    border-radius: 14px;
+    overflow: visible;
+}
+
+.area-form .card-header {
+    background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
+    border-bottom: 1px solid var(--color-primary-border);
+    border-radius: 14px 14px 0 0;
+    padding: 14px 20px;
+}
+
+.area-form .card-title {
+    color: var(--color-primary-ink);
+    font-weight: 700;
+}
+
+.area-form .form-label {
+    color: var(--color-primary-ink);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.area-form .form-control {
+    min-height: 42px;
+    border-radius: 8px;
+    border-color: var(--color-primary-border);
+}
+
+.area-form .form-control:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.area-form .form-control.is-invalid {
+    border-color: #dc3545;
+}
+
+/* v-select */
+.area-form .v-select {
+    --vs-border-radius: 8px;
+    --vs-border-color: var(--color-primary-border);
+    --vs-dropdown-option--active-bg: var(--color-primary);
+    --vs-dropdown-option--active-color: #ffffff;
+    --vs-selected-color: var(--color-primary-ink);
+    --vs-actions-padding: 4px 8px 0 4px;
+}
+
+.area-form :deep(.vs__dropdown-toggle) {
+    min-height: 42px;
+    background: #ffffff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.area-form :deep(.vs--open .vs__dropdown-toggle) {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.area-form :deep(.vs__open-indicator),
+.area-form :deep(.vs__clear) {
+    fill: var(--color-primary);
+}
+
+.area-form :deep(.vs__dropdown-menu) {
+    margin-top: 4px;
+    padding: 6px;
+    border: 1px solid var(--color-primary-border);
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(var(--color-primary-rgb), 0.16);
+}
+
+.area-form :deep(.vs__dropdown-option) {
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: var(--color-primary-ink);
+}
+
+/* icon + text on one row (the Iconify script swaps <iconify-icon> for an <svg>) */
+.area-form :deep(.vs__dropdown-option > div) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.3;
+}
+
+.area-form :deep(.vs__dropdown-option > div > iconify-icon),
+.area-form :deep(.vs__dropdown-option > div > svg) {
+    display: inline-flex;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    margin: 0 !important;
+    border-radius: 8px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary) !important;
+    box-sizing: border-box;
+}
+
+.area-form :deep(.vs__dropdown-option--highlight > div > iconify-icon),
+.area-form :deep(.vs__dropdown-option--highlight > div > svg) {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff !important;
+}
+
+.area-form :deep(.vs__dropdown-option--selected) {
+    background: var(--color-primary-soft);
+    font-weight: 600;
+}
+
+.area-form :deep(.vs--disabled .vs__dropdown-toggle) {
+    background: var(--color-primary-soft);
+}
+
+/* radios / checkbox */
+.area-form .form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.area-form .form-check-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.area-form .form-check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.area-form .form-check-label :deep(iconify-icon),
+.area-form .form-check-label :deep(svg) {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    margin: 0 !important;
+    color: var(--color-primary) !important;
+}
+
+/* buttons: icon and label on one row */
+.area-form .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.area-form .btn > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.area-form .btn :deep(iconify-icon),
+.area-form .btn :deep(svg) {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    margin: 0 !important;
+}
+
+/* name field header: title · project checkbox · Add another */
+.name-label-row {
+    margin-bottom: 10px;
+}
+
+.name-label-row .form-check {
+    margin: 0;
+}
+
+.area-form .add-name-btn {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px dashed var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.area-form .add-name-btn:hover:not(:disabled) {
+    background: var(--color-primary);
+    border-style: solid;
+    color: #ffffff;
+}
+
+/* remove-name button */
+.area-form .btn-outline-danger {
+    flex: 0 0 42px;
+    width: 42px;
+    padding: 0;
+    border-radius: 8px;
+    border-color: var(--color-primary-border);
+    color: #b4a3bd;
+    background: #ffffff;
+}
+
+.area-form .btn-outline-danger:hover:not(:disabled) {
+    border-color: #dc3545;
+    background: #fdecee;
+    color: #dc3545;
+}
+
+/* current path (edit mode) */
+.area-path {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary-border) !important;
+}
+
+.area-path .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff !important;
+    color: var(--color-primary) !important;
+    border: 1px solid var(--color-primary-border);
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 7px 12px;
+}
+
+.area-path .badge :deep(iconify-icon),
+.area-path .badge :deep(svg) {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    margin: 0 !important;
+    color: currentColor !important;
+}
+
+/* chevrons between chips (badge icons above override the colour) */
+.area-path > div :deep(iconify-icon),
+.area-path > div :deep(svg) {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    color: var(--color-primary-muted) !important;
+}
+
+.area-path .badge:last-child {
+    background: var(--gradient-primary) !important;
+    color: #ffffff !important;
+    border-color: transparent;
+}
+
+/* buttons */
+.area-form .btn-primary {
+    background: var(--gradient-primary) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+}
+
+.area-form .btn-primary:disabled {
+    opacity: 0.55;
+}
+
+.area-form .btn-outline-primary {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: #ffffff;
+}
+
+.area-form .btn-outline-primary:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: #ffffff;
 }
 </style>
