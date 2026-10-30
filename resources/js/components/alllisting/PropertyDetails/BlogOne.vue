@@ -5754,8 +5754,8 @@ const collectOfferImageUrls = () => {
 
   const project = property.value?.project;
   if (project?.image) push(getImageUrl(project.image));
-  // Project photos used by About Project / Amenities (same picker as the slides).
-  [1, 2].forEach((slot) => push(projectImageUrlBySlot(slot)));
+  // Project photos used by Cover / Property Details / About Project / Amenities (same picker as the slides).
+  [1, 2, 3, 4].forEach((slot) => push(projectImageUrlBySlot(slot)));
 
   return [...urls];
 };
@@ -7240,8 +7240,9 @@ const createGallerySlide = (imagesChunk) => {
 };
 /**
  * The project's photos in gallery order (sort_order, then as returned), for the offer:
- * slot 1 = About Project, 2 = Amenities. A missing slot
- * falls back to project photo 1, then the project's main image, then the listing's photo.
+ * slot 1 = Cover, 2 = Property Details, 3 = About Project, 4 = Amenities. With fewer
+ * photos the slots wrap round the list; no photos falls back to the project's main
+ * image, then the listing's photo.
  * (sort_order may start at 0 or 1, so position in the sorted list is used, not the value.)
  */
 const projectImageUrlBySlot = (slot) => {
@@ -7258,7 +7259,7 @@ const projectImageUrlBySlot = (slot) => {
     // Some projects have every photo stored twice in project_images — skip repeats so
     // photo 2 is really the next different photo (cover and details were identical).
     .filter((url, i, all) => all.indexOf(url) === i);
-  if (list.length) return list[slot - 1] || list[0];
+  if (list.length) return list[(slot - 1) % list.length];
   if (project?.image) return getImageUrl(project.image);
   return getMainImage();
 };
@@ -7427,7 +7428,7 @@ const createSlide1 = (currentUser) => {
   const headingImg = makePropertyOfferHeadingImg();
   const badgeImg = makeOfferStatusBadgeImg(badgeLabel);
   // Slide 1 — match Figma cover (white left / photo right / navy footer).
-  const bgImage = getListingImageBySlot(1);
+  const bgImage = getProjectImageBySlot(1);
   return `
   <div id="cover-slide" style="width:210mm !important; height:148mm !important; padding:0 !important; margin:0 !important; box-sizing:border-box !important; position:relative !important; overflow:hidden !important; background:#ffffff !important; font-family:Arial, Helvetica, sans-serif !important;">
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; display:flex !important; flex-direction:row !important; box-sizing:border-box !important;">
@@ -7736,7 +7737,7 @@ const makeFeaturePillImg = (label) => {
 
 const createSlide2 = () => {
   // Figma Property Details — icon ABOVE label/value, no column rules, features close under stats.
-  const bgImage = getListingImageBySlot(2);
+  const bgImage = getProjectImageBySlot(2);
   const propertyType = property.value?.property_type?.name || 'N/A';
   const bedrooms = property.value?.number_of_bedrooms === 0
     ? 'Studio'
@@ -7877,7 +7878,7 @@ const createSlide3 = () => {
     : [];
   // HTML slide is the source of truth — skip the old jsPDF list overlay.
   amenitiesSlideModel = null;
-  const projectImage = getProjectImageBySlot(2);
+  const projectImage = getProjectImageBySlot(4);
   const heading = makeOfferSectionHeadingImg('AMENITIES & FEATURES', { fontMm: 3.3, marginBottomMm: 0 });
   const cells = features.slice(0, 12).map((feature) => {
     const imageUrl = feature.image ? getImageUrl(feature.image) : null;
@@ -7922,7 +7923,7 @@ const createSlide4 = () => {
   const project = property.value?.project;
   const projectTitle = String(project?.title || project?.name || '').toUpperCase();
   const projectAbout = project?.about || '';
-  const projectImage = getProjectImageBySlot(1);
+  const projectImage = getProjectImageBySlot(3);
   const aboutLimited = limitText(projectAbout, 780);
   const aboutText = String(aboutLimited).replace(/\s+/g, ' ').trim();
   const heading = makeOfferSectionHeadingImg('ABOUT THE PROJECT', { fontMm: 3.2, marginBottomMm: 0 });
