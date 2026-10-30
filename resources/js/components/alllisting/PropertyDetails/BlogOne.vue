@@ -197,7 +197,16 @@
               </section>
             </div>
 
-           <div v-if="hasRejectionReason" class="rejection-alert-container mb-4">
+           <!-- Rejected listing the agent has set inactive: show that instead of the rejection reason -->
+           <div v-if="hasRejectionReason && !property.is_active" class="rejection-alert-container mb-4">
+              <div class="alert alert-danger rejection-alert" role="alert">
+                <div class="rejection-alert-header">
+                  <i class="ri-eye-off-fill me-2"></i>
+                  <strong>This listing is not active</strong>
+                </div>
+              </div>
+            </div>
+           <div v-else-if="hasRejectionReason" class="rejection-alert-container mb-4">
               <div class="alert alert-danger rejection-alert" role="alert">
                 <div class="rejection-alert-header">
                   <i class="ri-close-circle-fill me-2"></i>
