@@ -120,7 +120,7 @@
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>
-                  <span v-if="isRejectedListing(property)" class="badge-sold bg-danger">
+                  <span v-if="isRejectedListing(property) && property.is_active" class="badge-sold bg-danger">
                     <i class="ri-close-circle-fill me-1"></i>Rejected
                   </span>
                   <span v-else-if="!property.approved && ['published'].includes(property.status)" class="badge-sold bg-danger">
