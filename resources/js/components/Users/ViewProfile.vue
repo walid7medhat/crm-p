@@ -159,7 +159,7 @@
           </span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
         </button>
-        <button
+        <!-- <button
           v-if="isSalesProfile"
           type="button"
           class="vp-nav__item"
@@ -172,8 +172,8 @@
             Sales Performance
           </span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
-        </button>
-        <button
+        </button> -->
+        <!-- <button
           v-if="canViewTeamPerformance"
           type="button"
           class="vp-nav__item"
@@ -186,7 +186,7 @@
             Team Performance
           </span>
           <iconify-icon icon="lucide:chevron-right" class="vp-nav__chevron" />
-        </button>
+        </button> -->
 
         <!-- <button type="button" class="vp-nav__item" :class="{ 'is-active': activeTab === 'my-documents' }" role="tab" @click="activeTab = 'my-documents'; loadMyDocuments()">
           <span class="vp-nav__left"><iconify-icon icon="lucide:file-text" /> Document Requests</span>
@@ -652,7 +652,7 @@
           </section>
         </div>
 
-        <div v-if="activeTab === 'sales-performance'" class="vp-panel vp-hub">
+        <!-- <div v-if="activeTab === 'sales-performance'" class="vp-panel vp-hub">
           <div class="vp-panel__head">
             <div>
               <h3 class="vp-panel__title">Sales Performance</h3>
@@ -820,10 +820,10 @@
             </template>
             <div v-else class="vp-sales-state">No AI intelligence data available yet.</div>
           </div>
-        </div>
+        </div> -->
 
         <!-- Team Performance -->
-        <div v-if="activeTab === 'team-performance'" class="vp-panel vp-hub">
+        <!-- <div v-if="activeTab === 'team-performance'" class="vp-panel vp-hub">
           <div class="vp-panel__head">
             <div>
               <h3 class="vp-panel__title">Team Performance</h3>
@@ -916,7 +916,7 @@
               </table>
             </div>
           </div>
-        </div>
+        </div> -->
 
 
         <!-- My Documents -->

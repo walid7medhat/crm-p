@@ -161,11 +161,11 @@
                                 <span class="d-inline d-md-none">Properties</span>
                                 <span v-if="agentProperties.length > 0" class="badge bg-primary ms-2">{{ agentProperties.length }}</span>
                             </button>
-                            <button v-if="isAgent && canViewAgentPerformance" class="nav-link" id="performance-tab" data-bs-toggle="tab"
+                            <!-- <button v-if="isAgent && canViewAgentPerformance" class="nav-link" id="performance-tab" data-bs-toggle="tab"
                                     data-bs-target="#performance" type="button" role="tab" @click="loadSalesPerformance">
                                 <i class="ri-line-chart-line me-2"></i>
                                 <span>Performance</span>
-                            </button>
+                            </button> -->
                             <button v-if="canViewAgentAttendance" class="nav-link" :class="{ active: !isAgent }" id="attendance-tab" data-bs-toggle="tab"
                                     data-bs-target="#attendance" type="button" role="tab">
                                 <i class="ri-calendar-check-line me-2"></i>
@@ -330,7 +330,7 @@
                     </div>
 
                     <!-- Performance Tab -->
-                    <div class="tab-pane fade" id="performance" role="tabpanel" v-if="isAgent && canViewAgentPerformance">
+                    <!-- <div class="tab-pane fade" id="performance" role="tabpanel" v-if="isAgent && canViewAgentPerformance">
                         <div class="card border-0 shadow-sm perf-card">
                             <div class="card-body">
                                 <div class="perf-toolbar">
@@ -405,7 +405,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Attendance Tab -->
                     <div class="tab-pane fade" :class="{ 'show active': !isAgent }" id="attendance" role="tabpanel" v-if="canViewAgentAttendance">
