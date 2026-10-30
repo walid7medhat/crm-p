@@ -877,9 +877,7 @@ import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { getCurrentInstance } from 'vue'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
-import countries from "i18n-iso-countries";
-import en from "i18n-iso-countries/langs/en.json";
-countries.registerLocale(en);
+import { nationalityOptions } from '@/utils/nationalities'
 const { proxy } = getCurrentInstance()
 
 const props = defineProps({
@@ -1876,14 +1874,6 @@ defineExpose({ clearAllDocuments, validateForm, getPropertiesData, propertiesLis
 
 // ========== Options ==========
 
-
-const nationalityOptions = Object.entries(
-  countries.getNames("en", { select: "official" })
-).map(([code, name]) => ({
-  value: code.toLowerCase(), // eg
-  text: name, // Egypt
-  code: code.toLowerCase()
-}));
 
 const residencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]
 const buyerResidencyOptions = [{ value: 'resident', text: 'Resident' }, { value: 'non_resident', text: 'Non Resident' }]

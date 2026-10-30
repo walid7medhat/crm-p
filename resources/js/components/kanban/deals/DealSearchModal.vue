@@ -177,7 +177,7 @@
                 <v-select
                   v-model="form.buyer_nationality"
                   :options="nationalityOptions"
-                  :reduce="opt => opt.value"
+                  :reduce="opt => opt.text"
                   label="text"
                   class="custom-v-select deal-select-placeholder"
                   placeholder="Select Nationality"
@@ -594,6 +594,7 @@ import DealFilterFieldSettingsModal from './DealFilterFieldSettingsModal.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
 import DateTimePicker from '../shared/DateTimePicker.vue'
+import { nationalityOptions } from '@/utils/nationalities'
 import {
   parseToDate,
   toDateOnlyApiString,
@@ -1019,35 +1020,6 @@ const stages = ref([])
 const projects = ref([])
 
 // Options for selects
-const nationalityOptions = [
-  { value: 'emirati', text: 'Emirati' },
-  { value: 'saudi', text: 'Saudi' },
-  { value: 'egyptian', text: 'Egyptian' },
-  { value: 'indian', text: 'Indian' },
-  { value: 'british', text: 'British' },
-  { value: 'american', text: 'American' },
-    { value: 'qatari', text: 'Qatari' },
-  { value: 'kuwaiti', text: 'Kuwaiti' },
-  { value: 'bahraini', text: 'Bahraini' },
-  { value: 'omani', text: 'Omani' },
-  { value: 'american', text: 'American' },
-  { value: 'canadian', text: 'Canadian' },
-  { value: 'british', text: 'British' },
-  { value: 'french', text: 'French' },
-  { value: 'german', text: 'German' },
-  { value: 'italian', text: 'Italian' },
-  { value: 'spanish', text: 'Spanish' },
-  { value: 'dutch', text: 'Dutch' },
-  { value: 'swedish', text: 'Swedish' },
-  { value: 'norwegian', text: 'Norwegian' },
-  { value: 'danish', text: 'Danish' },
-  { value: 'finnish', text: 'Finnish' },
-  { value: 'polish', text: 'Polish' },
-  { value: 'ukrainian', text: 'Ukrainian' },
-  { value: 'russian', text: 'Russian' },
-    { value: 'other', text: 'Other' },
-
-]
 // UAE City Options
 const uaeCityOptions = [
     { value: 'Abu Dhabi', text: 'Abu Dhabi' },

@@ -2103,6 +2103,7 @@ import EvaluationSettingsPanel from '@/pages/hr/settings/EvaluationSettingsPanel
 import AllEvaluationsList from '@/pages/hr/evaluations/AllEvaluationsList.vue'
 import AttendanceMonthlyReport from '@/pages/hr/attendance-monthly-reports.vue'
 import SearchableSelect from '@/components/ui/SearchableSelect.vue'
+import { nationalityNames } from '@/utils/nationalities'
 import DateTimePicker from '@/components/kanban/shared/DateTimePicker.vue'
 import { hrPipelineDebugEnabled, useHrDashboard } from '@/composables/useHrDashboard'
 import {
@@ -3198,7 +3199,7 @@ const supervisorOptions = computed(() => {
     label: m.name || m
   }))
 })
-const nationalityOptions = ['UAE', 'Egypt', 'India', 'Pakistan', 'Morocco', 'Jordan', 'Philippines']
+const nationalityOptions = nationalityNames
 const salaryTypeOptions = ['daily', 'monthly', 'yearly']
 const maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed']
 const bankNameOptions = ['Emirates NBD', 'ADCB', 'Mashreq', 'FAB', 'RAKBANK']

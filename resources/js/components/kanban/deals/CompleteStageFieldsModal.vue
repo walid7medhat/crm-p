@@ -1528,18 +1528,8 @@ import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 import { isNonEmptyPhoneValid } from '@/utils/phone'
 import { normalizeLanguageSelection } from '@/composables/useLanguageMultiSelect'
 import { resolveDealStageStyle } from '@/config/dealStageStyles.js'
-import countries from "i18n-iso-countries";
-import en from "i18n-iso-countries/langs/en.json";
+import { nationalityOptions } from '@/utils/nationalities'
 
-// تسجيل اللغة
-countries.registerLocale(en);
-const nationalityOptions = Object.entries(
-  countries.getNames("en", { select: "official" })
-).map(([code, name]) => ({
-  value: code.toLowerCase(), // eg
-  text: name, // Egypt
-  code: code.toLowerCase()
-}));
 const isLoadingPropertyData = ref(true)
 const isDataLoaded = ref(false)
 const isDataInitialized = ref(false)
