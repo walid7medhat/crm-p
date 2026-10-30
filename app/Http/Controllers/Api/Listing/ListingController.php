@@ -556,12 +556,14 @@ SQL;
         }
 
         // Rejected listings (reject() sets approved=false, a reason, status=draft). Editing
-        // and re-publishing one resubmits it for approval (see update()).
+        // and re-publishing one resubmits it for approval (see update()). Rejected listings
+        // the agent has set inactive are left out.
         if ($request->boolean('rejected')) {
             $query->where('approved', false)
                 ->whereNotNull('rejection_reason')
                 ->where('rejection_reason', '!=', '')
-                ->where('status', 'draft');
+                ->where('status', 'draft')
+                ->where('is_active', true);
         }
 
         if($request->has('status') && $request->status != 'All') {

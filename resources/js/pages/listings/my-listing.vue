@@ -120,7 +120,7 @@
                   <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
                     {{property.occupancy_status}}
                   </span>
-                  <span v-if="isRejectedListing(property) && property.is_active" class="badge-sold bg-danger">
+                  <span v-if="isRejectedListing(property)" class="badge-sold bg-danger">
                     <i class="ri-close-circle-fill me-1"></i>Rejected
                   </span>
                   <span v-else-if="!property.approved && ['published'].includes(property.status)" class="badge-sold bg-danger">
@@ -332,9 +332,10 @@ export default {
     // Default images array for fallback
     const defaultImages = [property1, property2, property3, property4];
 
-    /** Rejected by an approver (same rule as the API `rejected` filter). */
+    /** Rejected by an approver and still active (same rule as the API `rejected` filter). */
     const isRejectedListing = (property) =>
-      !property?.approved && !!String(property?.rejection_reason || '').trim() && property?.status === 'draft';
+      !property?.approved && !!String(property?.rejection_reason || '').trim() && property?.status === 'draft'
+      && !!property?.is_active;
 
     // Computed property for filtered properties based on status
   const filteredProperties = computed(() => {
