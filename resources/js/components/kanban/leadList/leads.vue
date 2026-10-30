@@ -139,6 +139,10 @@
                         <iconify-icon icon="lucide:git-branch" />
                         Change stage
                     </button>
+                    <button v-if="canBulkChangeSource" type="button" class="lead-select-bar__btn" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="openBulkSourcePicker">
+                        <iconify-icon icon="lucide:radio-tower" />
+                        Change source
+                    </button>
                     <button type="button" class="lead-select-bar__btn" :disabled="!selectedLeadIds.length || bulkActionBusy" @click="openBulkAssignPicker">
                         <iconify-icon icon="lucide:user-round" />
                         Assign responsible person
@@ -1208,6 +1212,37 @@
         </div>
     </div>
 
+    <div v-if="showBulkSourcePicker" class="lead-bulk-overlay" @click.self="showBulkSourcePicker = false">
+        <div class="lead-bulk-panel" role="dialog" aria-label="Change source">
+            <header class="lead-bulk-panel__head">
+                <span class="lead-bulk-panel__title">Change source</span>
+                <button type="button" class="lead-bulk-panel__close" aria-label="Close" @click="showBulkSourcePicker = false">
+                    <iconify-icon icon="lucide:x" />
+                </button>
+            </header>
+            <p class="lead-bulk-panel__hint">{{ selectedLeadIds.length }} selected</p>
+            <label class="lead-bulk-search">
+                <iconify-icon icon="lucide:search" />
+                <input v-model="bulkSourceQuery" type="search" placeholder="Search source" />
+            </label>
+            <div class="lead-bulk-list">
+                <p v-if="bulkSourcesLoading" class="lead-bulk-panel__hint">Loading…</p>
+                <button
+                    v-for="source in visibleBulkSources"
+                    :key="source"
+                    type="button"
+                    class="lead-bulk-option"
+                    :disabled="bulkActionBusy"
+                    @click="applyBulkSource(source)"
+                >
+                    <iconify-icon icon="lucide:radio-tower" />
+                    <span>{{ source }}</span>
+                </button>
+                <p v-if="!bulkSourcesLoading && !visibleBulkSources.length" class="lead-bulk-panel__hint">No source found.</p>
+            </div>
+        </div>
+    </div>
+
     <div v-if="showBulkAssignPicker" class="lead-bulk-overlay" @click.self="showBulkAssignPicker = false">
         <div class="lead-bulk-panel" role="dialog" aria-label="Assign responsible person">
             <header class="lead-bulk-panel__head">
@@ -1615,6 +1650,12 @@ const canDeleteLeads = computed(() => {
     return user.value.roles?.includes('super_admin') || user.value.roles?.includes('admin')
 })
 
+// Bulk "Change source": super_admin and users 30 / 33 (LeadController::bulkChangeSource).
+const canBulkChangeSource = computed(() => {
+    if (!user.value) return false
+    return user.value.roles?.includes('super_admin') || [30, 33].includes(Number(user.value.id))
+})
+
 const leadSelectionActive = ref(false)
 const selectedLeadIds = ref([])
 
@@ -1826,6 +1867,64 @@ async function applyBulkStage(column) {
         window.$showNotification?.('Stage updated.', 'success')
     }
     fetchLeads(true)
+}
+
+const showBulkSourcePicker = ref(false)
+const bulkSourceQuery = ref('')
+const bulkSources = ref([])
+const bulkSourcesLoading = ref(false)
+
+const visibleBulkSources = computed(() => {
+    const q = bulkSourceQuery.value.trim().toLowerCase()
+    return q ? bulkSources.value.filter((name) => name.toLowerCase().includes(q)) : bulkSources.value
+})
+
+async function openBulkSourcePicker() {
+    if (!selectedLeadIds.value.length) return
+    bulkSourceQuery.value = ''
+    showBulkSourcePicker.value = true
+    if (bulkSources.value.length) return
+    bulkSourcesLoading.value = true
+    try {
+        const response = await api.get('/sources')
+        const data = response.data?.data || response.data || []
+        // The sources table has repeated names — show each once.
+        bulkSources.value = [...new Set((Array.isArray(data) ? data : []).map((s) => s?.name).filter(Boolean))]
+    } catch (error) {
+        bulkSources.value = []
+    } finally {
+        bulkSourcesLoading.value = false
+    }
+}
+
+async function applyBulkSource(source) {
+    if (!source || bulkActionBusy.value) return
+    const ids = [...selectedLeadIds.value]
+    const confirmed = await Swal.fire({
+        title: 'Change source?',
+        text: `Set the source of ${ids.length} lead${ids.length === 1 ? '' : 's'} to "${source}"?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Change',
+        cancelButtonText: 'Cancel',
+    })
+    if (!confirmed.isConfirmed) return
+    bulkActionBusy.value = true
+    try {
+        const response = await api.post('/leads/bulk-change-source', { lead_ids: ids, lead_source: source })
+        const updated = Number(response.data?.data?.updated ?? ids.length)
+        showBulkSourcePicker.value = false
+        clearLeadSelection()
+        window.$showNotification?.(
+            `Source changed to "${source}" for ${updated} lead${updated === 1 ? '' : 's'}.`,
+            'success'
+        )
+        fetchLeads(true)
+    } catch (error) {
+        window.$showNotification?.(error.response?.data?.message || 'Could not change the source.', 'error')
+    } finally {
+        bulkActionBusy.value = false
+    }
 }
 
 const ASSIGN_PREVIEW_LIMIT = 8

@@ -1176,6 +1176,52 @@ class LeadController extends Controller
 }
 
     /**
+     * Change the lead source of many leads at once (kanban select bar "Change source").
+     * super_admin and users 30 / 33 only.
+     *
+     *   POST /api/leads/bulk-change-source { lead_ids: int[], lead_source: string }
+     */
+    public function bulkChangeSource(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (! ($user->hasRole('super_admin') || in_array((int) $user->id, [30, 33], true))) {
+            return ApiResponse::error('You are not authorized to change the lead source', 403);
+        }
+
+        $data = $request->validate([
+            'lead_ids' => 'required|array|min:1|max:500',
+            'lead_ids.*' => 'integer',
+            'lead_source' => 'required|string|max:255|exists:sources,name',
+        ]);
+        $newSource = $data['lead_source'];
+
+        $leads = Lead::whereIn('id', array_unique($data['lead_ids']))->get(['id', 'lead_source']);
+        $updated = [];
+
+        DB::transaction(function () use ($leads, $newSource, &$updated) {
+            foreach ($leads as $lead) {
+                $oldSource = $lead->lead_source;
+                if ($oldSource === $newSource) {
+                    continue;
+                }
+                Lead::whereKey($lead->id)->update(['lead_source' => $newSource, 'updated_at' => now()]);
+                LeadHistoryHelper::log($lead->id, [
+                    'action' => 'updated',
+                    'fields' => ['lead_source' => ['old' => $oldSource, 'new' => $newSource]],
+                ]);
+                $updated[] = (int) $lead->id;
+            }
+        });
+
+        return ApiResponse::success([
+            'updated_ids' => $updated,
+            'updated' => count($updated),
+            'unchanged' => $leads->count() - count($updated),
+            'not_found' => count(array_unique($data['lead_ids'])) - $leads->count(),
+        ], 'Lead source updated');
+    }
+
+    /**
      * Persist additional client requirement blocks (separate from primary lead columns).
      */
     public function updateExtraClientRequirements(Request $request, Lead $lead): JsonResponse

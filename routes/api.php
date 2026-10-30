@@ -805,6 +805,7 @@ Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate'
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);
 Route::patch('/leads/{lead}/name', [LeadController::class, 'updateName']);
 Route::post('/leads/{lead}/assign-responsible-person', [LeadController::class, 'assignResponsiblePerson']);
+Route::post('/leads/bulk-change-source', [LeadController::class, 'bulkChangeSource']);
 Route::get('/push-subscriptions/config', [PushSubscriptionController::class, 'config']);
 Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
 Route::put('/leads/{lead}/extra-client-requirements', [LeadController::class, 'updateExtraClientRequirements']);
