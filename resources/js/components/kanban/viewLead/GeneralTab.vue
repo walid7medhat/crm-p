@@ -4,7 +4,18 @@
         <div ref="editSectionAnchorRef" class="lead-view-main">
             <div class="info-card bg-white  radius-12">
                 <!-- View Mode (read-only; do not use ViewLead.vue here – it is a full modal and would cause infinite recursion) -->
-                <LeadInfoView ref="leadInfoViewRef" v-if="!isEditMode" :lead="lead" :show-responsible-section="false" :can-edit="lead?.can_edit" :show-edit-icon="true" @edit-section="handleEditSection" @edit-request="toggleEditMode" @lead-updated="handleLeadUpdated" />
+                <LeadInfoView
+                    ref="leadInfoViewRef"
+                    v-if="!isEditMode"
+                    :lead="lead"
+                    :show-responsible-section="false"
+                    :can-edit="lead?.can_edit"
+                    :show-edit-icon="true"
+                    :prefer-matching="focusSection === 'matching'"
+                    @edit-section="handleEditSection"
+                    @edit-request="toggleEditMode"
+                    @lead-updated="handleLeadUpdated"
+                />
 
                 <!-- Edit Mode (footer Save/Cancel moved to global bottom bar below) -->
                 <EditLead 
@@ -69,7 +80,7 @@
                     :lead="lead"
                     @person-updated="handlePersonUpdated"
                 />
-              <MergedLeadsSection v-if="lead?.id" :lead-id="lead.id" />
+              <MergedLeadsSection v-if="lead?.id && showMergedLeads" :lead-id="lead.id" />
               <div
                 v-if="canViewCommentsAndActivities"
                 :id="activeViewTab === 'activity' ? 'lead-section-activity' : 'lead-section-comments'"
@@ -228,13 +239,10 @@ const editingSection = ref(null)
 const isEditMode = ref(false)
 const selectedStageId = ref(props.stageId || props.lead?.stage?.id || null)
 const activeViewTab = ref('comments')
-watch(() => props.focusSection, (section) => {
-    if (section === 'comments' || section === 'activity') activeViewTab.value = section
-}, { immediate: true })
-watch(activeViewTab, (section) => {
-    if (section === 'comments' || section === 'activity') emit('section-change', section)
-})
 const showActivityTimeline = ref(false)
+const showMergedLeads = ref(false)
+let secondaryLoadTimer = null
+let secondaryIdleId = null
 const commentListRef = ref(null)
 const leadInfoViewRef = ref(null)
 const activityListRef = ref(null)
@@ -243,6 +251,53 @@ const editDraftStatus = ref('')
 const editSectionAnchorRef = ref(null)
 const commentListKey = ref(0)
 const activityListKey = ref(0)
+
+function clearSecondarySchedule() {
+    if (secondaryLoadTimer != null) {
+        clearTimeout(secondaryLoadTimer)
+        secondaryLoadTimer = null
+    }
+    if (secondaryIdleId != null && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(secondaryIdleId)
+        secondaryIdleId = null
+    }
+}
+
+/** Schedule non-critical right-rail sections after the lead shell paints. */
+function scheduleSecondarySections(leadId) {
+    clearSecondarySchedule()
+    showActivityTimeline.value = false
+    showMergedLeads.value = false
+    if (!leadId) return
+    const reveal = () => {
+        secondaryIdleId = null
+        secondaryLoadTimer = null
+        if (Number(props.lead?.id) !== Number(leadId)) return
+        showMergedLeads.value = true
+        if (activeViewTab.value === 'comments') {
+            showActivityTimeline.value = true
+        }
+    }
+    if (typeof requestIdleCallback === 'function') {
+        secondaryIdleId = requestIdleCallback(reveal, { timeout: 1200 })
+    } else {
+        secondaryLoadTimer = setTimeout(reveal, 0)
+    }
+}
+
+watch(() => props.focusSection, (section) => {
+    if (section === 'comments' || section === 'activity') activeViewTab.value = section
+}, { immediate: true })
+watch(activeViewTab, (section) => {
+    if (section === 'comments' || section === 'activity') emit('section-change', section)
+    // Timeline only applies to the comments rail — mount it when that tab is chosen.
+    if (section === 'comments' && props.lead?.id && showMergedLeads.value) {
+        showActivityTimeline.value = true
+    }
+    if (section === 'activity') {
+        showActivityTimeline.value = false
+    }
+})
 
 const scrollEditSectionIntoView = async () => {
     await nextTick()
@@ -655,13 +710,14 @@ watch(
     () => props.lead?.id,
     (id, prevId) => {
         if (!id) {
+            clearSecondarySchedule()
             showActivityTimeline.value = false
+            showMergedLeads.value = false
             return
         }
-        // Keep timeline mounted when refreshing the same lead so comments/activities
-        // stay visible and new submits appear instantly.
-        if (id === prevId && showActivityTimeline.value) return
-        showActivityTimeline.value = true
+        // Keep secondary sections mounted when refreshing the same lead.
+        if (id === prevId && (showActivityTimeline.value || showMergedLeads.value)) return
+        scheduleSecondarySections(id)
     },
     { immediate: true }
 )
