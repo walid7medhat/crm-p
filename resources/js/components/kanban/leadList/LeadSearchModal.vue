@@ -6718,6 +6718,30 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 
 })
 
+// Live-apply core text fields as the user types (no Enter / Search click required).
+let liveTextSearchTimer = null
+watch(
+    () => [
+        form.value.leadName,
+        form.value.firstName,
+        form.value.workPhone,
+        form.value.email,
+    ].map((v) => String(v || '').trim()).join('\0'),
+    () => {
+        if (hydratingFromQuery.value) return
+        if (!show.value && !props.modelValue) return
+        clearTimeout(liveTextSearchTimer)
+        liveTextSearchTimer = setTimeout(() => {
+            liveTextSearchTimer = null
+            if (isFormEmpty()) {
+                emit('search', { query: null, activePill: null, activeFilters: [], keepOpen: true })
+                return
+            }
+            applySearch({ keepOpen: true })
+        }, 180)
+    }
+)
+
 
 
 

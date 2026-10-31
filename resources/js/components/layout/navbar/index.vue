@@ -1103,7 +1103,8 @@ const searchDropdownAnchorRef = ref(null);
 const searchDropdownPanelRef = ref(null);
 const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
-const SEARCH_DEBOUNCE_MS = 150;
+// Live client filter runs immediately; this only gates the board API refetch.
+const SEARCH_DEBOUNCE_MS = 120;
 const suppressSearchWatcher = ref(false);
 const isSearchLoading = ref(false);
 const leadsRef = ref(null);
@@ -1203,6 +1204,12 @@ function applySearchToApi() {
 watch(search, () => {
     if (suppressSearchWatcher.value) return
     console.log('Search value changed:', search.value)
+    // Instant: hide non-matching cards already on the board (no API wait).
+    if (isLeadRoute.value || activeKanbanTab.value === 'leads' || activeKanbanTab.value === 'lead-pool') {
+        window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', {
+            detail: { search: search.value || '' },
+        }))
+    }
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value)
         searchDebounceTimer.value = null
@@ -1671,7 +1678,7 @@ const onLeadSearch = (payload) => {
         activeFilters.value = []
         lastQuery.value = null
         setSearchSilently('')
-        
+        window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', { detail: { search: '' } }))
         window.dispatchEvent(new CustomEvent('kanban-lead-search-update', { 
             detail: { query: null, activeFilters: [] }
         }))
@@ -1705,6 +1712,20 @@ const onLeadSearch = (payload) => {
     
     console.log('Active filters:', activeFilters.value)
     console.log('Last query:', lastQuery.value)
+
+    // Instant board filter from modal text fields while the API refreshes.
+    window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', {
+        detail: {
+            search: String(
+                query?.search ||
+                query?.lead_name ||
+                query?.first_name ||
+                query?.work_phone ||
+                query?.email ||
+                ''
+            ).trim(),
+        },
+    }))
     
     window.dispatchEvent(new CustomEvent('kanban-lead-search-update', { 
         detail: { query: lastQuery.value, activeFilters: activeFilters.value }

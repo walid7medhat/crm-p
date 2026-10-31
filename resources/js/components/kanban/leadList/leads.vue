@@ -308,7 +308,7 @@
                                                     'kanban-card--selected': isLeadSelected(task.id),
                                                     'kanban-card--motion-hold': motionHeld[task.id],
                                                 }"
-                                                v-show="leadMatchesShortcutFilter(task)"
+                                                v-show="leadMatchesShortcutFilter(task) && leadMatchesLiveText(task)"
                                                 @touchstart="onMobileCardTouchStart(column, task, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
@@ -2147,6 +2147,9 @@ const isBoardFilterActive = computed(() => {
 })
 
 const showKanbanSearchOverlay = computed(() => {
+    // Free-text live filter already narrows cards on-screen — don't cover them
+    // with the full-board "Searching leads" wash while the server catches up.
+    if (String(liveTextSearch.value || '').trim()) return false
     return (
         isFetching.value &&
         columns.value.length > 0 &&
@@ -2250,6 +2253,69 @@ function leadMatchesShortcutFilter(lead) {
         default:
             return true
     }
+}
+
+/** Instant kanban filter while typing — server refetch still runs debounced. */
+const liveTextSearch = ref('')
+
+function syncLiveTextFromQuery(q) {
+    if (!q || typeof q !== 'object') {
+        liveTextSearch.value = ''
+        return
+    }
+    liveTextSearch.value = String(
+        q.search || q.lead_name || q.first_name || q.work_phone || q.email || ''
+    ).trim()
+}
+
+function onKanbanLeadLiveFilter(event) {
+    const term = event?.detail?.search
+    liveTextSearch.value = term == null ? '' : String(term).trim()
+}
+
+function leadMatchesLiveText(lead) {
+    const term = String(liveTextSearch.value || '').trim()
+    if (!term) return true
+    if (term.length < 2 && !term.includes('@')) {
+        const digitsOnly = term.replace(/\D+/g, '')
+        if (digitsOnly.length < 4) return true
+    }
+
+    const digits = term.replace(/\D+/g, '')
+    const isPhoneLike = digits.length >= 4 && /^[\d\s+\-().]+$/.test(term)
+    if (isPhoneLike) {
+        const phoneHay = [
+            lead?.work_phone,
+            lead?.work_phone_2,
+            lead?.whatsapp_number,
+            lead?.source_client_phone,
+            lead?.lead_number,
+        ]
+            .filter(Boolean)
+            .join('')
+            .replace(/\D+/g, '')
+        return phoneHay.includes(digits)
+    }
+
+    const needle = term.toLowerCase()
+    const hay = [
+        lead?.lead_name,
+        lead?.first_name,
+        lead?.last_name,
+        lead?.lead_number,
+        lead?.email,
+        lead?.secondary_email,
+        lead?.work_phone,
+        lead?.work_phone_2,
+        lead?.lead_source,
+        lead?.lead_branch_source,
+        lead?.responsible_person?.name,
+        lead?.responsible_person?.display_name,
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+    return hay.includes(needle)
 }
 
 // Maps a shortcut chip key to the API filter params the backend understands,
@@ -2665,12 +2731,19 @@ function buildLeadSearchApiParams(q = {}) {
 const fetchLeads = async (immediate = false, queryOverride = undefined, options = {}) => {
     if (queryOverride !== undefined) {
         appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
+        syncLiveTextFromQuery(appliedSearchParams.value)
     }
     const silent = !!options.silent
     const hasSearchCriteria =
         (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length > 0) ||
         !!activeShortcutFilter.value
-    if (!silent && hasSearchCriteria) {
+    // Text-only search: keep cards visible (live filter); skip blocking overlay flag.
+    const textOnlySearch = !!(
+        appliedSearchParams.value &&
+        Object.keys(appliedSearchParams.value).length === 1 &&
+        appliedSearchParams.value.search
+    )
+    if (!silent && hasSearchCriteria && !textOnlySearch) {
         isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     }
@@ -2809,14 +2882,24 @@ const executeFetchLeads = async (options = {}) => {
         loading.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     } else if (!silent && hasSearchCriteria) {
-        isSearching.value = true
-        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+        const textOnly = !!(
+            appliedSearchParams.value &&
+            Object.keys(appliedSearchParams.value).length === 1 &&
+            appliedSearchParams.value.search
+        )
+        if (!textOnly) {
+            isSearching.value = true
+            window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
+        }
     }
     try {
         const q = effectiveSearchParams.value
 
         const params = {
-            per_page: leadsPerPage.value,
+            // Smaller first page on free-text search → faster TTFB; load-more still available.
+            per_page: (q.search && String(q.search).trim())
+                ? Math.min(Number(leadsPerPage.value) || 15, 12)
+                : leadsPerPage.value,
             ...buildLeadSearchApiParams(q),
         }
 
@@ -3729,6 +3812,7 @@ onMounted(async () => {
     window.addEventListener('resize', updateListScrollArrows)
     window.addEventListener('echo-ready', onEchoReady)
     window.addEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
+    window.addEventListener('kanban-lead-live-filter', onKanbanLeadLiveFilter)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
     if (leadIdFromUrl) {
@@ -3756,6 +3840,7 @@ onUnmounted(() => {
     window.removeEventListener('resize', updateListScrollArrows)
     window.removeEventListener('echo-ready', onEchoReady)
     window.removeEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
+    window.removeEventListener('kanban-lead-live-filter', onKanbanLeadLiveFilter)
     cleanup()
     destroyLeadMotion()
 })
@@ -4820,7 +4905,7 @@ const listRows = computed(() => {
     for (const column of columns.value) {
         if (!isColumnVisibleOnMobile(column)) continue
         for (const task of column.leads || []) {
-            if (!task || !leadMatchesShortcutFilter(task)) continue
+            if (!task || !leadMatchesShortcutFilter(task) || !leadMatchesLiveText(task)) continue
             rows.push({ task, column })
         }
     }
