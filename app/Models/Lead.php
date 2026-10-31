@@ -609,6 +609,34 @@ public function activitiesWithTrashed()
     }
 
     /**
+     * Leads that have at least one other unmerged lead with the same phone digits or email
+     * (any branch). Correlated EXISTS on the indexed work_phone_digits / email columns.
+     */
+    public function scopeHasDuplicates($query)
+    {
+        $table = $query->getModel()->getTable();
+        $ignored = array_values(array_filter(array_map(
+            static fn ($value) => mb_strtolower(trim((string) $value)),
+            (array) config('lead_merge.ignored_duplicate_emails', [])
+        )));
+
+        $twin = fn (string $column) => fn ($sub) => $sub->selectRaw('1')
+            ->from("{$table} as dup")
+            ->whereColumn("dup.{$column}", "{$table}.{$column}")
+            ->whereColumn('dup.id', '!=', "{$table}.id")
+            ->whereNull('dup.merged_into_lead_id')
+            ->whereNull('dup.deleted_at');
+
+        return $query->where(function ($w) use ($table, $ignored, $twin) {
+            $w->where(fn ($p) => $p->where("{$table}.work_phone_digits", '!=', '')
+                    ->whereExists($twin('work_phone_digits')))
+                ->orWhere(fn ($p) => $p->where("{$table}.email", 'like', '%@%')
+                    ->when($ignored !== [], fn ($x) => $x->whereNotIn("{$table}.email", $ignored))
+                    ->whereExists($twin('email')));
+        });
+    }
+
+    /**
      * Super admin and the users in lead_merge.cross_branch_duplicate_user_ids see duplicates
      * in other branches; everyone else (and broadcasts / console, no user) only their branch.
      */

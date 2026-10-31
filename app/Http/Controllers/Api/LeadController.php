@@ -166,6 +166,9 @@ class LeadController extends Controller
                     });
                 }
                 $this->applyLeadSourceFilter($leadsQuery, $request);
+                if ($request->boolean('has_duplicate') && auth()->user()?->hasRole('super_admin')) {
+                    $leadsQuery->hasDuplicates();
+                }
                 if ($request->filled('source_information')) {
                     $leadsQuery->where('source_information', 'like', "%{$request->source_information}%");
                 }

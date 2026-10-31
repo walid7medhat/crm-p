@@ -2647,6 +2647,8 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),
         ...(q.why_lost_lead != null && q.why_lost_lead !== '' && { status_lead: q.why_lost_lead }),
         ...(q.heat != null && q.heat !== '' && { heat: q.heat }),
+        // Super admin "Duplicates" toggle (navbar); the API ignores it for other roles.
+        ...(q.has_duplicate && { has_duplicate: 1 }),
     }
 
     if (q.office_branch != null && q.office_branch !== '') {

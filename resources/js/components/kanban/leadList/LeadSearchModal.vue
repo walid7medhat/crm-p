@@ -2756,6 +2756,8 @@ const queryToFormKeys = {
 
     lead_type: 'leadType',
 
+    has_duplicate: 'hasDuplicate',
+
     property_status: 'propertyStatus',
 
     budget_from: 'budgetFrom',
@@ -2843,6 +2845,7 @@ function syncFormFromQuery(query) {
         team: [],
         office: [],
         leadType: '',
+        hasDuplicate: '',
         propertyStatus: '',
         budgetFrom: '',
         budgetTo: '',
@@ -3167,6 +3170,8 @@ const form = ref({
     office: [],
 
     leadType: '',
+
+    hasDuplicate: '',
 
     propertyStatus: '',
 
@@ -4224,7 +4229,10 @@ const searchFieldsConfig = computed(() => {
 
     )
 
-    
+    // "Duplicates only" is a navbar toggle (super admin), not a field here; has_duplicate is
+    // still carried through form.hasDuplicate so a search from this modal keeps it on.
+
+
 
     return fields
 
@@ -5574,6 +5582,8 @@ async function applySearch(options = {}) {
 
         lead_type: form.value.leadType || undefined,
 
+        has_duplicate: user.value?.roles?.includes('super_admin') && form.value.hasDuplicate ? '1' : undefined,
+
         property_status: form.value.propertyStatus || undefined,
 
         budget_from: parseBudgetNumber(form.value.budgetFrom),
@@ -6191,6 +6201,8 @@ function resetFormValues() {
         office: [],
 
          leadType: '',
+
+        hasDuplicate: '',
 
         propertyStatus: '',
 

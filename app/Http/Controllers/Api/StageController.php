@@ -677,6 +677,7 @@ class StageController extends Controller
             // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
             UaeDateRange::apply($q, 'created_at', $request->created_from, $request->created_to, $request->created_at);
             $this->applyLeadSourceFilter($q, $request);
+            $this->applyHasDuplicateFilter($q, $request);
             if ($request->filled('bedrooms')) {
                 $q->where('bedrooms', $request->bedrooms);
             }
@@ -899,6 +900,7 @@ class StageController extends Controller
             // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
             UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
             $this->applyLeadSourceFilter($leadsQuery, $request);
+            $this->applyHasDuplicateFilter($leadsQuery, $request);
             if ($request->filled('bedrooms')) {
                 $leadsQuery->where('bedrooms', $request->bedrooms);
             }
@@ -1420,6 +1422,14 @@ public function getOffices()
         }
 
         \App\Support\LeadSourceFilter::apply($query, $request->source);
+    }
+
+    /** "Duplicates only" search filter — super admin only (see Lead::scopeHasDuplicates). */
+    private function applyHasDuplicateFilter($query, Request $request): void
+    {
+        if ($request->boolean('has_duplicate') && auth()->user()?->hasRole('super_admin')) {
+            $query->hasDuplicates();
+        }
     }
 
     /**

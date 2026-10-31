@@ -199,6 +199,17 @@
               <iconify-icon :icon="showLeadBoardHeader ? 'lucide:sliders-horizontal' : 'lucide:layout-grid'" />
               <span v-if="resolvedActiveFilters.length" class="kanban-mob-search-grid__count">{{ resolvedActiveFilters.length }}</span>
             </button>
+            <button
+              v-if="showDuplicatesToggle"
+              type="button"
+              class="dup-only-toggle dup-only-toggle--mobile"
+              :class="{ 'is-active': duplicatesOnly }"
+              :aria-pressed="duplicatesOnly ? 'true' : 'false'"
+              aria-label="Show only leads with duplicates"
+              @click.stop="toggleDuplicatesOnly"
+            >
+              <iconify-icon icon="lucide:copy" aria-hidden="true" />
+            </button>
             </div>
             <div
               v-if="resolvedActiveFilters.length"
@@ -536,6 +547,20 @@
                 </div>
             </Teleport>
         </div>
+
+        <!-- Super admin: show only leads that have a duplicate (phone or email, any branch) -->
+        <button
+            v-if="showDuplicatesToggle"
+            type="button"
+            class="dup-only-toggle"
+            :class="{ 'is-active': duplicatesOnly }"
+            :aria-pressed="duplicatesOnly ? 'true' : 'false'"
+            @click.stop="toggleDuplicatesOnly"
+        >
+            <iconify-icon icon="lucide:copy" aria-hidden="true" />
+            <span>Duplicates</span>
+            <iconify-icon v-if="duplicatesOnly" icon="lucide:x" class="dup-only-toggle__x" aria-hidden="true" />
+        </button>
 
         <!-- Create New Button -->
         <button v-if="isLeadRoute && activeKanbanTab !== 'lead-pool'" class="btn-create-new btn-primary d-flex align-items-center" @click="handleKanbanCreateNew">
@@ -1770,6 +1795,37 @@ const removeFilter = (f) => {
     } else {
         window.dispatchEvent(new CustomEvent('kanban-lead-search', { detail: payload }));
     }
+};
+
+/**
+ * Super admin, lead boards only (the API ignores has_duplicate for anyone else).
+ * State lives in lastQuery.has_duplicate; the button itself is the indicator (no search chip).
+ */
+const showDuplicatesToggle = computed(() =>
+    isSuperAdmin.value && canUseLeadSearchModal.value && activeKanbanTab.value !== 'deals'
+);
+const duplicatesOnly = computed(() => !!lastQuery.value?.has_duplicate);
+
+const toggleDuplicatesOnly = () => {
+    const nextQuery = lastQuery.value ? { ...lastQuery.value } : {};
+
+    if (nextQuery.has_duplicate) {
+        delete nextQuery.has_duplicate;
+    } else {
+        nextQuery.has_duplicate = '1';
+    }
+
+    lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null;
+    if (!lastQuery.value) {
+        activeFilter.value = null;
+        activeFilters.value = [];
+    } else if (!activeFilter.value) {
+        activeFilter.value = { ...defaultFilter };
+    }
+
+    window.dispatchEvent(new CustomEvent('kanban-lead-search', {
+        detail: { query: lastQuery.value, activeFilters: activeFilters.value },
+    }));
 };
 
 const clearMoreFilters = () => {
@@ -5823,5 +5879,67 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   outline: 2px solid var(--color-primary) !important;
 }
 
+/* Super admin "Duplicates" toggle beside the lead search */
+.dup-only-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e3dcea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--color-primary);
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.dup-only-toggle iconify-icon {
+  font-size: 15px;
+}
+
+.dup-only-toggle:hover {
+  border-color: var(--color-primary);
+}
+
+.dup-only-toggle.is-active {
+  background: var(--gradient-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.dup-only-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.dup-only-toggle__x {
+  font-size: 13px !important;
+  opacity: .85;
+}
+
+.dup-only-toggle--mobile {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  border-color: #ece7f2;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(115, 62, 135, 0.08);
+}
+
+.dup-only-toggle--mobile iconify-icon {
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .dup-only-toggle:not(.dup-only-toggle--mobile) {
+    display: none;
+  }
+}
 
 </style>
