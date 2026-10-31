@@ -34,6 +34,15 @@ function isAuthenticated() {
   }
 }
 
+/** Super admin "switch account" session — never send the device location. */
+function isImpersonating() {
+  try {
+    return Boolean(localStorage.getItem('impersonator_token'))
+  } catch {
+    return false
+  }
+}
+
 async function loadSettings() {
   if (settingsPromise) return settingsPromise
   settingsPromise = (async () => {
@@ -69,7 +78,8 @@ function shouldMarkSessionStart() {
 }
 
 async function postFix(coords, { sessionStart = false } = {}) {
-  if (!coords || !isAuthenticated()) return
+  // Re-check: a capture started before "switch account" may resolve after it.
+  if (!coords || !isAuthenticated() || isImpersonating()) return
   try {
     await api.post('/auth/location', {
       latitude: coords.latitude,
@@ -85,7 +95,7 @@ async function postFix(coords, { sessionStart = false } = {}) {
 }
 
 async function captureAndSend({ sessionStart = false } = {}) {
-  if (inFlight || document.hidden || !isAuthenticated()) return
+  if (inFlight || document.hidden || !isAuthenticated() || isImpersonating()) return
   if (!navigator?.geolocation || window.isSecureContext === false) return
 
   const markStart = sessionStart || shouldMarkSessionStart()
@@ -124,7 +134,7 @@ function armTimer() {
  */
 export async function startLocationTracking() {
   if (typeof window === 'undefined') return
-  if (!isAuthenticated()) return
+  if (!isAuthenticated() || isImpersonating()) return
 
   await loadSettings()
 

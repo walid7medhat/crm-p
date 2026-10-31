@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import api, { setAuthToken } from '@/plugins/axios'
 import { API_ENDPOINTS } from '@/config/api'
+import { stopLocationTracking } from '@/composables/useLocationTracking'
 
 const IMPERSONATOR_TOKEN_KEY = 'impersonator_token'
 const IMPERSONATOR_USER_KEY = 'impersonator_user'
@@ -42,6 +43,9 @@ export function useImpersonation() {
     if (!token || !targetUser) {
       throw new Error('Switch account did not return a token')
     }
+
+    // Stop the super admin's tracking timer before the token changes hands.
+    stopLocationTracking()
 
     // Stash the current (super admin) session — only if we aren't already
     // impersonating someone, so a chain of switches always returns to the
