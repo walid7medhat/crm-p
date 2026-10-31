@@ -99,7 +99,8 @@ const UserAnimationPlayer = defineAsyncComponent(() => import('./components/anim
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
 const ViewLeadModal = defineAsyncComponent({
   loader: loadViewLeadModal,
-  delay: 80,
+  // Delay loader so a warm/preloaded chunk never flashes "Opening lead".
+  delay: 200,
   loadingComponent: LeadOpeningLoader,
   // One failed chunk download (weak mobile network) used to leave lead clicks dead
   // for the whole session — retry a few times before giving up.
@@ -115,7 +116,7 @@ import { useBackground } from './composables/useBackground.js'
 import ShortcutDock from './components/layout/ShortcutDock.vue'
 import { canUseNextActions } from './composables/useSalesActionCenter.js'
 import { chatPanelOpen, claimShortcutPanel } from './composables/useShortcutPanels.js'
-import { useLeadViewModal, initLeadViewModal, checkUrlForLead } from './composables/useLeadViewModal.js'
+import { useLeadViewModal, initLeadViewModal, checkUrlForLead, preloadLeadViewModal } from './composables/useLeadViewModal.js'
 import { useImpersonation } from './composables/useImpersonation.js'
 
 export default {
@@ -208,10 +209,6 @@ export default {
       document.body.classList.toggle('app-has-video-bg', showLayout.value)
     }
 
-    const preloadViewLeadModal = () => {
-      import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
-    }
-
     onMounted(() => {
       window.__openPropertyChat = openPropertyChat
       window.__openLeadView = openLeadView
@@ -220,12 +217,15 @@ export default {
       if (!showLayout.value) {
         resetSidebarLayout()
       }
-      // Idle preload only — avoid competing with dashboard stats on first paint.
-      // Search / ?lead= paths still warm the chunk when a lead is about to open.
-      if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(preloadViewLeadModal, { timeout: 6000 })
+      // Kanban: warm the modal chunk immediately so the first card click is sync.
+      // Elsewhere: idle preload so dashboard stats stay first paint.
+      const onKanban = route.path === '/kanban' || !!route.query.lead
+      if (onKanban) {
+        preloadLeadViewModal()
+      } else if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(preloadLeadViewModal, { timeout: 4000 })
       } else {
-        setTimeout(preloadViewLeadModal, 3500)
+        setTimeout(preloadLeadViewModal, 2000)
       }
       // Auto-open the lead modal on a hard refresh with ?lead= in the URL.
       // Done once here (page-agnostic) instead of per-page, so tabs like
@@ -258,9 +258,9 @@ export default {
     }, { immediate: true })
 
     watch(
-      () => route.query.lead,
-      (leadId) => {
-        if (leadId) preloadViewLeadModal()
+      () => [route.path, route.query.lead],
+      ([path, leadId]) => {
+        if (path === '/kanban' || leadId) preloadLeadViewModal()
       },
       { immediate: true },
     )

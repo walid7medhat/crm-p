@@ -42,6 +42,11 @@ export function useLeadViewModal() {
   }
 }
 
+/** Warm the async ViewLeadModal chunk so the first card click never waits on download. */
+export function preloadLeadViewModal() {
+  return import('@/components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
+}
+
 /**
  * @param {number|string} leadId
  * @param {object|null} [leadData] Local card/lead object for instant paint
@@ -52,6 +57,8 @@ export function useLeadViewModal() {
 export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
   if (!id) return
+  // Start chunk load before flipping show — avoids BrandLoader flash on cold open.
+  preloadLeadViewModal()
   leadViewOpenSeq.value++
   leadViewOpenSection.value = options.focus || null
 

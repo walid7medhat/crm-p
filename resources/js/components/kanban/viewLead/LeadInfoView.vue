@@ -886,14 +886,53 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
-        readonly: { type: Boolean, default: false },
-
+    readonly: { type: Boolean, default: false },
+    /** When true (e.g. Next Actions focus=matching), mount matching listings immediately. */
+    preferMatching: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const emit = defineEmits(['person-updated', 'edit-request', 'edit-section', 'lead-updated'])
 
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const showMatchingProperties = ref(false)
+let matchingRevealTimer = null
+let matchingIdleId = null
+
+function clearMatchingSchedule() {
+    if (matchingRevealTimer != null) {
+        clearTimeout(matchingRevealTimer)
+        matchingRevealTimer = null
+    }
+    if (matchingIdleId != null && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(matchingIdleId)
+        matchingIdleId = null
+    }
+}
+
+function scheduleMatchingProperties(leadId) {
+    clearMatchingSchedule()
+    showMatchingProperties.value = false
+    if (!leadId) return
+    if (props.preferMatching) {
+        showMatchingProperties.value = true
+        return
+    }
+    const reveal = () => {
+        matchingIdleId = null
+        matchingRevealTimer = null
+        if (Number(props.lead?.id) !== Number(leadId)) return
+        showMatchingProperties.value = true
+    }
+    // After the lead shell is interactive — do not compete with GET /leads/{id} paint.
+    if (typeof requestIdleCallback === 'function') {
+        matchingIdleId = requestIdleCallback(reveal, { timeout: 2000 })
+    } else {
+        matchingRevealTimer = setTimeout(reveal, 400)
+    }
+}
 
 // Links already shown as Property Portal Links chips are left out of Comments and the
 // question answers so they don't appear twice.
@@ -1002,15 +1041,25 @@ function ingestCommentPortalLinks(rows) {
 watch(
     () => props.lead?.id,
     (id) => {
-        showMatchingProperties.value = false
         commentPortalLinks.value = []
-        if (!id) return
-        // Matching listings can be heavy — load after lead details are visible.
-        setTimeout(() => {
-            showMatchingProperties.value = true
-        }, 300)
+        if (!id) {
+            clearMatchingSchedule()
+            showMatchingProperties.value = false
+            return
+        }
+        scheduleMatchingProperties(id)
     },
     { immediate: true }
+)
+
+watch(
+    () => props.preferMatching,
+    (prefer) => {
+        if (prefer && props.lead?.id) {
+            clearMatchingSchedule()
+            showMatchingProperties.value = true
+        }
+    }
 )
 
 defineExpose({

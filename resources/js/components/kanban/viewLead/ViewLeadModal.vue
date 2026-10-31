@@ -285,7 +285,12 @@ const props = defineProps({
     }
 })
 
-const lead = ref(null)
+// Seed from the kanban card on construction so the first paint is never empty.
+const lead = ref(
+  props.initialLead && Number(props.initialLead.id) === Number(props.leadId)
+    ? { ...props.initialLead }
+    : null
+)
 const isLoadingLead = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
@@ -301,7 +306,11 @@ const detailAnimating = ref(false)
 let detailExitGuard = false
 let entranceToken = 0
 let contentVisibleTimer = null
-const leadStageId = ref(null)
+const leadStageId = ref(
+  props.initialLead && Number(props.initialLead.id) === Number(props.leadId)
+    ? (props.initialLead.stage_id ?? null)
+    : null
+)
 const activeTab = ref('general')
 const echoListener = ref(null)
 const echoAssignedListener = ref(null)
@@ -684,9 +693,48 @@ const saveLeadName = async () => {
     }
 }
 
+// Module-level stage map — reused across modal opens (avoids GET /stages every time).
+// TTL + empty-skip: admin reorder must not stick forever; failed/empty parses must not poison cache.
+let cachedStageOrderPayload = null
+let cachedStageOrderAt = 0
+const STAGE_ORDER_CACHE_TTL_MS = 5 * 60 * 1000
+
+function invalidateStageOrderCache() {
+    cachedStageOrderPayload = null
+    cachedStageOrderAt = 0
+}
+
+function applyStageOrders(stages) {
+    const map = {}
+    const poolsByName = []
+    const poolsByOrder = []
+    stages.forEach((stage) => {
+        if (stage && stage.id) {
+            map[stage.id] = stage.order || 0
+            const name = String(stage.name || '').toLowerCase().replace(/[\s_-]+/g, '')
+            if (name === 'leadpool') poolsByName.push(stage)
+            if (Number(stage.order) === 9) poolsByOrder.push(stage)
+        }
+    })
+    const preferOriginal = (list) =>
+        [...list].sort((a, b) => Number(a.id) - Number(b.id))[0] || null
+    stageOrderMap.value = map
+    leadPoolStage.value = preferOriginal(poolsByName) || preferOriginal(poolsByOrder)
+    leadPoolStageId.value = leadPoolStage.value?.id || null
+}
+
 // Fetch stage orders
 const fetchStageOrders = async () => {
     try {
+        const cacheAge = Date.now() - cachedStageOrderAt
+        if (
+            Array.isArray(cachedStageOrderPayload) &&
+            cachedStageOrderPayload.length > 0 &&
+            cacheAge < STAGE_ORDER_CACHE_TTL_MS
+        ) {
+            applyStageOrders(cachedStageOrderPayload)
+            return
+        }
         const response = await api.get('/stages')
         let stages = []
         const payload = response.data?.data
@@ -703,26 +751,23 @@ const fetchStageOrders = async () => {
             stages = []
         }
 
-        const map = {}
-        const poolsByName = []
-        const poolsByOrder = []
-        stages.forEach(stage => {
-            if (stage && stage.id) {
-                map[stage.id] = stage.order || 0
-                const name = String(stage.name || '').toLowerCase().replace(/[\s_-]+/g, '')
-                if (name === 'leadpool') poolsByName.push(stage)
-                if (Number(stage.order) === 9) poolsByOrder.push(stage)
-            }
-        })
-        const preferOriginal = (list) =>
-            [...list].sort((a, b) => Number(a.id) - Number(b.id))[0] || null
-        stageOrderMap.value = map
-        leadPoolStage.value = preferOriginal(poolsByName) || preferOriginal(poolsByOrder)
-        leadPoolStageId.value = leadPoolStage.value?.id || null
-        console.log('Stage order map loaded:', stageOrderMap.value)
+        if (stages.length > 0) {
+            cachedStageOrderPayload = stages
+            cachedStageOrderAt = Date.now()
+        } else {
+            invalidateStageOrderCache()
+        }
+        applyStageOrders(stages)
     } catch (error) {
         console.error('Error fetching stage orders:', error)
+        // Leave any prior good cache; do not store a failed empty payload.
         stageOrderMap.value = {}
+    }
+}
+
+function onStageCacheVisibility() {
+    if (document.visibilityState === 'visible') {
+        invalidateStageOrderCache()
     }
 }
 
@@ -1486,6 +1531,7 @@ onMounted(() => {
     fetchStageOrders()
     checkUrlForLead()
     document.addEventListener('keydown', blockQualifiedRequirementEscape, true)
+    document.addEventListener('visibilitychange', onStageCacheVisibility)
 })
 
 const appliedOpenSection = ref(null)
@@ -1587,6 +1633,7 @@ watch(() => lead.value?.id, () => {
 onUnmounted(() => {
     jumpScroller?.removeEventListener('scroll', onJumpScroll)
     document.removeEventListener('keydown', blockQualifiedRequirementEscape, true)
+    document.removeEventListener('visibilitychange', onStageCacheVisibility)
     stopLeadDetailMotion()
     cleanup()
 })
@@ -1682,8 +1729,18 @@ watch(() => route.path, (newPath) => {
 
 async function queueLeadDetailEntrance() {
     const token = ++entranceToken
-    if (prefersReducedMotion()) {
+    const hasSeed = !!(
+        props.initialLead &&
+        Number(props.initialLead.id) === Number(props.leadId)
+    )
+    // Card seed already paints identity + tabs — never hide them with opacity:0.
+    if (prefersReducedMotion() || hasSeed) {
         detailAnimating.value = false
+        await nextTick()
+        if (token === entranceToken && leadModalRoot.value) {
+            resetLeadDetailMotion(leadModalRoot.value)
+            takeLeadDetailOrigin()
+        }
         return
     }
     await nextTick()
@@ -1827,7 +1884,13 @@ watch(show, (val, oldVal) => {
   if (val) {
     activeJump.value = 'details'
     detailExitGuard = false
-    if (!prefersReducedMotion()) detailAnimating.value = true
+    const hasSeed = !!(
+      props.initialLead &&
+      Number(props.initialLead.id) === Number(props.leadId)
+    )
+    // Seeded opens paint immediately — skip motion class that can leave content invisible.
+    if (!prefersReducedMotion() && !hasSeed) detailAnimating.value = true
+    else detailAnimating.value = false
     modalHostPath.value = route.path
     if (props.leadId) {
       fetchLead()

@@ -446,6 +446,8 @@ router.beforeEach(async (to, from, next) => {
       const hasBoardQuery = Object.keys(to.query || {}).some((key) => key !== 'lead' && to.query[key])
       import('./components/kanban/leadList/leads.vue')
       import('./components/kanban/leadList/LeadPool.vue')
+      // Warm lead modal before first card click (same chunk openLeadView preloads).
+      import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
       if (!hasBoardQuery) {
         holdBackgroundApis(700)
         prefetchLeadBoard().finally(() => releaseBackgroundApis())

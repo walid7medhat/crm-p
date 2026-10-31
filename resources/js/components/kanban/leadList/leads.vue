@@ -3735,7 +3735,7 @@ onMounted(async () => {
         const numericId = Number(leadIdFromUrl)
         if (!isNaN(numericId) && numericId > 0) {
             await nextTick()
-            openLeadView(numericId)
+            openLeadView(numericId, findLeadInColumns(numericId))
         }
     }
 })
@@ -4987,7 +4987,13 @@ function onLeadCardClick(task, column, event) {
         mobileLastTap = { id, at: now }
     }
     clearTimeout(leadCardClickTimer)
-    const openDelay = kanbanIsMobile.value && canDeleteLeads.value ? 380 : 220
+    // Desktop: open immediately (dblclick clears this timer). Mobile+delete: short
+    // wait only to distinguish double-tap delete from single-tap open.
+    const openDelay = kanbanIsMobile.value && canDeleteLeads.value ? 280 : 0
+    if (openDelay === 0) {
+        viewLead(task)
+        return
+    }
     leadCardClickTimer = setTimeout(() => viewLead(task), openDelay)
 }
 

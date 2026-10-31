@@ -33,8 +33,17 @@ function groups(root) {
     ].filter(Boolean)
 }
 
-export function playLeadDetailEntrance(root, origin, onDone) {
-    if (!root || prefersReducedMotion()) {
+/**
+ * @param {HTMLElement} root
+ * @param {DOMRect|null} origin
+ * @param {Function} [onDone]
+ * @param {{ instant?: boolean }} [opts] When instant, skip opacity:0 hide (seeded kanban open).
+ */
+export function playLeadDetailEntrance(root, origin, onDone, opts = {}) {
+    if (!root || prefersReducedMotion() || opts.instant) {
+        if (root && opts.instant) {
+            gsap.set([root, ...groups(root)], { clearProps: 'opacity,transform' })
+        }
         onDone?.()
         return
     }
@@ -69,7 +78,7 @@ export function playLeadDetailEntrance(root, origin, onDone) {
         y: 0,
         scale: 1,
         opacity: 1,
-        duration: 0.42,
+        duration: 0.32,
         ease: 'power3.out',
     }, 0)
 
@@ -78,18 +87,24 @@ export function playLeadDetailEntrance(root, origin, onDone) {
     const tabs = root.querySelector('[data-motion="tabs"]')
     const main = root.querySelector('.lead-view-main')
     const side = root.querySelector('.lead-view-side')
-    if (identity) tl.to(identity, { opacity: 1, y: 0, duration: 0.24, ease: 'power2.out' }, 0.1)
-    if (tabs) tl.to(tabs, { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out' }, 0.16)
-    if (stages) tl.to(stages, { opacity: 1, y: 0, duration: 0.24, ease: 'power2.out' }, 0.18)
-    if (main) tl.to(main, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' }, 0.22)
-    if (side) tl.to(side, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' }, 0.32)
-    if (!nodes.length) tl.set({}, {}, 0.42)
+    if (identity) tl.to(identity, { opacity: 1, y: 0, duration: 0.18, ease: 'power2.out' }, 0.06)
+    if (tabs) tl.to(tabs, { opacity: 1, y: 0, duration: 0.16, ease: 'power2.out' }, 0.1)
+    if (stages) tl.to(stages, { opacity: 1, y: 0, duration: 0.18, ease: 'power2.out' }, 0.12)
+    if (main) tl.to(main, { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' }, 0.14)
+    if (side) tl.to(side, { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' }, 0.2)
+    if (!nodes.length) tl.set({}, {}, 0.32)
 }
 
 export function playLeadDetailData(root) {
     if (!root || prefersReducedMotion()) return
     const nodes = [root.querySelector('.lead-view-main'), root.querySelector('.lead-view-side')].filter(Boolean)
     if (!nodes.length) return
+    // Already painted (e.g. from card seed) — don't flash opacity:0 over visible content.
+    const alreadyVisible = nodes.every((n) => {
+        const o = window.getComputedStyle(n).opacity
+        return o === '' || Number(o) > 0.5
+    })
+    if (alreadyVisible) return
     gsap.fromTo(nodes, { opacity: 0, y: 14 }, {
         opacity: 1,
         y: 0,
