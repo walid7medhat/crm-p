@@ -10,6 +10,12 @@ class ListingRequest extends FormRequest
     /** Property type names (lowercase) that require a plot size. Keep in sync with listingPlotSize.js. */
     public const PLOT_SIZE_TYPES = ['villa', 'townhouse', 'twinhouse', 'twin house'];
 
+    /** Largest value that fits the decimal(15,2) money columns (price, selling_price, ...). */
+    public const MAX_AMOUNT = 9999999999999;
+
+    /** Largest value that fits the INT columns (size_sqft, size_sqmt, bedrooms, ...). */
+    public const MAX_INT = 2147483647;
+
     public function authorize(): bool
     {
         return true;
@@ -42,6 +48,8 @@ $listingId = $this->route('property');
             $typeName = \App\Models\PropertyType::whereKey($propertyTypeId)->value('name');
             $isBuilding = strtolower(trim((string) $typeName)) === 'building';
         }
+        $maxAmount = 'max:' . self::MAX_AMOUNT;
+        $maxInt = 'max:' . self::MAX_INT;
         $rules = [
             // 'unit_number' => 'required|string|max:50',
             'unit_number' => [
@@ -56,16 +64,16 @@ $listingId = $this->route('property');
                 })
                 ->ignore($listingId),
             ],
-            'size_sqft' => 'nullable|numeric|min:1',
-            'size_sqmt' => 'nullable|numeric|min:1',
-            'plot_size' => ($needsPlotSize && ! $isDraft ? 'required' : 'nullable') . '|integer|min:1',
-            'number_of_bedrooms' => $isPlot?'nullable':'nullable|integer|min:0',
-            'number_of_bathrooms' => $isPlot?'nullable':'nullable|integer|min:0',
+            'size_sqft' => "nullable|numeric|min:1|$maxInt",
+            'size_sqmt' => "nullable|numeric|min:1|$maxInt",
+            'plot_size' => ($needsPlotSize && ! $isDraft ? 'required' : 'nullable') . "|integer|min:1|$maxInt",
+            'number_of_bedrooms' => $isPlot?'nullable':"nullable|integer|min:0|$maxInt",
+            'number_of_bathrooms' => $isPlot?'nullable':"nullable|integer|min:0|$maxInt",
             'number_of_floors' => (($isBuilding && ! $isDraft) ? 'required' : 'nullable') . '|integer|min:1|max:200',
-            'price' => 'required|numeric|min:10000',
+            'price' => "required|numeric|min:10000|$maxAmount",
             'listing_status' => 'sometimes|string|max:50',
             'mortgage_status' => 'required|string|max:50',
-            'mortgage_amount' => 'nullable|numeric|min:0',
+            'mortgage_amount' => "nullable|numeric|min:0|$maxAmount",
             'mortgage_comment' => 'nullable|string|max:1000',
             'occupancy_status' => 'nullable|string|max:50',
             'occupancy_comment' => 'nullable|string|max:1000',
@@ -83,14 +91,14 @@ $listingId = $this->route('property');
             'developer_id' => 'nullable|exists:developers,id',
             // TEMP: was after:today (rejects "today" and any past date). Relax until product confirms rules.
             'rent_expiry_date' => 'nullable|date',
-            'rent_amount' => 'nullable|numeric|min:0',
+            'rent_amount' => "nullable|numeric|min:0|$maxAmount",
             //   'rented_status' => 'nullable|in:Available,Rented',
             // 'rented_until' => 'nullable|date|after_or_equal:today',
             'payment_plan' => 'nullable|string',
-            'original_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
+            'original_price' => "nullable|numeric|min:0|$maxAmount",
+            'selling_price' => "nullable|numeric|min:0|$maxAmount",
             'noc_percentage' => 'nullable|integer|min:0|max:50',
-            'noc_fixed_amount' => 'nullable|integer|min:0',
+            'noc_fixed_amount' => "nullable|integer|min:0|$maxAmount",
             'handover_date' => 'nullable|date',
             'payment_breakdown' => 'nullable|array',
             'payment_breakdown.*.id' => 'nullable',
@@ -152,6 +160,15 @@ $listingId = $this->route('property');
     {
         return [
             'unit_number.required' => 'Unit number is required',
+            'price.max' => 'Price is too large',
+            'selling_price.max' => 'Selling price is too large',
+            'original_price.max' => 'Original price is too large',
+            'mortgage_amount.max' => 'Mortgage amount is too large',
+            'rent_amount.max' => 'Rent amount is too large',
+            'noc_fixed_amount.max' => 'NOC fixed amount is too large',
+            'size_sqft.max' => 'Size (sqft) is too large',
+            'size_sqmt.max' => 'Size (sqm) is too large',
+            'plot_size.max' => 'Plot size is too large',
             'property_type_id.required' => 'Property type is required',
             'area_id.required' => 'Area is required',
             'agent_id.required' => 'Agent is required',

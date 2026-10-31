@@ -72,11 +72,14 @@ class ListingController extends Controller
         $filtersHash = md5(serialize($request->all()));
         $userId      = (int) Auth::id();
         $version     = self::getUserCacheVersion($userId);
+        // Global epoch: a write by one user must invalidate every user's grid
+        // (the file driver has no tags, so the per-user version alone leaves others stale).
+        $epoch       = self::getIndexCacheEpoch();
 
         // Cache resolved grid JSON (not raw models) so cache hits skip resource N+1 work.
         $cacheKey = $request->boolean('my_listings')
-            ? self::CACHE_PREFIX . 'my_json_' . $userId . '_v' . $version . '_' . $filtersHash
-            : self::CACHE_PREFIX . 'index_json_' . $userId . '_v' . $version . '_' . $filtersHash;
+            ? self::CACHE_PREFIX . 'my_json_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash
+            : self::CACHE_PREFIX . 'index_json_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash;
 
         $resolver = function () use ($request) {
             ListingGridResource::resetRequestCaches();
@@ -2280,6 +2283,7 @@ private function sendResubmissionNotification($listing, $user)
             if (Auth::check()) {
                 self::bumpUserCacheVersion((int) Auth::id());
             }
+            self::bumpIndexCacheEpoch();
             self::bumpShowCacheEpoch();
             self::bumpStatsCacheEpoch();
 
@@ -2295,6 +2299,7 @@ private function sendResubmissionNotification($listing, $user)
             if (Auth::check()) {
                 self::bumpUserCacheVersion((int) Auth::id());
             }
+            self::bumpIndexCacheEpoch();
             self::bumpShowCacheEpoch();
             self::bumpStatsCacheEpoch();
         }
@@ -2310,6 +2315,20 @@ private function sendResubmissionNotification($listing, $user)
     {
         Cache::put(
             self::CACHE_PREFIX . 'ver_user_' . $userId,
+            (string) (microtime(true) * 1000),
+            86400 * 30
+        );
+    }
+
+    public static function getIndexCacheEpoch(): string
+    {
+        return (string) Cache::get(self::CACHE_PREFIX . 'index_epoch', '0');
+    }
+
+    public static function bumpIndexCacheEpoch(): void
+    {
+        Cache::put(
+            self::CACHE_PREFIX . 'index_epoch',
             (string) (microtime(true) * 1000),
             86400 * 30
         );
@@ -2376,6 +2395,7 @@ private function sendResubmissionNotification($listing, $user)
             if ($userId) {
                 self::bumpUserCacheVersion($userId);
             }
+            self::bumpIndexCacheEpoch();
             self::bumpShowCacheEpoch();
             self::bumpStatsCacheEpoch();
             if (method_exists(Cache::getStore(), 'tags')) {
@@ -2386,6 +2406,7 @@ private function sendResubmissionNotification($listing, $user)
             if ($userId) {
                 self::bumpUserCacheVersion($userId);
             }
+            self::bumpIndexCacheEpoch();
             self::bumpShowCacheEpoch();
             self::bumpStatsCacheEpoch();
         }
@@ -2720,15 +2741,16 @@ public function updatePaymentBreakdown(Request $request, $id): JsonResponse
             return ApiResponse::error('You can only add payment breakdown to your own listings.', 403);
         }
 
+        $maxAmount = 'max:' . \App\Http\Requests\Listing\ListingRequest::MAX_AMOUNT;
         $validated = $request->validate([
-            'original_price' => 'nullable|numeric|min:0',
-            'price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
+            'original_price' => "nullable|numeric|min:0|$maxAmount",
+            'price' => "nullable|numeric|min:0|$maxAmount",
+            'selling_price' => "nullable|numeric|min:0|$maxAmount",
             'payment_plan' => 'nullable',
             'payment_breakdown' => 'nullable',
             'assignment_expense_lines' => 'nullable',
             'noc_percentage' => 'nullable|integer|min:0',
-            'noc_fixed_amount' => 'nullable|integer|min:0',
+            'noc_fixed_amount' => "nullable|integer|min:0|$maxAmount",
             'handover_date' => 'nullable|date',
         ]);
 
