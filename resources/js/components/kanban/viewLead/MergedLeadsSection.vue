@@ -1,26 +1,29 @@
 <template>
-    <div v-if="rows.length" class="ml" role="list" aria-label="Merged leads">
+    <div v-if="count" class="ml">
         <span class="ml__label">Merged leads</span>
-        <span class="ml__count">{{ rows.length }}</span>
-        <span class="ml__sep" aria-hidden="true">·</span>
-
-        <template v-for="(r, index) in rows" :key="r.id">
-            <button
-                type="button"
-                class="ml__name"
-                role="listitem"
-                :title="r.lead_name || 'Untitled lead'"
-                @click="open(r.id)"
-            >
-                {{ r.lead_name || 'Untitled lead' }}
-            </button>
-            <span
-                v-if="index < rows.length - 1"
-                class="ml__sep"
-                aria-hidden="true"
-            >·</span>
-        </template>
+        <button
+            type="button"
+            class="ml__count"
+            :aria-label="`Show ${count} merged lead${count === 1 ? '' : 's'}`"
+            @click.stop="popover.open(leadId, $event.currentTarget)"
+            @pointerenter="popover.hoverOpen(leadId, $event)"
+            @pointerleave="popover.hoverLeave"
+        >
+            <iconify-icon icon="lucide:git-merge" />
+            {{ count }}
+        </button>
     </div>
+
+    <MergedLeadsModal
+        v-model="popover.show.value"
+        :lead-id="popover.leadId.value"
+        :trigger-element="popover.trigger.value"
+        :z-index="12500"
+        openable
+        @hover-enter="popover.cancelClose"
+        @hover-leave="popover.hoverLeave"
+        @open-lead="open"
+    />
 
     <MergedLeadViewModal
         v-model="showView"
@@ -34,12 +37,15 @@
 import { computed, ref, watch } from 'vue'
 import api from '@/plugins/axios'
 import MergedLeadViewModal from './MergedLeadViewModal.vue'
+import MergedLeadsModal from '../leadList/MergedLeadsModal.vue'
+import { useMergedLeadsPopover } from '../leadList/composables/useMergedLeadsPopover'
 
 const props = defineProps({ leadId: { type: Number, required: true } })
 
 const ELEVATED_ROLES = ['super_admin', 'admin', 'branch_admin']
 
-const rows = ref([])
+const popover = useMergedLeadsPopover()
+const count = ref(0)
 const elevatedFromApi = ref(null)
 const showView = ref(false)
 const selectedId = ref(null)
@@ -61,23 +67,25 @@ const elevated = computed(() => (
     elevatedFromApi.value === null ? elevatedLocal.value : !!elevatedFromApi.value
 ))
 
-function open(id) {
-    selectedId.value = id
+function open(item) {
+    if (!item?.id) return
+    selectedId.value = item.id
     showView.value = true
 }
 
 async function load() {
-    rows.value = []
+    count.value = 0
     elevatedFromApi.value = null
+    popover.show.value = false
     if (!props.leadId) return
     try {
         const res = await api.get(`/leads/${props.leadId}/merged-leads`)
-        rows.value = res.data?.data || []
+        count.value = (res.data?.data || []).length
         if (typeof res.data?.meta?.elevated_merged_view === 'boolean') {
             elevatedFromApi.value = res.data.meta.elevated_merged_view
         }
     } catch {
-        rows.value = []
+        count.value = 0
     }
 }
 
@@ -88,24 +96,17 @@ defineExpose({ reload: load })
 <style scoped>
 .ml {
     display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin: 0 0 8px;
     padding: 6px 10px;
     min-height: 32px;
     border: 1px solid #e8edf3;
     border-radius: 8px;
     background: #fff;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    scrollbar-width: thin;
 }
 
 .ml__label {
-    flex: 0 0 auto;
     font-family: Montserrat, sans-serif;
     font-size: 11px;
     font-weight: 700;
@@ -115,54 +116,27 @@ defineExpose({ reload: load })
 }
 
 .ml__count {
-    flex: 0 0 auto;
-    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--color-primary);
     background: var(--color-primary-soft);
-    border-radius: 999px;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.ml__sep {
-    flex: 0 0 auto;
-    color: #cbd5e1;
-    font-size: 12px;
-    line-height: 1;
-}
-
-.ml__name {
-    flex: 0 1 auto;
-    max-width: 180px;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    font-family: Montserrat, sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    color: #0B0736;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     cursor: pointer;
-    text-align: left;
+    transition: filter 0.15s;
 }
 
-.ml__name:hover {
-    color: var(--color-primary);
-    text-decoration: underline;
+.ml__count:hover {
+    filter: brightness(0.95);
 }
 
-.ml__name:focus-visible {
+.ml__count:focus-visible {
     outline: 2px solid var(--color-primary-muted);
     outline-offset: 2px;
-    border-radius: 4px;
 }
 </style>

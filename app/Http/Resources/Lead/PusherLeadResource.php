@@ -131,8 +131,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             'currency' => $this->currency,
             
             'created_at' => $this->created_at->setTimezone(config('app.timezone')),
-            'duplicate_no'=>$this->duplicate_leads->count(),
-            'duplicate_ids'=>$this->duplicate_leads->pluck('id')->toArray(),
+            // Broadcast to many viewers, so same-branch duplicates only (never the trigger user's view).
+            'duplicate_no'=>($sameBranchDuplicates = $this->resource->duplicateLeadsFor(false))->count(),
+            'duplicate_ids'=>$sameBranchDuplicates->pluck('id')->toArray(),
             'is_reverted'=>!is_null($this->revert),
             'can_edit'=>auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || $this->responsible_person_id== auth()->user()->id || (auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)),
             'can_edit_phone_email'=>auth()->check() &&( auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || (auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)),

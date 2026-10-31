@@ -1,12 +1,17 @@
 <template>
     <Teleport to="body">
-        <div v-if="modelValue && isSheet" class="mlp-backdrop" @click.stop="close"></div>
+        <div
+            v-if="modelValue && isSheet"
+            class="mlp-backdrop"
+            :style="zIndex ? { zIndex: zIndex - 1 } : null"
+            @click.stop="close"
+        ></div>
         <div
             v-if="modelValue"
             ref="popupRef"
             class="mlp"
             :class="{ 'mlp--sheet': isSheet }"
-            :style="isSheet ? null : popupStyle"
+            :style="[isSheet ? null : popupStyle, zIndex ? { zIndex } : null]"
             role="dialog"
             aria-label="Merged leads"
             @click.stop
@@ -27,7 +32,16 @@
                 <p v-else-if="error" class="mlp-hint mlp-hint--error">{{ error }}</p>
                 <p v-else-if="!items.length" class="mlp-hint">No merged leads.</p>
 
-                <article v-for="item in items" :key="item.id" class="mlp-row">
+                <article
+                    v-for="item in items"
+                    :key="item.id"
+                    class="mlp-row"
+                    :class="{ 'mlp-row--open': openable }"
+                    :role="openable ? 'button' : null"
+                    :tabindex="openable ? 0 : null"
+                    @click="openLead(item)"
+                    @keydown.enter="openLead(item)"
+                >
                     <strong class="mlp-row__name">{{ item.lead_name || 'Untitled lead' }}</strong>
                     <div v-if="item.stage_name || item.match_by?.length || ownerName(item) || (isAdmin && item.merged_at)" class="mlp-row__meta">
                         <span v-if="item.stage_name" class="mlp-chip">{{ item.stage_name }}</span>
@@ -50,8 +64,12 @@ const props = defineProps({
     modelValue: { type: Boolean, default: false },
     leadId: { type: [Number, String], default: null },
     triggerElement: { type: Object, default: null },
+    /** Rows emit open-lead on click (used inside the view lead modal). */
+    openable: { type: Boolean, default: false },
+    /** Raise above a host modal (view lead modal sits at 12200). */
+    zIndex: { type: Number, default: null },
 })
-const emit = defineEmits(['update:modelValue', 'hover-enter', 'hover-leave'])
+const emit = defineEmits(['update:modelValue', 'hover-enter', 'hover-leave', 'open-lead'])
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin']
 const POPUP_WIDTH = 280
@@ -76,6 +94,12 @@ const isAdmin = (() => {
 })()
 
 const close = () => emit('update:modelValue', false)
+
+function openLead(item) {
+    if (!props.openable) return
+    emit('open-lead', item)
+    close()
+}
 
 const ownerName = (item) => {
     const p = item?.responsible_person
@@ -263,6 +287,14 @@ onUnmounted(() => bind(false))
     padding: 7px 9px;
     background: #fbfbfd;
 }
+.mlp-row--open { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.mlp-row--open:hover,
+.mlp-row--open:focus-visible {
+    border-color: var(--color-primary-muted, #c7d2fe);
+    background: var(--color-primary-soft, #f5f3ff);
+    outline: none;
+}
+.mlp-row--open:hover .mlp-row__name { color: var(--color-primary); }
 .mlp-row__name {
     display: block;
     overflow: hidden;

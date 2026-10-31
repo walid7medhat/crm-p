@@ -6,6 +6,8 @@ return [
     /** null = resolve as first lead stage by order / "New" / "New Lead" */
     'new_lead_stage_id'    => env('LEAD_MERGE_NEW_LEAD_STAGE_ID', 3),
     'merge_roles'          => ['super_admin', 'admin', 'branch_admin'],
+    /** Besides super_admin, these user ids see duplicates in other branches (view only, never merge). */
+    'cross_branch_duplicate_user_ids' => array_filter(array_map('intval', explode(',', (string) env('LEAD_MERGE_CROSS_BRANCH_USER_IDS', '30')))),
     'group_by_branch'      => env('LEAD_MERGE_GROUP_BY_BRANCH', true),
     /**
      * Automatic merge (Rules A/B + daily command) only for these branch keys.

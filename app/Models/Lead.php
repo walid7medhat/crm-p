@@ -552,8 +552,9 @@ public function activitiesWithTrashed()
      * @param  iterable<int, Lead>  $leads
      * @return array<int, int[]>
      */
-    public static function duplicateIdsMap($leads, int $limit = 200): array
+    public static function duplicateIdsMap($leads, int $limit = 200, ?bool $crossBranch = null): array
     {
+        $crossBranch ??= static::seesCrossBranchDuplicates();
         $leads = collect($leads);
         $digitsList = $leads->map(fn ($l) => static::phoneDigits($l->work_phone))->filter()->unique()->values()->all();
         $emailList = $leads->map(fn ($l) => static::normalizeEmail($l->email))->filter()->unique()->values()->all();
@@ -587,11 +588,61 @@ public function activitiesWithTrashed()
             );
             $ids = array_values(array_diff(array_unique($ids), [$id]));
             if ($ids !== []) {
-                $map[$id] = array_slice($ids, 0, $limit);
+                $map[$id] = $ids;
             }
         }
 
-        return $map;
+        if (! $crossBranch && $map !== []) {
+            $keys = static::branchKeysForIds(array_merge(array_keys($map), ...array_values($map)));
+            foreach ($map as $id => $ids) {
+                $own = $keys[$id] ?? '';
+                $ids = array_values(array_filter($ids, fn ($other) => ($keys[$other] ?? '') === $own));
+                if ($ids === []) {
+                    unset($map[$id]);
+                } else {
+                    $map[$id] = $ids;
+                }
+            }
+        }
+
+        return array_map(fn ($ids) => array_slice($ids, 0, $limit), $map);
+    }
+
+    /**
+     * Super admin and the users in lead_merge.cross_branch_duplicate_user_ids see duplicates
+     * in other branches; everyone else (and broadcasts / console, no user) only their branch.
+     */
+    public static function seesCrossBranchDuplicates($user = null): bool
+    {
+        $user ??= auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        $allowed = array_map('intval', (array) config('lead_merge.cross_branch_duplicate_user_ids', []));
+
+        return in_array((int) $user->id, $allowed, true) || $user->hasRole('super_admin');
+    }
+
+    /**
+     * id => branchKey() for many leads in one query (owners' branch, else lead_branch_source).
+     *
+     * @param  int[]  $ids
+     * @return array<int, string>
+     */
+    public static function branchKeysForIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if ($ids === []) {
+            return [];
+        }
+
+        return static::withoutGlobalScope('notMerged')
+            ->with(['responsiblePerson', 'addedBy'])
+            ->whereIn('id', $ids)
+            ->get(['id', 'responsible_person_id', 'added_by', 'lead_branch_source'])
+            ->mapWithKeys(fn (Lead $lead) => [(int) $lead->id => $lead->branchKey()])
+            ->all();
     }
 
     /**
@@ -625,10 +676,23 @@ public function activitiesWithTrashed()
     /** Duplicates = other leads with the same phone (ignoring formatting) or the same email. */
     public function getDuplicateLeadsAttribute()
     {
+        return $this->duplicateLeadsFor();
+    }
+
+    /** Duplicates visible to the current viewer; $crossBranch=false forces same-branch only (broadcasts). */
+    public function duplicateLeadsFor(?bool $crossBranch = null)
+    {
+        $crossBranch ??= static::seesCrossBranchDuplicates();
         $ids = array_values(array_diff(
             static::matchingContactIds(static::phoneDigits($this->work_phone), static::normalizeEmail($this->email)),
             [(int) $this->id]
         ));
+
+        if ($ids !== [] && ! $crossBranch) {
+            $keys = static::branchKeysForIds(array_merge($ids, [(int) $this->id]));
+            $own = $keys[(int) $this->id] ?? '';
+            $ids = array_values(array_filter($ids, fn ($id) => ($keys[$id] ?? '') === $own));
+        }
 
         return $ids === [] ? collect() : Lead::query()->whereIn('id', $ids)->orderBy('id')->get();
     }

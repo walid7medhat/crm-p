@@ -16,7 +16,8 @@ class LeadMergeService
             $ids = Lead::matchingContactIds(Lead::phoneDigits($lead->work_phone), Lead::normalizeEmail($lead->email));
             if ($ids === []) return collect([$lead]);
 
-            $byBranch = (bool) config('lead_merge.group_by_branch');
+            // Merging never crosses branches (cross-branch duplicates are view-only).
+            $byBranch = true;
             $key = '';
             if ($byBranch) {
                 $lead->loadMissing(['responsiblePerson', 'addedBy']);
@@ -40,7 +41,7 @@ class LeadMergeService
     {
         $pool     = (int) config('lead_merge.lead_pool_stage_id');
         $allowed  = [(int) config('lead_merge.unqualified_stage_id'), (int) config('lead_merge.lost_stage_id')];
-        $byBranch = (bool) config('lead_merge.group_by_branch');
+        $byBranch = true; // never merge across branches
 
         $defKey = '';
         if ($byBranch) {
