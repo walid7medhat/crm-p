@@ -70,6 +70,7 @@
 <script>
 import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { startLocationTracking, stopLocationTracking } from '@/composables/useLocationTracking'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
 import Footer from './components/layout/footer/index.vue'
@@ -249,8 +250,12 @@ export default {
       syncVideoBgClass()
       if (!visible) {
         resetSidebarLayout()
+        stopLocationTracking()
+        return
       }
-    })
+      // Foreground-only: polls while CRM is open/visible; pauses when the tab is hidden.
+      startLocationTracking()
+    }, { immediate: true })
 
     watch(
       () => route.query.lead,

@@ -81,17 +81,48 @@ class LoginLocationUpdate
      */
     public function moved(mixed $fromLat, mixed $fromLng, mixed $toLat, mixed $toLng): bool
     {
+        $meters = $this->distanceMeters($fromLat, $fromLng, $toLat, $toLng);
+        if ($meters === null) {
+            return true;
+        }
+
+        return $meters > 20;
+    }
+
+    /**
+     * Great-circle distance in metres, or null when any coordinate is unusable.
+     */
+    public function distanceMeters(mixed $fromLat, mixed $fromLng, mixed $toLat, mixed $toLng): ?float
+    {
         $fromLatitude = $this->coordinate($fromLat);
         $fromLongitude = $this->coordinate($fromLng);
         $toLatitude = $this->coordinate($toLat);
         $toLongitude = $this->coordinate($toLng);
 
         if ($fromLatitude === null || $fromLongitude === null || $toLatitude === null || $toLongitude === null) {
+            return null;
+        }
+
+        $earthRadius = 6371000.0;
+        $latFrom = deg2rad($fromLatitude);
+        $latTo = deg2rad($toLatitude);
+        $deltaLat = deg2rad($toLatitude - $fromLatitude);
+        $deltaLng = deg2rad($toLongitude - $fromLongitude);
+
+        $a = sin($deltaLat / 2) ** 2
+            + cos($latFrom) * cos($latTo) * (sin($deltaLng / 2) ** 2);
+
+        return 2 * $earthRadius * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    public function movedAtLeast(mixed $fromLat, mixed $fromLng, mixed $toLat, mixed $toLng, float $meters): bool
+    {
+        $distance = $this->distanceMeters($fromLat, $fromLng, $toLat, $toLng);
+        if ($distance === null) {
             return true;
         }
 
-        return abs($fromLatitude - $toLatitude) > 0.0002
-            || abs($fromLongitude - $toLongitude) > 0.0002;
+        return $distance >= $meters;
     }
 
     public static function source(User $user): ?string

@@ -85,6 +85,19 @@ class LoginLocationUpdateTest extends TestCase
         $this->assertFalse(LoginLocationUpdate::isPrecise($decision['accuracy']));
     }
 
+    public function test_distance_and_move_threshold_helpers(): void
+    {
+        $near = $this->recorder->distanceMeters(25.2048493, 55.2707825, 25.2049493, 55.2707825);
+        $this->assertNotNull($near);
+        $this->assertLessThan(75, $near);
+        $this->assertFalse($this->recorder->movedAtLeast(25.2048493, 55.2707825, 25.2049493, 55.2707825, 75));
+
+        $far = $this->recorder->distanceMeters(25.2048493, 55.2707825, 25.2148493, 55.2707825);
+        $this->assertNotNull($far);
+        $this->assertGreaterThan(75, $far);
+        $this->assertTrue($this->recorder->movedAtLeast(25.2048493, 55.2707825, 25.2148493, 55.2707825, 75));
+    }
+
     public function test_ip_labelled_coordinates_are_not_treated_as_a_device_fix(): void
     {
         $ip = new User;

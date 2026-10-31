@@ -52,15 +52,8 @@ class UserResource extends JsonResource
                 return $this->getAllPermissions()->pluck('name');
             }),
             'created_at' => $this->created_at?->format('Y-m-d H:i'),
-                        'last_login_at' => $this->last_login_at,
-            'last_login_location' => $this->last_login_location,
-            'last_login_lat' => $this->last_login_lat !== null ? (float) $this->last_login_lat : null,
-            'last_login_lng' => $this->last_login_lng !== null ? (float) $this->last_login_lng : null,
-            'last_login_accuracy' => $this->last_login_accuracy !== null ? (int) $this->last_login_accuracy : null,
-            'last_login_location_at' => $this->last_login_location_at?->toIso8601String(),
-            'last_login_location_source' => LoginLocationUpdate::source($this->resource),
-            'last_login_location_precise' => LoginLocationUpdate::isPrecise($this->last_login_accuracy),
-            'last_login_ip' => $this->last_login_ip,
+            'last_login_at' => $this->last_login_at,
+            ...$this->locationFieldsForViewer(),
               // Hierarchical data
             'team_members_count' => $this->relationLoaded('children')
                 ? $this->children->count()
@@ -82,6 +75,41 @@ class UserResource extends JsonResource
                 ?: User::resolveDisplayName($this->office),
             'joining_date' => $this->employeeProfile?->joining_date,
             'receive_absent_email' => (bool) $this->receive_absent_email,
+        ];
+    }
+
+    /**
+     * Device location is Super Admin only (UI and API). Other roles receive nulls.
+     *
+     * @return array<string, mixed>
+     */
+    private function locationFieldsForViewer(): array
+    {
+        $viewer = auth()->user();
+        $allowed = $viewer && $viewer->hasRole('super_admin');
+
+        if (! $allowed) {
+            return [
+                'last_login_location' => null,
+                'last_login_lat' => null,
+                'last_login_lng' => null,
+                'last_login_accuracy' => null,
+                'last_login_location_at' => null,
+                'last_login_location_source' => null,
+                'last_login_location_precise' => false,
+                'last_login_ip' => null,
+            ];
+        }
+
+        return [
+            'last_login_location' => $this->last_login_location,
+            'last_login_lat' => $this->last_login_lat !== null ? (float) $this->last_login_lat : null,
+            'last_login_lng' => $this->last_login_lng !== null ? (float) $this->last_login_lng : null,
+            'last_login_accuracy' => $this->last_login_accuracy !== null ? (int) $this->last_login_accuracy : null,
+            'last_login_location_at' => $this->last_login_location_at?->toIso8601String(),
+            'last_login_location_source' => LoginLocationUpdate::source($this->resource),
+            'last_login_location_precise' => LoginLocationUpdate::isPrecise($this->last_login_accuracy),
+            'last_login_ip' => $this->last_login_ip,
         ];
     }
 }

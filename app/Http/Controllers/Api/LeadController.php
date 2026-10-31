@@ -59,12 +59,16 @@ class LeadController extends Controller
                 // $this->checkAndRevertLeads();
         
                 $user = auth()->user();
-                $perPage = $request->get('per_page', 20);
-                $isPaginatedPool = $request->filled('paginate') && (string) $request->paginate === '1';
+                $perPage = max(1, min(100, (int) $request->get('per_page', 20)));
+                // Explicit grouped dump (legacy). Ordinary list requests — including callers
+                // that omit paginate=1 — use the bounded paginated path so we never
+                // Lead::latest()->get() the entire filtered set by accident.
+                $wantsGrouped = $request->boolean('grouped');
+                $isPaginatedPool = ! $wantsGrouped;
                 $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
                 $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
 
-                // Lead Pool cards only need light relations — avoid heavy graph loads.
+                // Lead Pool / paginated cards only need light relations — avoid heavy graph loads.
                 // Grouped list path needs relations LeadResource reads (propertyType/area/createdHistory).
                 $leadsQuery = Lead::query();
                 if ($isPaginatedPool) {
@@ -374,6 +378,35 @@ class LeadController extends Controller
                         ]]);
                     }
 
+                // Aggregates for report KPI cards — never load lead rows.
+                if ($request->boolean('stage_counts_only')) {
+                    $rows = (clone $leadsQuery)->setEagerLoads([])
+                        ->toBase()
+                        ->cloneWithout(['columns', 'orders'])
+                        ->selectRaw('stage_id, COUNT(*) as c')
+                        ->groupBy('stage_id')
+                        ->pluck('c', 'stage_id');
+
+                    $stages = Stage::query()
+                        ->whereIn('id', $rows->keys()->filter()->all())
+                        ->get(['id', 'name']);
+
+                    $stagePayload = $stages->map(fn (Stage $stage) => [
+                        'stage_id' => (int) $stage->id,
+                        'stage_name' => $stage->name,
+                        'count' => (int) ($rows[$stage->id] ?? 0),
+                    ])->values();
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'total' => (int) $rows->sum(),
+                            'by_stage_id' => $rows->map(fn ($c) => (int) $c)->all(),
+                            'stages' => $stagePayload,
+                        ],
+                    ]);
+                }
+
                 if ($request->filled('lead_type')) {
                     if (in_array($request->lead_type, ['rent', 'sale'], true)) {
                         $leadsQuery->whereRaw("($typeSql) IN (?, 'both')", [$request->lead_type]);
@@ -392,8 +425,12 @@ class LeadController extends Controller
 
                     // Always use the light Kanban card resource for pool cards (LeadResource is ~20x heavier).
                     try {
-                        // Lead Pool: always simplePaginate — COUNT(*) over ~50k+ pool rows is too slow.
-                        $paginator = $leadsQuery->simplePaginate($perPage);
+                        // Lead Pool: simplePaginate — COUNT(*) over large pool sets is too slow.
+                        // Reports / callers that need page totals opt in with with_total=1.
+                        $withTotal = $request->boolean('with_total') || $request->boolean('count_total');
+                        $paginator = $withTotal
+                            ? $leadsQuery->paginate($perPage)
+                            : $leadsQuery->simplePaginate($perPage);
                         $items = collect($paginator->items());
 
                         // Count only. Loading every duplicate id for the page (often tens of
@@ -421,9 +458,11 @@ class LeadController extends Controller
                             'data' => $payload,
                             'pagination' => [
                                 'current_page' => $paginator->currentPage(),
-                                'last_page'    => $paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage(),
+                                'last_page'    => $withTotal
+                                    ? $paginator->lastPage()
+                                    : ($paginator->hasMorePages() ? ($paginator->currentPage() + 1) : $paginator->currentPage()),
                                 'per_page'     => $paginator->perPage(),
-                                'total'        => null,
+                                'total'        => $withTotal ? $paginator->total() : null,
                                 'has_more_pages' => $paginator->hasMorePages(),
                             ],
                             'search_ranking_disabled' => $skipSearchRanking,
@@ -435,9 +474,18 @@ class LeadController extends Controller
                     }
                 }
 
-                // Default: grouped-by-stage response (existing callers such as lead-reports).
-                // Cannot force pagination here — callers expect the full filtered set grouped by stage.
-                $leads = $leadsQuery->latest()->get();
+                // Explicit grouped=1 only. Refuse silently truncating huge dumps — callers
+                // must narrow filters or use paginate / stage_counts_only / export endpoints.
+                $groupedMax = (int) config('leads.index_grouped_max', 2000);
+                $matchedTotal = (clone $leadsQuery)->setEagerLoads([])->toBase()->getCountForPagination();
+                if ($matchedTotal > $groupedMax) {
+                    return ApiResponse::error(
+                        "Grouped lead index matched {$matchedTotal} rows (max {$groupedMax}). Narrow filters or use paginate=1 / stage_counts_only=1.",
+                        422
+                    );
+                }
+
+                $leads = $leadsQuery->latest()->limit($groupedMax)->get();
 
                 try {
                     LeadResource::primeForCollection($leads);

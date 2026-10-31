@@ -346,9 +346,12 @@ const editForm = ref({
 })
 
 
-watch(() => props.keyDelete, () => {
+// Refresh after parent bumps keyDelete (e.g. bulk delete). Not immediate — initial load is leadId watch.
+watch(() => props.keyDelete, (value, previous) => {
+    if (previous === undefined) return
+    if (value === previous) return
     fetchActivities()
-}, { immediate: true })
+})
 
 
 // Reminder options
@@ -846,14 +849,14 @@ const handleClickOutside = (event) => {
     // Don't close edit mode on outside click - user needs to explicitly save or cancel
 }
 
-// Watch for leadId changes
+// Single initial/load-on-id-change fetch path (immediate covers first mount).
 watch(() => props.leadId, (newLeadId) => {
     if (newLeadId) {
         fetchActivities()
     } else {
         activities.value = []
     }
-})
+}, { immediate: true })
 
 // Add new activity to the list (called from parent when activity is created)
 const addActivity = (newActivity) => {
@@ -887,11 +890,7 @@ defineExpose({
     addActivity
 })
 
-// Fetch activities on mount
 onMounted(() => {
-    if (props.leadId) {
-        fetchActivities()
-    }
     document.addEventListener('click', handleClickOutside)
 })
 

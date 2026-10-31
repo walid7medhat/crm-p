@@ -1533,6 +1533,8 @@ import { nationalityOptions } from '@/utils/nationalities'
 const isLoadingPropertyData = ref(true)
 const isDataLoaded = ref(false)
 const isDataInitialized = ref(false)
+/** In-flight promise so concurrent show=true watchers share one reference-data load. */
+let referenceDataLoadPromise = null
 const propertyTypesLoaded = ref(false)
 const developersLoaded = ref(false)
 const areasLoaded = ref(false)
@@ -5056,7 +5058,35 @@ function onOverlayClick() {
   if (submitting.value) return
 }
 
-// Watch for modal show
+async function ensureReferenceDataLoaded() {
+  if (isDataInitialized.value || referenceDataLoadPromise) {
+    return referenceDataLoadPromise || Promise.resolve()
+  }
+
+  isLoadingPropertyData.value = true
+  propertyTypesLoaded.value = false
+  developersLoaded.value = false
+  areasLoaded.value = false
+
+  referenceDataLoadPromise = (async () => {
+    try {
+      await fetchAllAreas()
+      await Promise.all([
+        fetchUsers(),
+        fetchSources(),
+        fetchPropertyTypes(),
+        fetchDevelopers(),
+      ])
+      isDataInitialized.value = true
+    } finally {
+      referenceDataLoadPromise = null
+    }
+  })()
+
+  return referenceDataLoadPromise
+}
+
+// Watch for modal show — reference datasets load only when the modal opens (never while closed).
 watch(() => props.show, async (val) => {
     if (val) {
         resetAccumulatedRequiredKeys()
@@ -5067,23 +5097,16 @@ watch(() => props.show, async (val) => {
         const viewModal = document.getElementById('view-deal-modal')
         viewModal?.setAttribute?.('inert', '')
         validationAttempted.value = false
-        // إعادة تعيين حالة تحميل الـ Properties
-        isLoadingPropertyData.value = true
-        
-        // إذا لم يتم تهيئة البيانات، قم بتحميلها
+        // Properties spinner: only force true when reference data still needs loading.
         if (!isDataInitialized.value) {
-            propertyTypesLoaded.value = false
-            developersLoaded.value = false
-            areasLoaded.value = false
-            
-            await fetchAllAreas()
-            await Promise.all([
-                fetchPropertyTypes(),
-                fetchDevelopers()
-            ])
-            isDataInitialized.value = true
+          isLoadingPropertyData.value = true
         }
-        
+
+        await ensureReferenceDataLoaded()
+        if (propertyTypesLoaded.value && developersLoaded.value && areasLoaded.value) {
+          isLoadingPropertyData.value = false
+        }
+
         await initializeForm()
 
         // Focus first input inside the stage modal so typing works
@@ -5540,32 +5563,13 @@ const isLostReasonOnly = computed(() => {
 watch([propertyTypesLoaded, developersLoaded, areasLoaded], () => {
   if (propertyTypesLoaded.value && developersLoaded.value && areasLoaded.value) {
     isLoadingPropertyData.value = false
-    console.log('All property data loaded successfully')
   }
-}, { deep: true })// Load data on mount
-// Load data on mount
-onMounted(async () => {
-    isLoadingPropertyData.value = true
-    isDataInitialized.value = false
-    
-    // إعادة تعيين حالات التحميل
-    propertyTypesLoaded.value = false
-    developersLoaded.value = false
-    areasLoaded.value = false
-    
-    await fetchAllAreas()
-    await Promise.all([
-        fetchUsers(),
-        fetchSources(),
-        fetchPropertyTypes(),
-        fetchDevelopers()
-    ])
-    
-    isDataInitialized.value = true
-    
-    
-     const style = document.createElement('style');
-    style.textContent = `
+}, { deep: true })
+
+// Dropdown z-index helpers only — no network I/O while the modal stays closed on the board.
+onMounted(() => {
+  const style = document.createElement('style')
+  style.textContent = `
         body.complete-stage-open .vs__dropdown-menu {
             z-index: 46200 !important;
         }
@@ -5575,8 +5579,8 @@ onMounted(async () => {
         body.complete-stage-open [data-popper-placement] {
             z-index: 46200 !important;
         }
-    `;
-    document.head.appendChild(style);
+    `
+  document.head.appendChild(style)
 })
 
 </script>

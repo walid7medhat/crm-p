@@ -23,7 +23,7 @@
             :rows="paginatedRows"
             :current-page="currentPage"
             :total-pages="totalPages"
-            @update:page="currentPage = $event"
+            @update:page="onPageChange"
             @refresh="applyFilters"
           />
         </template>
@@ -43,7 +43,7 @@
             :rows="paginatedRows"
             :current-page="currentPage"
             :total-pages="totalPages"
-            @update:page="currentPage = $event"
+            @update:page="onPageChange"
             @refresh="applyFilters"
           />
         </template>
@@ -94,37 +94,33 @@ const pageSize = 10
 const detailsMode = ref(false)
 const showAdvanced = ref(false)
 const rows = ref([])
-const allLeads = ref([])
 const branchOptions = ref(['All Team'])
 const stageList = ref([])
+const stageCounts = ref([])
+const reportTotal = ref(0)
+const serverTotalPages = ref(1)
 let searchDebounceTimer = null
 
-const filteredRows = computed(() => {
-  const q = tableSearch.value.trim().toLowerCase()
-  if (!q) return rows.value
-  return rows.value.filter((row) =>
-    `${row.leadName} ${row.responsibleName} ${row.source}`.toLowerCase().includes(q)
-  )
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / pageSize)))
-const paginatedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredRows.value.slice(start, start + pageSize)
-})
+const totalPages = computed(() => serverTotalPages.value)
+const paginatedRows = computed(() => rows.value)
 
 const kpiCardsData = computed(() => {
-  const countBy = (matcher) => allLeads.value.filter((lead) => matcher((lead.stage?.name || '').toLowerCase())).length
+  const countBy = (matcher) =>
+    stageCounts.value.reduce((sum, row) => {
+      const name = String(row.stage_name || '').toLowerCase()
+      return matcher(name) ? sum + Number(row.count || 0) : sum
+    }, 0)
+  const totalFromStages = stageCounts.value.reduce((sum, row) => sum + Number(row.count || 0), 0)
   return [
-    { key: 'total', stageName: '', title: 'Total leads', value: allLeads.value.length, trend: 'Live', delta: '100%', positive: true, icon: 'lucide:users' },
+    { key: 'total', stageName: '', title: 'Total leads', value: totalFromStages || reportTotal.value, trend: 'Live', delta: '100%', positive: true, icon: 'lucide:users' },
     { key: 'follow', stageName: 'Follow Up / Contacted', title: 'Follow Ups', value: countBy((s) => s.includes('follow')), trend: 'Live', delta: 'API', positive: true, icon: 'lucide:message-circle' },
-    { key: 'qualified', stageName: 'Qualified', title: 'Qualified Leads', value: countBy((s) => s.includes('qualified')), trend: 'Live', delta: 'API', positive: true, icon: 'lucide:user-check' },
+    { key: 'qualified', stageName: 'Qualified', title: 'Qualified Leads', value: countBy((s) => s.includes('qualified') && !s.includes('unqualified')), trend: 'Live', delta: 'API', positive: true, icon: 'lucide:user-check' },
     { key: 'unqualified', stageName: 'Unqualified', title: 'Unqualified Leads', value: countBy((s) => s.includes('unqualified') || s.includes('lost')), trend: 'Live', delta: 'API', positive: false, icon: 'lucide:user-x' },
     { key: 'converted', stageName: 'Converted', title: 'Converted Leads', value: countBy((s) => s.includes('converted')), trend: 'Live', delta: 'API', positive: true, icon: 'lucide:refresh-cw' }
   ]
 })
 
-const stageHeadlineValue = computed(() => filteredRows.value.length)
+const stageHeadlineValue = computed(() => reportTotal.value)
 
 const parseDateRange = (value) => {
   const now = new Date()
@@ -193,43 +189,79 @@ const fetchFilterOptions = async () => {
   }
 }
 
-const flattenLeadsFromGroups = (groups) => {
-  if (!Array.isArray(groups)) return []
-  return groups.flatMap((group) => normalizeArray(group?.leads))
-}
+const stageNameById = computed(() => {
+  const map = {}
+  stageList.value.forEach((item) => {
+    if (item?.id != null) map[item.id] = item.name || ''
+  })
+  return map
+})
 
-const fetchLeadRows = async () => {
+const buildLeadFilters = ({ includePaging = false } = {}) => {
   const search = `${searchQuery.value} ${tableSearch.value}`.trim()
   const selectedStageObj = stageList.value.find((item) => item.name === selectedStage.value)
   const dateParams = parseDateRange(dateRange.value)
   const params = {
     ...(search ? { search } : {}),
     ...(selectedStageObj?.id ? { stage_id: selectedStageObj.id } : {}),
-    ...dateParams
+    ...(branch.value && branch.value !== 'All Team' ? { lead_branch_source: branch.value } : {}),
+    ...dateParams,
+  }
+  if (includePaging) {
+    params.paginate = 1
+    params.with_total = 1
+    params.page = currentPage.value
+    params.per_page = pageSize
+  }
+  return params
+}
+
+const fetchLeadRows = async () => {
+  const listParams = buildLeadFilters({ includePaging: true })
+  const countParams = { ...buildLeadFilters(), stage_counts_only: 1, paginate: 1 }
+
+  let listRes
+  let countsRes
+  try {
+    ;[listRes, countsRes] = await Promise.all([
+      api.get('/leads', { params: listParams }),
+      api.get('/leads', { params: countParams }),
+    ])
+  } catch (error) {
+    console.error('Failed to load lead reports', error)
+    rows.value = []
+    stageCounts.value = []
+    reportTotal.value = 0
+    serverTotalPages.value = 1
+    return
   }
 
-  const response = await api.get('/leads', { params })
-  let groups = normalizeArray(response?.data?.data || response?.data)
-  let leads = flattenLeadsFromGroups(groups)
-
-  // If a date range preset returns no data, fallback to all-time so table is not blank by default.
+  // If a date range preset returns no rows, fallback to all-time so the table is not blank by default.
+  const dateParams = parseDateRange(dateRange.value)
+  let listBody = listRes?.data || {}
+  let leads = normalizeArray(listBody.data)
   if (leads.length === 0 && Object.keys(dateParams).length > 0) {
-    const retry = await api.get('/leads', {
-      params: {
-        ...(search ? { search } : {}),
-        ...(selectedStageObj?.id ? { stage_id: selectedStageObj.id } : {})
-      }
+    const { created_from, created_to, created_at, ...withoutDates } = listParams
+    const retry = await api.get('/leads', { params: withoutDates })
+    listBody = retry?.data || {}
+    leads = normalizeArray(listBody.data)
+    const retryCounts = await api.get('/leads', {
+      params: { ...withoutDates, stage_counts_only: 1, paginate: 1, page: undefined, per_page: undefined, with_total: undefined },
     })
-    groups = normalizeArray(retry?.data?.data || retry?.data)
-    leads = flattenLeadsFromGroups(groups)
+    countsRes = retryCounts
   }
-  allLeads.value = leads
 
-  const mapped = leads.map((lead) => {
+  const pagination = listBody.pagination || {}
+  reportTotal.value = Number(pagination.total) || leads.length
+  serverTotalPages.value = Math.max(1, Number(pagination.last_page) || 1)
+  stageCounts.value = normalizeArray(countsRes?.data?.data?.stages || countsRes?.data?.stages)
+
+  rows.value = leads.map((lead) => {
     const created = lead?.created_at ? new Date(lead.created_at) : null
     const createdOn = created && !Number.isNaN(created.getTime())
       ? created.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       : '-'
+    const stageName = lead?.stage?.name || stageNameById.value[lead?.stage_id] || ''
     return {
       id: lead.id,
       createdOn,
@@ -238,15 +270,9 @@ const fetchLeadRows = async () => {
       responsibleEmail: lead?.responsible_person?.email || '-',
       closingDate: createdOn,
       source: lead.lead_source || '-',
-      stage: lead?.stage?.name || '',
-      branch: lead.lead_branch_source || 'All Team'
+      stage: stageName,
+      branch: lead.lead_branch_source || 'All Team',
     }
-  })
-
-  rows.value = mapped.filter((row) => {
-    const branchMatch = branch.value === 'All Team' || row.branch === branch.value
-    const stageMatch = !selectedStage.value || row.stage === selectedStage.value
-    return branchMatch && stageMatch
   })
 }
 
@@ -264,7 +290,9 @@ const resetFilters = () => {
   dateRange.value = ''
   selectedStage.value = ''
   rows.value = []
-  allLeads.value = []
+  stageCounts.value = []
+  reportTotal.value = 0
+  serverTotalPages.value = 1
   detailsMode.value = false
   clearFilters()
 }
@@ -273,6 +301,10 @@ const openStageDetails = (card) => {
   selectedStage.value = card.stageName || card.title.replace(' Leads', '')
   detailsMode.value = true
   applyFilters()
+}
+const onPageChange = async (page) => {
+  currentPage.value = page
+  await fetchLeadRows()
 }
 
 onMounted(async () => {

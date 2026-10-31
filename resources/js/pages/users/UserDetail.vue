@@ -91,7 +91,7 @@
                                                     {{ formatLastLoginDetail(user.last_login_at) }}
                                                 </span>
                                         </div>
-                                        <div class="col-12" v-if="isAdminOrSuperAdmin">
+                                        <div class="col-12" v-if="isSuperAdminViewer">
                                             <UserDeviceLocation
                                                 :latitude="user.last_login_lat"
                                                 :longitude="user.last_login_lng"
@@ -668,17 +668,7 @@ export default {
             return this.agentProperties.filter(p => p.status === 'converted').length;
         },
 
-        /** Last-login location is sensitive — only admin/super_admin can see it. */
-        isAdminOrSuperAdmin() {
-            try {
-                const me = JSON.parse(localStorage.getItem('user') || 'null');
-                const roles = me?.roles || [];
-                return roles.includes('super_admin') || roles.includes('admin');
-            } catch {
-                return false;
-            }
-        },
-
+        /** Device location is Super Admin only (matches API redaction). */
         isSuperAdminViewer() {
             try {
                 const me = JSON.parse(localStorage.getItem('user') || 'null');

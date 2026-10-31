@@ -135,7 +135,6 @@ Route::get('/save-account-activated-email-html', function () {
 
 Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
-    Route::post('auth/location', [AuthController::class, 'updateLocation'])->middleware('auth:api');
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
@@ -165,7 +164,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::middleware(['jwt.auth'])->group(function () {
-  
+        Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:30,1');
+        Route::get('location-settings', [AuthController::class, 'locationSettings']);
         Route::post('logout', [AuthController::class,'logout']);
         Route::get('notifications',[AuthController::class,'notifications']);
         Route::post('notifications/read-all', [AuthController::class, 'markAllNotificationsAsRead']);
@@ -755,6 +755,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Contacted / Qualified / Assigned lead duplicates — super_admin only.
     Route::middleware('role:super_admin')->group(function () {
         Route::get('/reports/stage-duplicates', \App\Http\Controllers\Api\StageDuplicateReportController::class);
+        Route::get('/admin/location/online', [\App\Http\Controllers\Api\Admin\LocationTrackingController::class, 'online']);
+        Route::get('/admin/location/users/{user}', [\App\Http\Controllers\Api\Admin\LocationTrackingController::class, 'history']);
     });
 
      // User routes
@@ -799,9 +801,10 @@ Route::middleware('role:super_admin|admin')->group(function () {
     Route::delete('/leads/archived/{id}/force', [LeadController::class, 'forceDeleteArchived']);
 });
 
-// Before apiResource so "phone-duplicates" isn't taken as a {lead} id.
+// Before apiResource so "phone-duplicates" / "total-count" aren't taken as a {lead} id.
 Route::get('/leads/phone-duplicates', [LeadController::class, 'phoneDuplicates']);
 Route::get('/leads/inactive-sales', [LeadController::class, 'inactiveSales']);
+Route::get('/leads/total-count', [LeadController::class, 'totalCount']);
 Route::apiResource('leads', LeadController::class);
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);

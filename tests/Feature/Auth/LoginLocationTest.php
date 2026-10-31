@@ -22,9 +22,11 @@ class LoginLocationTest extends TestCase
         if (! Schema::hasColumn('users', 'last_login_accuracy') || ! Schema::hasColumn('users', 'last_login_location_at')) {
             $this->fail('Run php artisan migrate before login location tests.');
         }
+
+        config(['location_tracking.write_cooldown_seconds' => 0]);
     }
 
-    public function test_sign_in_saves_the_device_fix_for_every_role_and_profile_returns_it(): void
+    public function test_auth_location_saves_the_device_fix_after_login(): void
     {
         $this->fakeGeocoder();
 
@@ -32,20 +34,21 @@ class LoginLocationTest extends TestCase
             $user = $this->makeUser($role);
             $capturedAt = now()->subMinute()->toIso8601String();
 
-            $response = $this->postJson('/api/auth/login', [
+            $this->postJson('/api/auth/login', [
                 'email' => $user->email,
                 'password' => 'password',
+            ])->assertOk();
+
+            $user->refresh();
+            $this->assertNull($user->last_login_lat);
+
+            $this->asUser($user)->postJson('/api/auth/location', [
                 'latitude' => 25.2048493,
                 'longitude' => 55.2707825,
                 'accuracy' => 18,
                 'captured_at' => $capturedAt,
                 'user_id' => 999999,
-            ]);
-
-            $response->assertOk()
-                ->assertJsonPath('data.user.last_login_location_source', 'device')
-                ->assertJsonPath('data.user.last_login_location_precise', true)
-                ->assertJsonPath('data.user.last_login_accuracy', 18);
+            ])->assertOk()->assertJsonPath('data.location_updated', true);
 
             $user->refresh();
             $this->assertEqualsWithDelta(25.2048493, (float) $user->last_login_lat, 0.0000001);
@@ -54,25 +57,22 @@ class LoginLocationTest extends TestCase
             $this->assertNotNull($user->last_login_location_at);
             $this->assertSame('Nearby Street, Abu Dhabi', $user->last_login_location);
 
+            // Non–super_admin profile must not leak coordinates.
             $again = $this->asUser($user)->getJson('/api/profile');
             $again->assertOk()
-                ->assertJsonPath('data.last_login_accuracy', 18)
-                ->assertJsonPath('data.last_login_location_source', 'device');
-            $this->assertEqualsWithDelta(25.2048493, (float) $again->json('data.last_login_lat'), 0.0000001);
-            $this->assertEqualsWithDelta(55.2707825, (float) $again->json('data.last_login_lng'), 0.0000001);
+                ->assertJsonPath('data.last_login_lat', null)
+                ->assertJsonPath('data.last_login_location_source', null);
 
-            $user->refresh();
-            $this->assertEqualsWithDelta(25.2048493, (float) $user->last_login_lat, 0.0000001);
-            $this->assertEqualsWithDelta(55.2707825, (float) $user->last_login_lng, 0.0000001);
             $this->flushHeaders();
         }
 
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'ip-api.com') || str_contains($request->url(), 'ipify.org'));
     }
 
-    public function test_view_user_returns_the_selected_users_saved_coordinates(): void
+    public function test_view_user_coordinates_are_super_admin_only(): void
     {
         $admin = $this->makeUser('admin');
+        $super = $this->makeUser('super_admin');
         $sales = $this->makeUser('sales');
         $sales->forceFill([
             'last_login_lat' => 25.2048493,
@@ -82,18 +82,18 @@ class LoginLocationTest extends TestCase
             'last_login_location' => 'Marina, Dubai',
         ])->save();
 
-        $first = $this->asUser($admin)->getJson('/api/users/'.$sales->id);
-        $second = $this->asUser($admin)->getJson('/api/users/'.$sales->id);
-
-        $first->assertOk()
+        $this->asUser($admin)->getJson('/api/users/'.$sales->id)
+            ->assertOk()
             ->assertJsonPath('data.id', $sales->id)
+            ->assertJsonPath('data.last_login_lat', null)
+            ->assertJsonPath('data.last_login_location', null);
+
+        $first = $this->asUser($super)->getJson('/api/users/'.$sales->id);
+        $first->assertOk()
             ->assertJsonPath('data.last_login_location_source', 'device')
             ->assertJsonPath('data.last_login_location_precise', true)
             ->assertJsonPath('data.last_login_location', 'Marina, Dubai');
         $this->assertEqualsWithDelta(25.2048493, (float) $first->json('data.last_login_lat'), 0.0000001);
-        $this->assertEqualsWithDelta(55.2707825, (float) $first->json('data.last_login_lng'), 0.0000001);
-        $this->assertSame($first->json('data.last_login_lat'), $second->json('data.last_login_lat'));
-        $this->assertSame($first->json('data.last_login_lng'), $second->json('data.last_login_lng'));
 
         $sales->refresh();
         $this->assertEqualsWithDelta(25.2048493, (float) $sales->last_login_lat, 0.0000001);
@@ -144,23 +144,19 @@ class LoginLocationTest extends TestCase
         $this->fakeGeocoder();
         $user = $this->makeUser('sales');
 
-        $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password',
+        $this->asUser($user)->postJson('/api/auth/location', [
             'latitude' => 25.2048493,
             'longitude' => 55.2707825,
             'accuracy' => 15,
             'captured_at' => now()->subMinutes(2)->toIso8601String(),
-        ])->assertOk();
+        ])->assertOk()->assertJsonPath('data.location_updated', true);
 
-        $this->postJson('/api/auth/login', [
-            'email' => $user->email,
-            'password' => 'password',
+        $this->asUser($user)->postJson('/api/auth/location', [
             'latitude' => 24.4539,
             'longitude' => 54.3773,
             'accuracy' => 20,
             'captured_at' => now()->subHour()->toIso8601String(),
-        ])->assertOk();
+        ])->assertOk()->assertJsonPath('data.location_updated', false);
 
         $user->refresh();
         $this->assertEqualsWithDelta(25.2048493, (float) $user->last_login_lat, 0.0000001);

@@ -32,11 +32,12 @@ export async function fetchAttendance(params = {}) {
 }
 
 export async function fetchLeadTotalCount() {
-  const { data } = await api.get('/leads', { params: { per_page: 1, page: 1 } })
+  // Dedicated count endpoint — never loads lead rows via GET /leads.
+  const { data } = await api.get('/leads/total-count')
   const total =
-    data?.meta?.total ??
-    data?.data?.meta?.total ??
+    data?.data?.total ??
     data?.total ??
+    data?.data?.data?.total ??
     0
   return Number(total) || 0
 }

@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
-use App\Jobs\ResolveLoginLocation;
-use App\Services\Auth\LoginLocationUpdate;
+use App\Services\Auth\LocationTrackingService;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\BirthdaySelfNotification;
 use App\Notifications\NewSalesAgentNotification;
@@ -179,73 +178,43 @@ public function resetPassword(Request $request): JsonResponse
         return ApiResponse::error('Login failed: ' . $e->getMessage());
     }
 }
-public function updateLocation(Request $request): JsonResponse
+public function updateLocation(Request $request, LocationTrackingService $tracking): JsonResponse
 {
     $request->validate([
         'latitude' => 'required|numeric|between:-90,90',
         'longitude' => 'required|numeric|between:-180,180',
         'accuracy' => 'nullable|numeric|min:0|max:1000000',
         'captured_at' => 'nullable|date',
+        // Client hint: becoming active/online again (not a login). Server also
+        // detects new sessions from the CRM online window when this is omitted.
+        'session_start' => 'nullable|boolean',
     ]);
 
     // Always the authenticated account. A user id in the body is ignored.
-    $user = auth()->user();
-    $updated = $this->recordSignInLocation($user, $request);
+    $result = $tracking->record(auth()->user(), $request);
 
-    return ApiResponse::success(
-        ['location_updated' => $updated],
-        $updated ? 'Location saved' : 'Location unchanged'
-    );
+    $message = 'Location unchanged';
+    if ($result['location_updated'] && $result['history_recorded']) {
+        $message = 'Location saved';
+    } elseif ($result['location_updated']) {
+        $message = 'Location updated';
+    }
+
+    return ApiResponse::success($result, $message);
 }
 
     /**
-     * Save a device fix for this user. A rejected or missing fix leaves any
-     * stored coordinates in place and never substitutes an IP position.
+     * Foreground tracking knobs for the SPA (interval only — history thresholds stay server-side).
      */
-    private function recordSignInLocation(User $user, Request $request): bool
+    public function locationSettings(): JsonResponse
     {
-        $recorder = app(LoginLocationUpdate::class);
-        $decision = $recorder->decision(
-            $user,
-            $request->input('latitude'),
-            $request->input('longitude'),
-            $request->input('accuracy'),
-            $request->input('captured_at'),
-        );
-        $attributes = $recorder->attributes($decision);
-
-        $loginData = [
-            'last_login_at' => now(),
-            'last_login_ip' => $request->ip(),
-        ];
-
-        if ($attributes !== []) {
-            if ($recorder->moved(
-                $user->last_login_lat,
-                $user->last_login_lng,
-                $attributes['last_login_lat'],
-                $attributes['last_login_lng'],
-            )) {
-                $attributes['last_login_location'] = null;
-            }
-
-            $loginData = array_merge($loginData, $attributes);
-        }
-
-        $user->update($loginData);
-
-        if ($attributes === []) {
-            return false;
-        }
-
-        ResolveLoginLocation::dispatch(
-            $user->id,
-            (float) $attributes['last_login_lat'],
-            (float) $attributes['last_login_lng'],
-            $request->ip(),
-        )->afterResponse();
-
-        return true;
+        return ApiResponse::success([
+            'interval_seconds' => (int) config('location_tracking.interval_seconds', 180),
+            'fresh_minutes' => (int) config('location_tracking.fresh_minutes', 10),
+            'online_window_minutes' => (int) config('location_tracking.online_window_minutes', 15),
+            'background_tracking' => false,
+            'note' => 'Location follows CRM online presence while the app is open and visible. Background GPS is not supported in the browser/PWA. A new login is not required.',
+        ]);
     }
     /**
      * "Switch account" — super_admin only. Mints a JWT for the target user, same

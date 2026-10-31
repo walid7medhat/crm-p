@@ -204,7 +204,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, getCurrentInstance } from 'vue'
+import { ref, computed, watch, getCurrentInstance } from 'vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
 import ProfilePopup from '../shared/ProfilePopup.vue'
@@ -261,9 +261,12 @@ const openPersonProfile = (lead, userId, event) => {
 }
 
 
-watch(() => props.key, () => {
+// Refresh after parent bumps key (e.g. bulk delete). Not immediate — initial load is dealId watch.
+watch(() => props.key, (value, previous) => {
+    if (previous === undefined) return
+    if (value === previous) return
     fetchComments()
-}, { immediate: true })
+})
 
 // Format date to match image format
 const formatDateLabel = (dateString) => {
@@ -544,9 +547,9 @@ const loadOlderComments = async () => {
     }
 }
 
-// Watch for dealId changes - reset pagination and fetch first page
-watch(() => props.dealId, (newLeadId) => {
-    if (newLeadId) {
+// Single initial/load-on-id-change fetch path (immediate covers first mount).
+watch(() => props.dealId, (newDealId) => {
+    if (newDealId) {
         // Reset pagination state
         comments.value = []
         nextPageUrl.value = null
@@ -559,12 +562,6 @@ watch(() => props.dealId, (newLeadId) => {
         nextPageUrl.value = null
     }
 }, { immediate: true })
-
-onMounted(() => {
-    if (props.dealId) {
-        fetchComments()
-    }
-})
 
 // Method to add a new comment to the list
 const addComment = (newComment) => {

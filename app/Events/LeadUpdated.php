@@ -151,11 +151,17 @@ class LeadUpdated implements ShouldBroadcast
 {
     $channels = [];
 
-    if ($this->actionType == 'assigned' && $this->changes['old_person_id']) {
+    if ($this->actionType == 'assigned' && ($this->changes['old_person_id'] ?? null)) {
         $this->addChannelIfNotSales($channels, $this->changes['old_person_id']);
     }
-    if(!($this->actionType=='updated' && auth()->user()->hasRole('branch_admin'))){
-    $this->addChannelIfNotSales($channels, $this->lead->responsible_person_id);
+    // Queue workers have no HTTP auth — resolve the actor from $this->userId
+    // (set at dispatch). Preserve: branch_admin "updated" skips responsible's channel.
+    $actor = $this->userId ? User::find($this->userId) : null;
+    $skipResponsibleForBranchAdminUpdate = $this->actionType === 'updated'
+        && $actor
+        && $actor->hasRole('branch_admin');
+    if (! $skipResponsibleForBranchAdminUpdate) {
+        $this->addChannelIfNotSales($channels, $this->lead->responsible_person_id);
     }
     // $this->addChannelIfNotSales($channels, $this->lead->added_by);
 

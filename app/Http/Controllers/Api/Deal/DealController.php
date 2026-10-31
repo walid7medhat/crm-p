@@ -80,15 +80,36 @@ class DealController extends Controller
 
     /**
      * 1. جلب كل الصفقات مع فلترة متقدمة
+     *
+     * Full DealResource shape is preserved for any REST/list consumers. Collection
+     * priming + detail-graph eager loads avoid per-row assignment-history, user,
+     * listing/area, and party-document queries (same priming pattern as Kanban).
      */
     public function index(Request $request)
     {
-        $deals = Deal::with([
-                'lead',
-                'stage',
-                'responsiblePerson',
-                'parties',
-                'properties'
+        // Same light user graph as getDealsGroupedByStage — formatLeadUser / hierarchy.
+        $userEager = [
+            'roles:id,name',
+            'employeeProfile.companyBranch:id,name',
+            'employeeProfile.designation:id,name',
+            'parent:id,name,display_name,avatar,parent_id,status,background_id',
+            'parent.roles:id,name',
+        ];
+
+        // Do not pass closures through Deal::withDetailGraph() (array_unique).
+        // Deal has no area/developer relations (those fields on DealResource read null /
+        // property-level data). detailGraphRelations covers listing + property areas/types.
+        $with = array_values(array_unique(array_merge([
+            'lead',
+            'stage',
+            'parties.documents',
+            'properties',
+        ], Deal::detailGraphRelations())));
+
+        $deals = Deal::with($with)
+            ->with([
+                'responsiblePerson' => fn ($q) => $q->with($userEager),
+                'addedBy' => fn ($q) => $q->with($userEager),
             ])
             ->visibleFor(auth()->user())
             ->filter($request)
@@ -97,16 +118,23 @@ class DealController extends Controller
                 $request->get('order_dir','desc')
             )
             ->paginate($request->get('per_page',15));
-    
-        return response()->json([
-            'success' => true,
-            'data' => DealResource::collection($deals),
-            'meta' => [
-                'total' => $deals->total(),
-                'current_page' => $deals->currentPage(),
-                'last_page' => $deals->lastPage()
-            ]
-        ]);
+
+        try {
+            DealResource::primeForCollection($deals->getCollection());
+            DealKanbanCardResource::warmCardUsers($deals->getCollection());
+
+            return response()->json([
+                'success' => true,
+                'data' => DealResource::collection($deals),
+                'meta' => [
+                    'total' => $deals->total(),
+                    'current_page' => $deals->currentPage(),
+                    'last_page' => $deals->lastPage()
+                ]
+            ]);
+        } finally {
+            DealResource::clearCollectionPrime();
+        }
     }
 
     /**

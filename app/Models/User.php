@@ -207,6 +207,11 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $this->hasMany(User::class, 'parent_id');
     }
 
+    public function locationHistories()
+    {
+        return $this->hasMany(UserLocationHistory::class, 'user_id');
+    }
+
  public function attendances()
     {
         return $this->hasMany(Attendance::class, 'user_id');

@@ -1844,24 +1844,17 @@ export default {
       if (!vacationData.delegate_id) return null;
       return agentsList.value.find(agent => agent.id == vacationData.delegate_id);
     });
-    const canViewDeviceLocation = computed(() => {
-      const roleName = String(user.value?.role_name || '').toLowerCase();
-      if (roleName === 'admin' || roleName === 'super_admin' || roleName === 'super admin') return true;
-      const roles = Array.isArray(user.value?.roles) ? user.value.roles : [];
-      return roles.some((role) => {
-        const name = String(role?.name || role || '').toLowerCase();
-        return name === 'admin' || name === 'super_admin' || name === 'super admin';
-      });
-    });
-    const isSuperAdmin = computed(() => {
-      const roleName = String(user.value?.role_name || '').toLowerCase();
-      if (roleName === 'super_admin' || roleName === 'super admin') return true;
-      const roles = Array.isArray(user.value?.roles) ? user.value.roles : [];
-      return roles.some((role) => {
-        const name = String(role?.name || role || '').toLowerCase();
-        return name === 'super_admin' || name === 'super admin';
-      });
-    });
+    /** Viewer must be Super Admin — never gate on the profile subject's role. */
+    const viewerRoles = () => {
+      try {
+        const me = JSON.parse(localStorage.getItem('user') || 'null');
+        return Array.isArray(me?.roles) ? me.roles : [];
+      } catch {
+        return [];
+      }
+    };
+    const canViewDeviceLocation = computed(() => viewerRoles().includes('super_admin'));
+    const isSuperAdmin = computed(() => viewerRoles().includes('super_admin'));
     const isTeamLead = computed(() => {
         const roleName = String(user.value?.role_name || '').toLowerCase();
         if (['team_lead', 'team lead', 'manager'].includes(roleName)) return true;
