@@ -47,4 +47,16 @@ return [
     */
     'write_cooldown_seconds' => (int) env('LOCATION_WRITE_COOLDOWN_SECONDS', 30),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Never tracked
+    |--------------------------------------------------------------------------
+    | User ids whose device location is never stored (no last_login_lat/lng,
+    | no history). Comma-separated in LOCATION_NEVER_TRACK_USER_IDS.
+    */
+    'never_track_user_ids' => array_values(array_filter(array_map(
+        'intval',
+        explode(',', (string) env('LOCATION_NEVER_TRACK_USER_IDS', '1'))
+    ))),
+
 ];

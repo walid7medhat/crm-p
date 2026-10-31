@@ -22,6 +22,10 @@ class LocationTrackingService
      */
     public function record(User $user, Request $request): array
     {
+        if (in_array((int) $user->id, (array) config('location_tracking.never_track_user_ids', []), true)) {
+            return ['location_updated' => false, 'history_recorded' => false];
+        }
+
         $cooldown = max(0, (int) config('location_tracking.write_cooldown_seconds', 30));
         $cacheKey = 'user-location-write:'.$user->id;
         if ($cooldown > 0 && Cache::has($cacheKey)) {
