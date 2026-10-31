@@ -138,6 +138,10 @@ let searchTimer = null
 let ignoreCloseUntil = 0
 let summaryRequest = 0
 let listsRequest = 0
+/** warmScope() after a successful with_lists load (or restored warm lists). */
+let listsLoadedScope = null
+/** In-flight with_lists promise — prevents duplicate simultaneous requests. */
+let listsInFlight = null
 
 const isCompact = computed(() => {
   layoutTick.value
@@ -184,8 +188,10 @@ watch(open, (isOpen) => {
     treeReady.value = true
     nextTick(() => drawWires())
   }
-  // Refresh counts in the background — never block the open on lead lists.
+  // Refresh counts in the background. Heavy with_lists runs only while open
+  // (and only once per search/preview scope until cleared or failed).
   loadSummary({ soft: categories.value.length > 0 })
+  ensureListsLoaded()
 })
 
 function displayCount(count) {
@@ -510,13 +516,23 @@ function restoreWarmCache() {
     if (!data || data.scope !== warmScope() || !Array.isArray(data.categories)) return
     if (data.at && Date.now() - Number(data.at) > 6 * 60 * 60 * 1000) return
     categories.value = data.categories.filter((row) => Number(row?.count) > 0)
-    if (data.lists && typeof data.lists === 'object') lists.value = data.lists
+    if (data.lists && typeof data.lists === 'object') {
+      lists.value = data.lists
+      // Reuse restored lists on reopen — skip with_lists until scope changes.
+      if (Object.keys(data.lists).length) listsLoadedScope = warmScope()
+    }
     preview.value = !!data.preview
     subjectName.value = data.subjectName || ''
     if (categories.value.length) state.value = 'ready'
   } catch {
     // Ignore broken cache.
   }
+}
+
+function invalidateListsWarm() {
+  listsLoadedScope = null
+  listsInFlight = null
+  listsRequest += 1
 }
 
 async function loadAgents() {
@@ -528,35 +544,54 @@ async function loadAgents() {
   }
 }
 
-async function prefetchLists() {
+/**
+ * Load category lead lists (with_lists=1) only when the panel needs them.
+ * Skips when this search/preview scope already loaded successfully; joins an
+ * in-flight request; leaves listsLoadedScope unset on failure so open retries.
+ */
+async function ensureListsLoaded({ force = false } = {}) {
+  if (!open.value) return
   if (!categories.value.length) return
+  const scope = warmScope()
+  if (!force && listsLoadedScope === scope) return
+  if (!force && listsInFlight) return listsInFlight
+
   const requestId = ++listsRequest
-  try {
-    const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
-    if (requestId !== listsRequest) return
-    const data = response.data?.data || {}
-    if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
-    // Keep stage counts in sync if this heavier call finishes later.
-    if (Array.isArray(data.categories) && requestId === listsRequest) {
-      categories.value = data.categories.filter((row) => Number(row?.count) > 0)
-      writeWarmCache()
-      if (open.value) {
-        await nextTick()
-        drawWires()
+  const run = (async () => {
+    try {
+      const response = await api.get('/sales-action-center', { params: params({ with_lists: 1 }) })
+      if (requestId !== listsRequest) return
+      const data = response.data?.data || {}
+      if (data.lists && typeof data.lists === 'object') applyListsPayload(data.lists)
+      // Keep stage counts in sync if this heavier call finishes later.
+      if (Array.isArray(data.categories) && requestId === listsRequest) {
+        categories.value = data.categories.filter((row) => Number(row?.count) > 0)
+        writeWarmCache()
+        if (open.value) {
+          await nextTick()
+          drawWires()
+        }
       }
+      if (requestId === listsRequest) listsLoadedScope = warmScope()
+    } catch (_) {
+      // Allow retry on next open; hover can still fetch a single stage.
+      if (requestId === listsRequest) listsLoadedScope = null
+    } finally {
+      if (requestId === listsRequest) listsInFlight = null
     }
-  } catch (_) {
-    // Hover can still fetch a single stage if needed.
-  }
+  })()
+
+  listsInFlight = run
+  return run
 }
 
 async function prefetchSummary() {
   const requestId = ++summaryRequest
   try {
+    // Counts only on startup — never with_lists (that competes with Kanban).
     const response = await api.get('/sales-action-center', { params: params() })
     if (requestId !== summaryRequest) return
     applyCenterPayload(response.data?.data || {})
-    prefetchLists()
   } catch (_) {
     // Prefetch is best-effort; a click will try again.
   }
@@ -570,7 +605,7 @@ async function loadSummary({ soft = false } = {}) {
     errorMessage.value = ''
   }
   try {
-    // Fast path: counts only. Lead lists warm in the background.
+    // Fast path: counts only. Lists load via ensureListsLoaded when the panel is open.
     const response = await api.get('/sales-action-center', { params: params() })
     if (requestId !== summaryRequest) return
     applyCenterPayload(response.data?.data || {})
@@ -578,8 +613,8 @@ async function loadSummary({ soft = false } = {}) {
       treeReady.value = true
       await nextTick()
       drawWires()
+      await ensureListsLoaded()
     }
-    prefetchLists()
   } catch (error) {
     if (requestId !== summaryRequest) return
     if (!open.value) return
@@ -741,6 +776,7 @@ function onSearch() {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
     lists.value = {}
+    invalidateListsWarm()
     loadSummary({ soft: false })
   }, 250)
 }
