@@ -285,7 +285,12 @@ const props = defineProps({
     }
 })
 
-const lead = ref(null)
+// Seed from the kanban card on construction so the first paint is never empty.
+const lead = ref(
+  props.initialLead && Number(props.initialLead.id) === Number(props.leadId)
+    ? { ...props.initialLead }
+    : null
+)
 const isLoadingLead = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
@@ -301,7 +306,11 @@ const detailAnimating = ref(false)
 let detailExitGuard = false
 let entranceToken = 0
 let contentVisibleTimer = null
-const leadStageId = ref(null)
+const leadStageId = ref(
+  props.initialLead && Number(props.initialLead.id) === Number(props.leadId)
+    ? (props.initialLead.stage_id ?? null)
+    : null
+)
 const activeTab = ref('general')
 const echoListener = ref(null)
 const echoAssignedListener = ref(null)
@@ -1720,8 +1729,18 @@ watch(() => route.path, (newPath) => {
 
 async function queueLeadDetailEntrance() {
     const token = ++entranceToken
-    if (prefersReducedMotion()) {
+    const hasSeed = !!(
+        props.initialLead &&
+        Number(props.initialLead.id) === Number(props.leadId)
+    )
+    // Card seed already paints identity + tabs — never hide them with opacity:0.
+    if (prefersReducedMotion() || hasSeed) {
         detailAnimating.value = false
+        await nextTick()
+        if (token === entranceToken && leadModalRoot.value) {
+            resetLeadDetailMotion(leadModalRoot.value)
+            takeLeadDetailOrigin()
+        }
         return
     }
     await nextTick()
@@ -1865,7 +1884,13 @@ watch(show, (val, oldVal) => {
   if (val) {
     activeJump.value = 'details'
     detailExitGuard = false
-    if (!prefersReducedMotion()) detailAnimating.value = true
+    const hasSeed = !!(
+      props.initialLead &&
+      Number(props.initialLead.id) === Number(props.leadId)
+    )
+    // Seeded opens paint immediately — skip motion class that can leave content invisible.
+    if (!prefersReducedMotion() && !hasSeed) detailAnimating.value = true
+    else detailAnimating.value = false
     modalHostPath.value = route.path
     if (props.leadId) {
       fetchLead()

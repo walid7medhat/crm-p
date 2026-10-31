@@ -151,9 +151,16 @@ function attachAuthInterceptor(client) {
     const url = String(config?.url || '')
     const params = config?.params || {}
     const isLeadPoolPage = String(params.paginate) === '1' && String(params.stage_id) === '10'
+    // Lead open must never sit behind the board priority hold — users click a card
+    // while stages-with-leads is still running (often multi-second on production).
+    const isLeadOpenCritical =
+      /\/leads\/\d+(?:\/|$|\?)/.test(url) ||
+      /\/leads\/get\/duplicate\//.test(url) ||
+      /\/leads\/\d+\/history\//.test(url) ||
+      (/\/stages(?:\?|$)/.test(url) && !url.includes('stages-with-leads'))
     // The pool list must not wait behind the kanban board request, or the cards
     // stay blank until that board call finishes (often only after a refresh).
-    if (!url.includes('stages-with-leads') && !isLeadPoolPage) {
+    if (!url.includes('stages-with-leads') && !isLeadPoolPage && !isLeadOpenCritical) {
       await waitForLeadBoardPriority()
     }
     const token = resolveAuthToken()
