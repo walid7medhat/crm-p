@@ -4795,6 +4795,36 @@ const revertFromConverted = async () => {
       echoListeners.value = [];
     };
 
+    // Hero image first (big image), then the rest by their saved order.
+    // No hero → plain gallery order, so the first ordered image is the big one.
+    const orderGalleryWithHero = (images, heroUrl) => {
+      const list = (Array.isArray(images) ? [...images] : [])
+        .sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0));
+      if (!heroUrl) return list;
+
+      const storagePath = (url) => {
+        const s = String(url || '');
+        const i = s.indexOf('/storage/');
+        return i >= 0 ? s.slice(i + '/storage/'.length) : s;
+      };
+      const heroPath = storagePath(heroUrl);
+      const heroIndex = list.findIndex((img) => storagePath(img?.image_url) === heroPath);
+
+      if (heroIndex > 0) {
+        list.unshift(list.splice(heroIndex, 1)[0]);
+      } else if (heroIndex === -1) {
+        // Hero uploaded separately (not one of the gallery images).
+        list.unshift({
+          id: 'hero',
+          name: 'hero',
+          image_url: heroUrl,
+          image_url_final: `${window.location.origin}/image/watermark?path=${encodeURIComponent(heroPath)}`,
+          order: -1,
+        });
+      }
+      return list;
+    };
+
     // Main data fetching
     const fetchProperty = async () => {
       try {
@@ -4805,7 +4835,9 @@ const revertFromConverted = async () => {
         const response = await api.get(`/listings/properties/${propertyId}`);
         
         if (response.data.status) {
-          property.value = response.data.data;
+          const data = response.data.data;
+          data.gallery_images = orderGalleryWithHero(data.gallery_images, data.hero_image);
+          property.value = data;
         //   console.log(response.data.data);
         //   console.log('Property Data:', property.value);
           // console.log('Area Data:', property.value.area);
