@@ -1181,16 +1181,19 @@ function applySearchToApi() {
         : (activeKanbanTab.value || 'leads')
     const fingerprint = JSON.stringify({ routeKey, query, filters: payload.activeFilters })
     // Debounce can fire twice with the same term (focus/blur) — skip duplicate board hits.
-    if (fingerprint === lastLeadSearchFingerprint && term) {
+    // Always allow clears through so the board can restore instantly.
+    const clearing = !query || !Object.keys(query).length
+    if (!clearing && fingerprint === lastLeadSearchFingerprint && term) {
         return
     }
     lastLeadSearchFingerprint = fingerprint
 
     // Immediate feedback in the search box while the board fetches.
-    if (query && Object.keys(query).length) {
+    if (!clearing) {
         isSearchLoading.value = true
     } else {
         isSearchLoading.value = false
+        window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', { detail: { search: '' } }))
     }
     
     if (isDealRoute.value || activeKanbanTab.value === 'deals') {
@@ -1901,6 +1904,7 @@ const clearSearchFilter = () => {
     activeFilter.value = null;
     activeFilters.value = [];
     lastQuery.value = null;
+    lastLeadSearchFingerprint = '';
     // Prevent watch(search) from firing a second clear/refetch after this explicit dispatch.
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value);
@@ -1909,9 +1913,14 @@ const clearSearchFilter = () => {
     suppressSearchWatcher.value = true;
     search.value = '';
     showSearchModal.value = false;
+    isSearchLoading.value = false;
     nextTick(() => {
         suppressSearchWatcher.value = false;
     });
+
+    // Instant: drop live text filter; board restores from pre-search snapshot in leads.vue.
+    window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', { detail: { search: '' } }));
+    window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }));
     
     if (activeKanbanTab.value === 'deals') {
         window.dispatchEvent(new CustomEvent('kanban-deal-search', { detail: null }));

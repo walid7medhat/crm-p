@@ -2258,6 +2258,48 @@ function leadMatchesShortcutFilter(lead) {
 /** Instant kanban filter while typing — server refetch still runs debounced. */
 const liveTextSearch = ref('')
 
+/** Unfiltered board captured before the first search response replaces columns. */
+let boardSnapshotBeforeSearch = null
+
+function cloneBoardState() {
+    return {
+        columns: (columns.value || []).map((col) => ({
+            title: col.title,
+            status: col.status,
+            color: col.color,
+            order: col.order,
+            leads: Array.isArray(col.leads) ? col.leads.map((lead) => ({ ...lead })) : [],
+            pagination: col.pagination ? { ...col.pagination } : undefined,
+        })),
+        stagePagination: JSON.parse(JSON.stringify(stagePagination.value || {})),
+    }
+}
+
+function captureBoardBeforeSearch() {
+    if (boardSnapshotBeforeSearch) return
+    if (!columns.value?.length) return
+    boardSnapshotBeforeSearch = cloneBoardState()
+}
+
+function restoreBoardFromSearchSnapshot() {
+    liveTextSearch.value = ''
+    const snap = boardSnapshotBeforeSearch
+    boardSnapshotBeforeSearch = null
+    if (snap?.columns?.length) {
+        columns.value = snap.columns
+        stagePagination.value = snap.stagePagination || {}
+        syncStageOrderMapFromColumns(columns.value)
+        loading.value = false
+        isSearching.value = false
+        isFetching.value = false
+        error.value = null
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
+        return true
+    }
+    // Fallback: last unfiltered localStorage paint (search results are not written there).
+    return loadCachedColumns()
+}
+
 function syncLiveTextFromQuery(q) {
     if (!q || typeof q !== 'object') {
         liveTextSearch.value = ''
@@ -2730,8 +2772,27 @@ function buildLeadSearchApiParams(q = {}) {
 
 const fetchLeads = async (immediate = false, queryOverride = undefined, options = {}) => {
     if (queryOverride !== undefined) {
-        appliedSearchParams.value = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
+        const nextParams = queryOverride && Object.keys(queryOverride).length ? { ...queryOverride } : null
+        const hadParams = !!(appliedSearchParams.value && Object.keys(appliedSearchParams.value).length)
+        const clearingSearch = hadParams && !nextParams
+
+        // Snapshot the unfiltered board once, before search results replace it.
+        if (nextParams && !hadParams) {
+            captureBoardBeforeSearch()
+        }
+
+        appliedSearchParams.value = nextParams
         syncLiveTextFromQuery(appliedSearchParams.value)
+
+        // Clear (X / empty search): paint the previous board immediately, then soft-refresh.
+        if (clearingSearch) {
+            if (fetchDebounceTimer.value) {
+                clearTimeout(fetchDebounceTimer.value)
+                fetchDebounceTimer.value = null
+            }
+            restoreBoardFromSearchSnapshot()
+            return executeFetchLeads({ silent: true })
+        }
     }
     const silent = !!options.silent
     const hasSearchCriteria =
@@ -2947,6 +3008,11 @@ const executeFetchLeads = async (options = {}) => {
 
 function saveColumnsToCache() {
     try {
+        // Never overwrite the unfiltered board cache with search-narrowed columns —
+        // clear-search restore depends on this snapshot staying complete.
+        if (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length) {
+            return
+        }
         const snapshot = Array.isArray(columns.value)
             ? columns.value.map(col => ({
                   // keep only what we need for fast first paint
