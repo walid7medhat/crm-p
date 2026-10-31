@@ -157,10 +157,13 @@ function attachAuthInterceptor(client) {
       /\/leads\/\d+(?:\/|$|\?)/.test(url) ||
       /\/leads\/get\/duplicate\//.test(url) ||
       /\/leads\/\d+\/history\//.test(url) ||
+      /\/leads\/\d+\/comment-portal-links/.test(url) ||
       (/\/stages(?:\?|$)/.test(url) && !url.includes('stages-with-leads'))
+    // Global / smart search must stay interactive while the kanban board is loading.
+    const isSmartSearch = url.includes('smart-search')
     // The pool list must not wait behind the kanban board request, or the cards
     // stay blank until that board call finishes (often only after a refresh).
-    if (!url.includes('stages-with-leads') && !isLeadPoolPage && !isLeadOpenCritical) {
+    if (!url.includes('stages-with-leads') && !isLeadPoolPage && !isLeadOpenCritical && !isSmartSearch) {
       await waitForLeadBoardPriority()
     }
     const token = resolveAuthToken()

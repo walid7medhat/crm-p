@@ -385,6 +385,16 @@ function hasSearchInput() {
   })
 }
 
+/** Typing feel: short debounce; AbortController cancels superseded keystrokes. */
+const SEARCH_DEBOUNCE_MS = 160
+
+let lastRequestKey = ''
+let lastCompletedKey = ''
+
+function searchRequestKey(params) {
+  return JSON.stringify(params)
+}
+
 function schedule() {
   clearTimeout(timer)
   if (!hasSearchInput()) {
@@ -393,10 +403,10 @@ function schedule() {
     payload.value = null
     error.value = ''
     activeKey.value = ''
+    lastRequestKey = ''
     return
   }
-  // 500ms debounce + single-flight below cuts overlapping /smart-search work.
-  timer = setTimeout(runNow, 500)
+  timer = setTimeout(runNow, SEARCH_DEBOUNCE_MS)
 }
 
 function isPhoneOrEmailQuery(value) {
@@ -405,6 +415,36 @@ function isPhoneOrEmailQuery(value) {
   if (q.includes('@')) return true
   const digits = q.replace(/\D+/g, '')
   return digits.length >= 4 && /^[\d\s+\-().]+$/.test(q)
+}
+
+function applySearchPayload(data, { mergeNonLeads = false } = {}) {
+  if (!mergeNonLeads || !payload.value) {
+    payload.value = data
+    return
+  }
+  const prevGroups = Array.isArray(payload.value.groups) ? payload.value.groups : []
+  const nextGroups = Array.isArray(data?.groups) ? data.groups : []
+  const byType = new Map(prevGroups.map((g) => [g.type, g]))
+  nextGroups.forEach((g) => byType.set(g.type, g))
+  // Stable module order for the All tab.
+  const order = ['leads', 'deals', 'listings', 'places']
+  const merged = order
+    .filter((type) => byType.has(type))
+    .map((type) => byType.get(type))
+  payload.value = {
+    ...payload.value,
+    ...data,
+    groups: merged.length ? merged : nextGroups,
+  }
+}
+
+function finishSearchUi() {
+  if (!flat.value.some((row) => itemKey(row) === activeKey.value)) {
+    activeKey.value = flat.value[0] ? itemKey(flat.value[0]) : ''
+  }
+  if (flat.value.some((row) => row.action === 'open_lead')) {
+    warmLeadModalIfIdle()
+  }
 }
 
 function runNow() {
@@ -418,30 +458,57 @@ function runNow() {
   if (q && !isPhoneOrEmailQuery(q) && q.length < 2) {
     return
   }
-  const current = ++seq
-  abortController?.abort()
-  abortController = new AbortController()
-  loading.value = true
-  error.value = ''
-  const params = {
+  const baseParams = {
     q: query.value,
-    types: activeTab.value,
     limit: 5,
     confirmed: confirmed.value ? 1 : 0,
     ...structured.value,
   }
-  if (suppress.value.length) params.suppress = suppress.value.join(',')
+  if (suppress.value.length) baseParams.suppress = suppress.value.join(',')
 
-  const request = api.get('/smart-search', { params, signal: abortController.signal })
-    .then((response) => {
+  const tab = activeTab.value || 'all'
+  // All tab: paint leads first, then fill other modules — same final results, faster lead feel.
+  const progressiveAll = tab === 'all'
+  const primaryParams = {
+    ...baseParams,
+    types: progressiveAll ? 'leads' : tab,
+  }
+  const key = searchRequestKey({ ...baseParams, types: tab })
+  // Same query already in flight or just completed — skip a duplicate round-trip.
+  if (key === lastRequestKey && inFlight) return
+  if (key === lastCompletedKey && payload.value && !loading.value) return
+
+  const current = ++seq
+  abortController?.abort()
+  abortController = new AbortController()
+  const signal = abortController.signal
+  lastRequestKey = key
+  loading.value = true
+  error.value = ''
+
+  const request = api.get('/smart-search', { params: primaryParams, signal })
+    .then(async (response) => {
       if (current !== seq) return
-      payload.value = response.data?.data || null
-      if (!flat.value.some((row) => itemKey(row) === activeKey.value)) {
-        activeKey.value = flat.value[0] ? itemKey(flat.value[0]) : ''
+      applySearchPayload(response.data?.data || null, { mergeNonLeads: false })
+      finishSearchUi()
+      // Keep the "Searching…" indicator only until leads are on screen for All.
+      if (progressiveAll && current === seq) {
+        loading.value = false
+        try {
+          const rest = await api.get('/smart-search', {
+            params: { ...baseParams, types: 'deals,listings,places' },
+            signal,
+          })
+          if (current !== seq) return
+          applySearchPayload(rest.data?.data || null, { mergeNonLeads: true })
+          finishSearchUi()
+        } catch (err) {
+          if (current !== seq) return
+          if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return
+          // Leads already painted — don't wipe them if the follow-up fails.
+        }
       }
-      if (flat.value.some((row) => row.action === 'open_lead')) {
-        warmLeadModalIfIdle()
-      }
+      if (current === seq) lastCompletedKey = key
     })
     .catch((err) => {
       if (current !== seq) return

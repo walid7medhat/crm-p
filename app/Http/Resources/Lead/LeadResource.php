@@ -31,6 +31,23 @@ class LeadResource extends JsonResource
     protected static bool $collectionPrimed = false;
 
     /**
+     * Modal GET /leads/{id}: skip duplicate scans, portal-adjacent work, and deep
+     * user hierarchy walks so the first paint hydrates in well under a second.
+     * Kanban card seed already carries duplicate_no / has_service_duplicate.
+     */
+    protected static bool $fastShow = false;
+
+    public static function enableFastShow(): void
+    {
+        static::$fastShow = true;
+    }
+
+    public static function disableFastShow(): void
+    {
+        static::$fastShow = false;
+    }
+
+    /**
      * Batch-load per-lead duplicate / history / activity data for a collection.
      * Preserves the same rules as the per-row queries previously used in toArray().
      *
@@ -258,10 +275,10 @@ class LeadResource extends JsonResource
             $finalLastActivityAt = $this->bitrix24_last_activity_at ?? $this->created_at;
         }
 
-        $duplicateIds = $this->resolveDuplicateIds();
+        $duplicateIds = static::$fastShow ? [] : $this->resolveDuplicateIds();
 $branchName =
     $this->lead_branch_source
-    ?: $this->addedBy?->admin_parent?->name;
+    ?: (static::$fastShow ? null : $this->addedBy?->admin_parent?->name);
         $data= [
             'id' => $this->id,
             'added_by' => $this->added_by,
@@ -316,11 +333,15 @@ $branchName =
             'source_information' => $this->source_information,
            'office_branch' => Lead::branchLabel(
             $this->lead_branch_source
-            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name),
+            ?: (static::$fastShow
+                ? null
+                : ($this->addedBy?->admin_parent?->name ?: $this->responsiblePerson?->admin_parent?->name))),
 
         'lead_branch_source' => Lead::branchLabel(
             $this->lead_branch_source
-            ?: $this->addedBy?->admin_parent?->name?: $this->responsiblePerson?->admin_parent?->name),
+            ?: (static::$fastShow
+                ? null
+                : ($this->addedBy?->admin_parent?->name ?: $this->responsiblePerson?->admin_parent?->name))),
             'ad_id' => $this->ad_id,
             'available_to_everyone' => $this->available_to_everyone,
 
@@ -361,8 +382,11 @@ $branchName =
             'created_at' => $this->created_at->setTimezone(config('app.timezone')),
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at,
-            'duplicate_no' => count($duplicateIds),
-            'duplicate_ids' => $duplicateIds,
+            // Fast show omits these so the FE keeps kanban-card seed values.
+            ...(static::$fastShow ? [] : [
+                'duplicate_no' => count($duplicateIds),
+                'duplicate_ids' => $duplicateIds,
+            ]),
             'is_reverted' => ! is_null($this->revert),
             // branch_admin may edit any lead they can see (their branch) — except the
             // primary phone (can_edit_primary_phone; also stripped in LeadController::update).
@@ -395,9 +419,15 @@ $branchName =
                 : '',
             'original_name' => data_get($this->createdHistory, 'changes.name', $this->name),
 
-            'original_branch' => Lead::branchLabel($this->resolveOriginalBranch()),
+            'original_branch' => Lead::branchLabel(
+                static::$fastShow
+                    ? (data_get($this->createdHistory, 'changes.lead_branch_source') ?: $this->lead_branch_source)
+                    : $this->resolveOriginalBranch()
+            ),
             'api_first_question' => $this->getFirstApiQuestion(),
-            'has_service_duplicate' => $this->hasServiceDuplicate(),
+            ...(static::$fastShow ? [] : [
+                'has_service_duplicate' => $this->hasServiceDuplicate(),
+            ]),
             'whatsapp_qualification' => $this->when(
                 ! empty($this->whatsapp_qualification),
                 $this->formatWhatsappQualification($this->whatsapp_qualification)
@@ -542,6 +572,32 @@ protected function resolveOriginalBranch(): ?string
     {
         if (! $user instanceof User) {
             return null;
+        }
+
+        // Modal open: identity only — admin_parent / office walks are multi-query each.
+        if (static::$fastShow) {
+            $user->loadMissing(['roles:id,name']);
+            $roleName = $user->roles->first()?->name;
+
+            return [
+                'id' => $user->id,
+                'name' => User::resolveDisplayName($user),
+                'display_name' => $user->display_name,
+                'email' => $user->email,
+                'avatar' => $user->avatar ? asset('storage/'.$user->avatar) : null,
+                'status' => $user->status,
+                'parent_id' => $user->parent_id,
+                'parent_name' => null,
+                'admin_parent_id' => null,
+                'admin_parent_name' => null,
+                'office_name' => null,
+                'role_name' => $roleName ? ucwords(str_replace('_', ' ', $roleName)) : null,
+                'branch' => null,
+                'branch_name' => null,
+                'position' => null,
+                'bitrix24_id' => $user->bitrix24_id,
+                'is_external' => false,
+            ];
         }
 
         $user->loadMissing([

@@ -1380,10 +1380,27 @@ const fetchLead = async ({ silent = false } = {}) => {
             }
             const fresh = response.data.data
             if (fresh) {
-                lead.value = lead.value ? { ...lead.value, ...fresh } : fresh
+                const prev = lead.value
+                // Fast show omits duplicate_* — keep kanban seed badges until a full payload arrives.
+                lead.value = {
+                    ...(prev || {}),
+                    ...fresh,
+                    duplicate_no: fresh.duplicate_no ?? prev?.duplicate_no,
+                    duplicate_ids: fresh.duplicate_ids ?? prev?.duplicate_ids,
+                    has_service_duplicate: fresh.has_service_duplicate ?? prev?.has_service_duplicate,
+                }
                 if (fresh.stage_id) leadStageId.value = fresh.stage_id
                 await nextTick()
                 applyOpenSection()
+                // Portal links were pulled out of show() (slow LIKE on comments).
+                api.get(`/leads/${leadIdNum}/comment-portal-links`)
+                    .then((portalRes) => {
+                        if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) return
+                        const links = portalRes?.data?.data
+                        if (!Array.isArray(links) || !lead.value || Number(lead.value.id) !== leadIdNum) return
+                        lead.value = { ...lead.value, comment_portal_links: links }
+                    })
+                    .catch(() => {})
             }
         } catch (error) {
             if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {

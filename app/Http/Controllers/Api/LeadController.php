@@ -714,18 +714,15 @@ class LeadController extends Controller
             //     ['action' => 'view']
             // );
 
-            // Keep the first paint light: one parent level + area name is enough for the
-            // modal shell. Deep parent chains were multi-join and slowed every lead open.
-            $data = (new LeadResource($lead->load([
+            // Fast modal open: slim relations + LeadResource::enableFastShow (no duplicate
+            // table scans, no admin_parent walks). Portal links are a separate request —
+            // LIKE '%propertyfinder%' on comments was multi-second on production.
+            $lead->load([
                 'stage',
+                'addedBy:id,name,display_name,avatar,email,parent_id,status,bitrix24_id',
                 'addedBy.roles:id,name',
-                'addedBy.parent:id,name,display_name,avatar,parent_id',
-                'addedBy.employeeProfile.companyBranch:id,name',
-                'addedBy.employeeProfile.designation:id,name',
+                'responsiblePerson:id,name,display_name,avatar,email,parent_id,status,bitrix24_id',
                 'responsiblePerson.roles:id,name',
-                'responsiblePerson.parent:id,name,display_name,avatar,parent_id',
-                'responsiblePerson.employeeProfile.companyBranch:id,name',
-                'responsiblePerson.employeeProfile.designation:id,name',
                 'participants',
                 'observers.user:id,name,display_name,avatar,email',
                 'integration:id,project_id',
@@ -733,13 +730,40 @@ class LeadController extends Controller
                 'area:id,name,parent_id,type',
                 'area.parent:id,name,parent_id,type',
                 'createdHistory',
-            ])))->resolve();
+            ]);
 
-            $data['comment_portal_links'] = $this->commentPortalLinks($lead);
+            LeadResource::enableFastShow();
+            try {
+                $data = (new LeadResource($lead))->resolve();
+            } finally {
+                LeadResource::disableFastShow();
+            }
+
+            $data['comment_portal_links'] = [];
 
             return ApiResponse::success($data, 'Lead retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * PF / Bayut URLs found in lead comments — loaded after the modal shell so show() stays fast.
+     */
+    public function commentPortalLinks(Lead $lead): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (! $user->canViewLead($lead)) {
+                return ApiResponse::error('You are not authorized to view this lead', 403);
+            }
+
+            return ApiResponse::success(
+                $this->commentPortalLinksForLead($lead),
+                'Portal links retrieved'
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to retrieve portal links: '.$e->getMessage());
         }
     }
 
@@ -751,7 +775,7 @@ class LeadController extends Controller
      *
      * @return array<int, string>
      */
-    private function commentPortalLinks(Lead $lead): array
+    private function commentPortalLinksForLead(Lead $lead): array
     {
         $comments = LeadComment::query()
             ->where('lead_id', $lead->id)

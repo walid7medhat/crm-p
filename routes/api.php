@@ -805,6 +805,7 @@ Route::middleware('role:super_admin|admin')->group(function () {
 Route::get('/leads/phone-duplicates', [LeadController::class, 'phoneDuplicates']);
 Route::get('/leads/inactive-sales', [LeadController::class, 'inactiveSales']);
 Route::get('/leads/total-count', [LeadController::class, 'totalCount']);
+Route::get('/leads/{lead}/comment-portal-links', [LeadController::class, 'commentPortalLinks']);
 Route::apiResource('leads', LeadController::class);
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);

@@ -148,26 +148,29 @@ class LeadTextSearch
                     });
             }
 
-            // Responsible person's name (long "name" or short "display_name") — kept out of the
-            // lean-mode skip below since it's a single indexed FK join (responsible_person_id),
-            // not the broader table scans lean mode is meant to avoid.
+            // Responsible person's name — same match rules as whereHas, as a single
+            // users.id subquery (avoids correlated EXISTS per lead row).
             if ($includeRelations) {
                 // "yasmeen hasan" as one substring won't match "Yasmeen Abdlrhman Hasan" (middle
                 // name in between) — also require every individual word to appear somewhere in
                 // the name when the search has more than one word.
                 $nameWords = array_slice(preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY), 0, 6);
 
-                $s->orWhereHas('responsiblePerson', function ($r) use ($like, $nameWords) {
-                    $r->where('name', 'like', $like)
-                        ->orWhere('display_name', 'like', $like);
+                $s->orWhereIn('responsible_person_id', function ($sub) use ($like, $nameWords) {
+                    $sub->select('id')
+                        ->from('users')
+                        ->where(function ($r) use ($like, $nameWords) {
+                            $r->where('name', 'like', $like)
+                                ->orWhere('display_name', 'like', $like);
 
-                    if (count($nameWords) > 1) {
-                        $r->orWhere(function ($multi) use ($nameWords) {
-                            foreach ($nameWords as $word) {
-                                $multi->where('name', 'like', '%'.$word.'%');
+                            if (count($nameWords) > 1) {
+                                $r->orWhere(function ($multi) use ($nameWords) {
+                                    foreach ($nameWords as $word) {
+                                        $multi->where('name', 'like', '%'.$word.'%');
+                                    }
+                                });
                             }
                         });
-                    }
                 });
             }
 

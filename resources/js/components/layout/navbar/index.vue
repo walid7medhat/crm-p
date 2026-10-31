@@ -1132,6 +1132,8 @@ const openSettingsHub = (section = null) => {
 }
 const defaultFilter = { id: 'leads-in-progress', label: 'Leads In Progress' }
 
+let lastLeadSearchFingerprint = ''
+
 function applySearchToApi() {
     const term = (search.value || '').trim()
     const digits = term.replace(/\D+/g, '')
@@ -1172,6 +1174,16 @@ function applySearchToApi() {
         query,
         activeFilters: activeFilters.value || [],
     }
+
+    const routeKey = isDealRoute.value || activeKanbanTab.value === 'deals'
+        ? 'deals'
+        : (activeKanbanTab.value || 'leads')
+    const fingerprint = JSON.stringify({ routeKey, query, filters: payload.activeFilters })
+    // Debounce can fire twice with the same term (focus/blur) — skip duplicate board hits.
+    if (fingerprint === lastLeadSearchFingerprint && term) {
+        return
+    }
+    lastLeadSearchFingerprint = fingerprint
 
     // Immediate feedback in the search box while the board fetches.
     if (query && Object.keys(query).length) {

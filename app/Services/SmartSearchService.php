@@ -563,14 +563,19 @@ class SmartSearchService
         } elseif ($intent['phone']) {
             LeadTextSearch::apply($query, $raw);
         } elseif ($intent['email']) {
-            $email = mb_strtolower(trim($raw));
+            // CI collation makes equality case-insensitive; avoids LOWER() which blocks email index.
+            $email = trim($raw);
             $query->where(function ($q) use ($email) {
-                $q->whereRaw('LOWER(email) = ?', [$email])
-                    ->orWhereRaw('LOWER(secondary_email) = ?', [$email])
-                    ->orWhereRaw('LOWER(source_client_email) = ?', [$email]);
+                $q->where('email', $email)
+                    ->orWhere('secondary_email', $email)
+                    ->orWhere('source_client_email', $email);
             });
         } else {
             $exact = (clone $query)->where('lead_number', $raw)->with($this->leadWith())->limit($limit)->get();
+            // Exact lead_number hit is enough — skip the broad OR scan.
+            if ($exact->count() >= $limit) {
+                return $this->presentLeads($user, $exact, $raw, $limit, null, null);
+            }
             // Same options as LeadController kanban text search: lean + role-gated admin.
             // Area names stay available via places / listings / requirement_area_id — not a lead OR.
             LeadTextSearch::apply($query, $raw, [
@@ -579,13 +584,14 @@ class SmartSearchService
                 'admin' => $user->hasRole(['admin', 'super_admin']),
                 'lean' => true,
             ]);
-            $rows = $query->with($this->leadWith())->orderByDesc('id')->limit($limit + count($exact))->get();
-            $merged = $exact->concat($rows)->unique('id')->take($limit + 8);
+            // constrainLeads already enforces visibility — fetch only what we will present.
+            $rows = $query->with($this->leadWith())->orderByDesc('id')->limit($limit)->get();
+            $merged = $exact->concat($rows)->unique('id')->take($limit);
 
             return $this->presentLeads($user, $merged, $raw, $limit, null, null);
         }
 
-        $rows = $query->with($this->leadWith())->orderByDesc('id')->limit($limit + 8)->get();
+        $rows = $query->with($this->leadWith())->orderByDesc('id')->limit($limit)->get();
 
         return $this->presentLeads($user, $rows, $raw, $limit, $requirementName, $filters['requirement_area_id'] ?? null);
     }
@@ -598,10 +604,9 @@ class SmartSearchService
     {
         $areaIds = $requirementAreaId ? Area::descendantIdsIncludingSelf($requirementAreaId) : [];
         $out = [];
+        // Visibility is already applied in constrainLeads() (same rules as canViewLead).
+        // Re-checking per row re-walked admin_parent / subordinates and dominated latency.
         foreach ($rows as $lead) {
-            if (! $user->canViewLead($lead)) {
-                continue;
-            }
             $match = null;
             if ($requirementAreaId) {
                 $match = $this->requirementMatch($lead, $areaIds);

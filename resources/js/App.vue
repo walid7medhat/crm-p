@@ -68,7 +68,7 @@
 </template>
 
 <script>
-import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent, h } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { startLocationTracking, stopLocationTracking } from '@/composables/useLocationTracking'
 import Header from './components/layout/header/index.vue'
@@ -77,7 +77,6 @@ import Footer from './components/layout/footer/index.vue'
 import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
-import BrandLoader from './components/layout/BrandLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
 import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
 import LoginWelcomeSplash from './components/layout/LoginWelcomeSplash.vue'
@@ -85,30 +84,13 @@ import MobilePushToggle from './components/layout/MobilePushToggle.vue'
 import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
 import PropertyCompareDock from './components/listings/PropertyCompareDock.vue'
 import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
-const loadViewLeadModal = () => import('./components/kanban/viewLead/ViewLeadModal.vue')
-const LeadOpeningLoader = {
-  name: 'LeadOpeningLoader',
-  setup() {
-    return () => h(BrandLoader, { variant: 'overlay', label: 'Opening lead' })
-  },
-}
+// Eager: async chunk + "Opening lead" overlay made the first card click feel like 5s.
+import ViewLeadModal from './components/kanban/viewLead/ViewLeadModal.vue'
 const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layout/SystemCampaignPopup.vue'))
 const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-motivation/DailyEdgeLayer.vue'))
 const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
-const ViewLeadModal = defineAsyncComponent({
-  loader: loadViewLeadModal,
-  // Delay loader so a warm/preloaded chunk never flashes "Opening lead".
-  delay: 200,
-  loadingComponent: LeadOpeningLoader,
-  // One failed chunk download (weak mobile network) used to leave lead clicks dead
-  // for the whole session — retry a few times before giving up.
-  onError(error, retry, fail, attempts) {
-    if (attempts <= 3) setTimeout(retry, 600 * attempts)
-    else fail()
-  },
-})
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
