@@ -1500,6 +1500,9 @@ function onDealSheetTouchMove(event) {
 function syncDealSheetLock() {
   const locked = props.asDropdown && props.modelValue && isMobileSheet.value
   const root = document.documentElement
+  // append-to-body v-select menus default to z-index 13000 (vue-select-overrides.css),
+  // below the navbar's search panel (15000) — this class lifts them above it.
+  root.classList.toggle('deal-search-open', !!(props.asDropdown && props.modelValue))
   if (root.classList.contains('lead-search-sheet-lock') === locked) return
   root.classList.toggle('lead-search-sheet-lock', locked)
   if (locked) document.addEventListener('touchmove', onDealSheetTouchMove, { passive: false })
@@ -1777,7 +1780,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  document.documentElement.classList.remove('lead-search-sheet-lock')
+  document.documentElement.classList.remove('lead-search-sheet-lock', 'deal-search-open')
   document.removeEventListener('touchmove', onDealSheetTouchMove)
 })
 </script>
@@ -2347,6 +2350,12 @@ onUnmounted(() => {
 }
 </style>
 <style>
+/* Lift append-to-body menus above the navbar search panel (15000). Skips the DOB
+   DateTimePicker, which raises its own menus to 101050. */
+html.deal-search-open body:not(.date-time-picker-open) .vs__dropdown-menu {
+    z-index: 100010 !important;
+}
+
 .lead-search-date-backdrop.lr-modal-backdrop {
     position: fixed;
     inset: 0;
