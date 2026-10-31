@@ -92,6 +92,19 @@
               <!-- Everyone else: read-only tag -->
               <!-- <span v-else class="deal-type-tag-pill">{{ selectedDealTypeName }}</span> -->
 
+              <!-- Super admin only: delete (archive) the deal -->
+              <button
+                v-if="canDeleteDeal && deal?.id"
+                class="close-btn deal-delete-btn"
+                type="button"
+                aria-label="Delete deal"
+                title="Delete deal"
+                :disabled="dealDeleting"
+                @click="deleteDeal"
+              >
+                <iconify-icon icon="lucide:trash-2"></iconify-icon>
+              </button>
+
               <button class="close-btn" type="button" aria-label="Close" @click="close">
                 <iconify-icon icon="lucide:x"></iconify-icon>
               </button>
@@ -361,7 +374,7 @@ const props = defineProps({
   autoEditSection: { type: String, default: null } 
 })
 
-const emit = defineEmits(['update:modelValue', 'deal-updated', 'stage-change-request', 'deal-type-changed'])
+const emit = defineEmits(['update:modelValue', 'deal-updated', 'deal-deleted', 'stage-change-request', 'deal-type-changed'])
 
 const show = ref(props.modelValue)
 const dealType = ref('primary')
@@ -418,6 +431,45 @@ const canEditDealType = computed(() => {
   return roles.includes('super_admin') || roles.includes('admin')
 })
 const dealTypeSaving = ref(false)
+
+// Matches DealController::destroy — super_admin only.
+const canDeleteDeal = computed(() => {
+  const roles = (currentUser?.roles || []).map((r) =>
+    String(typeof r === 'string' ? r : r?.name).toLowerCase()
+  )
+  return roles.includes('super_admin')
+})
+const dealDeleting = ref(false)
+
+async function deleteDeal() {
+  if (!canDeleteDeal.value || !deal.value?.id || dealDeleting.value) return
+
+  const result = await Swal.fire({
+    title: 'Delete this deal?',
+    text: 'The deal will be removed from the board.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    heightAuto: false,
+  })
+  if (!result.isConfirmed) return
+
+  const deletedDeal = deal.value
+  dealDeleting.value = true
+  try {
+    await axios.delete(`/deals/${deletedDeal.id}`)
+    emit('deal-deleted', deletedDeal)
+    window.$showNotification?.('Deal deleted', 'success')
+    close()
+  } catch (e) {
+    console.error('Failed to delete deal', e)
+    window.$showNotification?.(e?.response?.data?.message || 'Failed to delete deal', 'error')
+  } finally {
+    dealDeleting.value = false
+  }
+}
 
 
 
@@ -1659,6 +1711,19 @@ function close() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+.deal-delete-btn {
+  color: #94a3b8;
+  border-radius: 8px;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.deal-delete-btn:hover:not(:disabled) {
+  color: #dc2626;
+  background: #fef2f2;
+}
+.deal-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .deal-type-tag-pill {
   display: inline-flex;

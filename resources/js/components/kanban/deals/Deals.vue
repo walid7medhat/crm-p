@@ -290,6 +290,7 @@
       v-model="showViewDealModal"
       :deal="selectedDeal"
       @deal-updated="handleDealUpdatedFromModal"
+      @deal-deleted="handleDeletedDeal"
       @stage-change-request="handleStageChangeFromModal"
         :auto-edit-section="autoEditSection"
         

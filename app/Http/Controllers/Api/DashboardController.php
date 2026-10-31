@@ -2147,6 +2147,7 @@ public function getPropertyTypesWithListings(Request $request)
             $revenueTotal = (float) $dealScope(Deal::query())->sum('deal_total_amount');
             $propertyRevenue = (float) DB::table('deal_properties')
                 ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
+                ->whereNull('deals.deleted_at')
                 ->when(! $isSuperAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
                 ->sum('deal_properties.purchase_price');
             if ($propertyRevenue > $revenueTotal) {
@@ -2342,6 +2343,7 @@ public function getPropertyTypesWithListings(Request $request)
         } else {
             $revenueMap = DB::table('deal_properties')
                 ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
+                ->whereNull('deals.deleted_at')
                 ->when(! $isSuperAdmin, fn ($q) =>
                     $q->whereIn('deals.responsible_person_id', $scopeIds)
                 )
@@ -2355,6 +2357,7 @@ public function getPropertyTypesWithListings(Request $request)
 
             if ($revenueMap->sum() <= 0) {
                 $revenueMap = DB::table('deals')
+                    ->whereNull('deleted_at')
                     ->when(! $isSuperAdmin, fn ($q) =>
                         $q->whereIn('responsible_person_id', $scopeIds)
                     )

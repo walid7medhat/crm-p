@@ -172,6 +172,7 @@ class AiLeadBehaviorRepository
                 COALESCE(SUM(CASE WHEN d.status = ? THEN d.deal_total_amount ELSE 0 END), 0) AS revenue
             FROM deals d
             WHERE d.responsible_person_id = ?
+              AND d.deleted_at IS NULL
               AND d.updated_at >= ?
             ',
             ['completed', 'cancelled', 'completed', $userId, $since->toDateTimeString()]

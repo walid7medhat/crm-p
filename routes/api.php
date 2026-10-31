@@ -583,6 +583,8 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/{deal}/properties/{property}', [DealController::class, 'updateProperty']);
         Route::delete('/property-document', [DealController::class, 'deletePropertyDocument']);
         Route::post('/{deal}/properties', [DealController::class, 'addProperty']);
+        // Last so it can't swallow DELETE /deals/property-document above.
+        Route::delete('/{deal}', [DealController::class, 'destroy']);
     });
     
 });

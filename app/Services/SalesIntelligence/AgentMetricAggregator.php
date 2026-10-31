@@ -178,6 +178,7 @@ class AgentMetricAggregator
             FROM deals d
             INNER JOIN leads l ON l.id = d.lead_id
             WHERE d.responsible_person_id = ?
+              AND d.deleted_at IS NULL
               AND d.status = ?
               AND d.updated_at >= ?
             ',

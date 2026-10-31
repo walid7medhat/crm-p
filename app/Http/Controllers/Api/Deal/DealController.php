@@ -1499,6 +1499,43 @@ class DealController extends Controller
     }
 
     /**
+     * Delete (archive) a deal — super_admin only. Deal uses SoftDeletes, so like
+     * LeadController::destroy() this only soft-deletes the row.
+     */
+    public function destroy(Deal $deal): JsonResponse
+    {
+        if (! auth()->user()->hasRole('super_admin')) {
+            return ApiResponse::error('You are not authorized to delete this deal', 403);
+        }
+
+        try {
+            DB::transaction(function () use ($deal) {
+                // The lead would otherwise keep pointing at a deleted deal. Move the pointer
+                // to another live deal of the same lead, or clear it if this was the only one.
+                if ($deal->lead_id) {
+                    $lead = Lead::find($deal->lead_id);
+                    if ($lead && (int) $lead->converted_to_deal_id === (int) $deal->id) {
+                        $lead->update([
+                            'converted_to_deal_id' => Deal::where('lead_id', $lead->id)
+                                ->where('id', '!=', $deal->id)
+                                ->latest('id')
+                                ->value('id'),
+                        ]);
+                    }
+                }
+
+                $deal->delete();
+            });
+
+            $this->broadcastDealUpdate($deal, 'deleted', auth()->id());
+
+            return ApiResponse::success(null, 'Deal deleted successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to delete deal: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * حذف مستند
      */
     public function deleteDocument($id)
