@@ -26,6 +26,7 @@ class JwtAuthMiddleware
                 return ApiResponse::error('Account inactive', 403);
             }
             Auth::setUser($user);
+            $impersonated = JWTAuth::getPayload()->get('impersonated_by') !== null;
         } catch (TokenExpiredException $e) {
             return ApiResponse::error('Token expired', 401);
         } catch (TokenInvalidException $e) {
@@ -35,10 +36,12 @@ class JwtAuthMiddleware
         }
 
         $request->attributes->set('user', $user);
+        $request->attributes->set('impersonated', $impersonated);
 
         // Keep "online" fresh while the user is actively using the CRM (at most every 5 min).
+        // Skipped for super admin "switch account" tokens so the user doesn't appear online.
         $cacheKey = 'user-presence-touch:' . $user->id;
-        if (! Cache::has($cacheKey)) {
+        if (! $impersonated && ! Cache::has($cacheKey)) {
             Cache::put($cacheKey, true, now()->addMinutes(5));
             $user->forceFill(['last_login_at' => now()])->save();
         }

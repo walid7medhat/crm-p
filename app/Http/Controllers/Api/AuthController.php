@@ -190,6 +190,14 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
         'session_start' => 'nullable|boolean',
     ]);
 
+    // Super admin "switch account" sessions must not overwrite the user's real location.
+    if ($request->attributes->get('impersonated')) {
+        return ApiResponse::success([
+            'location_updated' => false,
+            'history_recorded' => false,
+        ], 'Location ignored while switched account');
+    }
+
     // Always the authenticated account. A user id in the body is ignored.
     $result = $tracking->record(auth()->user(), $request);
 
@@ -239,7 +247,9 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
                 return ApiResponse::error('Cannot switch to an inactive account', 422);
             }
 
-            $token = auth()->login($user);
+            // Tag the token so presence (last_login_at) and device location are not
+            // touched while the super admin is browsing as this user.
+            $token = auth()->claims(['impersonated_by' => (int) $currentUser->id])->login($user);
             $user->load('roles', 'permissions');
 
             \Log::info('Super admin switched account', [
