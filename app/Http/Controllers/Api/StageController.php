@@ -316,11 +316,14 @@ class StageController extends Controller
         $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
         // Temporary benchmark switch — see config/lead_scoring.php → kanban_search.skip_ranking
         $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
+        // Super-admin "Duplicates" toggle — same soft board path as text search (skip exact COUNT).
+        $isDuplicateFilter = $request->boolean('has_duplicate') && $user->hasRole('super_admin');
+        $skipHeavyBoardAggregates = $isTextSearch || $skipSearchRanking || $isDuplicateFilter;
 
         // ================= analytics counts (chip totals, pre-heat-filter) =================
-        // Skip during free-text search. For normal board refresh, cache briefly to avoid
-        // re-scanning the full lead set on every page reload.
-        $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, $isTextSearch || $skipSearchRanking);
+        // Skip during free-text search / duplicates filter. For normal board refresh, cache briefly
+        // to avoid re-scanning the full lead set on every page reload.
+        $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, $skipHeavyBoardAggregates);
 
         // ================= apply heat chip filter (affects stage counts + lists only) =================
         if ($request->filled('heat')) {
@@ -333,10 +336,10 @@ class StageController extends Controller
         $stagesWithLeads = [];
         $allLeadsForMeta = collect();
 
-        // Exact per-stage totals for header badges — skip during free-text search.
-        // Search uses soft has_more (limit+1) so we do not repeat the LIKE predicate in COUNT(*).
+        // Exact per-stage totals for header badges — skip during free-text / duplicates filter.
+        // Soft has_more (limit+1) avoids repeating the expensive predicate in COUNT(*).
         $exactCountsByStage = collect();
-        if (! $isTextSearch) {
+        if (! $isTextSearch && ! $isDuplicateFilter) {
             $exactCountsByStage = (clone $baseLeadsQuery)
                 ->whereIn('stage_id', $stageIds)
                 ->reorder()
@@ -509,27 +512,50 @@ class StageController extends Controller
                     ->filter()
                     ->values();
 
-                $total = (int) ($exactCountsByStage[$stage->id] ?? 0);
-                $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
+                $loaded = $leads->count();
                 $allLeadsForMeta = $allLeadsForMeta->merge($leads);
 
-                $stagesWithLeads[] = [
-                    'id' => $stage->id,
-                    'name' => $stage->name,
-                    'order' => $stage->order,
-                    'color' => $stage->color,
-                    'lead_count' => $total,
-                    'leads' => $leads,
-                    'pagination' => [
-                        'current_page' => 1,
-                        'last_page' => $lastPage,
-                        'per_page' => $perPage,
-                        'total' => $total,
-                        'has_more_pages' => $total > $perPage,
-                    ],
-                    'created_at' => $stage->created_at?->toISOString(),
-                    'updated_at' => $stage->updated_at?->toISOString(),
-                ];
+                if ($isDuplicateFilter) {
+                    // Soft totals — avoid a second full-board COUNT with hasDuplicates().
+                    $stagesWithLeads[] = [
+                        'id' => $stage->id,
+                        'name' => $stage->name,
+                        'order' => $stage->order,
+                        'color' => $stage->color,
+                        'lead_count' => $loaded,
+                        'leads' => $leads,
+                        'pagination' => [
+                            'current_page' => 1,
+                            'last_page' => $hasMore ? 2 : 1,
+                            'per_page' => $perPage,
+                            'total' => $hasMore ? null : $loaded,
+                            'has_more_pages' => $hasMore,
+                        ],
+                        'created_at' => $stage->created_at?->toISOString(),
+                        'updated_at' => $stage->updated_at?->toISOString(),
+                    ];
+                } else {
+                    $total = (int) ($exactCountsByStage[$stage->id] ?? 0);
+                    $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
+
+                    $stagesWithLeads[] = [
+                        'id' => $stage->id,
+                        'name' => $stage->name,
+                        'order' => $stage->order,
+                        'color' => $stage->color,
+                        'lead_count' => $total,
+                        'leads' => $leads,
+                        'pagination' => [
+                            'current_page' => 1,
+                            'last_page' => $lastPage,
+                            'per_page' => $perPage,
+                            'total' => $total,
+                            'has_more_pages' => $total > $perPage,
+                        ],
+                        'created_at' => $stage->created_at?->toISOString(),
+                        'updated_at' => $stage->updated_at?->toISOString(),
+                    ];
+                }
             }
         }
 

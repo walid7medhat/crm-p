@@ -1844,11 +1844,12 @@ const duplicatesOnly = computed(() => !!lastQuery.value?.has_duplicate);
 
 const toggleDuplicatesOnly = () => {
     const nextQuery = lastQuery.value ? { ...lastQuery.value } : {};
+    const turningOn = !nextQuery.has_duplicate;
 
-    if (nextQuery.has_duplicate) {
-        delete nextQuery.has_duplicate;
-    } else {
+    if (turningOn) {
         nextQuery.has_duplicate = '1';
+    } else {
+        delete nextQuery.has_duplicate;
     }
 
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null;
@@ -1857,6 +1858,18 @@ const toggleDuplicatesOnly = () => {
         activeFilters.value = [];
     } else if (!activeFilter.value) {
         activeFilter.value = { ...defaultFilter };
+    }
+
+    // Instant: filter loaded cards by duplicate_no while the board API catches up.
+    window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', {
+        detail: {
+            search: String(search.value || '').trim(),
+            duplicatesOnly: turningOn,
+        },
+    }));
+    if (!turningOn) {
+        isSearchLoading.value = false;
+        window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }));
     }
 
     window.dispatchEvent(new CustomEvent('kanban-lead-search', {

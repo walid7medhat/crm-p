@@ -308,7 +308,7 @@
                                                     'kanban-card--selected': isLeadSelected(task.id),
                                                     'kanban-card--motion-hold': motionHeld[task.id],
                                                 }"
-                                                v-show="leadMatchesShortcutFilter(task) && leadMatchesLiveText(task)"
+                                                v-show="leadCardIsVisible(task)"
                                                 @touchstart="onMobileCardTouchStart(column, task, $event)"
                                                 @touchmove="onMobileCardTouchMove(column, $event)"
                                                 @touchend="onMobileCardTouchEnd(column, $event)"
@@ -2147,9 +2147,9 @@ const isBoardFilterActive = computed(() => {
 })
 
 const showKanbanSearchOverlay = computed(() => {
-    // Free-text live filter already narrows cards on-screen — don't cover them
+    // Live filters already narrow cards on-screen — don't cover them
     // with the full-board "Searching leads" wash while the server catches up.
-    if (String(liveTextSearch.value || '').trim()) return false
+    if (String(liveTextSearch.value || '').trim() || liveDuplicatesOnly.value) return false
     return (
         isFetching.value &&
         columns.value.length > 0 &&
@@ -2283,6 +2283,7 @@ function captureBoardBeforeSearch() {
 
 function restoreBoardFromSearchSnapshot() {
     liveTextSearch.value = ''
+    liveDuplicatesOnly.value = false
     const snap = boardSnapshotBeforeSearch
     boardSnapshotBeforeSearch = null
     if (snap?.columns?.length) {
@@ -2300,19 +2301,36 @@ function restoreBoardFromSearchSnapshot() {
     return loadCachedColumns()
 }
 
+/** Super-admin Duplicates toggle — hide non-dups on the loaded board immediately. */
+const liveDuplicatesOnly = ref(false)
+
 function syncLiveTextFromQuery(q) {
     if (!q || typeof q !== 'object') {
         liveTextSearch.value = ''
+        liveDuplicatesOnly.value = false
         return
     }
     liveTextSearch.value = String(
         q.search || q.lead_name || q.first_name || q.work_phone || q.email || ''
     ).trim()
+    liveDuplicatesOnly.value = !!(q.has_duplicate)
 }
 
 function onKanbanLeadLiveFilter(event) {
     const term = event?.detail?.search
     liveTextSearch.value = term == null ? '' : String(term).trim()
+    if (Object.prototype.hasOwnProperty.call(event?.detail || {}, 'duplicatesOnly')) {
+        liveDuplicatesOnly.value = !!event.detail.duplicatesOnly
+    }
+}
+
+function leadMatchesDuplicatesOnly(lead) {
+    if (!liveDuplicatesOnly.value) return true
+    return Number(lead?.duplicate_no) > 0 || !!lead?.has_service_duplicate
+}
+
+function leadCardIsVisible(lead) {
+    return leadMatchesShortcutFilter(lead) && leadMatchesLiveText(lead) && leadMatchesDuplicatesOnly(lead)
 }
 
 function leadMatchesLiveText(lead) {
@@ -2798,13 +2816,13 @@ const fetchLeads = async (immediate = false, queryOverride = undefined, options 
     const hasSearchCriteria =
         (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length > 0) ||
         !!activeShortcutFilter.value
-    // Text-only search: keep cards visible (live filter); skip blocking overlay flag.
-    const textOnlySearch = !!(
+    // Text / duplicates-only: keep cards visible (live filter); skip blocking overlay flag.
+    const softLiveFilter = !!(
         appliedSearchParams.value &&
         Object.keys(appliedSearchParams.value).length === 1 &&
-        appliedSearchParams.value.search
+        (appliedSearchParams.value.search || appliedSearchParams.value.has_duplicate)
     )
-    if (!silent && hasSearchCriteria && !textOnlySearch) {
+    if (!silent && hasSearchCriteria && !softLiveFilter) {
         isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     }
@@ -2943,12 +2961,12 @@ const executeFetchLeads = async (options = {}) => {
         loading.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     } else if (!silent && hasSearchCriteria) {
-        const textOnly = !!(
+        const softLive = !!(
             appliedSearchParams.value &&
             Object.keys(appliedSearchParams.value).length === 1 &&
-            appliedSearchParams.value.search
+            (appliedSearchParams.value.search || appliedSearchParams.value.has_duplicate)
         )
-        if (!textOnly) {
+        if (!softLive) {
             isSearching.value = true
             window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
         }
@@ -2957,8 +2975,8 @@ const executeFetchLeads = async (options = {}) => {
         const q = effectiveSearchParams.value
 
         const params = {
-            // Smaller first page on free-text search → faster TTFB; load-more still available.
-            per_page: (q.search && String(q.search).trim())
+            // Smaller first page on free-text / duplicates → faster TTFB; load-more still available.
+            per_page: ((q.search && String(q.search).trim()) || q.has_duplicate)
                 ? Math.min(Number(leadsPerPage.value) || 15, 12)
                 : leadsPerPage.value,
             ...buildLeadSearchApiParams(q),
@@ -4971,7 +4989,7 @@ const listRows = computed(() => {
     for (const column of columns.value) {
         if (!isColumnVisibleOnMobile(column)) continue
         for (const task of column.leads || []) {
-            if (!task || !leadMatchesShortcutFilter(task) || !leadMatchesLiveText(task)) continue
+            if (!task || !leadCardIsVisible(task)) continue
             rows.push({ task, column })
         }
     }

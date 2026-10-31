@@ -610,7 +610,8 @@ public function activitiesWithTrashed()
 
     /**
      * Leads that have at least one other unmerged lead with the same phone digits or email
-     * (any branch). Correlated EXISTS on the indexed work_phone_digits / email columns.
+     * (any branch). Uses grouped key sets + WHERE IN (index-friendly) instead of
+     * correlated EXISTS, which was multi-second on large boards for the Duplicates toggle.
      */
     public function scopeHasDuplicates($query)
     {
@@ -620,19 +621,28 @@ public function activitiesWithTrashed()
             (array) config('lead_merge.ignored_duplicate_emails', [])
         )));
 
-        $twin = fn (string $column) => fn ($sub) => $sub->selectRaw('1')
-            ->from("{$table} as dup")
-            ->whereColumn("dup.{$column}", "{$table}.{$column}")
-            ->whereColumn('dup.id', '!=', "{$table}.id")
-            ->whereNull('dup.merged_into_lead_id')
-            ->whereNull('dup.deleted_at');
+        $duplicatePhoneDigits = DB::table($table)
+            ->select('work_phone_digits')
+            ->whereNotNull('work_phone_digits')
+            ->where('work_phone_digits', '!=', '')
+            ->whereNull('merged_into_lead_id')
+            ->whereNull('deleted_at')
+            ->groupBy('work_phone_digits')
+            ->havingRaw('COUNT(*) > 1');
 
-        return $query->where(function ($w) use ($table, $ignored, $twin) {
-            $w->where(fn ($p) => $p->where("{$table}.work_phone_digits", '!=', '')
-                    ->whereExists($twin('work_phone_digits')))
-                ->orWhere(fn ($p) => $p->where("{$table}.email", 'like', '%@%')
-                    ->when($ignored !== [], fn ($x) => $x->whereNotIn("{$table}.email", $ignored))
-                    ->whereExists($twin('email')));
+        $duplicateEmails = DB::table($table)
+            ->select('email')
+            ->whereNotNull('email')
+            ->where('email', 'like', '%@%')
+            ->when($ignored !== [], fn ($q) => $q->whereNotIn('email', $ignored))
+            ->whereNull('merged_into_lead_id')
+            ->whereNull('deleted_at')
+            ->groupBy('email')
+            ->havingRaw('COUNT(*) > 1');
+
+        return $query->where(function ($w) use ($table, $duplicatePhoneDigits, $duplicateEmails) {
+            $w->whereIn("{$table}.work_phone_digits", $duplicatePhoneDigits)
+                ->orWhereIn("{$table}.email", $duplicateEmails);
         });
     }
 
