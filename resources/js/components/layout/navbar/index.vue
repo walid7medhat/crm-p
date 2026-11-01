@@ -277,9 +277,10 @@
             <a
               :href="href"
               class="top-module-btn"
-              :class="{ active: isTopModuleItemActive(item) }"
+              :class="{ active: isTopModuleItemActive(item), 'top-module-btn--highlight': item.highlight }"
               @click="navigate"
             >
+              <iconify-icon v-if="item.highlight" icon="lucide:sparkles" class="top-module-btn__spark" aria-hidden="true" />
               {{ item.label }}
             </a>
           </router-link>
@@ -323,9 +324,10 @@
               <a
                 :href="href"
                 class="top-module-btn"
-                :class="{ active: isTopModuleItemActive(item) }"
+                :class="{ active: isTopModuleItemActive(item), 'top-module-btn--highlight': item.highlight }"
                 @click="navigate"
               >
+                <iconify-icon v-if="item.highlight" icon="lucide:sparkles" class="top-module-btn__spark" aria-hidden="true" />
                 {{ item.label }}
               </a>
             </router-link>
@@ -3331,6 +3333,54 @@ const showBackButton = computed(() => {
 .navbar-header--dashboard-home .top-module-btn.active:hover {
   color: #ffffff !important;
   background: var(--gradient-primary) !important;
+}
+
+/* Matches: gold-edged pill with a light sweep, so the new module stands out on the dashboard. */
+.top-module-btn--highlight {
+  position: relative;
+  gap: 5px;
+  overflow: hidden;
+  color: #3f2148;
+  border-color: rgba(212, 175, 55, 0.75);
+  background: linear-gradient(180deg, #fffdf6 0%, #f7efd6 100%);
+  box-shadow: 0 2px 0 #d9c27a, 0 4px 10px rgba(212, 175, 55, 0.28);
+}
+
+.top-module-btn--highlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.9) 48%, transparent 66%);
+  background-size: 250% 100%;
+  animation: top-module-shine 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes top-module-shine {
+  0% { background-position: 130% 0; }
+  55%, 100% { background-position: -130% 0; }
+}
+
+.top-module-btn__spark {
+  width: 13px;
+  height: 13px;
+  color: #b8901e;
+  animation: top-module-twinkle 2.4s ease-in-out infinite;
+}
+
+.top-module-btn--highlight.active .top-module-btn__spark,
+.top-module-btn--highlight:hover .top-module-btn__spark {
+  color: #ffffff;
+}
+
+@keyframes top-module-twinkle {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.25) rotate(15deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-module-btn--highlight::before,
+  .top-module-btn__spark { animation: none; }
 }
 
 .module-tabs-nav--sub {

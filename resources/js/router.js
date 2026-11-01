@@ -71,6 +71,9 @@ const baseRoutes = [
   { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true, allowBranchAdmin: true } },
   { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
+  // Match Studio: the agent's clients with homes waiting (+ Team board for managers).
+  { path: '/matches', redirect: '/matches/mine' },
+  { path: '/matches/:view(mine|team)', component: () => import('./pages/matches/index.vue'), meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue`
   { path: '/hr', component: () => import('./pages/hr/index.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },
   { path: '/hr/employees/:id', component: () => import('./pages/hr/employees/EmployeeProfilePage.vue'), meta: { requiresAuth: true, requiresAdmin: true, allowHr: true  } },

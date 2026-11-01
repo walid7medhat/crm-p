@@ -12,7 +12,10 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadComment;
+use App\Models\Listing;
 use App\Observers\ActivityObserver;
+use App\Observers\LeadMatchObserver;
+use App\Observers\ListingMatchObserver;
 use App\Observers\DealAssignmentLearningObserver;
 use App\Observers\LeadFirstContactObserver;
 use App\Observers\SalesIntelligenceDealObserver;
@@ -75,6 +78,10 @@ class AppServiceProvider extends ServiceProvider
             Lead::observe(LeadObserver::class);
             LeadComment::observe(LeadCommentObserver::class);
             LeadActivity::observe(ActivityObserver::class);
+
+        // Match Studio: re-match leads and listings when they change.
+        Lead::observe(LeadMatchObserver::class);
+        Listing::observe(ListingMatchObserver::class);
 
 
     }

@@ -193,6 +193,12 @@ export default {
         return
       }
 
+      // Match Studio digests (several clients at once) open the My Matches page.
+      if (notification?.data?.type === 'lead_matches' && notification?.data?.url) {
+        this.$router.push(notification.data.url)
+        return
+      }
+
       const type = notification.type || notification?.data?.notification_type
 
       if (type === 'App\\Notifications\\DailyMotivationTestNotification' || notification?.data?.type === 'daily_motivation_test') {

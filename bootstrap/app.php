@@ -85,6 +85,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone('Asia/Dubai')
             ->withoutOverlapping();
         $schedule->command('birthdays:celebrate')->dailyAt('08:00');
+        // Match Studio: quiet clients (90+ days) get re-matched; one digest per agent.
+        $schedule->command('matches:scan-quiet')
+            ->dailyAt('07:45')
+            ->timezone('Asia/Dubai')
+            ->withoutOverlapping()
+            ->runInBackground();
         $schedule->command('evaluations:check-due')->dailyAt('08:15');
         $schedule->command('leads:score')
                 ->everyTenMinutes()

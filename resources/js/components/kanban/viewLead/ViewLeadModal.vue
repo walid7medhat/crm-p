@@ -149,6 +149,16 @@
                     >
                         Activity
                     </button>
+                    <button
+                        type="button"
+                        class="tab-item tab-item--matches"
+                        :class="{ active: activeTab === 'matches' }"
+                        @click="switchTab('matches')"
+                    >
+                        <iconify-icon icon="lucide:sparkles" class="tab-item__spark" aria-hidden="true"></iconify-icon>
+                        Matches
+                        <span v-if="matchCount > 0" class="tab-item__badge">{{ matchCount }}</span>
+                    </button>
                 </div>
             </div>
 
@@ -169,6 +179,16 @@
 
                 <!-- History Tab Content -->
                 <HistoryTab v-else-if="activeTab === 'history' && canViewHistory && lead"  :lead="lead" :is-active="activeTab === 'history'" />
+
+                <!-- Match Studio entry: homes that fit this client -->
+                <MatchesTab
+                    v-else-if="activeTab === 'matches' && lead"
+                    :lead="lead"
+                    :data="leadMatches"
+                    :loading="leadMatchesLoading"
+                    @refresh="loadLeadMatches"
+                    @edit-requirements="jumpTo('requirements')"
+                />
             </div>
         </div>
         
@@ -219,7 +239,9 @@ import LeadDealsPopup from './LeadDealsPopup.vue'
 import BrandLoader from '@/components/layout/BrandLoader.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
+import MatchesTab from './MatchesTab.vue'
 import api from '@/plugins/axios'
+import { matchStudioVersion } from '@/composables/useMatchStudio.js'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 import {
     playLeadDetailData,
@@ -1563,10 +1585,49 @@ function applyOpenSection() {
         openCreateDealForConvertedLead()
         return
     }
+    if (section === 'matches') {
+        activeTab.value = 'matches'
+        return
+    }
     if (section === 'activity' || section === 'comments' || section === 'requirements' || section === 'matching') {
         jumpTo(section)
     }
 }
+
+// ================= Match Studio: homes that fit this lead =================
+const leadMatches = ref(null)
+const leadMatchesLoading = ref(false)
+let leadMatchesGeneration = 0
+
+const matchCount = computed(() => {
+    const counts = leadMatches.value?.counts
+    return counts ? (counts.new || 0) + (counts.shortlisted || 0) : 0
+})
+
+async function loadLeadMatches() {
+    const id = lead.value?.id
+    if (!id) return
+    const generation = ++leadMatchesGeneration
+    leadMatchesLoading.value = true
+    try {
+        const res = await api.get(`/leads/${id}/matches`)
+        if (generation === leadMatchesGeneration) leadMatches.value = res.data?.data || null
+    } catch {
+        if (generation === leadMatchesGeneration) leadMatches.value = null
+    } finally {
+        if (generation === leadMatchesGeneration) leadMatchesLoading.value = false
+    }
+}
+
+// After the lead paints, so the badge never slows the modal down.
+watch(() => (show.value ? lead.value?.id : null), (id, oldId) => {
+    if (id === oldId) return
+    leadMatches.value = null
+    if (id) setTimeout(() => { if (lead.value?.id === id) loadLeadMatches() }, 400)
+})
+watch(matchStudioVersion, () => {
+    if (show.value && lead.value?.id) loadLeadMatches()
+})
 
 function syncJumpFromScroll() {
     if (jumpTarget) {
@@ -2434,6 +2495,90 @@ defineExpose({
 
 .tab-item.active::after {
     display: none;
+}
+
+/* Raised 3D pill with a gold edge and a light sweep, so the new tab gets noticed. */
+.tab-item--matches {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    overflow: hidden;
+    border-color: rgba(212, 175, 55, 0.7);
+    background: linear-gradient(180deg, #fffdf6 0%, #f7efd6 100%);
+    color: var(--color-primary-ink);
+    box-shadow: 0 2px 0 #d9c27a, 0 5px 12px rgba(212, 175, 55, 0.25);
+    transform: translateY(-1px);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tab-item--matches:hover:not(.active) {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 0 #d9c27a, 0 8px 16px rgba(212, 175, 55, 0.32);
+}
+
+.tab-item--matches:active,
+.tab-item--matches.active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 #4a285c, 0 3px 8px rgba(var(--color-primary-rgb), 0.3);
+}
+
+.tab-item--matches::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.85) 48%, transparent 66%);
+    background-size: 250% 100%;
+    animation: tab-match-shine 3.2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes tab-match-shine {
+    0% { background-position: 130% 0; }
+    55%, 100% { background-position: -130% 0; }
+}
+
+.tab-item__spark {
+    width: 12px;
+    height: 12px;
+    color: #b8901e;
+    animation: tab-match-twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes tab-match-twinkle {
+    0%, 100% { transform: scale(1) rotate(0); }
+    50% { transform: scale(1.25) rotate(15deg); }
+}
+
+.tab-item--matches.active .tab-item__spark {
+    color: #ffffff;
+}
+
+.tab-item__badge {
+    min-width: 17px;
+    height: 17px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--color-primary-glow);
+    color: var(--color-primary-ink);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 17px;
+}
+
+.tab-item--matches:not(.active) .tab-item__badge {
+    animation: tab-match-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tab-match-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.55); }
+    50% { box-shadow: 0 0 0 5px rgba(212, 175, 55, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-item--matches:not(.active) .tab-item__badge,
+    .tab-item--matches::before,
+    .tab-item__spark { animation: none; }
 }
 
 .bg-light-gray {

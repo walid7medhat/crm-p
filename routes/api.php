@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
 use App\Http\Controllers\Api\SalesActionCenterController;
+use App\Http\Controllers\Api\LeadMatchController;
 use App\Http\Controllers\Api\SmartSearchController;
 use App\Http\Controllers\Api\UserAnimationController;
 use App\Http\Controllers\Api\StageController;
@@ -627,6 +628,13 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/my-day', [MyDayController::class, 'show']);
     Route::get('/sales-action-center', [SalesActionCenterController::class, 'index']);
     Route::get('/sales-action-center/agents', [SalesActionCenterController::class, 'agents']);
+
+    // Match Studio: lead ↔ listing matches.
+    Route::get('/lead-matches', [LeadMatchController::class, 'queue']);
+    Route::get('/lead-matches/team', [LeadMatchController::class, 'team']);
+    Route::post('/lead-matches/{match}/decision', [LeadMatchController::class, 'decide'])->whereNumber('match');
+    Route::get('/leads/{lead}/matches', [LeadMatchController::class, 'forLead'])->whereNumber('lead');
+    Route::post('/leads/{lead}/matches/send', [LeadMatchController::class, 'send'])->whereNumber('lead');
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 

@@ -430,7 +430,8 @@ function scheduleEchoInit() {
               : 'info'
             // Super admins / admins see every lead, so lead pop-ups would never stop for them.
             // They still land in the bell via the 'app-notification' event below.
-            if (!(isLeadNotification(notification) && isStoredAdminOrSuperAdmin())) {
+            // Match alerts get their own toast (MatchAlertToast.vue) from the 'app-notification' event below.
+            if (notification.type !== 'lead_matches' && !(isLeadNotification(notification) && isStoredAdminOrSuperAdmin())) {
               // Lead / deal notifications: clicking the pop-up opens that lead / deal.
               let onClick = null
               if (leadIdFromNotification(notification)) {

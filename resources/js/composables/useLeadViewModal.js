@@ -149,6 +149,8 @@ export function leadIdFromNotification(notification) {
 export function openLeadFromNotification(notification) {
   const leadId = leadIdFromNotification(notification)
   if (!leadId) return false
-  openLeadView(leadId)
+  // Match alerts open the lead straight on its Matches tab.
+  const focus = notification?.data?.focus ?? notification?.focus ?? null
+  openLeadView(leadId, null, focus ? { focus } : {})
   return true
 }

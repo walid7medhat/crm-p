@@ -60,6 +60,8 @@
       @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
+    <MatchStudio v-if="showLayout" />
+    <MatchAlertToast v-if="showLayout && !isAppLoading" />
     <PropertyCompareDock v-if="showLayout && !isAppLoading" />
     <PropertyDetailsModal v-if="showLayout" />
     <ProjectDetailsModal v-if="showLayout" />
@@ -91,6 +93,8 @@ const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-mot
 const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
+const MatchStudio = defineAsyncComponent(() => import('./components/matches/MatchStudio.vue'))
+const MatchAlertToast = defineAsyncComponent(() => import('./components/matches/MatchAlertToast.vue'))
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
@@ -118,6 +122,8 @@ export default {
     PropertyCompareDock,
     ProjectDetailsModal,
     SmartSearchDialog,
+    MatchStudio,
+    MatchAlertToast,
     Header,
     Navbar,
     Footer,
