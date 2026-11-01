@@ -279,5 +279,5 @@ if (! empty($opts['phone'])) {
 $base = rtrim(config('app.frontend_url', config('app.url')), '/');
 $line("\nNow sign in as {$agent->name} ({$agent->email}) — or impersonate them — and open:");
 $line("  The floating dock → Matches (sparkle button): clients with homes waiting → Match Studio");
-$line("  {$base}/kanban?lead={$leads->first()->id}   Lead modal → Matches tab");
+$line("  Bell / toast match alert → Match Studio for that client, then the lead when you close it");
 $line("\nWhen you're done:  php test.php --restore\n");

@@ -306,7 +306,6 @@ onUnmounted(() => {
   transform: translate3d(-18px, -4px, 42px) rotateY(-26deg) rotateX(8deg) scale(1.14) !important;
   filter: none;
   box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.85),
     18px 22px 28px rgba(115, 62, 135, 0.32),
     inset 0 -8px 12px rgba(74, 40, 92, 0.2),
     inset 0 8px 10px rgba(255, 255, 255, 0.4) !important;

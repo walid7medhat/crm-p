@@ -43,7 +43,6 @@ class MatchNotifier
         $agent->notify(new LeadMatchesNotification([
             'message' => $message,
             'lead_id' => $lead->id,
-            'focus' => 'matches',
             'matches_count' => $rows->count(),
             'best_score' => $best->score,
             'bucket' => $drop ? LeadListingMatch::BUCKET_PRICE_DROP : $best->bucket,

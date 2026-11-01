@@ -718,7 +718,7 @@ function segmentClass(client, i) {
 }
 
 // ---------- misc ----------
-/** Lead popup that was open when the studio started; reopened on its Matches tab when the studio closes. */
+/** Lead popup that was open when the studio started (or a notification's lead); opened when the studio closes. */
 let returnToLeadId = null
 /** Lead to open once the studio has closed ("View lead", "Add requirements"). */
 let pendingLead = null
@@ -760,7 +760,7 @@ function close() {
 function finishClose() {
     pushedHistory = false
     closeMatchStudio()
-    const next = pendingLead || (returnToLeadId ? { id: returnToLeadId, focus: 'matches' } : null)
+    const next = pendingLead || (returnToLeadId ? { id: returnToLeadId, focus: null } : null)
     pendingLead = null
     returnToLeadId = null
     if (next) nextTick(() => openLeadView(next.id, null, next.focus ? { focus: next.focus } : {}))

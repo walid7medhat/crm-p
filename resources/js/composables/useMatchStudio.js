@@ -4,8 +4,8 @@ import { renderListingOffer } from '@/composables/useOfferPdf.js'
 
 /**
  * Global Match Studio overlay (mounted once in App.vue).
- * - openMatchStudio(leadId): one client, from the lead modal's Matches tab.
- * - startMatchQueue(clients): the My Matches review, one client after another.
+ * - openMatchStudio(leadId): one client, from a match notification or the dock panel.
+ * - startMatchQueue(clients): the dock panel's "Review all", one client after another.
  */
 export const matchStudioOpen = ref(false)
 /** [{ id, name, first_name, initials, matches_count }] in review order. */
@@ -14,7 +14,7 @@ export const matchStudioIndex = ref(0)
 export const matchStudioQueueMode = ref(false)
 /** Bumped whenever the studio sends or decides something, so pages can reload. */
 export const matchStudioVersion = ref(0)
-/** Lead to open (on its Matches tab) once the studio closes; set by match notifications. */
+/** Lead to open once the studio closes; set by match notifications. */
 export const matchStudioThenLead = ref(null)
 
 /**
