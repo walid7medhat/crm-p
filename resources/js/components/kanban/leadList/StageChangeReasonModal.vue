@@ -559,6 +559,7 @@
                             <label class="form-label">Lead Pool Status <span class="text-danger">*</span></label>
                             <v-select
                                 append-to-body
+                                :calculate-position="calculatePosition"
                                 v-model="leadPoolStatus"
                                 :options="leadPoolStatusOptions"
                                 :reduce="opt => opt.value"
@@ -1745,7 +1746,11 @@ watch(visible, (newVal) => {
             formData.value.currency = props.leadData.currency || 'AED'
             formData.value.area_id = props.leadData.area_id || ''
             formData.value.property_type_id = props.leadData.property_type_id || ''
-            formData.value.bedrooms = props.leadData.bedrooms || ''
+            // Studio is saved as 0 — map it back so the select shows it instead of empty.
+            const bedrooms = props.leadData.bedrooms
+            formData.value.bedrooms = bedrooms === 0 || bedrooms === '0' || String(bedrooms).toLowerCase() === 'studio'
+                ? 'Studio'
+                : (bedrooms ? Number(bedrooms) || bedrooms : '')
             formData.value.purpose_buying = props.leadData.purpose_buying || ''
             formData.value.lead_source = props.leadData.lead_source || ''
             // للمرحلة 6، اجعل القيمة 'converted' إذا لم تكن موجودة
@@ -1769,7 +1774,9 @@ const calculatePosition = (dropdownList, component, { width }) => {
     dropdownList.style.width = width
     dropdownList.style.left = `${Math.round(rect.left)}px`
     dropdownList.style.top = `${Math.round(rect.bottom + 4)}px`
-    dropdownList.style.zIndex = '15000'
+    // Inline !important: global `.vs__dropdown-menu { z-index: … !important }` rules (e.g. LeadSearchModal's 9999)
+    // otherwise beat a plain inline z-index and drop the menu under this modal's 14000 overlay.
+    dropdownList.style.setProperty('z-index', '15000', 'important')
 }
 onMounted(() => {
     const warmLookups = () => loadLookupData()
