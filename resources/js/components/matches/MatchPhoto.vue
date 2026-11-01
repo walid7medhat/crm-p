@@ -22,12 +22,12 @@ const broken = ref(false)
 const canvasEl = ref(null)
 
 const SKIES = [
-    ['#f6b26b', '#8f5aa3'],
-    ['#7cc4e8', '#e9d6a8'],
-    ['#3b2a63', '#d98a6a'],
-    ['#9fd3c7', '#f2e3c6'],
-    ['#d6a6c9', '#f4c27a'],
-    ['#b8a6e0', '#f0c6a0'],
+    ['#c58fd6', '#5c3270'],
+    ['#7cc4e8', '#d9c8f0'],
+    ['#3b2a63', '#b07cc6'],
+    ['#9fd3c7', '#e6dcf2'],
+    ['#d6a6c9', '#b98fd0'],
+    ['#b8a6e0', '#e7b8d8'],
 ]
 
 function rng(seed) {
@@ -61,9 +61,9 @@ function draw() {
 
     const sx = w * (0.2 + r() * 0.6)
     const glow = c.createRadialGradient(sx, h * 0.42, 0, sx, h * 0.42, h * 0.5)
-    glow.addColorStop(0, 'rgba(255,236,170,.95)')
-    glow.addColorStop(0.12, 'rgba(255,220,140,.6)')
-    glow.addColorStop(1, 'rgba(255,220,140,0)')
+    glow.addColorStop(0, 'rgba(255,240,250,.95)')
+    glow.addColorStop(0.12, 'rgba(240,210,250,.6)')
+    glow.addColorStop(1, 'rgba(240,210,250,0)')
     c.fillStyle = glow
     c.fillRect(0, 0, w, h)
 
@@ -78,7 +78,7 @@ function draw() {
         for (let wy = ground - bh + 6; wy < ground - 6; wy += 7) {
             for (let wx = x + 4; wx < x + bw - 4; wx += 6) {
                 if (r() > 0.62) {
-                    c.fillStyle = r() > 0.5 ? 'rgba(255,214,120,.85)' : 'rgba(255,240,200,.55)'
+                    c.fillStyle = r() > 0.5 ? 'rgba(233,213,255,.85)' : 'rgba(255,255,255,.55)'
                     c.fillRect(wx, wy, 2.5, 3.5)
                 }
             }

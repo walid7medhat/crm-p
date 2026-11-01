@@ -25,6 +25,7 @@
     </ShortcutDock>
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
     <SalesActionCenter v-if="showLayout && !isAppLoading && canUseNextActions" />
+    <MatchQuickPanel v-if="showLayout && !isAppLoading && canUseNextActions" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
@@ -62,6 +63,7 @@
     />
     <MatchStudio v-if="showLayout" />
     <MatchAlertToast v-if="showLayout && !isAppLoading" />
+    <OfferPdfHost v-if="offerPdfJobs.length" />
     <PropertyCompareDock v-if="showLayout && !isAppLoading" />
     <PropertyDetailsModal v-if="showLayout" />
     <ProjectDetailsModal v-if="showLayout" />
@@ -95,6 +97,10 @@ const UserAnimationPlayer = defineAsyncComponent(() => import('./components/anim
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
 const MatchStudio = defineAsyncComponent(() => import('./components/matches/MatchStudio.vue'))
 const MatchAlertToast = defineAsyncComponent(() => import('./components/matches/MatchAlertToast.vue'))
+const MatchQuickPanel = defineAsyncComponent(() => import('./components/matches/MatchQuickPanel.vue'))
+// Loaded only while a Send offer is building its PDF (pulls in BlogOne's offer generator).
+const OfferPdfHost = defineAsyncComponent(() => import('./components/matches/OfferPdfHost.vue'))
+import { offerPdfJobs } from './composables/useOfferPdf.js'
 import { useAppLoader } from './composables/useAppLoader.js'
 import { useNavProgress } from './composables/useNavProgress.js'
 import { resetSidebarLayout } from './composables/useSidebar.js'
@@ -124,6 +130,8 @@ export default {
     SmartSearchDialog,
     MatchStudio,
     MatchAlertToast,
+    MatchQuickPanel,
+    OfferPdfHost,
     Header,
     Navbar,
     Footer,
@@ -275,6 +283,7 @@ export default {
       notifyLeadViewUpdated,
       impersonatorUser,
       returnToSuperAdmin,
+      offerPdfJobs,
     }
   }
 }

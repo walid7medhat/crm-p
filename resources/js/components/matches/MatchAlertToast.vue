@@ -15,10 +15,28 @@
                 </div>
                 <div class="mat__actions">
                     <button type="button" class="mat__btn mat__btn--primary" @click="open">
-                        {{ alert.lead_id ? 'Open Match Studio' : 'Open My Matches' }}
+                        {{ alert.lead_id ? 'Open Match Studio' : 'See clients' }}
                     </button>
                     <button type="button" class="mat__btn" @click="dismiss">Later</button>
                 </div>
+            </div>
+        </transition>
+
+        <!-- The offer PDF is built; the agent's click here sends it (browsers need a fresh click). -->
+        <transition name="mat">
+            <div v-if="pendingPdfShare" class="mat-share" role="status">
+                <iconify-icon icon="lucide:file-text" width="22" height="22" class="mat-share__icon" />
+                <div class="min-w-0">
+                    <b>Sales offer {{ pendingPdfShare.offerNumber }} is ready<template v-if="pendingPdfShare.clientName"> for {{ pendingPdfShare.clientName }}</template></b>
+                    <small>{{ shareHint }}</small>
+                </div>
+                <button type="button" class="mat-share__btn" @click="send">
+                    <iconify-icon :icon="pendingPdfShare.mode === 'share' || pendingPdfShare.whatsappUrl ? 'mdi:whatsapp' : 'lucide:download'" width="16" height="16" />
+                    {{ shareLabel }}
+                </button>
+                <button type="button" class="mat__x mat-share__x" aria-label="Dismiss" @click="dismissShare">
+                    <iconify-icon icon="lucide:x" width="15" height="15" />
+                </button>
             </div>
         </transition>
     </Teleport>
@@ -26,12 +44,11 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import MatchScoreRing from './MatchScoreRing.vue'
-import { openMatchStudio } from '@/composables/useMatchStudio.js'
+import { openMatchStudio, pendingPdfShare, sharePendingPdf } from '@/composables/useMatchStudio.js'
+import { openMatchesPanel } from '@/composables/useShortcutPanels.js'
 
 /** The live pop-up for Match Studio alerts. The bell keeps the same alert for later. */
-const router = useRouter()
 const alert = ref(null)
 let hideTimer = null
 
@@ -51,17 +68,48 @@ function onNotification(event) {
     hideTimer = window.setTimeout(dismiss, 15000)
 }
 
+const shareLabel = computed(() => {
+    const p = pendingPdfShare.value
+    if (!p) return ''
+    if (p.mode === 'share') return 'Share PDF'
+    return p.whatsappUrl ? 'Send on WhatsApp' : 'Download PDF'
+})
+
+const shareHint = computed(() => {
+    const p = pendingPdfShare.value
+    if (!p) return ''
+    if (p.mode === 'share') return 'Share the PDF, then pick WhatsApp and your client.'
+    return p.whatsappUrl
+        ? 'Opens the client\'s WhatsApp chat with the message; drag the downloaded PDF in.'
+        : 'No WhatsApp number on this lead: the PDF downloads and the message is copied.'
+})
+
+async function send() {
+    const outcome = await sharePendingPdf()
+    if (outcome === 'opened') notify('WhatsApp is open. Drag the downloaded PDF into the chat.')
+    else if (outcome === 'copied') notify('PDF downloaded and message copied.')
+}
+
+function notify(message) {
+    if (window.$showNotification) window.$showNotification(message, 'success')
+}
+
+function dismissShare() {
+    pendingPdfShare.value = null
+}
+
 function dismiss() {
     window.clearTimeout(hideTimer)
     alert.value = null
 }
 
+/** One client: Match Studio, then the lead when the studio closes. Several: the dock's Matches panel. */
 function open() {
     const n = alert.value
     dismiss()
     if (!n) return
-    if (n.lead_id) openMatchStudio({ id: Number(n.lead_id) })
-    else router.push(n.url || '/matches')
+    if (n.lead_id) openMatchStudio({ id: Number(n.lead_id) }, { thenOpenLead: true })
+    else openMatchesPanel()
 }
 
 onMounted(() => window.addEventListener('app-notification', onNotification))
@@ -95,7 +143,7 @@ onBeforeUnmount(() => {
 
 .mat__x { position: absolute; top: 10px; right: 10px; border: 0; background: transparent; padding: 4px; border-radius: 8px; color: var(--color-text-muted); }
 .mat__top { display: flex; align-items: center; gap: 14px; padding-right: 18px; }
-.mat__icon { width: 50px; height: 50px; flex: none; border-radius: 16px; display: grid; place-items: center; background: var(--gradient-primary); color: #fff; }
+.mat__icon { width: 50px; height: 50px; flex: none; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%); color: #fff; }
 .mat__kicker {
     display: flex;
     align-items: center;
@@ -104,7 +152,7 @@ onBeforeUnmount(() => {
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #8a6d12;
+    color: #733e87;
 }
 .mat__msg { margin: 3px 0 0; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--color-text-primary); }
 .mat__actions { display: flex; gap: 8px; }
@@ -120,11 +168,48 @@ onBeforeUnmount(() => {
 .mat__btn--primary {
     flex: 1;
     border-color: transparent;
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%);
     color: var(--color-on-primary);
     box-shadow: 0 8px 18px rgba(var(--color-primary-rgb), 0.28);
 }
-.mat__btn--primary:hover { background: var(--gradient-primary-hover); }
+.mat__btn--primary:hover { background: linear-gradient(135deg, #7d4a91 0%, #5c3270 100%); }
+
+.mat-share {
+    position: fixed;
+    z-index: 12650;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    max-width: 520px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px 12px 14px;
+    border-radius: 18px;
+    background: var(--color-surface);
+    border: 1px solid rgba(37, 163, 90, 0.4);
+    box-shadow: 0 18px 40px rgba(23, 12, 28, 0.25);
+}
+.mat-share__icon { flex: none; color: #219653; }
+.mat-share b { display: block; font-size: 13.5px; color: var(--color-text-primary); }
+.mat-share small { display: block; font-size: 12px; color: var(--color-text-secondary); }
+.mat-share__btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #2fbf6b 0%, #219653 100%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: 0 2px 0 #17703d;
+}
+.mat-share__x { position: static; flex: none; }
 
 @media (max-width: 640px) {
     .mat { left: max(16px, env(safe-area-inset-left, 0px)); width: auto; }

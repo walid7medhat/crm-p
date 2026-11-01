@@ -1,4 +1,6 @@
 <template>
+  <!-- offerOnly: rendered off-screen by Match Studio just to build the sales offer PDF; no page UI. -->
+  <template v-if="!offerOnly">
   <div
     class="dashboard-main-body-inner property-show-inner"
     :class="{
@@ -2304,6 +2306,7 @@
       v-model="agentProfileOpen"
       :user-id="agentProfileId"
     />
+  </template>
 </template>
 
 <script>
@@ -2352,6 +2355,9 @@ export default {
     // When set, the component is rendered inside a popup (PropertyDetailsModal)
     // instead of the /property-details/:id route.
     listingId: { type: [Number, String], default: null },
+    // Match Studio renders this off-screen only to call buildOfferPdf(): loads the property,
+    // skips the page UI and everything else the page does on load.
+    offerOnly: { type: Boolean, default: false },
   },
   emits: ['deleted'],
   data() {
@@ -4826,6 +4832,10 @@ const revertFromConverted = async () => {
     };
 
     // Main data fetching
+    // Settles after the first property load (success or not); buildOfferPdf waits on it.
+    let resolvePropertyLoaded;
+    const propertyLoaded = new Promise((resolve) => { resolvePropertyLoaded = resolve; });
+
     const fetchProperty = async () => {
       try {
         loading.value = true;
@@ -4848,6 +4858,7 @@ const revertFromConverted = async () => {
           if (property.value.gallery_images && property.value.gallery_images.length > 0) {
             currentMainImage.value = getImageUrl(property.value.main_image);
           }
+          if (props.offerOnly) return;
           await fetchInternalUpdates();
           await fetchApprovedViewings();
           await fetchRequestStatus();
@@ -4863,7 +4874,8 @@ const revertFromConverted = async () => {
         handleApiError(err, 'Failed to load property details');
       } finally {
         loading.value = false;
-        markKanbanReady();
+        if (!props.offerOnly) markKanbanReady();
+        resolvePropertyLoaded();
       }
     };
 
@@ -4879,7 +4891,8 @@ const revertFromConverted = async () => {
     }
 
     watch(property, (p) => {
-      if (p?.agent) {
+      // Off-screen offer builds must not repoint the global "Chat with Agent".
+      if (p?.agent && !props.offerOnly) {
         try {
           const propertyContext = {
             propertyId: p.id ?? null,
@@ -7137,6 +7150,60 @@ const generatePDF = async () => {
     offerPdfInFlight = false;
   }
 };
+/**
+ * The same sales offer as "Generate Offer" (generatePDF's desktop path), handed back
+ * instead of downloaded, for Match Studio's Send offer. No popups. Saves the offer
+ * record exactly like Generate Offer, so it shows in this listing's offer history.
+ * @returns {Promise<{ blob: Blob, filename: string, offerNumber: string }>}
+ */
+const buildOfferPdf = async ({ clientName = 'Potential Client', onProgress = () => {} } = {}) => {
+  await propertyLoaded;
+  if (!property.value) throw new Error('This listing could not be loaded.');
+  if (!canGenerateOffer.value) throw new Error('Offers can only be generated for active, approved listings.');
+  if (offerPdfInFlight) throw new Error('Another offer is being generated. Try again in a moment.');
+  offerPdfInFlight = true;
+  offerDateLabel = '';
+  try {
+    const userData = localStorage.getItem('user');
+    const currentUser = userData ? JSON.parse(userData) : null;
+    const offerData = {
+      generated_at: new Date().toISOString(),
+      property_id: property.value.id,
+      property_title: property.value.title || property.value.area?.area_title,
+      client_name: clientName,
+      generated_by: currentUser?.name,
+      source: 'match_studio',
+      offer_details: {
+        price: property.value.price,
+        bedrooms: property.value.number_of_bedrooms,
+        bathrooms: property.value.number_of_bathrooms,
+        area: property.value.area?.area_title
+      }
+    };
+
+    const imagesReady = Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
+    onProgress('Saving the offer…');
+    const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
+      offer_data: offerData,
+      client_name: clientName
+    });
+    if (!saveResponse.data.status) throw new Error('Failed to save offer record');
+
+    const offerNumber = saveResponse.data.data.offer.offer_number;
+    offerDateLabel = formatOfferDate(saveResponse.data.data.offer.created_at);
+    pdfMobileMode = false;
+    onProgress('Preparing images…');
+    await imagesReady;
+    const pdf = await renderOfferSlidesPdf(currentUser, onProgress);
+
+    return { blob: pdf.output('blob'), filename: `sales-offer-${offerNumber}.pdf`, offerNumber };
+  } finally {
+    pdfMobileMode = false;
+    pdfDesktopMode = false;
+    offerPdfInFlight = false;
+  }
+};
+
 const showOfferHistory = async () => {
   try {
     const response = await api.get(`/listings/properties/${property.value.id}/offers`);
@@ -9094,6 +9161,10 @@ const getLocationIcon = () => {
 const windowWidth = ref(window.innerWidth);
 
     onMounted(() => {
+      if (props.offerOnly) {
+        fetchProperty();
+        return;
+      }
   //         console.log('Current User:', getCurrentUser());
   // console.log('Roles:', getCurrentUser()?.roles);
   // console.log('is_listing_team:', getCurrentUser()?.is_listing_team);
@@ -9680,6 +9751,7 @@ const getHistoryIcon = (event) => {
       chatListingId,
       //pdf
       generatePDF,
+      buildOfferPdf,
       showOfferHistory,
         // Dropdown and Modal
         showActionsDropdown,

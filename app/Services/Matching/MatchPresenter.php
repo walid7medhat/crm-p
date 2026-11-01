@@ -145,6 +145,60 @@ class MatchPresenter
             ."\n\nWould you like to view {$ask} this week?{$sign}";
     }
 
+    /**
+     * One home as a short offer, readable in a phone notification:
+     *
+     *   Hi K2, a home that fits what you asked for:
+     *   *Al Reem Hills, Canal Promenade*
+     *   4 BR Villa · 3,828 sqft · AED 6.1M
+     *   Off-plan · 40/60 · Offer OFF-20261101-0001
+     *   Full offer in the attached PDF.
+     *   Can I book you a viewing? – abu dhabi
+     */
+    public function offerMessage(Lead $lead, LeadListingMatch $match, ?\App\Models\User $agent, ?string $offerNumber = null): string
+    {
+        $l = $match->listing;
+        $title = $l->project?->title ?: ($l->reference_number ?: 'Property #'.$l->id);
+        $place = implode(', ', array_filter([$title, $l->area?->name]));
+
+        $beds = $l->number_of_bedrooms !== null ? $this->matcher->bedsLabel((int) $l->number_of_bedrooms) : null;
+        $price = $l->price ? $this->shortPrice((float) $l->price) : null;
+        if ($price && $match->bucket === LeadListingMatch::BUCKET_PRICE_DROP && $match->previous_price > $l->price) {
+            $price .= ' (was '.$this->shortPrice((float) $match->previous_price).')';
+        }
+        $specs = implode(' · ', array_filter([
+            trim(($beds ?? '').' '.($l->propertyType?->name ?? '')) ?: null,
+            $l->size_sqft ? number_format((int) $l->size_sqft).' sqft' : null,
+            $price,
+        ]));
+
+        $completion = strtolower((string) $l->completion_status);
+        $status = match (true) {
+            // A handover date already behind us is stale listing data; leave it out.
+            str_contains($completion, 'off') || str_contains($completion, 'under') => 'Off-plan'
+                .($l->handover_date && $l->handover_date->isFuture() ? ' '.$l->handover_date->format('M Y') : ''),
+            str_contains($completion, 'ready') || str_contains($completion, 'complet') => 'Ready',
+            default => null,
+        };
+        $plan = collect(is_array($l->payment_plan) ? $l->payment_plan : [])
+            ->first(fn ($p) => is_string($p) && trim($p) !== '');
+
+        $sign = $agent?->name ? ' – '.$agent->name : '';
+
+        return implode("\n", array_filter([
+            "Hi {$this->firstName($lead)}, a home that fits what you asked for:",
+            "*{$place}*",
+            $specs ?: null,
+            implode(' · ', array_filter([
+                $status,
+                $plan ? str_replace('_', ' ', $plan) : null,
+                $offerNumber ? 'Offer '.$offerNumber : ($l->reference_number ? 'Ref '.$l->reference_number : null),
+            ])),
+            'Full offer in the attached PDF.',
+            "Can I book you a viewing?{$sign}",
+        ]));
+    }
+
     public function shortPrice(float $price): string
     {
         if ($price >= 1_000_000) {
@@ -191,7 +245,8 @@ class MatchPresenter
         return $digits;
     }
 
-    private function imagePath(Listing $listing): ?string
+    /** Path on the public disk of the listing's main photo (hero, else first gallery image). */
+    public function imagePath(Listing $listing): ?string
     {
         if ($listing->hero_image_path && Storage::disk('public')->exists($listing->hero_image_path)) {
             return $listing->hero_image_path;

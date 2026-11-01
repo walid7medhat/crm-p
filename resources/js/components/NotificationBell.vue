@@ -61,6 +61,8 @@ import { openDealFromNotification } from '@/composables/useDealViewModal.js'
 import { openMarketingFromNotification } from '@/composables/useMarketingNotification.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import MobilePushToggle from '@/components/layout/MobilePushToggle.vue'
+import { openMatchesPanel } from '@/composables/useShortcutPanels.js'
+import { openMatchStudio } from '@/composables/useMatchStudio.js'
 
 function getApiBaseUrl() {
   const base =
@@ -189,13 +191,19 @@ export default {
       if (!notification.read_at) this.markAsRead(notification.id)
       this.showDropdown = false
 
+      // Match alert for one client: Match Studio first, the lead when the studio closes.
+      if (notification?.data?.type === 'lead_matches' && notification?.data?.lead_id) {
+        openMatchStudio({ id: Number(notification.data.lead_id) }, { thenOpenLead: true })
+        return
+      }
+
       if (openLeadFromNotification(notification) || openDealFromNotification(notification) || openMarketingFromNotification(notification)) {
         return
       }
 
-      // Match Studio digests (several clients at once) open the My Matches page.
-      if (notification?.data?.type === 'lead_matches' && notification?.data?.url) {
-        this.$router.push(notification.data.url)
+      // Match alerts for several clients at once open the dock's Matches panel.
+      if (notification?.data?.type === 'lead_matches') {
+        openMatchesPanel()
         return
       }
 

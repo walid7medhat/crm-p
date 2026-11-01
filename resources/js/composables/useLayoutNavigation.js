@@ -10,12 +10,7 @@ export const LAYOUT_MODULES = {
   AGENTS: 'agents',
   LISTINGS: 'listings',
   SETTINGS: 'settings',
-  MATCHES: 'matches',
 };
-
-/** Match Studio pages: My Matches for everyone, Team for managers. */
-const MATCHES_PREFIXES = ['/matches'];
-const MATCHES_TEAM_ROLES = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'];
 
 export const CALCULATOR_PREFIXES = [
   '/settings/roi-calculator',
@@ -277,7 +272,6 @@ export function resolveActiveModule(path) {
   if (pathMatches(path, MARKETING_PREFIXES)) return LAYOUT_MODULES.MARKETING;
   if (pathMatches(path, AGENTS_PREFIXES)) return LAYOUT_MODULES.AGENTS;
   if (pathMatches(path, SETTINGS_PREFIXES)) return LAYOUT_MODULES.SETTINGS;
-  if (pathMatches(path, MATCHES_PREFIXES)) return LAYOUT_MODULES.MATCHES;
   return null;
 }
 
@@ -333,17 +327,6 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       { id: 'calendar', label: 'Calendar', type: 'marketing-tab', icon: 'lucide:calendar-days' },
       { id: 'analytics', label: 'Analytics', type: 'marketing-tab', icon: 'lucide:bar-chart-3' },
     ];
-  }
-
-  if (module === LAYOUT_MODULES.MATCHES) {
-    const tabs = [
-      { id: 'matches-mine', label: 'My Matches', type: 'route', path: '/matches/mine', matchPaths: ['/matches/mine'] },
-    ];
-    const roles = ctx.user?.roles || [];
-    if (isSuperAdmin || isAdmin || MATCHES_TEAM_ROLES.some((r) => roles.includes(r))) {
-      tabs.push({ id: 'matches-team', label: 'Team', type: 'route', path: '/matches/team', matchPaths: ['/matches/team'] });
-    }
-    return tabs;
   }
 
   if (module === LAYOUT_MODULES.CALCULATOR) {
@@ -658,7 +641,6 @@ export function buildTopModuleNav() {
   return [
     { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
     { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
-    { id: 'matches', label: 'Matches', path: '/matches', matchPaths: ['/matches'], highlight: true },
     { id: 'property', label: 'Property', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
     { id: 'transaction', label: 'Transaction', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
   ];

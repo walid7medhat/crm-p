@@ -7,6 +7,7 @@ use App\Models\LeadListingMatch;
 use App\Models\Listing;
 use App\Models\User;
 use App\Notifications\LeadMatchesNotification;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 /**
@@ -28,7 +29,8 @@ class MatchNotifier
             return;
         }
 
-        $rows->load('listing.project:id,title', 'listing.area:id,name');
+        // The matcher hands back a plain collection; load() needs an Eloquent one.
+        $rows = (new EloquentCollection($rows->all()))->load('listing.project:id,title', 'listing.area:id,name');
         $best = $rows->sortByDesc('score')->first();
         $drop = $rows->firstWhere('bucket', LeadListingMatch::BUCKET_PRICE_DROP);
         $name = $lead->lead_name ?: 'your client';
@@ -70,7 +72,6 @@ class MatchNotifier
                 'message' => $priceDropped
                     ? "Price dropped on {$place}. It now fits {$agentRows->count()} of your clients."
                     : "New listing {$place} fits {$agentRows->count()} of your clients.",
-                'url' => '/matches',
                 'listing_match_id' => $listing->id,
                 'matches_count' => $agentRows->count(),
                 'best_score' => (int) $agentRows->max('score'),
@@ -92,7 +93,6 @@ class MatchNotifier
         $agent->notify(new LeadMatchesNotification([
             'message' => ($clients === 1 ? '1 quiet client has' : "{$clients} quiet clients have")
                 .' new matches. No contact for '.LeadMatcher::QUIET_DAYS.'+ days.',
-            'url' => '/matches',
             'matches_count' => $rows->count(),
             'clients_count' => $clients,
             'bucket' => LeadListingMatch::BUCKET_REVIVE,

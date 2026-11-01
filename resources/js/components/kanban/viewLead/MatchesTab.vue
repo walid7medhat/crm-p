@@ -15,6 +15,13 @@
             </section>
 
             <template v-else>
+                <section class="lm-contact">
+                    <a class="lm-contact__btn" :class="{ 'is-disabled': !phone }" :href="phone ? `tel:+${phone}` : undefined">
+                        <iconify-icon icon="lucide:phone" width="15" height="15" /> Call
+                    </a>
+                    <span v-if="!phone" class="lm-contact__hint">No phone number on this lead</span>
+                </section>
+
                 <section>
                     <div class="lm-label"><span>What {{ firstName }} wants</span></div>
                     <div class="lm-wants">
@@ -30,13 +37,15 @@
                         <span class="lm-label__aside">Sorted by match</span>
                     </div>
                     <div class="lm-strip">
-                        <button
+                        <div
                             v-for="m in visibleMatches"
                             :key="m.id"
-                            type="button"
                             class="lm-mini"
                             :class="{ 'is-shortlisted': m.status === 'shortlisted' }"
+                            role="button"
+                            tabindex="0"
                             @click="openStudio"
+                            @keydown.enter.self="openStudio"
                         >
                             <div class="lm-mini__photo">
                                 <MatchPhoto :src="m.listing.main_image" :seed="m.listing.id" />
@@ -52,7 +61,7 @@
                                 <b>{{ m.listing.title }}</b>
                                 <small>{{ shortPrice(m.listing.price) }}<template v-if="m.listing.bedrooms_label"> · {{ m.listing.bedrooms_label }}</template></small>
                             </div>
-                        </button>
+                        </div>
                         <button v-if="hiddenCount" type="button" class="lm-mini lm-more" @click="openStudio">
                             <span class="lm-more__stack" aria-hidden="true">
                                 <MatchPhoto v-for="m in hiddenPreview" :key="m.id" class="lm-more__thumb" :src="m.listing.main_image" :seed="m.listing.id" />
@@ -66,7 +75,7 @@
                 <section v-if="matches.length" class="lm-cta">
                     <p>
                         <b>Pick the best ones in Match Studio</b>
-                        Swipe through the matches, shortlist the good ones, and send them to {{ firstName }} on WhatsApp in one message.
+                        Swipe through the matches and send {{ firstName }} the sales offer PDF on WhatsApp.
                     </p>
                     <button type="button" class="lm-btn lm-btn--primary" @click="openStudio">
                         <iconify-icon icon="lucide:sparkles" width="14" height="14" />
@@ -126,6 +135,8 @@ const visibleMatches = computed(() => matches.value.slice(0, matches.value.lengt
 const hiddenCount = computed(() => matches.value.length - visibleMatches.value.length)
 const hiddenPreview = computed(() => matches.value.slice(visibleMatches.value.length, visibleMatches.value.length + 3))
 
+const phone = computed(() => props.data?.lead?.whatsapp || null)
+
 function openStudio() {
     openMatchStudio({
         id: props.lead.id,
@@ -151,8 +162,11 @@ function formatDate(iso) {
 <style scoped>
 .lead-matches {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
+    min-width: 0;
     padding: 18px 20px 24px;
+    overflow-x: hidden;
 }
 
 .lm-label {
@@ -202,13 +216,13 @@ function formatDate(iso) {
     padding: 14px 10px;
     text-align: center;
     border-style: dashed;
-    border-color: var(--color-primary-glow);
-    background: linear-gradient(180deg, #fffdf6 0%, #f7efd6 100%);
+    border-color: #8f5aa3;
+    background: linear-gradient(180deg, #ffffff 0%, #f3eaf7 100%);
 }
 .lm-more b { font-size: 15px; font-weight: 800; color: var(--color-primary-ink); }
 .lm-more small { font-size: 11.5px; color: var(--color-text-secondary); }
 .lm-more__stack { display: flex; margin-bottom: 6px; }
-.lm-more__thumb { width: 40px !important; height: 30px !important; margin-left: -10px; border-radius: 8px; border: 2px solid #fffdf6; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12); }
+.lm-more__thumb { width: 40px !important; height: 30px !important; margin-left: -10px; border-radius: 8px; border: 2px solid #ffffff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12); }
 .lm-more__thumb:first-child { margin-left: 0; }
 @media (max-width: 480px) {
     .lm-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -223,7 +237,7 @@ function formatDate(iso) {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 .lm-mini:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(var(--color-primary-rgb), 0.16); }
-.lm-mini.is-shortlisted { border-color: var(--color-primary-glow); }
+.lm-mini.is-shortlisted { border-color: #8f5aa3; }
 .lm-mini__photo { position: relative; aspect-ratio: 16 / 11; }
 .lm-mini__pct {
     position: absolute;
@@ -232,7 +246,7 @@ function formatDate(iso) {
     padding: 2px 7px;
     border-radius: 999px;
     background: rgba(23, 12, 28, 0.72);
-    color: #f3d77a;
+    color: #d8b4fe;
     font-size: 11px;
     font-weight: 800;
 }
@@ -245,11 +259,29 @@ function formatDate(iso) {
     border-radius: 50%;
     display: grid;
     place-items: center;
-    background: var(--color-primary-glow);
-    color: var(--color-primary-ink);
+    background: #8f5aa3;
+    color: #fff;
 }
 .lm-mini__flag--drop { background: var(--color-success-soft); color: var(--color-success); }
-.lm-mini__info { padding: 8px 10px 10px; }
+.lm-mini { cursor: pointer; }
+.lm-mini__info { display: grid; gap: 2px; padding: 8px 10px 10px; }
+.lm-contact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lm-contact__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 11px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+.lm-contact__btn:disabled, .lm-contact__btn.is-disabled { opacity: 0.45; pointer-events: none; }
+.lm-contact__hint { font-size: 12px; color: var(--color-text-muted); }
 .lm-mini__info b { display: block; font-size: 12px; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lm-mini__info small { font-size: 11.5px; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 
@@ -286,11 +318,11 @@ function formatDate(iso) {
 }
 .lm-btn--primary {
     border-color: transparent;
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%);
     color: var(--color-on-primary);
     box-shadow: 0 8px 18px rgba(var(--color-primary-rgb), 0.28);
 }
-.lm-btn--primary:hover { background: var(--gradient-primary-hover); }
+.lm-btn--primary:hover { background: linear-gradient(135deg, #7d4a91 0%, #5c3270 100%); }
 
 .lm-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .lm-history li {

@@ -238,9 +238,11 @@ onUnmounted(() => {
 
 .shortcut-dock .shortcut-item--chat { order: 1; }
 .shortcut-dock .shortcut-item--actions { order: 2; }
-.shortcut-dock .shortcut-item--day { order: 3; }
-.shortcut-dock .shortcut-item--message { order: 4; }
+.shortcut-dock .shortcut-item--matches { order: 3; }
+.shortcut-dock .shortcut-item--day { order: 4; }
+.shortcut-dock .shortcut-item--message { order: 5; }
 
+.shortcut-dock .mqp-root,
 .shortcut-dock .sac-root,
 .shortcut-dock .edge-pill,
 .shortcut-dock .edge-pill--day,
@@ -275,6 +277,12 @@ onUnmounted(() => {
   min-width: 56px !important;
 }
 
+/* Matches: a lighter lavender-to-purple, so homes waiting stand out in the dock. */
+.shortcut-dock .mqp-root {
+  background: linear-gradient(150deg, #c58fd6 0%, #8f5aa3 45%, #5c3270 100%) !important;
+}
+
+.shortcut-dock .mqp-root::after,
 .shortcut-dock .sac-root::after,
 .shortcut-dock .edge-pill::after,
 .shortcut-dock .chat-floating-btn::after {
@@ -310,6 +318,7 @@ onUnmounted(() => {
   animation: shortcut-shine 0.7s ease;
 }
 
+.shortcut-dock .mqp-root span,
 .shortcut-dock .sac-root span,
 .shortcut-dock .edge-pill span,
 .shortcut-dock .chat-floating-btn > span:not(.chat-floating-badge) {
@@ -340,6 +349,7 @@ onUnmounted(() => {
   transform: translateY(-50%) translateX(-8px) rotateY(0deg) scale(1.06);
 }
 
+.shortcut-dock .mqp-root iconify-icon,
 .shortcut-dock .sac-root iconify-icon,
 .shortcut-dock .edge-pill iconify-icon,
 .shortcut-dock .chat-floating-btn iconify-icon,
@@ -371,6 +381,7 @@ onUnmounted(() => {
     padding: 8px 6px 10px;
   }
 
+  .shortcut-dock .mqp-root,
   .shortcut-dock .sac-root,
   .shortcut-dock .edge-pill,
   .shortcut-dock .edge-pill--day,
@@ -386,6 +397,7 @@ onUnmounted(() => {
     min-width: 48px !important;
   }
 
+  .shortcut-dock .mqp-root span,
   .shortcut-dock .sac-root span,
   .shortcut-dock .edge-pill span,
   .shortcut-dock .chat-floating-btn > span:not(.chat-floating-badge) {

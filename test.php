@@ -6,8 +6,12 @@
  *   php test.php                 Give 4 leads of user #25 requirements copied from active listings, then match them
  *   php test.php --user=59 --leads=3
  *   php test.php --notify        Also send the agent one match notification (needs `php artisan queue:work`)
+ *   php test.php --phone=+971521152141   Put this WhatsApp number on the seeded leads (works on an existing run too)
  *   php test.php --check         Only check the setup (table, routes, command), change nothing
- *   php test.php --restore       Put the leads back exactly as they were and delete their test matches
+ *   php test.php --new-listing   NEW PROPERTY MATCH: add a copy of a listing that fits a test client, run the
+ *                                real matching + notification, and show who got alerted
+ *   php test.php --price-drop    PRICE DROP: lower a matched listing's price 6% and run the same flow
+ *   php test.php --restore       Put the leads back exactly as they were, delete test listings and matches, undo price drops
  *
  * The original lead values are saved to storage/app/match-studio-test-backup.json before anything changes.
  * Do not commit this file.
@@ -33,15 +37,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
-$opts = getopt('', ['user::', 'leads::', 'notify', 'check', 'restore']);
+$opts = getopt('', ['user::', 'leads::', 'phone::', 'notify', 'check', 'restore', 'new-listing', 'price-drop']);
 $userId = (int) ($opts['user'] ?? 25);
 $leadCount = max(1, min(10, (int) ($opts['leads'] ?? 4)));
 $backupFile = storage_path('app/match-studio-test-backup.json');
-$fields = ['area_id', 'property_type_id', 'bedrooms', 'budget', 'budget_from', 'budget_to', 'lead_type', 'property_status', 'last_engagement_at'];
+$fields = ['area_id', 'property_type_id', 'bedrooms', 'budget', 'budget_from', 'budget_to', 'lead_type', 'property_status', 'last_engagement_at', 'whatsapp_number'];
 
 $ok = fn ($msg) => print("  \033[32m✔\033[0m {$msg}\n");
 $bad = fn ($msg) => print("  \033[31m✘\033[0m {$msg}\n");
 $line = fn ($msg = '') => print($msg."\n");
+
+/** Put the test WhatsApp number on the seeded leads, keeping each lead's own number in the backup. */
+$applyPhone = function (string $phone) use ($backupFile, $ok) {
+    $backup = json_decode(file_get_contents($backupFile), true);
+    foreach (array_keys($backup['leads']) as $id) {
+        if (! array_key_exists('whatsapp_number', $backup['leads'][$id])) {
+            $backup['leads'][$id]['whatsapp_number'] = DB::table('leads')->where('id', $id)->value('whatsapp_number');
+        }
+        DB::table('leads')->where('id', $id)->update(['whatsapp_number' => $phone]);
+        $ok("Lead #{$id} WhatsApp → {$phone}");
+    }
+    file_put_contents($backupFile, json_encode($backup, JSON_PRETTY_PRINT));
+};
 
 // ------------------------------------------------------------------ checks
 $line("\nMatch Studio setup");
@@ -67,6 +84,15 @@ if (isset($opts['restore'])) {
         exit(1);
     }
     $backup = json_decode(file_get_contents($backupFile), true);
+    foreach ($backup['created_listings'] ?? [] as $id) {
+        // Its matches go with it (cascade).
+        DB::table('listings')->where('id', $id)->delete();
+        $ok("Test listing #{$id} deleted");
+    }
+    foreach ($backup['prices'] ?? [] as $id => $price) {
+        DB::table('listings')->where('id', $id)->update(['price' => $price]);
+        $ok("Listing #{$id} price put back to AED ".number_format((float) $price));
+    }
     foreach ($backup['leads'] as $id => $values) {
         DB::table('leads')->where('id', $id)->update($values);
         LeadListingMatch::where('lead_id', $id)->delete();
@@ -79,6 +105,76 @@ if (isset($opts['restore'])) {
     exit(0);
 }
 
+// ------------------------------------------------------------------ new listing / price drop
+if (isset($opts['new-listing']) || isset($opts['price-drop'])) {
+    if (! is_file($backupFile)) {
+        $bad('Seed test clients first: php test.php');
+        exit(1);
+    }
+    $backup = json_decode(file_get_contents($backupFile), true);
+    $leadIds = array_map('intval', array_keys($backup['leads']));
+
+    // The best match of the seeded clients is the listing we copy or discount.
+    $match = LeadListingMatch::whereIn('lead_id', $leadIds)->orderByDesc('score')->with('listing', 'lead')->first();
+    if (! $match || ! $match->listing) {
+        $bad('The test clients have no matches to start from. Run `php test.php --restore` then `php test.php`.');
+        exit(1);
+    }
+    $template = $match->listing;
+    $agentName = User::find($match->lead->responsible_person_id)?->name ?? 'the agent';
+    $notificationsBefore = DB::table('notifications')->where('type', App\Notifications\LeadMatchesNotification::class)->max('created_at');
+
+    if (isset($opts['new-listing'])) {
+        $line("\nNew property match test");
+        // A fresh copy of a listing that already fits, 3% cheaper so it stays in budget.
+        // Saved through Eloquent, so the real "listing created" observer fires.
+        $copy = $template->replicate(['reference_number']);
+        $copy->reference_number = null;
+        $copy->price = round((float) $template->price * 0.97);
+        $copy->created_at = now();
+        $copy->save();
+        $backup['created_listings'][] = $copy->id;
+        file_put_contents($backupFile, json_encode($backup, JSON_PRETTY_PRINT));
+        $ok("Created listing #{$copy->id} ({$copy->reference_number}), a copy of #{$template->id} at AED ".number_format((float) $copy->price));
+        $watched = $copy;
+    } else {
+        $line("\nPrice drop test");
+        $backup['prices'][$template->id] ??= (float) $template->price;
+        file_put_contents($backupFile, json_encode($backup, JSON_PRETTY_PRINT));
+        // Mark it handled first: a price drop brings a home back even after it was sent or skipped.
+        $match->update(['status' => LeadListingMatch::STATUS_SKIPPED]);
+        $newPrice = round((float) $template->price * 0.94);
+        $template->update(['price' => $newPrice]);
+        $ok("Listing #{$template->id} price AED ".number_format((float) $backup['prices'][$template->id]).' → AED '.number_format($newPrice));
+        $watched = $template;
+    }
+
+    // What a queue worker would do: run the matching job and send the notifications now.
+    $line('  Running the queue (matching + notifications)…');
+    Artisan::call('queue:work', ['--stop-when-empty' => true, '--tries' => 1]);
+
+    $rows = LeadListingMatch::where('listing_id', $watched->id)->with('lead:id,lead_name,responsible_person_id')->orderByDesc('score')->get();
+    $rows->isEmpty()
+        ? $bad('No client matched this listing.')
+        : $ok($rows->count().' client(s) matched:');
+    foreach ($rows as $row) {
+        $line("     {$row->score}%  {$row->lead?->lead_name}  [{$row->status} · {$row->bucket}]");
+    }
+    $sent = DB::table('notifications')
+        ->where('type', App\Notifications\LeadMatchesNotification::class)
+        ->when($notificationsBefore, fn ($q) => $q->where('created_at', '>', $notificationsBefore))
+        ->get(['notifiable_id', 'data']);
+    $sent->isEmpty()
+        ? $bad('No notification was sent (already notified for these clients, or no agent on the lead).')
+        : $ok($sent->count().' notification(s) sent:');
+    foreach ($sent as $n) {
+        $line('     → user #'.$n->notifiable_id.': '.(json_decode($n->data, true)['message'] ?? ''));
+    }
+    $line("\nSigned in as {$agentName}? The bell shows it now. With Pusher connected you also get the gold toast.");
+    $line("Undo with: php test.php --restore\n");
+    exit(0);
+}
+
 // ------------------------------------------------------------------ seed
 $agent = User::find($userId);
 if (! $agent) {
@@ -86,6 +182,12 @@ if (! $agent) {
     exit(1);
 }
 if (is_file($backupFile)) {
+    if (! empty($opts['phone'])) {
+        $line("\nTest run already in place: only setting the WhatsApp number");
+        $applyPhone($opts['phone']);
+        $line("\nOpen the dock's Matches panel, pick a client, and press Send offer in Match Studio.\n");
+        exit(0);
+    }
     $bad('A previous test run is still in place. Run `php test.php --restore` first.');
     exit(1);
 }
@@ -170,9 +272,12 @@ foreach ($leads->values() as $i => $lead) {
     }
 }
 
+if (! empty($opts['phone'])) {
+    $applyPhone($opts['phone']);
+}
+
 $base = rtrim(config('app.frontend_url', config('app.url')), '/');
 $line("\nNow sign in as {$agent->name} ({$agent->email}) — or impersonate them — and open:");
-$line("  {$base}/matches/mine          My Matches + Start review");
-$line("  {$base}/matches/team          Team board (managers / admins)");
+$line("  The floating dock → Matches (sparkle button): clients with homes waiting → Match Studio");
 $line("  {$base}/kanban?lead={$leads->first()->id}   Lead modal → Matches tab");
 $line("\nWhen you're done:  php test.php --restore\n");

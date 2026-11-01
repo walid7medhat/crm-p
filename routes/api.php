@@ -631,9 +631,8 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     // Match Studio: lead ↔ listing matches.
     Route::get('/lead-matches', [LeadMatchController::class, 'queue']);
-    Route::get('/lead-matches/team', [LeadMatchController::class, 'team']);
     Route::post('/lead-matches/{match}/decision', [LeadMatchController::class, 'decide'])->whereNumber('match');
-    Route::get('/leads/{lead}/matches', [LeadMatchController::class, 'forLead'])->whereNumber('lead');
+    Route::post('/lead-matches/{match}/offer', [LeadMatchController::class, 'offer'])->whereNumber('match');    Route::get('/leads/{lead}/matches', [LeadMatchController::class, 'forLead'])->whereNumber('lead');
     Route::post('/leads/{lead}/matches/send', [LeadMatchController::class, 'send'])->whereNumber('lead');
 
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);

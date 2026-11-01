@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\LeadComment;
 use App\Models\LeadListingMatch;
-use App\Models\User;
 use App\Services\Matching\LeadMatcher;
 use App\Services\Matching\MatchPresenter;
 use Illuminate\Http\Request;
@@ -16,8 +15,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Match Studio: the agent's queue of clients with homes waiting, one lead's matches,
- * shortlist/skip decisions, sending on WhatsApp, and the managers' team board.
+ * Match Studio: the agent's clients with homes waiting, one lead's matches,
+ * shortlist/skip decisions, and sending offers on WhatsApp.
  */
 class LeadMatchController extends Controller
 {
@@ -26,13 +25,11 @@ class LeadMatchController extends Controller
 
     private const QUEUE_LIMIT = 60;
 
-    private const TEAM_ROLES = ['super_admin', 'admin', 'manager', 'team_lead', 'branch_admin'];
-
     public function __construct(private LeadMatcher $matcher, private MatchPresenter $presenter)
     {
     }
 
-    /** GET /lead-matches: the signed-in agent's own clients with homes waiting, plus who they sent to today. */
+    /** GET /lead-matches: the signed-in agent's own clients with homes waiting (the dock's Matches panel). */
     public function queue(Request $request)
     {
         $user = $request->user();
@@ -64,31 +61,13 @@ class LeadMatchController extends Controller
             fn ($a, $b) => $b['best_score'] <=> $a['best_score'],
         ])->values()->take(self::QUEUE_LIMIT);
 
-        $sentToday = LeadListingMatch::query()
-            ->where('status', LeadListingMatch::STATUS_SENT)
-            ->where('decided_by', $user->id)
-            ->where('sent_at', '>=', now()->startOfDay())
-            ->select('lead_id', DB::raw('count(*) as homes'))
-            ->groupBy('lead_id')
-            ->get();
-        $sentLeads = Lead::query()->whereIn('id', $sentToday->pluck('lead_id'))->get(['id', 'lead_name', 'first_name'])->keyBy('id');
-
         return ApiResponse::success([
             'summary' => [
                 'clients_waiting' => $clients->count(),
                 'homes_waiting' => $clients->sum('matches_count'),
-                'sent_today' => $sentToday->count(),
                 'best_score' => (int) ($clients->max('best_score') ?? 0),
-                'minutes' => max(2, $clients->count() * 2),
             ],
             'clients' => $clients,
-            'sent_today' => $sentToday->map(fn ($row) => [
-                'lead_id' => (int) $row->lead_id,
-                'name' => $sentLeads->get($row->lead_id)?->lead_name,
-                'initials' => $this->presenter->initials($sentLeads->get($row->lead_id)?->lead_name),
-                'homes' => (int) $row->homes,
-            ])->values(),
-            'can_view_team' => $user->hasAnyRole(self::TEAM_ROLES),
         ]);
     }
 
@@ -219,92 +198,52 @@ class LeadMatchController extends Controller
         ], 'Logged on the lead');
     }
 
-    /** GET /lead-matches/team: agents in the viewer's scope, ranked by homes sent in the last 7 days. */
-    public function team(Request $request)
+    /**
+     * POST /lead-matches/{match}/offer {offer_number?}
+     * Called once the browser has built the sales offer PDF (the property page's own
+     * "Generate Offer", which saves the offer record). Marks the home sent, logs it on
+     * the lead, and hands back the WhatsApp message and link.
+     */
+    public function offer(Request $request, LeadListingMatch $match)
     {
+        $data = $request->validate(['offer_number' => 'nullable|string|max:40']);
         $user = $request->user();
-        if (! $user->hasAnyRole(self::TEAM_ROLES)) {
-            return ApiResponse::error('Only managers can see the team board.', 403);
+        $lead = $match->lead;
+        if (! $lead || ! $user->canViewLead($lead)) {
+            return ApiResponse::error('You cannot send offers for this lead.', 403);
         }
-        $limit = max(1, min(50, (int) $request->input('limit', 5)));
-        $scopeIds = $user->hasRole('super_admin') ? null : array_map('intval', $user->leadScopeUserIds());
-        $working = $this->matcher->workingStageIds();
+        $match->load($this->listingRelations());
+        if (! $match->listing) {
+            return ApiResponse::error('This listing is no longer available.', 422);
+        }
 
-        $base = fn () => LeadListingMatch::query()
-            ->join('leads', 'leads.id', '=', 'lead_listing_matches.lead_id')
-            ->whereNull('leads.archived_at')
-            ->where('leads.responsible_person_id', '!=', 1)
-            ->when($scopeIds !== null, fn ($q) => $q->whereIn('leads.responsible_person_id', $scopeIds ?: [-1]));
+        $offerNumber = $data['offer_number'] ?? null;
+        $phone = $this->presenter->phoneDigits($lead->whatsapp_number ?: $lead->work_phone);
+        $message = $this->presenter->offerMessage($lead, $match, $user, $offerNumber);
+        $what = $offerNumber ? "sales offer {$offerNumber}" : 'a sales offer';
 
-        $waiting = $base()
-            ->where('lead_listing_matches.status', LeadListingMatch::STATUS_NEW)
-            ->whereIn('leads.stage_id', $working)
-            ->groupBy('leads.responsible_person_id')
-            ->get([
-                'leads.responsible_person_id as agent_id',
-                DB::raw('count(*) as homes'),
-                DB::raw('count(distinct lead_listing_matches.lead_id) as clients'),
-            ])->keyBy('agent_id');
-
-        $sent = $base()
-            ->where('lead_listing_matches.status', LeadListingMatch::STATUS_SENT)
-            ->where('lead_listing_matches.sent_at', '>=', now()->subDays(7))
-            ->groupBy('leads.responsible_person_id')
-            ->get([
-                'leads.responsible_person_id as agent_id',
-                DB::raw('count(*) as homes'),
-                DB::raw('count(distinct lead_listing_matches.lead_id) as clients'),
-            ])->keyBy('agent_id');
-
-        $agentIds = $waiting->keys()->merge($sent->keys())->unique()->map(fn ($id) => (int) $id);
-        $users = User::query()->whereIn('id', $agentIds)->get(['id', 'name'])->keyBy('id');
-
-        $agents = $agentIds->map(fn ($id) => [
-            'id' => $id,
-            'name' => $users->get($id)?->name ?? 'Agent #'.$id,
-            'initials' => $this->presenter->initials($users->get($id)?->name),
-            'is_you' => $id === (int) $user->id,
-            'waiting_homes' => (int) ($waiting->get($id)?->homes ?? 0),
-            'waiting_clients' => (int) ($waiting->get($id)?->clients ?? 0),
-            'sent_homes' => (int) ($sent->get($id)?->homes ?? 0),
-            'reached_clients' => (int) ($sent->get($id)?->clients ?? 0),
-        ])->sortBy([
-            fn ($a, $b) => $b['reached_clients'] <=> $a['reached_clients'],
-            fn ($a, $b) => $b['sent_homes'] <=> $a['sent_homes'],
-        ])->values();
-
-        $top = $agents->take($limit)->map(function ($agent) use ($base, $working) {
-            $agent['leads'] = $base()
-                ->where('leads.responsible_person_id', $agent['id'])
-                ->where('lead_listing_matches.status', LeadListingMatch::STATUS_NEW)
-                ->whereIn('leads.stage_id', $working)
-                ->groupBy('lead_listing_matches.lead_id', 'leads.lead_name')
-                ->orderByDesc(DB::raw('max(lead_listing_matches.score)'))
-                ->limit(5)
-                ->get([
-                    'lead_listing_matches.lead_id',
-                    'leads.lead_name',
-                    DB::raw('count(*) as homes'),
-                    DB::raw('max(lead_listing_matches.score) as best'),
-                ])->map(fn ($row) => [
-                    'lead_id' => (int) $row->lead_id,
-                    'name' => $row->lead_name,
-                    'initials' => $this->presenter->initials($row->lead_name),
-                    'homes' => (int) $row->homes,
-                    'best' => (int) $row->best,
-                ])->values();
-
-            return $agent;
+        DB::transaction(function () use ($match, $lead, $user, $message, $what) {
+            $match->update([
+                'status' => LeadListingMatch::STATUS_SENT,
+                'sent_at' => now(),
+                'decided_by' => $user->id,
+                'decided_at' => now(),
+            ]);
+            LeadComment::create([
+                'lead_id' => $lead->id,
+                'user_id' => $user->id,
+                'comment' => "Sent {$what} (PDF) on WhatsApp from Match Studio:\n\n".$message,
+            ]);
         });
 
         return ApiResponse::success([
-            'agents' => $top,
-            'total_agents' => $agents->count(),
-            'unsent_alert' => $agents->filter(fn ($a) => $a['waiting_homes'] >= 5)->values()->map(fn ($a) => [
-                'name' => $a['name'],
-                'homes' => $a['waiting_homes'],
-            ]),
-        ]);
+            'match_id' => $match->id,
+            'listing_id' => $match->listing_id,
+            'offer_number' => $offerNumber,
+            'message' => $message,
+            'phone' => $phone,
+            'whatsapp_url' => $phone ? 'https://wa.me/'.$phone.'?text='.rawurlencode($message) : null,
+        ], 'Logged on the lead');
     }
 
     private function queueRow(Lead $lead, Collection $rows): array
@@ -320,7 +259,11 @@ class LeadMatchController extends Controller
                 'first_name' => $this->presenter->firstName($lead),
                 'initials' => $this->presenter->initials($lead->lead_name),
                 'stage' => $lead->stage?->name,
+                'whatsapp' => $this->presenter->phoneDigits($lead->whatsapp_number ?: $lead->work_phone),
             ],
+            // The home the row's one-tap "Send offer" sends.
+            'best_match_id' => $rows->sortByDesc('score')->first()?->id,
+            'best_listing_id' => $rows->sortByDesc('score')->first()?->listing_id,
             'bucket' => $bucket,
             'reason' => $this->whyNow($lead, $rows),
             'matches_count' => $rows->count(),

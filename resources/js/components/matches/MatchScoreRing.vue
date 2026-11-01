@@ -64,7 +64,7 @@ watch(() => props.score, fill)
 
 .match-ring__track { stroke: var(--match-ring-track, rgba(255, 255, 255, 0.14)); }
 .match-ring__fill {
-    stroke: var(--color-primary-glow, #d4af37);
+    stroke: #8f5aa3;
     stroke-linecap: round;
     transition: stroke-dashoffset 0.9s ease-out;
 }
@@ -76,7 +76,7 @@ watch(() => props.score, fill)
     text-align: center;
     font-weight: 800;
     line-height: 1;
-    color: var(--match-ring-text, #f7e3a1);
+    color: var(--match-ring-text, #ede4ff);
     font-size: 15px;
 }
 .match-ring--sm .match-ring__value { font-size: 10px; }

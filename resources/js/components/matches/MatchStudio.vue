@@ -59,8 +59,21 @@
                                     <small>{{ leadMeta }}</small>
                                 </div>
                             </div>
+                            <div class="ms-contact">
+                                <button type="button" class="ms-contact__btn ms-contact__btn--wa" :disabled="!lead.whatsapp" @click="openWhatsAppChat(lead.whatsapp)">
+                                    <iconify-icon icon="mdi:whatsapp" width="16" height="16" /> WhatsApp
+                                </button>
+                                <a class="ms-contact__btn" :class="{ 'is-disabled': !lead.whatsapp }" :href="lead.whatsapp ? `tel:+${lead.whatsapp}` : undefined">
+                                    <iconify-icon icon="lucide:phone" width="15" height="15" /> Call
+                                </a>
+                            </div>
                             <div v-if="whyNow" class="ms-why">{{ whyNow }}</div>
-                            <div class="ms-dna">
+                            <!-- Phones fold the requirements away so the card fits the screen. -->
+                            <button type="button" class="ms-dna-toggle" :aria-expanded="showDna" @click="showDna = !showDna">
+                                What {{ lead.first_name }} wants
+                                <iconify-icon :icon="showDna ? 'lucide:chevron-up' : 'lucide:chevron-down'" width="14" height="14" />
+                            </button>
+                            <div class="ms-dna" :class="{ 'is-open': showDna }">
                                 <div v-for="row in lead.requirements" :key="row.label" class="ms-dna__row">
                                     <span>{{ row.label }}</span><b>{{ row.value }}</b>
                                 </div>
@@ -139,7 +152,25 @@
                             <div v-else-if="lead && pos >= deck.length" class="ms-pane">
                                 <template v-if="shortlist.length">
                                     <h3>All {{ deck.length }} reviewed</h3>
-                                    <p>{{ plural(shortlist.length, 'home') }} on the shortlist. Send them to {{ lead.first_name }} from the panel.</p>
+                                    <p>{{ plural(shortlist.length, 'home') }} saved. Send them to {{ lead.first_name }} in one message from the panel.</p>
+                                </template>
+                                <template v-else-if="offersSent">
+                                    <div class="ms-check"><iconify-icon icon="lucide:check" width="30" height="30" /></div>
+                                    <h3>{{ plural(offersSent, 'offer') }} sent to {{ lead.first_name }}</h3>
+                                    <p>Each one is logged on {{ lead.first_name }}'s timeline.</p>
+                                    <template v-if="nextClient">
+                                        <div class="ms-upnext">Up next</div>
+                                        <div class="ms-next">
+                                            <div class="ms-avatar ms-avatar--sm">{{ nextClient.initials }}</div>
+                                            <div class="min-w-0">
+                                                <b>{{ nextClient.name }}</b>
+                                                <small>{{ plural(nextClient.matches_count || 0, 'match', 'matches') }}<template v-if="nextClient.reason"> · {{ nextClient.reason }}</template></small>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="ms-cta" @click="goNext">Continue to {{ nextClient.first_name || nextClient.name }}</button>
+                                    </template>
+                                    <button v-else-if="queueMode" type="button" class="ms-cta" @click="goNext">Finish</button>
+                                    <button v-else type="button" class="ms-btn" @click="close">Back</button>
                                 </template>
                                 <template v-else>
                                     <h3>Nothing shortlisted</h3>
@@ -165,8 +196,11 @@
                                         <span v-if="cardTag(m)" class="ms-card__tag">{{ cardTag(m) }}</span>
                                         <MatchScoreRing class="ms-card__ring" :score="m.score" />
                                         <template v-if="k === stackCards.length - 1">
-                                            <div class="ms-stamp ms-stamp--yes" :style="{ opacity: stampYes }">SHORTLIST</div>
-                                            <div class="ms-stamp ms-stamp--no" :style="{ opacity: stampNo }">SKIP</div>
+                                            <div v-if="sendingOffer" class="ms-stamp ms-stamp--sent">OFFER SENT</div>
+                                            <template v-else>
+                                                <div class="ms-stamp ms-stamp--yes" :style="{ opacity: stampYes }">SAVED</div>
+                                                <div class="ms-stamp ms-stamp--no" :style="{ opacity: stampNo }">SKIP</div>
+                                            </template>
                                         </template>
                                     </div>
                                     <div class="ms-card__body">
@@ -187,9 +221,21 @@
                                                 <iconify-icon icon="lucide:alert-circle" width="11" height="11" />{{ t }}
                                             </span>
                                         </div>
-                                        <button type="button" class="ms-card__open" @pointerdown.stop @click.stop="openListing(m.listing.id)">
-                                            View listing
-                                        </button>
+                                        <div v-if="k === stackCards.length - 1" class="ms-card__actions">
+                                            <button
+                                                type="button"
+                                                class="ms-offer"
+                                                :disabled="!canDecide"
+                                                @pointerdown.stop
+                                                @click.stop="sendOffer"
+                                            >
+                                                <iconify-icon icon="mdi:whatsapp" width="20" height="20" />
+                                                {{ sendingOffer ? (offerProgress || 'Preparing PDF…') : 'Send offer' }}
+                                            </button>
+                                            <button type="button" class="ms-card__open" @pointerdown.stop @click.stop="openListing(m.listing.id)">
+                                                Details
+                                            </button>
+                                        </div>
                                     </div>
                                 </article>
                             </template>
@@ -201,20 +247,22 @@
                             </button>
                             <button type="button" class="ms-cbtn ms-cbtn--skip" :disabled="!canDecide" aria-label="Skip home" @click="decide(false)">
                                 <iconify-icon icon="lucide:x" width="24" height="24" />
+                                <span>Skip</span>
                             </button>
-                            <button type="button" class="ms-cbtn ms-cbtn--like" :disabled="!canDecide" aria-label="Shortlist home" @click="decide(true)">
-                                <iconify-icon icon="lucide:heart" width="28" height="28" />
+                            <button type="button" class="ms-cbtn ms-cbtn--like" :disabled="!canDecide" aria-label="Save for a combined message" @click="decide(true)">
+                                <iconify-icon icon="lucide:bookmark-plus" width="22" height="22" />
+                                <span>Save</span>
                             </button>
                         </div>
                         <div v-if="deck.length && !pane && !done" class="ms-progress">
-                            <i v-for="m in deck" :key="m.id" :class="{ liked: m.status === 'shortlisted', done: m.status === 'skipped' }"></i>
+                            <i v-for="m in deck" :key="m.id" :class="{ liked: m.status === 'shortlisted', done: m.status === 'skipped', sent: m.status === 'sent' }"></i>
                             <span>&nbsp;{{ Math.min(pos + 1, deck.length) }} of {{ deck.length }}</span>
                         </div>
-                        <div class="ms-keys">← skip · → shortlist · Z undo</div>
+                        <div class="ms-keys">Enter send offer · ← skip · → save · Z undo</div>
                     </section>
 
                     <!-- Shortlist -->
-                    <aside class="ms-panel ms-tray">
+                    <aside class="ms-panel ms-tray" :class="{ 'is-empty': !shortlist.length }">
                         <h3>Shortlist <span>{{ shortlist.length }}</span></h3>
                         <p>{{ lead && !done ? `Homes you will send to ${lead.first_name}.` : 'Homes you pick show up here.' }}</p>
                         <TransitionGroup name="ms-drop" tag="div" class="ms-slist">
@@ -289,6 +337,10 @@ import {
     matchStudioQueueMode,
     closeMatchStudio,
     touchMatchStudio,
+    matchStudioThenLead,
+    sendMatchOffer,
+    offerResultText,
+    openWhatsAppChat,
 } from '@/composables/useMatchStudio.js'
 import { openLeadView, closeLeadView, showLeadViewModal, leadViewModalId } from '@/composables/useLeadViewModal.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
@@ -318,6 +370,13 @@ const paneActionEl = ref(null)
 const outcome = ref({})
 const sentHomes = ref({})
 const busy = ref(false)
+/** One-tap offers sent to the current client. */
+const offersSent = ref(0)
+const sendingOffer = ref(false)
+/** Phones only: the client's requirements are folded until asked for. */
+const showDna = ref(false)
+/** The offer generator's current step ("Preparing images…") while Send offer works. */
+const offerProgress = ref('')
 
 const me = (() => {
     try { return JSON.parse(localStorage.getItem('user') || 'null') } catch { return null }
@@ -394,6 +453,9 @@ function resetClientState() {
     learned.value = ''
     pane.value = null
     sentCount.value = 0
+    offersSent.value = 0
+    sendingOffer.value = false
+    showDna.value = false
     sheetOpen.value = false
     resetDrag()
 }
@@ -403,8 +465,11 @@ watch(matchStudioOpen, (open) => {
     document.body.classList.toggle('match-studio-open', open)
     if (open) {
         // The studio takes over from the lead popup and hands it back on close.
-        returnToLeadId = showLeadViewModal.value ? Number(leadViewModalId.value) || null : null
-        if (returnToLeadId) {
+        const leadWasOpen = showLeadViewModal.value ? Number(leadViewModalId.value) || null : null
+        // From a match notification: no lead was open, but it opens when the studio closes.
+        returnToLeadId = leadWasOpen || matchStudioThenLead.value || null
+        matchStudioThenLead.value = null
+        if (leadWasOpen) {
             closeLeadView()
             // Let the lead popup finish clearing ?lead= first, or its navigation cancels ours.
             window.setTimeout(pushStudioEntry, 150)
@@ -454,6 +519,42 @@ function decide(liked) {
         .catch(() => {
             showSnack("Couldn't save that choice. It's back in the deck.", 'lucide:alert-circle')
             window.setTimeout(() => rollBack(match), 360)
+        })
+}
+
+/** The main action: send the top card to the client as an offer on WhatsApp, in one tap. */
+function sendOffer() {
+    if (!canDecide.value || !lead.value) return
+    const match = deck.value[pos.value]
+    const who = lead.value.first_name
+    const leadId = lead.value.id
+    busy.value = true
+    sendingOffer.value = true
+    offerProgress.value = ''
+    sendMatchOffer(match.id, {
+        listingId: match.listing.id,
+        clientName: lead.value.name,
+        hasPhone: !!lead.value.whatsapp,
+        onProgress: (text) => { offerProgress.value = text },
+    })
+        .then((data) => {
+            flying.value = 'right'
+            window.setTimeout(() => {
+                match.status = 'sent'
+                pos.value++
+                offersSent.value++
+                outcome.value = { ...outcome.value, [leadId]: 'sent' }
+                sentHomes.value = { ...sentHomes.value, [leadId]: (sentHomes.value[leadId] || 0) + 1 }
+                resetDrag()
+                sendingOffer.value = false
+                busy.value = false
+            }, 330)
+            showSnack(offerResultText(data, who), 'mdi:whatsapp')
+        })
+        .catch((e) => {
+            sendingOffer.value = false
+            busy.value = false
+            showSnack(e.response?.data?.message || "Couldn't send the offer. Try again.", 'lucide:alert-circle')
         })
 }
 
@@ -578,7 +679,7 @@ async function confirmSend() {
         else if (win) win.close()
         sentCount.value = data.sent_count || shortlist.value.length
         outcome.value = { ...outcome.value, [lead.value.id]: 'sent' }
-        sentHomes.value = { ...sentHomes.value, [lead.value.id]: sentCount.value }
+        sentHomes.value = { ...sentHomes.value, [lead.value.id]: (sentHomes.value[lead.value.id] || 0) + sentCount.value }
         sheetOpen.value = false
         pane.value = 'sent'
         touchMatchStudio()
@@ -801,7 +902,8 @@ function onKeydown(e) {
     if (sheetOpen.value) return
     const tag = e.target?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA') return
-    if (e.key === 'ArrowRight') { e.preventDefault(); decide(true) }
+    if (e.key === 'Enter' && tag !== 'BUTTON') { e.preventDefault(); sendOffer() }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); decide(true) }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); decide(false) }
     else if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); undo() }
 }
@@ -817,7 +919,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* One committed dark plum stage in every theme; brand purple carries, gold marks a match. */
+/* One committed dark plum stage in every theme; brand purple carries, lavender marks a match. */
 .ms {
     --ms-bg: #170c1c;
     --ms-panel: rgba(255, 255, 255, 0.05);
@@ -826,22 +928,23 @@ onBeforeUnmount(() => {
     --ms-muted: #bba9c7;
     --ms-ok: #86efac;
     --ms-ok-bg: rgba(74, 222, 128, 0.14);
-    --ms-warn: #fcd34d;
-    --ms-warn-bg: rgba(251, 191, 36, 0.15);
+    --ms-warn: #f0abfc;
+    --ms-warn-bg: rgba(240, 171, 252, 0.15);
     --ms-no: #fda4af;
-    --ms-gold: #f3d77a;
-    --ms-fill: var(--gradient-primary, linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(212, 175, 55, 0.38)), #733e87);
+    --ms-accent: #d8b4fe;
+    --ms-fill: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%);
 
     position: fixed;
     inset: 0;
     z-index: 12600;
     display: flex;
     flex-direction: column;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     color: var(--ms-ink);
     background:
         radial-gradient(60% 50% at 50% 0%, rgba(143, 90, 163, 0.45) 0%, rgba(23, 12, 28, 0) 70%),
-        radial-gradient(40% 40% at 90% 100%, rgba(212, 175, 55, 0.16) 0%, rgba(23, 12, 28, 0) 70%),
+        radial-gradient(40% 40% at 90% 100%, rgba(143, 90, 163, 0.16) 0%, rgba(23, 12, 28, 0) 70%),
         var(--ms-bg);
     padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
     font-size: 14px;
@@ -849,7 +952,7 @@ onBeforeUnmount(() => {
 }
 .ms button { font: inherit; color: inherit; cursor: pointer; }
 .ms button:disabled { cursor: default; }
-.ms button:focus-visible { outline: 2px solid var(--ms-gold); outline-offset: 2px; }
+.ms button:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 2px; }
 .min-w-0 { min-width: 0; }
 
 .ms-fade-enter-active, .ms-fade-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
@@ -858,14 +961,14 @@ onBeforeUnmount(() => {
 /* Desktop: sits inside the page area (inline top/left/right from measureFrame) like a stage in the layout. */
 .ms--framed {
     border-radius: 22px;
-    border: 1px solid rgba(212, 175, 55, 0.25);
+    border: 1px solid rgba(143, 90, 163, 0.25);
     box-shadow: 0 30px 70px rgba(23, 12, 28, 0.35);
     padding: 0 22px;
 }
 
-.ms-head { display: flex; align-items: center; gap: 12px; padding: 16px 0 12px; flex-wrap: wrap; }
+.ms-head { display: flex; align-items: center; gap: 12px; padding: 12px 0 10px; flex-wrap: wrap; }
 
-/* The "Match Studio" label: a gold-edged pill with a light sweep and gold text, easy to spot. */
+/* The "Match Studio" label: a lavender-edged pill with a light sweep, easy to spot. */
 .ms-title {
     position: relative;
     display: inline-flex;
@@ -874,9 +977,9 @@ onBeforeUnmount(() => {
     padding: 6px 16px 6px 6px;
     overflow: hidden;
     border-radius: 999px;
-    border: 1px solid rgba(243, 215, 122, 0.55);
-    background: linear-gradient(180deg, rgba(243, 215, 122, 0.16), rgba(243, 215, 122, 0.04));
-    box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.08), 0 0 26px rgba(212, 175, 55, 0.28), 0 3px 0 rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(216, 180, 254, 0.55);
+    background: linear-gradient(180deg, rgba(216, 180, 254, 0.16), rgba(216, 180, 254, 0.04));
+    box-shadow: 0 0 0 4px rgba(143, 90, 163, 0.08), 0 0 26px rgba(143, 90, 163, 0.28), 0 3px 0 rgba(0, 0, 0, 0.35);
     font-weight: 800;
     font-size: 18px !important;
     letter-spacing: 0.01em;
@@ -892,7 +995,7 @@ onBeforeUnmount(() => {
 }
 @keyframes ms-title-shine { 0% { background-position: 130% 0; } 55%, 100% { background-position: -130% 0; } }
 .ms-title__text {
-    background: linear-gradient(90deg, #fff6d6 0%, #f3d77a 45%, #ffffff 100%);
+    background: linear-gradient(90deg, #f3e8ff 0%, #d8b4fe 45%, #ffffff 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -905,7 +1008,7 @@ onBeforeUnmount(() => {
     display: grid;
     place-items: center;
     color: #fff;
-    box-shadow: 0 0 14px rgba(243, 215, 122, 0.55);
+    box-shadow: 0 0 14px rgba(216, 180, 254, 0.55);
     animation: ms-title-twinkle 2.4s ease-in-out infinite;
 }
 @keyframes ms-title-twinkle { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.1) rotate(12deg); } }
@@ -938,45 +1041,50 @@ onBeforeUnmount(() => {
 .ms-cta:disabled { opacity: 0.6; }
 .ms-cta--grow { flex: 1; }
 
-.ms-qbar { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; flex-wrap: wrap; }
+.ms-qbar { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; flex-wrap: wrap; }
 .ms-qbar__seg { display: flex; gap: 5px; flex: 1 1 200px; }
 .ms-qbar__seg i { flex: 1; height: 5px; border-radius: 5px; background: var(--ms-line); position: relative; overflow: hidden; }
 .ms-qbar__seg i.is-done { background: var(--ms-ok); }
 .ms-qbar__seg i.is-skipped { background: var(--ms-muted); }
-.ms-qbar__seg i.is-current { background: rgba(212, 175, 55, 0.35); }
-.ms-qbar__seg i.is-current::after { content: ''; position: absolute; inset: 0; width: 40%; border-radius: 5px; background: var(--color-primary-glow, #d4af37); animation: ms-slide 1.6s ease-in-out infinite; }
+.ms-qbar__seg i.is-current { background: rgba(143, 90, 163, 0.35); }
+.ms-qbar__seg i.is-current::after { content: ''; position: absolute; inset: 0; width: 40%; border-radius: 5px; background: #8f5aa3; animation: ms-slide 1.6s ease-in-out infinite; }
 @keyframes ms-slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 .ms-qbar__label { font-size: 12.5px; color: var(--ms-muted); }
 .ms-qbar__label b { color: var(--ms-ink); }
 
+/* Fits one screen: the row takes what's left under the header, the card grows or shrinks
+   with it, and long side panels scroll inside themselves instead of the whole studio. */
 .ms-main {
     flex: 1;
+    min-width: 0;
     display: grid;
     grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(250px, 300px);
-    gap: 28px;
-    padding-bottom: 24px;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 24px;
+    padding-bottom: 16px;
     min-height: 0;
 }
-.ms-panel { background: var(--ms-panel); border: 1px solid var(--ms-line); border-radius: 20px; padding: 18px; align-self: start; }
+.ms-panel { min-width: 0; max-height: 100%; overflow-y: auto; background: var(--ms-panel); border: 1px solid var(--ms-line); border-radius: 20px; padding: 16px; align-self: start; scrollbar-width: thin; }
+.ms-dna-toggle { display: none; }
 
 .ms-client { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
 .ms-client b { display: block; font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-client small { color: var(--ms-muted); font-size: 12px; }
 .ms-avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--ms-fill); color: #fff; display: grid; place-items: center; font-weight: 800; flex: none; }
 .ms-avatar--sm { width: 40px; height: 40px; font-size: 13px; }
-.ms-why { font-size: 12px; color: var(--ms-gold); background: rgba(212, 175, 55, 0.1); border-radius: 10px; padding: 7px 10px; margin-bottom: 8px; }
+.ms-why { font-size: 12px; color: var(--ms-accent); background: rgba(143, 90, 163, 0.1); border-radius: 10px; padding: 7px 10px; margin-bottom: 8px; }
 .ms-dna__row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 9px 0; border-top: 1px solid var(--ms-line); }
 .ms-dna__row span { color: var(--ms-muted); }
 .ms-dna__row b { text-align: right; font-weight: 600; }
-.ms-learn { margin-top: 14px; font-size: 12px; color: var(--ms-muted); background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 12px; padding: 10px 12px; }
-.ms-learn b { color: var(--ms-gold); font-weight: 600; }
+.ms-learn { margin-top: 14px; font-size: 12px; color: var(--ms-muted); background: rgba(143, 90, 163, 0.08); border: 1px solid rgba(143, 90, 163, 0.25); border-radius: 12px; padding: 10px 12px; }
+.ms-learn b { color: var(--ms-accent); font-weight: 600; }
 .ms-skeleton { display: grid; gap: 10px; }
 .ms-skeleton span { height: 14px; border-radius: 6px; background: var(--ms-line); animation: ms-pulse 1.2s ease-in-out infinite; }
 .ms-skeleton span:first-child { height: 46px; width: 60%; }
 @keyframes ms-pulse { 50% { opacity: 0.4; } }
 
-.ms-center { display: flex; flex-direction: column; align-items: center; gap: 18px; min-width: 0; }
-.ms-deck { position: relative; width: min(380px, 100%); height: 520px; }
+.ms-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-width: 0; min-height: 0; }
+.ms-deck { position: relative; width: min(390px, 100%); flex: 1 1 auto; min-height: 360px; max-height: 540px; }
 
 .ms-card {
     position: absolute;
@@ -994,24 +1102,26 @@ onBeforeUnmount(() => {
 }
 .ms-card.is-top { cursor: grab; }
 .ms-card.is-dragging { transition: none; cursor: grabbing; }
-.ms-card__photo { position: relative; flex: none; height: 270px; }
+/* The photo takes whatever height the details leave, so the card fits any screen. */
+.ms-card__photo { position: relative; flex: 1 1 auto; min-height: 110px; }
 .ms-card__photo::after { content: ''; position: absolute; inset: auto 0 0; height: 90px; background: linear-gradient(0deg, #24152b, rgba(36, 21, 43, 0)); pointer-events: none; }
 .ms-card__ring { position: absolute; top: 14px; right: 14px; border-radius: 50%; background: rgba(23, 12, 28, 0.65); backdrop-filter: blur(6px); }
 .ms-card__tag { position: absolute; top: 16px; left: 16px; z-index: 1; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(23, 12, 28, 0.65); backdrop-filter: blur(6px); }
 .ms-stamp { position: absolute; top: 90px; z-index: 2; font-weight: 800; font-size: 26px; letter-spacing: 0.08em; padding: 4px 14px; border: 3px solid; border-radius: 12px; pointer-events: none; }
-.ms-stamp--yes { left: 22px; color: var(--ms-gold); border-color: var(--ms-gold); transform: rotate(-14deg); }
+.ms-stamp--yes { left: 22px; color: var(--ms-accent); border-color: var(--ms-accent); transform: rotate(-14deg); }
 .ms-stamp--no { right: 22px; color: var(--ms-no); border-color: var(--ms-no); transform: rotate(14deg); }
-.ms-card__body { position: relative; z-index: 1; display: grid; gap: 6px; padding: 0 20px 18px; margin-top: -30px; }
+.ms-card__body { position: relative; z-index: 1; flex: none; display: grid; gap: 5px; padding: 0 18px 16px; margin-top: -30px; }
 .ms-card__loc { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ms-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ms-card__price { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .ms-card__price small { font-size: 13px; font-weight: 600; color: var(--ms-muted); margin-right: 4px; }
 .ms-card__price s { font-size: 13px; font-weight: 600; color: var(--ms-muted); margin-left: 8px; }
 .ms-card__specs { font-size: 12.5px; color: var(--ms-muted); font-variant-numeric: tabular-nums; }
-.ms-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+/* Two rows of chips at most, so a long list can't push the buttons off the card. */
+.ms-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; max-height: 56px; overflow: hidden; }
 .ms-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 8px; }
 .ms-chip--ok { background: var(--ms-ok-bg); color: var(--ms-ok); }
 .ms-chip--gap { background: var(--ms-warn-bg); color: var(--ms-warn); }
-.ms-card__open { justify-self: start; margin-top: 4px; border: 0; background: none; padding: 0; font-size: 12px; font-weight: 600; color: var(--ms-gold); text-decoration: underline; text-underline-offset: 3px; }
+.ms-card__open { flex: none; border: 0; background: none; padding: 0; font-size: 12px; font-weight: 600; color: var(--ms-accent); text-decoration: underline; text-underline-offset: 3px; }
 
 .ms-pane {
     position: absolute;
@@ -1031,36 +1141,92 @@ onBeforeUnmount(() => {
 /* style.css forces h1–h6 sizes with !important, so the studio's headings need it too. */
 .ms-pane h3 { margin: 0; font-size: 21px !important; font-weight: 800; color: var(--ms-ink); text-wrap: balance; }
 .ms-pane p { margin: 0; max-width: 32ch; color: var(--ms-muted); }
-.ms-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--ms-line); border-top-color: var(--color-primary-glow, #d4af37); animation: ms-spin 0.9s linear infinite; }
+.ms-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--ms-line); border-top-color: #8f5aa3; animation: ms-spin 0.9s linear infinite; }
 @keyframes ms-spin { to { transform: rotate(360deg); } }
 .ms-check { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--ms-ok-bg); color: var(--ms-ok); animation: ms-pop 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.4); }
 @keyframes ms-pop { from { transform: scale(0.4); opacity: 0; } }
-.ms-upnext { margin-top: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ms-gold); }
+.ms-upnext { margin-top: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ms-accent); }
 .ms-next { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px; text-align: left; border-radius: 16px; background: var(--ms-panel); border: 1px solid var(--ms-line); }
 .ms-next b { display: block; font-size: 14px; }
 .ms-next small { display: block; font-size: 12px; color: var(--ms-muted); }
 .ms-stats { display: flex; gap: 22px; justify-content: center; }
-.ms-stats b { display: block; font-size: 26px; font-weight: 800; color: var(--ms-gold); font-variant-numeric: tabular-nums; }
+.ms-stats b { display: block; font-size: 26px; font-weight: 800; color: var(--ms-accent); font-variant-numeric: tabular-nums; }
 .ms-stats span { font-size: 11.5px; color: var(--ms-muted); }
-.ms-burst { position: relative; width: 70px; height: 70px; display: grid; place-items: center; color: var(--ms-gold); animation: ms-pop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.4); }
-.ms-burst i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary-glow, #d4af37); animation: ms-fly 1s ease-out forwards; }
+.ms-burst { position: relative; width: 70px; height: 70px; display: grid; place-items: center; color: var(--ms-accent); animation: ms-pop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.4); }
+.ms-burst i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #8f5aa3; animation: ms-fly 1s ease-out forwards; }
 @keyframes ms-fly { to { transform: translate(var(--x), var(--y)); opacity: 0; } }
 
-.ms-controls { display: flex; align-items: center; gap: 16px; }
-.ms-cbtn { width: 58px; height: 58px; border-radius: 50%; border: 1px solid var(--ms-line); background: var(--ms-panel); display: grid; place-items: center; transition: transform 0.15s; }
-.ms-cbtn:hover:not(:disabled) { transform: scale(1.07); }
+/* Secondary actions under the card; the main one (Send offer) lives on the card itself. */
+.ms-controls { display: flex; align-items: center; gap: 10px; }
+.ms-cbtn {
+    height: 46px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid var(--ms-line);
+    background: var(--ms-panel);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+    transition: transform 0.15s, background 0.15s;
+}
+.ms-cbtn:hover:not(:disabled) { transform: translateY(-2px); background: rgba(255, 255, 255, 0.09); }
 .ms-cbtn:disabled { opacity: 0.35; }
 .ms-cbtn--skip { color: var(--ms-no) !important; }
-.ms-cbtn--like { width: 70px; height: 70px; border-color: transparent; background: var(--ms-fill); color: #fff; box-shadow: 0 12px 30px rgba(212, 175, 55, 0.3); }
-.ms-cbtn--undo { width: 44px; height: 44px; color: var(--ms-muted) !important; }
+.ms-cbtn--like { color: var(--ms-accent) !important; border-color: rgba(216, 180, 254, 0.4); }
+.ms-cbtn--undo { width: 46px; padding: 0; justify-content: center; color: var(--ms-muted) !important; }
+
+/* Client contact: one tap to chat or call. */
+.ms-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.ms-contact__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid var(--ms-line);
+    background: var(--ms-panel);
+    color: var(--ms-ink) !important;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+.ms-contact__btn--wa { border-color: transparent; background: #25a35a; color: #fff !important; }
+.ms-contact__btn:disabled, .ms-contact__btn.is-disabled { opacity: 0.4; pointer-events: none; }
+
+/* The card's main action: the offer goes straight to WhatsApp. */
+.ms-card__actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.ms-offer {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #2fbf6b 0%, #219653 100%);
+    color: #fff !important;
+    font-size: 14.5px;
+    font-weight: 800;
+    box-shadow: 0 3px 0 #17703d, 0 12px 24px rgba(37, 163, 90, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.ms-offer:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 0 #17703d, 0 16px 28px rgba(37, 163, 90, 0.45); }
+.ms-offer:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #17703d, 0 6px 14px rgba(37, 163, 90, 0.3); }
+.ms-offer:disabled { opacity: 0.6; }
+.ms-stamp--sent { left: 50%; color: #86efac; border-color: #86efac; transform: translateX(-50%) rotate(-8deg); white-space: nowrap; }
+.ms-progress i.sent { background: #25a35a; }
 .ms-progress { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ms-muted); flex-wrap: wrap; justify-content: center; }
 .ms-progress i { width: 22px; height: 4px; border-radius: 4px; background: var(--ms-line); }
 .ms-progress i.done { background: var(--ms-muted); }
-.ms-progress i.liked { background: var(--color-primary-glow, #d4af37); }
+.ms-progress i.liked { background: #8f5aa3; }
 .ms-keys { font-size: 11.5px; color: var(--ms-muted); }
 
 .ms-tray h3 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; font-size: 15px !important; font-weight: 800; color: var(--ms-ink); }
-.ms-tray h3 span { font-size: 12px !important; color: #3f2148; background: var(--color-primary-glow, #d4af37); border-radius: 999px; padding: 1px 9px; }
+.ms-tray h3 span { font-size: 12px !important; color: #fff; background: #8f5aa3; border-radius: 999px; padding: 1px 9px; }
 .ms-tray > p { margin: 0 0 12px; font-size: 12px; color: var(--ms-muted); }
 .ms-slist { display: grid; gap: 8px; margin-bottom: 14px; }
 .ms-sitem { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--ms-line); }
@@ -1090,17 +1256,79 @@ onBeforeUnmount(() => {
 .ms-snack-enter-active, .ms-snack-leave-active { transition: opacity 0.25s, transform 0.25s; }
 .ms-snack-enter-from, .ms-snack-leave-to { opacity: 0; transform: translate(-50%, 12px); }
 
+/* Short laptop screens: drop the keyboard hint, keep the card. */
+@media (max-height: 820px) {
+    .ms-keys { display: none; }
+    .ms-deck { min-height: 330px; }
+}
+
+/* Tablets and phones: one column. Compact client bar on top, the card filling the
+   middle, the buttons under it. The shortlist shows only once something is saved. */
 @media (max-width: 960px) {
-    .ms-main { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-    .ms-center { order: 1; }
-    .ms-tray { order: 2; }
-    .ms-panel { align-self: stretch; }
-    .ms-dna { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); column-gap: 14px; }
+    .ms { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+    .ms-head { padding: 8px 0 6px; gap: 8px; }
+    .ms-title { font-size: 15px !important; padding: 4px 12px 4px 4px; }
+    .ms-title__mark { width: 26px; height: 26px; }
+    .ms-sub, .ms-keys, .ms-btn kbd { display: none; }
+    .ms-btn { padding: 7px 10px; font-size: 12px; }
+    .ms-qbar { padding-bottom: 6px; }
+
+    .ms-main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 10px;
+        padding-bottom: 10px;
+    }
+    .ms-panel { align-self: stretch; max-height: none; }
+
+    .ms-profile {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 6px 10px;
+        padding: 10px 12px;
+        border-radius: 16px;
+    }
+    .ms-profile .ms-client { margin: 0; gap: 10px; }
+    .ms-profile .ms-avatar { width: 36px; height: 36px; font-size: 13px; }
+    .ms-contact { margin: 0; grid-template-columns: auto auto; }
+    .ms-contact__btn { height: 34px; padding: 0 10px; font-size: 12px; }
+    .ms-why,
+    .ms-dna-toggle,
+    .ms-dna,
+    .ms-learn { grid-column: 1 / -1; }
+    .ms-why { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ms-dna-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        justify-self: start;
+        padding: 0;
+        border: 0;
+        background: none;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ms-accent);
+    }
+    .ms-dna { display: none; }
+    .ms-dna.is-open { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); column-gap: 14px; }
+    .ms-learn { display: none; }
+
+    .ms-center { justify-content: flex-start; gap: 10px; }
+    .ms-deck { width: min(420px, 100%); min-height: 300px; max-height: none; }
+    .ms-controls { gap: 8px; }
+    .ms-cbtn { height: 42px; padding: 0 14px; }
+    .ms-cbtn--undo { width: 42px; }
+    .ms-progress i { width: 16px; }
+
+    .ms-tray.is-empty { display: none; }
+    .ms-tray { padding: 12px; }
+    .ms-tray > p { display: none; }
 }
 @media (max-width: 640px) {
-    .ms-deck { height: 490px; }
-    .ms-card__photo { height: 240px; }
-    .ms-sub, .ms-keys, .ms-btn kbd { display: none; }
+    .ms-card__body { padding: 0 14px 12px; }
+    .ms-card__price { font-size: 21px; }
+    .ms-offer { height: 44px; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .ms *, .ms *::before, .ms *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

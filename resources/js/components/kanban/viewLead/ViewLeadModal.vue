@@ -2497,24 +2497,29 @@ defineExpose({
     display: none;
 }
 
-/* Raised 3D pill with a gold edge and a light sweep, so the new tab gets noticed. */
+/* Raised 3D lavender pill with a light sweep, so the new tab gets noticed. */
 .tab-item--matches {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 5px;
     overflow: hidden;
-    border-color: rgba(212, 175, 55, 0.7);
-    background: linear-gradient(180deg, #fffdf6 0%, #f7efd6 100%);
+    border-color: rgba(143, 90, 163, 0.55);
+    background: linear-gradient(180deg, #ffffff 0%, #f3eaf7 100%);
     color: var(--color-primary-ink);
-    box-shadow: 0 2px 0 #d9c27a, 0 5px 12px rgba(212, 175, 55, 0.25);
+    box-shadow: 0 2px 0 #d4c0de, 0 5px 12px rgba(143, 90, 163, 0.2);
     transform: translateY(-1px);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tab-item--matches:hover:not(.active) {
     transform: translateY(-2px);
-    box-shadow: 0 3px 0 #d9c27a, 0 8px 16px rgba(212, 175, 55, 0.32);
+    box-shadow: 0 3px 0 #d4c0de, 0 8px 16px rgba(143, 90, 163, 0.28);
+}
+
+/* Active: pure purple, without the brand gradient's gold tint. */
+.tab-item--matches.active {
+    background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%) !important;
 }
 
 .tab-item--matches:active,
@@ -2541,7 +2546,7 @@ defineExpose({
 .tab-item__spark {
     width: 12px;
     height: 12px;
-    color: #b8901e;
+    color: #8f5aa3;
     animation: tab-match-twinkle 2.4s ease-in-out infinite;
 }
 
@@ -2559,11 +2564,16 @@ defineExpose({
     height: 17px;
     padding: 0 5px;
     border-radius: 999px;
-    background: var(--color-primary-glow);
-    color: var(--color-primary-ink);
+    background: #8f5aa3;
+    color: #ffffff;
     font-size: 10px;
     font-weight: 800;
     line-height: 17px;
+}
+
+.tab-item--matches.active .tab-item__badge {
+    background: #ffffff;
+    color: #733e87;
 }
 
 .tab-item--matches:not(.active) .tab-item__badge {
@@ -2571,8 +2581,8 @@ defineExpose({
 }
 
 @keyframes tab-match-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.55); }
-    50% { box-shadow: 0 0 0 5px rgba(212, 175, 55, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(143, 90, 163, 0.5); }
+    50% { box-shadow: 0 0 0 5px rgba(143, 90, 163, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
