@@ -15,7 +15,7 @@
                 </div>
                 <div class="mat__actions">
                     <button type="button" class="mat__btn mat__btn--primary" @click="open">
-                        {{ alert.lead_id ? 'Open Match Studio' : 'See clients' }}
+                        {{ alert.lead_id ? 'Show' : 'See clients' }}
                     </button>
                     <button type="button" class="mat__btn" @click="dismiss">Later</button>
                 </div>
@@ -45,10 +45,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import MatchScoreRing from './MatchScoreRing.vue'
-import { openMatchStudio, pendingPdfShare, sharePendingPdf } from '@/composables/useMatchStudio.js'
+import { pendingPdfShare, sharePendingPdf } from '@/composables/useMatchStudio.js'
 import { openMatchesPanel } from '@/composables/useShortcutPanels.js'
+import { openLeadMatching } from '@/composables/useLeadViewModal.js'
 
-/** The live pop-up for Match Studio alerts. The bell keeps the same alert for later. */
+/** Live match alert. Show opens the lead at the matching carousel. */
 const alert = ref(null)
 let hideTimer = null
 
@@ -103,13 +104,18 @@ function dismiss() {
     alert.value = null
 }
 
-/** One client: Match Studio, then the lead when the studio closes. Several: the dock's Matches panel. */
+/** One client: open the lead scrolled to matching. Several: the dock's Matches panel. */
 function open() {
     const n = alert.value
     dismiss()
     if (!n) return
-    if (n.lead_id) openMatchStudio({ id: Number(n.lead_id) }, { thenOpenLead: true })
-    else openMatchesPanel()
+    if (n.lead_id) {
+        openLeadMatching(n.lead_id, {
+            highlightListingId: n.listing_id || n.listing_match_id || null,
+        })
+    } else {
+        openMatchesPanel()
+    }
 }
 
 onMounted(() => window.addEventListener('app-notification', onNotification))

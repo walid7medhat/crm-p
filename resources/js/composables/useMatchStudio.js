@@ -3,9 +3,8 @@ import api from '@/plugins/axios'
 import { renderListingOffer } from '@/composables/useOfferPdf.js'
 
 /**
- * Global Match Studio overlay (mounted once in App.vue).
- * - openMatchStudio(leadId): one client, from a match notification or the dock panel.
- * - startMatchQueue(clients): the dock panel's "Review all", one client after another.
+ * Match helpers shared by the dock panel, lead matching carousel, and offer PDF toast.
+ * The full-screen Match Studio overlay was removed; openLeadMatching() opens the lead instead.
  */
 export const matchStudioOpen = ref(false)
 /** [{ id, name, first_name, initials, matches_count }] in review order. */

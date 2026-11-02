@@ -43,9 +43,11 @@ class MatchNotifier
         $agent->notify(new LeadMatchesNotification([
             'message' => $message,
             'lead_id' => $lead->id,
+            'listing_id' => (int) ($drop?->listing_id ?: $best->listing_id),
             'matches_count' => $rows->count(),
             'best_score' => $best->score,
             'bucket' => $drop ? LeadListingMatch::BUCKET_PRICE_DROP : $best->bucket,
+            'focus' => 'matching',
         ]));
 
         $this->stamp($rows);

@@ -242,6 +242,8 @@ onUnmounted(() => {
 .shortcut-dock .shortcut-item--day { order: 4; }
 .shortcut-dock .shortcut-item--message { order: 5; }
 
+/* Matches, Next Actions, My Day, Daily Message (+ chat): one primary color system. */
+.shortcut-dock .mm-root,
 .shortcut-dock .mqp-root,
 .shortcut-dock .sac-root,
 .shortcut-dock .edge-pill,
@@ -256,6 +258,7 @@ onUnmounted(() => {
   height: 48px !important;
   min-width: 48px !important;
   padding: 0 !important;
+  border: 0 !important;
   border-radius: 50% !important;
   justify-content: center !important;
   gap: 0 !important;
@@ -265,7 +268,7 @@ onUnmounted(() => {
   transform-style: preserve-3d;
   transform: translate3d(0, 0, 0) rotateX(12deg);
   box-shadow:
-    0 10px 16px rgba(115, 62, 135, 0.28),
+    0 10px 16px rgba(var(--color-primary-rgb, 115, 62, 135), 0.28),
     inset 0 -6px 10px rgba(74, 40, 92, 0.28),
     inset 0 6px 8px rgba(255, 255, 255, 0.28);
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease, filter 0.45s ease;
@@ -277,11 +280,7 @@ onUnmounted(() => {
   min-width: 56px !important;
 }
 
-/* Matches: a lighter lavender-to-purple, so homes waiting stand out in the dock. */
-.shortcut-dock .mqp-root {
-  background: linear-gradient(150deg, #c58fd6 0%, #8f5aa3 45%, #5c3270 100%) !important;
-}
-
+.shortcut-dock .mm-root::after,
 .shortcut-dock .mqp-root::after,
 .shortcut-dock .sac-root::after,
 .shortcut-dock .edge-pill::after,
@@ -305,8 +304,9 @@ onUnmounted(() => {
 .shortcut-dock .shortcut-item:focus-visible {
   transform: translate3d(-18px, -4px, 42px) rotateY(-26deg) rotateX(8deg) scale(1.14) !important;
   filter: none;
+  background: var(--gradient-primary) !important;
   box-shadow:
-    18px 22px 28px rgba(115, 62, 135, 0.32),
+    18px 22px 28px rgba(var(--color-primary-rgb, 115, 62, 135), 0.32),
     inset 0 -8px 12px rgba(74, 40, 92, 0.2),
     inset 0 8px 10px rgba(255, 255, 255, 0.4) !important;
   z-index: 2;
@@ -317,6 +317,7 @@ onUnmounted(() => {
   animation: shortcut-shine 0.7s ease;
 }
 
+.shortcut-dock .mm-root span,
 .shortcut-dock .mqp-root span,
 .shortcut-dock .sac-root span,
 .shortcut-dock .edge-pill span,
@@ -348,6 +349,7 @@ onUnmounted(() => {
   transform: translateY(-50%) translateX(-8px) rotateY(0deg) scale(1.06);
 }
 
+.shortcut-dock .mm-root iconify-icon,
 .shortcut-dock .mqp-root iconify-icon,
 .shortcut-dock .sac-root iconify-icon,
 .shortcut-dock .edge-pill iconify-icon,
@@ -380,6 +382,7 @@ onUnmounted(() => {
     padding: 8px 6px 10px;
   }
 
+  .shortcut-dock .mm-root,
   .shortcut-dock .mqp-root,
   .shortcut-dock .sac-root,
   .shortcut-dock .edge-pill,
@@ -396,6 +399,7 @@ onUnmounted(() => {
     min-width: 48px !important;
   }
 
+  .shortcut-dock .mm-root span,
   .shortcut-dock .mqp-root span,
   .shortcut-dock .sac-root span,
   .shortcut-dock .edge-pill span,

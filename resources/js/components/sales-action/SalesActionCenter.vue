@@ -361,7 +361,7 @@ function onPointerDown(event) {
   // Keep Next Actions open while the admin Preview tour is guiding the UI.
   if (isTourWalkthrough.value) return
   const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target]
-  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, #shortcut-dock, .shortcut-dock, .sidebar-nav-link, .mobile-more-row, .nat-tour, .nat-announce'))
+  const inside = path.some((node) => node instanceof Element && node.closest('.sac-root, .sac-node, .sac-pop, .mm-root, .mm-node, .mm-pop, #shortcut-dock, .shortcut-dock, .sidebar-nav-link, .mobile-more-row, .nat-tour, .nat-announce'))
   if (inside) return
   closeSalesActionCenter()
 }
@@ -801,21 +801,21 @@ function openItem(item) {
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
-  background: #1a1028;
+  background: var(--gradient-primary);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
 .sac-root.is-open {
-  box-shadow: inset 0 0 0 1px rgba(216, 180, 254, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-primary-rgb, 115, 62, 135), 0.55);
 }
 .sac-root__dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d8b4fe;
-  box-shadow: 0 0 10px #e9d5ff;
+  background: var(--color-primary-soft, #f7f2f8);
+  box-shadow: 0 0 10px rgba(var(--color-primary-rgb, 115, 62, 135), 0.45);
 }
 .sac-wires {
   position: fixed;

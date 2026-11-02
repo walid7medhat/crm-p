@@ -61,7 +61,6 @@
       @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
-    <MatchStudio v-if="showLayout" />
     <MatchAlertToast v-if="showLayout && !isAppLoading" />
     <OfferPdfHost v-if="offerPdfJobs.length" />
     <PropertyCompareDock v-if="showLayout && !isAppLoading" />
@@ -95,7 +94,6 @@ const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-mot
 const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
-const MatchStudio = defineAsyncComponent(() => import('./components/matches/MatchStudio.vue'))
 const MatchAlertToast = defineAsyncComponent(() => import('./components/matches/MatchAlertToast.vue'))
 const MatchQuickPanel = defineAsyncComponent(() => import('./components/matches/MatchQuickPanel.vue'))
 // Loaded only while a Send offer is building its PDF (pulls in BlogOne's offer generator).
@@ -128,7 +126,6 @@ export default {
     PropertyCompareDock,
     ProjectDetailsModal,
     SmartSearchDialog,
-    MatchStudio,
     MatchAlertToast,
     MatchQuickPanel,
     OfferPdfHost,

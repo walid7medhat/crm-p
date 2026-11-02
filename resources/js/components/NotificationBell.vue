@@ -62,7 +62,7 @@ import { openMarketingFromNotification } from '@/composables/useMarketingNotific
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
 import MobilePushToggle from '@/components/layout/MobilePushToggle.vue'
 import { openMatchesPanel } from '@/composables/useShortcutPanels.js'
-import { openMatchStudio } from '@/composables/useMatchStudio.js'
+import { openLeadMatching } from '@/composables/useLeadViewModal.js'
 
 function getApiBaseUrl() {
   const base =
@@ -191,9 +191,11 @@ export default {
       if (!notification.read_at) this.markAsRead(notification.id)
       this.showDropdown = false
 
-      // Match alert for one client: Match Studio first, the lead when the studio closes.
+      // Match alert for one client: open the lead scrolled to matching homes.
       if (notification?.data?.type === 'lead_matches' && notification?.data?.lead_id) {
-        openMatchStudio({ id: Number(notification.data.lead_id) }, { thenOpenLead: true })
+        openLeadMatching(notification.data.lead_id, {
+          highlightListingId: notification.data.listing_id || notification.data.listing_match_id || null,
+        })
         return
       }
 

@@ -1553,11 +1553,11 @@ onMounted(() => {
 
 const appliedOpenSection = ref(null)
 
-function applyOpenSection() {
+function applyOpenSection({ force = false } = {}) {
     const section = props.openSection
     if (!section || !lead.value?.id) return
     const token = `${lead.value.id}:${section}`
-    if (appliedOpenSection.value === token) return
+    if (!force && appliedOpenSection.value === token) return
     appliedOpenSection.value = token
     if (section === 'create_deal') {
         openCreateDealForConvertedLead()
@@ -1567,6 +1567,14 @@ function applyOpenSection() {
         jumpTo(section)
     }
 }
+
+watch(
+    () => props.openSection,
+    (section) => {
+        if (!section || !show.value || !lead.value?.id) return
+        applyOpenSection({ force: true })
+    }
+)
 
 function syncJumpFromScroll() {
     if (jumpTarget) {
@@ -1589,10 +1597,17 @@ function jumpTo(section) {
     activeJump.value = section
     focusSection.value = section
     jumpTarget = section
+    let attempts = 0
     const reveal = () => {
         const root = leadModalRoot.value
         const target = root?.querySelector(`#lead-section-${section}`)
+        // Matching mounts after preferMatching / idle reveal — retry briefly.
         if (!target) {
+            if (section === 'matching' && attempts < 20) {
+                attempts += 1
+                window.setTimeout(reveal, 100)
+                return
+            }
             jumpTarget = null
             return
         }

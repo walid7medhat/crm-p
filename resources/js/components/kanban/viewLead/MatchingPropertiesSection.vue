@@ -1,12 +1,12 @@
 <template>
-    <div v-if="lead?.id && canAttemptMatching" id="lead-section-matching" class="matching-properties-section info-section">
+    <div v-if="lead?.id" id="lead-section-matching" class="matching-properties-section info-section">
         <div class="info-section-title">Matching property</div>
 
-        <div v-if="resolvingIntegration">Loading project from integration…</div>
-        <div v-else-if="integrationMissingProject">...</div>
-        <div v-else-if="!hasSearchCriteria">Add a project via the lead's integration...</div>
-        <div v-else-if="loading">Loading matches…</div>
+        <div v-if="loading">Loading matches…</div>
+        <div v-else-if="resolvingIntegration">Loading project from integration…</div>
         <div v-else-if="error">{{ error }}</div>
+        <div v-else-if="integrationMissingProject && !scoredMode && !listings.length">...</div>
+        <div v-else-if="!hasSearchCriteria && !scoredMode && !listings.length">Add budget, area or bedrooms to see matching homes.</div>
         <div v-else-if="!listings.length">No matching listings found.</div>
 
         <template v-else>
@@ -33,7 +33,12 @@
                         :key="item.id"
                         :href="`/property-details/${item.id}`"
                         class="matching-card matching-card-link"
-                        @click="openPropertyDetailsFromClick($event, item.id)"
+                        :class="{
+                            'matching-card--highlight': isHighlighted(item),
+                            'matching-card--new': item.showNew,
+                        }"
+                        :data-listing-id="item.id"
+                        @click.stop="onMatchingCardClick($event, item)"
                     >
                         <div class="matching-card-media">
                             <img
@@ -48,6 +53,8 @@
                                 <iconify-icon icon="lucide:image-off" width="18" height="18"></iconify-icon>
                             </div>
                             <div class="matching-card-badges">
+                                <span v-if="item.showNew" class="matching-badge matching-badge--new">New</span>
+                                <span v-if="item.match_score != null" class="matching-badge matching-badge--score">{{ item.match_score }}% match</span>
                                 <span v-if="statusBadge(item)" class="matching-badge">{{ statusBadge(item) }}</span>
                                 <span v-if="completionBadge(item)" class="matching-badge matching-badge--muted">{{ completionBadge(item) }}</span>
                             </div>
@@ -69,7 +76,7 @@
                                 </span>
                                 <span class="matching-meta-item">
                                     <iconify-icon icon="lucide:bed-double" width="13" height="13"></iconify-icon>
-                                    {{ formatBeds(item.number_of_bedrooms) }}
+                                    {{ formatBeds(item.number_of_bedrooms ?? item.bedrooms) }}
                                 </span>
                                 <span v-if="item.number_of_bathrooms != null" class="matching-meta-item">
                                     <iconify-icon icon="lucide:bath" width="13" height="13"></iconify-icon>
@@ -119,6 +126,46 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import api from '@/plugins/axios'
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal'
+import { leadViewHighlightListingId } from '@/composables/useLeadViewModal.js'
+
+function onMatchingCardClick(event, item) {
+    const id = Number(item?.id)
+    if (!id) return
+    // Opens the global property popup above the lead modal (z-index 15050).
+    openPropertyDetailsFromClick(event, id)
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Parse API dates (ISO preferred; also "Y-m-d H:i:s" or "M d, Y"). */
+function listingCreatedAtMs(item) {
+    const raw = item?.created_at_iso || item?.created_at || item?.createdAt
+    if (!raw) return 0
+    if (typeof raw === 'number' && Number.isFinite(raw)) return raw
+    const ts = new Date(raw).getTime()
+    return Number.isFinite(ts) ? ts : 0
+}
+
+/** "New" only when the listing itself was created within the last week. */
+function isListingCreatedThisWeek(item) {
+    const ts = listingCreatedAtMs(item)
+    if (!ts) return false
+    return Date.now() - ts <= WEEK_MS
+}
+
+/** Week-new homes first (newest among them), then highest match score. */
+function sortMatchingListings(rows) {
+    return [...rows].sort((a, b) => {
+        const aNew = !!a.showNew
+        const bNew = !!b.showNew
+        if (aNew !== bNew) return aNew ? -1 : 1
+        if (aNew && bNew) {
+            const byDate = listingCreatedAtMs(b) - listingCreatedAtMs(a)
+            if (byDate) return byDate
+        }
+        return (Number(b.match_score) || 0) - (Number(a.match_score) || 0)
+    })
+}
 
 const matchingScrollEl = ref(null)
 const canScrollPrev = ref(false)
@@ -233,6 +280,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('resize', updateScrollUi)
+    window.clearTimeout(highlightScrollTimer)
 })
 
 const props = defineProps({
@@ -247,6 +295,27 @@ const loading = ref(false)
 const error = ref('')
 const resolvedProjectId = ref(null)
 const resolvingIntegration = ref(false)
+/** True when cards come from /leads/{id}/matches (scored Match Studio rows). */
+const scoredMode = ref(false)
+let highlightScrollTimer = null
+
+function isHighlighted(item) {
+    const id = Number(leadViewHighlightListingId.value)
+    return id > 0 && Number(item?.id) === id
+}
+
+function scrollToHighlighted() {
+    const id = Number(leadViewHighlightListingId.value)
+    if (!id) return
+    nextTick(() => {
+        const el = matchingScrollEl.value
+        const card = el?.querySelector(`[data-listing-id="${id}"]`)
+        if (!card || !el) return
+        const left = card.offsetLeft - Math.max(0, (el.clientWidth - card.offsetWidth) / 2)
+        el.scrollTo({ left: Math.max(0, left), behavior: 'smooth' })
+        updateScrollUi()
+    })
+}
 
 /** Project id from the lead JSON (integration_project_id, nested integration, or lead.project_id). */
 function listingScopeProjectIdFromLead(lead) {
@@ -413,27 +482,120 @@ async function resolveIntegrationProject() {
     }
 }
 
+function mapScoredMatch(row) {
+    const listing = row?.listing || {}
+    const listingId = Number(listing.id)
+    const mapped = {
+        id: listingId,
+        match_id: row.id,
+        match_score: row.score != null ? Number(row.score) : null,
+        match_status: row.status,
+        match_bucket: row.bucket,
+        main_image: listing.main_image,
+        title: listing.title,
+        reference_number: listing.reference_number,
+        area: listing.area,
+        price: listing.price,
+        property_type: listing.property_type,
+        number_of_bedrooms: listing.bedrooms,
+        bedrooms: listing.bedrooms,
+        size_sqft: listing.size_sqft,
+        listing_status: listing.listing_status,
+        completion_status: listing.completion_status,
+        created_at: listing.created_at,
+        project: listing.title ? { title: listing.title } : null,
+        fits: row.fits || [],
+        gaps: row.gaps || [],
+    }
+    mapped.showNew = isListingCreatedThisWeek(mapped)
+    return mapped
+}
+
+async function fetchScoredMatchRows() {
+    if (!props.lead?.id) return []
+    try {
+        const res = await api.get(`/leads/${props.lead.id}/matches`)
+        const rows = res.data?.data?.matches
+        if (!Array.isArray(rows) || !rows.length) return []
+        return rows.map(mapScoredMatch).filter((item) => item.id)
+    } catch (e) {
+        if (e.response?.status !== 403 && e.response?.status !== 404) {
+            console.error('Lead scored matches', e)
+        }
+        return []
+    }
+}
+
+async function fetchSearchMatchRows() {
+    if (!hasSearchCriteria.value) return []
+    try {
+        const params = buildApiParams()
+        const res = await api.get('/listings/matching/?active=1', { params })
+        const data = res.data?.data
+        const rows = Array.isArray(data) ? data : []
+        return rows.map((item) => ({
+            ...item,
+            id: Number(item.id),
+            showNew: isListingCreatedThisWeek(item),
+            match_score: item.match_score != null ? Number(item.match_score) : null,
+        })).filter((item) => item.id)
+    } catch (e) {
+        console.error('Matching search listings', e)
+        return []
+    }
+}
+
+/** Prefer scored rows; fill gaps from project/search so brand-new listings still appear. */
+function mergeMatchingRows(scored, searched) {
+    const byId = new Map()
+    for (const row of scored) byId.set(Number(row.id), { ...row, showNew: isListingCreatedThisWeek(row) })
+    for (const row of searched) {
+        const id = Number(row.id)
+        if (!id) continue
+        if (byId.has(id)) {
+            const existing = byId.get(id)
+            byId.set(id, {
+                ...existing,
+                created_at: existing.created_at || row.created_at,
+                showNew: isListingCreatedThisWeek({ ...existing, created_at: existing.created_at || row.created_at }),
+            })
+            continue
+        }
+        byId.set(id, { ...row, showNew: isListingCreatedThisWeek(row) })
+    }
+    return sortMatchingListings([...byId.values()]).slice(0, 24)
+}
+
 async function fetchMatches() {
-    if (!props.lead?.id || !hasSearchCriteria.value) {
+    if (!props.lead?.id) {
         listings.value = []
+        scoredMode.value = false
         return
     }
     loading.value = true
     error.value = ''
     try {
-        const params = buildApiParams()
-        const res = await api.get('/listings/matching/?active=1', { params })
-        const data = res.data?.data
-        listings.value = Array.isArray(data) ? data.slice(0, 24) : []
+        const [scored, searched] = await Promise.all([
+            fetchScoredMatchRows(),
+            fetchSearchMatchRows(),
+        ])
+        listings.value = mergeMatchingRows(scored, searched)
+        scoredMode.value = scored.length > 0
+        if (!listings.value.length && !hasSearchCriteria.value) {
+            error.value = ''
+        }
     } catch (e) {
         console.error('Matching properties', e)
         listings.value = []
+        scoredMode.value = false
         error.value = e.response?.status === 403
             ? 'You do not have permission to browse listings.'
             : 'Could not load matching listings.'
     } finally {
         loading.value = false
         bindScrollResize()
+        window.clearTimeout(highlightScrollTimer)
+        highlightScrollTimer = window.setTimeout(scrollToHighlighted, 80)
     }
 }
 
@@ -454,6 +616,7 @@ watch(
 
 watch(
     () => [
+        props.lead?.id,
         effectiveProjectId.value,
         resolvingIntegration.value,
         props.lead?.area_id,
@@ -463,13 +626,18 @@ watch(
         props.lead?.budget_to,
         props.lead?.budget,
         props.lead?.integration_id,
-         props.lead?.lead_type,
+        props.lead?.lead_type,
     ],
     () => fetchMatches(),
     { immediate: true, deep: true }
 )
 
 watch(listings, () => bindScrollResize(), { deep: true })
+
+watch(leadViewHighlightListingId, (id) => {
+    if (!id || !listings.value.length) return
+    scrollToHighlighted()
+})
 
 function formatPrice(n) {
     if (n == null || n === '') return '—'
@@ -604,9 +772,19 @@ function onImgError(e) {
     cursor: pointer;
     color: #0f172a;
     background: transparent;
+    /* Only the circle captures clicks — not a wide strip over the cards. */
+    pointer-events: auto;
     transition:
         transform 0.2s cubic-bezier(0.34, 1.2, 0.64, 1),
         opacity 0.2s ease;
+}
+
+.matching-card-link {
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    text-decoration: none;
+    color: inherit;
 }
 
 .matching-nav__inner {
@@ -823,6 +1001,30 @@ function onImgError(e) {
 
 .matching-badge--muted {
     background: rgba(15, 23, 42, 0.55);
+}
+
+.matching-badge--new {
+    background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%);
+    box-shadow: 0 0 0 2px rgba(143, 90, 163, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.matching-badge--score {
+    background: rgba(33, 150, 83, 0.92);
+}
+
+.matching-card--highlight {
+    border-color: #8f5aa3 !important;
+    box-shadow: 0 0 0 2px rgba(143, 90, 163, 0.45), 0 10px 24px rgba(115, 62, 135, 0.18);
+}
+
+.matching-card--new .matching-card-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 2px rgba(143, 90, 163, 0.55);
 }
 
 .matching-card-body {

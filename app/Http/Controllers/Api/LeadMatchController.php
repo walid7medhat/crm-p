@@ -92,7 +92,24 @@ class LeadMatchController extends Controller
             ->filter(fn ($row) => $row->listing);
 
         $open = $rows->filter(fn ($row) => in_array($row->status, [LeadListingMatch::STATUS_NEW, LeadListingMatch::STATUS_SHORTLISTED], true)
-            && $row->listing->isActiveUnit());
+            && $row->listing->isActiveUnit())
+            // Week-new listings first, then best score — so a just-created home surfaces at the front.
+            ->sort(function (LeadListingMatch $a, LeadListingMatch $b) {
+                $weekAgo = now()->subWeek();
+                $aCreated = $a->listing?->created_at;
+                $bCreated = $b->listing?->created_at;
+                $aNew = $aCreated && $aCreated->greaterThanOrEqualTo($weekAgo);
+                $bNew = $bCreated && $bCreated->greaterThanOrEqualTo($weekAgo);
+                if ($aNew !== $bNew) {
+                    return $aNew ? -1 : 1;
+                }
+                if ($aNew && $bNew && $aCreated && $bCreated && ! $aCreated->equalTo($bCreated)) {
+                    return $bCreated <=> $aCreated;
+                }
+
+                return ((int) $b->score) <=> ((int) $a->score);
+            })
+            ->values();
         $history = $rows->filter(fn ($row) => in_array($row->status, [LeadListingMatch::STATUS_SENT, LeadListingMatch::STATUS_SKIPPED], true))
             ->sortByDesc(fn ($row) => $row->sent_at ?? $row->decided_at)
             ->take(20);

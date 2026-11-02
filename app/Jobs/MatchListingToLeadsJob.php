@@ -8,6 +8,7 @@ use App\Services\Matching\MatchNotifier;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 
 /** A listing went live or got cheaper: find the clients it fits and tell their agents. */
 class MatchListingToLeadsJob implements ShouldQueue, ShouldBeUnique
@@ -35,6 +36,10 @@ class MatchListingToLeadsJob implements ShouldQueue, ShouldBeUnique
         }
 
         $rows = $matcher->matchListing($listing, $this->priceDropped);
+        // Let the next lead-view match load pick up this listing immediately.
+        foreach ($rows->pluck('lead_id')->unique()->filter() as $leadId) {
+            Cache::forget('lead-matches:fresh:'.(int) $leadId);
+        }
         $notifier->listingMatches($listing, $rows, $this->priceDropped);
     }
 }

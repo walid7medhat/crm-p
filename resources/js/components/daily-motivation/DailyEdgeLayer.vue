@@ -631,7 +631,8 @@ onUnmounted(() => {
   background: #f3eaf6;
 }
 
-.edge-pill {
+.edge-pill,
+.edge-pill--day {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -648,10 +649,6 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-}
-
-.edge-pill--day {
-  background: #4c1d6e !important;
 }
 
 .edge-pill__mark {

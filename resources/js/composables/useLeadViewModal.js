@@ -11,6 +11,8 @@ export const leadViewModalSeed = ref(null)
 export const leadViewModalDisableStageChange = ref(false)
 /** Section inside the lead modal to reveal after open: activity, requirements, matching, create_deal. */
 export const leadViewOpenSection = ref(null)
+/** Listing to highlight in the matching carousel (e.g. from a match notification "Show"). */
+export const leadViewHighlightListingId = ref(null)
 /** Bumped on every openLeadView() — lets the modal cancel a close that a new click overtook. */
 export const leadViewOpenSeq = ref(0)
 const leadUpdatedListeners = new Set()
@@ -31,6 +33,7 @@ export function useLeadViewModal() {
     leadViewModalSeed,
     leadViewModalDisableStageChange,
     leadViewOpenSection,
+    leadViewHighlightListingId,
     openLeadView,
     closeLeadView,
     onLeadViewUpdated,
@@ -53,6 +56,7 @@ export function preloadLeadViewModal() {
  * @param {object} [options]
  * @param {boolean} [options.disableStageChange] Lead Pool leads shouldn't be movable from the modal
  * @param {string|null} [options.focus] Activity, requirements, matching, or create_deal
+ * @param {number|string|null} [options.highlightListingId] Scroll/highlight this listing in matching
  */
 export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
@@ -61,6 +65,8 @@ export function openLeadView(leadId, leadData = null, options = {}) {
   preloadLeadViewModal()
   leadViewOpenSeq.value++
   leadViewOpenSection.value = options.focus || null
+  const highlight = Number(options.highlightListingId)
+  leadViewHighlightListingId.value = Number.isFinite(highlight) && highlight > 0 ? highlight : null
 
   // The ?lead= URL sync (and page-mount checks) call this again for a lead that is
   // already open — only the first open counts as a view.
@@ -95,6 +101,8 @@ export function closeLeadViewWithUrl() {
   showLeadViewModal.value = false
   leadViewModalSeed.value = null
   leadViewModalDisableStageChange.value = false
+  leadViewOpenSection.value = null
+  leadViewHighlightListingId.value = null
   clearLeadQuery()
 }
 
@@ -102,6 +110,8 @@ export function closeLeadView() {
   showLeadViewModal.value = false
   leadViewModalSeed.value = null
   leadViewModalDisableStageChange.value = false
+  leadViewOpenSection.value = null
+  leadViewHighlightListingId.value = null
   clearLeadQuery()
 }
 
@@ -150,7 +160,22 @@ export function openLeadFromNotification(notification) {
   const leadId = leadIdFromNotification(notification)
   if (!leadId) return false
   // A notification can ask for a section of the lead (activity, requirements…).
-  const focus = notification?.data?.focus ?? notification?.focus ?? null
-  openLeadView(leadId, null, focus ? { focus } : {})
+  const data = notification?.data || notification || {}
+  const focus = data.focus ?? null
+  const highlightListingId = data.listing_id ?? data.listing_match_id ?? null
+  const options = {}
+  if (focus) options.focus = focus
+  if (highlightListingId) options.highlightListingId = highlightListingId
+  openLeadView(leadId, null, options)
   return true
+}
+
+/** Open a lead scrolled to matching homes (replaces Match Studio). */
+export function openLeadMatching(leadId, { highlightListingId = null, leadData = null } = {}) {
+  const id = Number(leadId)
+  if (!id) return
+  openLeadView(id, leadData, {
+    focus: 'matching',
+    highlightListingId: highlightListingId || null,
+  })
 }

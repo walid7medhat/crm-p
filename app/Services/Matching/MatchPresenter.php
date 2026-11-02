@@ -51,6 +51,7 @@ class MatchPresenter
             'listing_status' => $listing->listing_status,
             'completion_status' => $listing->completion_status,
             'main_image' => $image ? route('image.watermark', ['path' => $image]) : null,
+            'created_at' => $listing->created_at?->toIso8601String(),
         ];
     }
 

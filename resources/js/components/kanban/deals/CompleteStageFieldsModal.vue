@@ -178,6 +178,7 @@
                       <label class="form-label-custom">Buyer Nationality <span v-if="isRequiredField('buyer_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.buyer_nationality" 
                           :reduce="item => item.text"
                           :options="nationalityOptions"
@@ -216,6 +217,7 @@
                       <label class="form-label-custom">Buyer Residency Status <span v-if="isRequiredField('buyer_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.buyer_residency_status"
                         :options="buyerResidencyOptions"
                         :reduce="item => item.value" 
@@ -237,6 +239,7 @@
                       <label class="form-label-custom">Buyer Country Of Residence <span v-if="isRequiredField('buyer_country')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.buyer_country" 
                         :options="countryOptions" 
                         :reduce="item => item.value" 
@@ -257,6 +260,7 @@
                       <label class="form-label-custom">Buyer City Of Residence <span v-if="isRequiredField('buyer_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.buyer_city" 
                         :options="buyerCityOptions" 
                         :reduce="item => item.value" 
@@ -288,6 +292,7 @@
                       <label class="form-label-custom">Buyer Language <span v-if="isRequiredField('buyer_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         :model-value="normalizeLanguageSelection(formData.buyer_language)"
                         @update:modelValue="(v) => { formData.buyer_language = normalizeLanguageSelection(v) }"
                         :options="languageOptions" 
@@ -407,6 +412,7 @@
                       <label class="form-label-custom">Nationality <span v-if="isRequiredField('seller_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.seller_nationality" 
                           :reduce="item => item.text"
                           :options="nationalityOptions"
@@ -445,6 +451,7 @@
                       <label class="form-label-custom">Residency Status <span v-if="isRequiredField('seller_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.seller_residency_status" 
                         :options="residencyOptions" 
                         :reduce="item => item.value" 
@@ -465,6 +472,7 @@
                       <label class="form-label-custom">Country Of Residence</label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.seller_country" 
                         :options="countryOptions" 
                         :reduce="item => item.value" 
@@ -485,6 +493,7 @@
                       <label class="form-label-custom">City Of Residence <span v-if="isRequiredField('seller_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.seller_city" 
                         :options="sellerCityOptions" 
                         :reduce="item => item.value" 
@@ -505,6 +514,7 @@
                       <label class="form-label-custom">Language <span v-if="isRequiredField('seller_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.seller_language" 
                         :options="languageOptions" 
                         :reduce="item => item.value" 
@@ -608,6 +618,7 @@
                       <label class="form-label-custom">Nationality <span v-if="isRequiredField('tenant_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.tenant_nationality" 
                           :reduce="item => item.text"
                         :options="nationalityOptions"
@@ -646,6 +657,7 @@
                       <label class="form-label-custom">Residency Status <span v-if="isRequiredField('tenant_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.tenant_residency_status" 
                         :options="residencyOptions" 
                         :reduce="item => item.value" 
@@ -666,6 +678,7 @@
                       <label class="form-label-custom">Country Of Residence</label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.tenant_country" 
                         :options="countryOptions" 
                         :reduce="item => item.value" 
@@ -686,6 +699,7 @@
                       <label class="form-label-custom">City Of Residence <span v-if="isRequiredField('tenant_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.tenant_city" 
                         :options="tenantCityOptions" 
                         :reduce="item => item.value" 
@@ -706,6 +720,7 @@
                       <label class="form-label-custom">Language <span v-if="isRequiredField('tenant_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.tenant_language" 
                         :options="languageOptions" 
                         :reduce="item => item.value" 
@@ -821,6 +836,7 @@
                       <label class="form-label-custom">Nationality <span v-if="isRequiredField('landlord_nationality')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.landlord_nationality" 
                           :reduce="item => item.text"
                         :options="nationalityOptions"
@@ -859,6 +875,7 @@
                       <label class="form-label-custom">Residency Status <span v-if="isRequiredField('landlord_residency_status')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.landlord_residency_status" 
                         :options="residencyOptions" 
                         :reduce="item => item.value" 
@@ -879,6 +896,7 @@
                       <label class="form-label-custom">Country Of Residence</label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.landlord_country" 
                         :options="countryOptions" 
                         :reduce="item => item.value" 
@@ -899,6 +917,7 @@
                       <label class="form-label-custom">City Of Residence <span v-if="isRequiredField('landlord_city')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.landlord_city" 
                         :options="landlordCityOptions" 
                         :reduce="item => item.value" 
@@ -919,6 +938,7 @@
                       <label class="form-label-custom">Language <span v-if="isRequiredField('landlord_language')" class="text-danger">*</span></label>
                       <v-select
                         append-to-body 
+                        :calculate-position="calculateDropdownPosition"
                         v-model="formData.landlord_language" 
                         :options="languageOptions" 
                         :reduce="item => item.value" 
@@ -1024,6 +1044,8 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('area_id', property)">
                                     <label class="form-label-custom">Property Address <span v-if="isPropertyFieldRequired('area_id', propIndex)" class="text-danger">*</span></label>
                                     <v-select
+                                        append-to-body
+                                        :calculate-position="calculateDropdownPosition"
                                         :model-value="property.area_id"
                                         @update:modelValue="(val) => onPropertyAreaSelected(val, propIndex)"
                                         @search="onSearchAreas"
@@ -1056,6 +1078,8 @@
                                         <span v-if="isListingRequiredForProperty()" class="text-danger">*</span>
                                     </label>
                                     <v-select
+                                        append-to-body
+                                        :calculate-position="calculateDropdownPosition"
                                         :model-value="property.listing_id"
                                         @update:modelValue="(val) => {
                                             const list = availableListingsByProp[propIndex] || []
@@ -1140,6 +1164,8 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('property_type_id', property)">
                                     <label class="form-label-custom">Property Type <span v-if="isPropertyFieldRequired('property_type_id', propIndex)" class="text-danger">*</span></label>
                                     <v-select
+                                        append-to-body
+                                        :calculate-position="calculateDropdownPosition"
                                         :model-value="property.property_type_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'property_type_id', val)"
                                         :options="propertyTypes"
@@ -1160,6 +1186,8 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('bedrooms', property)">
                                     <label class="form-label-custom">Bedrooms <span v-if="isPropertyFieldRequired('bedrooms', propIndex)" class="text-danger">*</span></label>
                                     <v-select
+                                        append-to-body
+                                        :calculate-position="calculateDropdownPosition"
                                         :model-value="property.bedrooms"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'bedrooms', val)"
                                         :options="bedroomOptions"
@@ -1242,6 +1270,8 @@
                                 <div class="col-md-6" v-if="shouldShowPropertyField('developer_id', property)">
                                     <label class="form-label-custom">Developer <span v-if="isPropertyFieldRequired('developer_id', propIndex)" class="text-danger">*</span></label>
                                     <v-select
+                                        append-to-body
+                                        :calculate-position="calculateDropdownPosition"
                                         :model-value="property.developer_id"
                                         @update:modelValue="(val) => updateProperty(propIndex, 'developer_id', val)"
                                         :options="developers"
@@ -5565,6 +5595,24 @@ watch([propertyTypesLoaded, developersLoaded, areasLoaded], () => {
     isLoadingPropertyData.value = false
   }
 }, { deep: true })
+
+
+const calculateDropdownPosition = (dropdownList, component, { width }) => {
+  const toggle = component?.$refs?.toggle
+  if (!toggle) return
+  const rect = toggle.getBoundingClientRect()
+  const menuHeight = dropdownList.offsetHeight || 260
+  const spaceBelow = window.innerHeight - rect.bottom
+  const openUp = spaceBelow < menuHeight + 12 && rect.top > spaceBelow
+  dropdownList.style.position = 'fixed'
+  dropdownList.style.width = width
+  dropdownList.style.left = `${Math.round(rect.left)}px`
+  dropdownList.style.top = openUp
+    ? `${Math.round(rect.top - menuHeight - 4)}px`
+    : `${Math.round(rect.bottom + 4)}px`
+  // Above .complete-fields-overlay (30000)
+  dropdownList.style.zIndex = '46200'
+}
 
 // Dropdown z-index helpers only — no network I/O while the modal stays closed on the board.
 onMounted(() => {
