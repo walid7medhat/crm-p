@@ -5156,9 +5156,13 @@ function onLeadCardClick(task, column, event) {
         mobileLastTap = { id, at: now }
     }
     clearTimeout(leadCardClickTimer)
-    // Desktop: open immediately (dblclick clears this timer). Mobile+delete: short
-    // wait only to distinguish double-tap delete from single-tap open.
-    const openDelay = kanbanIsMobile.value && canDeleteLeads.value ? 280 : 0
+    // Wait briefly only where a double click/tap does something else (dblclick clears this
+    // timer): mobile+delete (double-tap delete) and desktop admins (dblclick selects). Opening
+    // instantly there lets the view modal cover the card before the second click lands.
+    // Everyone else opens immediately.
+    const openDelay = kanbanIsMobile.value
+        ? (canDeleteLeads.value ? 280 : 0)
+        : (isAdminOrSuperAdmin.value ? 220 : 0)
     if (openDelay === 0) {
         viewLead(task)
         return
