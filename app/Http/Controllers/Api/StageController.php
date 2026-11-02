@@ -317,7 +317,8 @@ class StageController extends Controller
         // Temporary benchmark switch — see config/lead_scoring.php → kanban_search.skip_ranking
         $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
         // Super-admin "Duplicates" toggle — same soft board path as text search (skip exact COUNT).
-        $isDuplicateFilter = $request->boolean('has_duplicate') && $user->hasRole('super_admin');
+        $isDuplicateFilter = ($request->boolean('has_duplicate') || $request->boolean('has_blacklist'))
+            && $user->hasRole('super_admin');
         $skipHeavyBoardAggregates = $isTextSearch || $skipSearchRanking || $isDuplicateFilter;
 
         // ================= analytics counts (chip totals, pre-heat-filter) =================
@@ -560,7 +561,12 @@ class StageController extends Controller
         }
 
         // Duplicate badge: one exact-phone lookup for all leads on the board (cheap, indexed).
-        KanbanLeadCardResource::setKanbanMeta([], [], KanbanLeadCardResource::duplicateIdsByLeadId($allLeadsForMeta));
+        // Blacklisted label: one indexed lookup of blacklisted leads by phone digits / email.
+        KanbanLeadCardResource::setKanbanMeta(
+            [],
+            $this->kanbanServiceDuplicateFlags($allLeadsForMeta),
+            KanbanLeadCardResource::duplicateIdsByLeadId($allLeadsForMeta)
+        );
         KanbanLeadCardResource::setEngagementUsersByLeadId(
             KanbanLeadCardResource::engagementUsersForLeads($allLeadsForMeta)
         );
@@ -1456,6 +1462,10 @@ public function getOffices()
         if ($request->boolean('has_duplicate') && auth()->user()?->hasRole('super_admin')) {
             $query->hasDuplicates();
         }
+        // "Blacklisted" toggle — leads carrying the Blacklisted label (see Lead::scopeHasBlacklistDuplicate).
+        if ($request->boolean('has_blacklist') && auth()->user()?->hasRole('super_admin')) {
+            $query->hasBlacklistDuplicate();
+        }
     }
 
     /**
@@ -1490,43 +1500,7 @@ public function getOffices()
      */
     private function kanbanServiceDuplicateFlags($leads): array
     {
-        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
-        $emails = $leads->pluck('email')->filter()->unique()->values()->all();
-
-        if ($phones === [] && $emails === []) {
-            return [];
-        }
-
-        $blacklistQuery = Lead::query()
-            ->where('status_lead', 'blacklist')
-            ->where(function ($q) use ($phones, $emails) {
-                if ($phones !== []) {
-                    $q->whereIn('work_phone', $phones);
-                }
-                if ($emails !== []) {
-                    $q->orWhereIn('email', $emails);
-                }
-            });
-
-        $blacklistPhones = [];
-        $blacklistEmails = [];
-        foreach ($blacklistQuery->get(['id', 'work_phone', 'email']) as $row) {
-            if ($row->work_phone) {
-                $blacklistPhones[$row->work_phone] = true;
-            }
-            if ($row->email) {
-                $blacklistEmails[$row->email] = true;
-            }
-        }
-
-        $flags = [];
-        foreach ($leads as $lead) {
-            $flags[$lead->id] =
-                ($lead->work_phone && isset($blacklistPhones[$lead->work_phone]))
-                || ($lead->email && isset($blacklistEmails[$lead->email]));
-        }
-
-        return $flags;
+        return Lead::blacklistDuplicateFlags($leads);
     }
 
     /**

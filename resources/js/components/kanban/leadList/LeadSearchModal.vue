@@ -2757,6 +2757,7 @@ const queryToFormKeys = {
     lead_type: 'leadType',
 
     has_duplicate: 'hasDuplicate',
+    has_blacklist: 'hasBlacklist',
 
     property_status: 'propertyStatus',
 
@@ -2846,6 +2847,7 @@ function syncFormFromQuery(query) {
         office: [],
         leadType: '',
         hasDuplicate: '',
+        hasBlacklist: '',
         propertyStatus: '',
         budgetFrom: '',
         budgetTo: '',
@@ -3172,6 +3174,7 @@ const form = ref({
     leadType: '',
 
     hasDuplicate: '',
+    hasBlacklist: '',
 
     propertyStatus: '',
 
@@ -5583,6 +5586,7 @@ async function applySearch(options = {}) {
         lead_type: form.value.leadType || undefined,
 
         has_duplicate: user.value?.roles?.includes('super_admin') && form.value.hasDuplicate ? '1' : undefined,
+        has_blacklist: user.value?.roles?.includes('super_admin') && form.value.hasBlacklist ? '1' : undefined,
 
         property_status: form.value.propertyStatus || undefined,
 
@@ -6203,6 +6207,7 @@ function resetFormValues() {
          leadType: '',
 
         hasDuplicate: '',
+        hasBlacklist: '',
 
         propertyStatus: '',
 

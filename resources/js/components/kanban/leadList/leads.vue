@@ -2303,17 +2303,21 @@ function restoreBoardFromSearchSnapshot() {
 
 /** Super-admin Duplicates toggle — hide non-dups on the loaded board immediately. */
 const liveDuplicatesOnly = ref(false)
+/** Super-admin Blacklisted toggle — same instant hide, on has_service_duplicate. */
+const liveBlacklistOnly = ref(false)
 
 function syncLiveTextFromQuery(q) {
     if (!q || typeof q !== 'object') {
         liveTextSearch.value = ''
         liveDuplicatesOnly.value = false
+        liveBlacklistOnly.value = false
         return
     }
     liveTextSearch.value = String(
         q.search || q.lead_name || q.first_name || q.work_phone || q.email || ''
     ).trim()
     liveDuplicatesOnly.value = !!(q.has_duplicate)
+    liveBlacklistOnly.value = !!(q.has_blacklist)
 }
 
 function onKanbanLeadLiveFilter(event) {
@@ -2322,6 +2326,9 @@ function onKanbanLeadLiveFilter(event) {
     if (Object.prototype.hasOwnProperty.call(event?.detail || {}, 'duplicatesOnly')) {
         liveDuplicatesOnly.value = !!event.detail.duplicatesOnly
     }
+    if (Object.prototype.hasOwnProperty.call(event?.detail || {}, 'blacklistOnly')) {
+        liveBlacklistOnly.value = !!event.detail.blacklistOnly
+    }
 }
 
 function leadMatchesDuplicatesOnly(lead) {
@@ -2329,8 +2336,20 @@ function leadMatchesDuplicatesOnly(lead) {
     return Number(lead?.duplicate_no) > 0 || !!lead?.has_service_duplicate
 }
 
+function leadMatchesBlacklistOnly(lead) {
+    return !liveBlacklistOnly.value || !!lead?.has_service_duplicate
+}
+
 function leadCardIsVisible(lead) {
-    return leadMatchesShortcutFilter(lead) && leadMatchesLiveText(lead) && leadMatchesDuplicatesOnly(lead)
+    return leadMatchesShortcutFilter(lead) && leadMatchesLiveText(lead)
+        && leadMatchesDuplicatesOnly(lead) && leadMatchesBlacklistOnly(lead)
+}
+
+/** Only text search and/or the navbar toggles: cards stay visible (live filter), no blocking overlay. */
+function isSoftLiveFilter(params) {
+    const keys = Object.keys(params || {})
+    return keys.length > 0
+        && keys.every((key) => ['search', 'has_duplicate', 'has_blacklist'].includes(key))
 }
 
 function leadMatchesLiveText(lead) {
@@ -2775,6 +2794,8 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.heat != null && q.heat !== '' && { heat: q.heat }),
         // Super admin "Duplicates" toggle (navbar); the API ignores it for other roles.
         ...(q.has_duplicate && { has_duplicate: 1 }),
+        // Super admin "Blacklisted" toggle (navbar); same — ignored for other roles.
+        ...(q.has_blacklist && { has_blacklist: 1 }),
     }
 
     if (q.office_branch != null && q.office_branch !== '') {
@@ -2817,11 +2838,7 @@ const fetchLeads = async (immediate = false, queryOverride = undefined, options 
         (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length > 0) ||
         !!activeShortcutFilter.value
     // Text / duplicates-only: keep cards visible (live filter); skip blocking overlay flag.
-    const softLiveFilter = !!(
-        appliedSearchParams.value &&
-        Object.keys(appliedSearchParams.value).length === 1 &&
-        (appliedSearchParams.value.search || appliedSearchParams.value.has_duplicate)
-    )
+    const softLiveFilter = isSoftLiveFilter(appliedSearchParams.value)
     if (!silent && hasSearchCriteria && !softLiveFilter) {
         isSearching.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
@@ -2961,11 +2978,7 @@ const executeFetchLeads = async (options = {}) => {
         loading.value = true
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
     } else if (!silent && hasSearchCriteria) {
-        const softLive = !!(
-            appliedSearchParams.value &&
-            Object.keys(appliedSearchParams.value).length === 1 &&
-            (appliedSearchParams.value.search || appliedSearchParams.value.has_duplicate)
-        )
+        const softLive = isSoftLiveFilter(appliedSearchParams.value)
         if (!softLive) {
             isSearching.value = true
             window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: true } }))
@@ -2976,7 +2989,7 @@ const executeFetchLeads = async (options = {}) => {
 
         const params = {
             // Smaller first page on free-text / duplicates → faster TTFB; load-more still available.
-            per_page: ((q.search && String(q.search).trim()) || q.has_duplicate)
+            per_page: ((q.search && String(q.search).trim()) || q.has_duplicate || q.has_blacklist)
                 ? Math.min(Number(leadsPerPage.value) || 15, 12)
                 : leadsPerPage.value,
             ...buildLeadSearchApiParams(q),

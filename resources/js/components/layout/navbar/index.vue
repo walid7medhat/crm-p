@@ -210,6 +210,17 @@
             >
               <iconify-icon icon="lucide:copy" aria-hidden="true" />
             </button>
+            <button
+              v-if="showDuplicatesToggle"
+              type="button"
+              class="dup-only-toggle dup-only-toggle--mobile dup-only-toggle--blacklist"
+              :class="{ 'is-active': blacklistOnly }"
+              :aria-pressed="blacklistOnly ? 'true' : 'false'"
+              aria-label="Show only blacklisted leads"
+              @click.stop="toggleBlacklistOnly"
+            >
+              <iconify-icon icon="lucide:ban" aria-hidden="true" />
+            </button>
             </div>
             <div
               v-if="resolvedActiveFilters.length"
@@ -560,6 +571,20 @@
             <iconify-icon icon="lucide:copy" aria-hidden="true" />
             <span>Duplicates</span>
             <iconify-icon v-if="duplicatesOnly" icon="lucide:x" class="dup-only-toggle__x" aria-hidden="true" />
+        </button>
+
+        <!-- Super admin: show only leads with the Blacklisted label (match a blacklisted lead) -->
+        <button
+            v-if="showDuplicatesToggle"
+            type="button"
+            class="dup-only-toggle dup-only-toggle--blacklist"
+            :class="{ 'is-active': blacklistOnly }"
+            :aria-pressed="blacklistOnly ? 'true' : 'false'"
+            @click.stop="toggleBlacklistOnly"
+        >
+            <iconify-icon icon="lucide:ban" aria-hidden="true" />
+            <span>Blacklisted</span>
+            <iconify-icon v-if="blacklistOnly" icon="lucide:x" class="dup-only-toggle__x" aria-hidden="true" />
         </button>
 
         <!-- Create New Button -->
@@ -1841,15 +1866,20 @@ const showDuplicatesToggle = computed(() =>
     isSuperAdmin.value && canUseLeadSearchModal.value && activeKanbanTab.value !== 'deals'
 );
 const duplicatesOnly = computed(() => !!lastQuery.value?.has_duplicate);
+// Same toggle for the "Blacklisted" label (has_blacklist, super admin only on the API too).
+const blacklistOnly = computed(() => !!lastQuery.value?.has_blacklist);
 
-const toggleDuplicatesOnly = () => {
+const toggleDuplicatesOnly = () => toggleQueryFlag('has_duplicate', 'duplicatesOnly');
+const toggleBlacklistOnly = () => toggleQueryFlag('has_blacklist', 'blacklistOnly');
+
+const toggleQueryFlag = (key, liveKey) => {
     const nextQuery = lastQuery.value ? { ...lastQuery.value } : {};
-    const turningOn = !nextQuery.has_duplicate;
+    const turningOn = !nextQuery[key];
 
     if (turningOn) {
-        nextQuery.has_duplicate = '1';
+        nextQuery[key] = '1';
     } else {
-        delete nextQuery.has_duplicate;
+        delete nextQuery[key];
     }
 
     lastQuery.value = Object.keys(nextQuery).length ? nextQuery : null;
@@ -1860,11 +1890,11 @@ const toggleDuplicatesOnly = () => {
         activeFilter.value = { ...defaultFilter };
     }
 
-    // Instant: filter loaded cards by duplicate_no while the board API catches up.
+    // Instant: filter loaded cards (duplicate_no / has_service_duplicate) while the board API catches up.
     window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', {
         detail: {
             search: String(search.value || '').trim(),
-            duplicatesOnly: turningOn,
+            [liveKey]: turningOn,
         },
     }));
     if (!turningOn) {
@@ -5969,6 +5999,21 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 .dup-only-toggle:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* Blacklisted toggle — same shape, the card label's red */
+.dup-only-toggle--blacklist {
+  color: #b66262;
+}
+
+.dup-only-toggle--blacklist:hover {
+  border-color: #b66262;
+}
+
+.dup-only-toggle--blacklist.is-active {
+  background: linear-gradient(135deg, #be6666 0%, #b66262 100%);
+  border-color: #b66262;
+  color: #ffffff;
 }
 
 .dup-only-toggle__x {

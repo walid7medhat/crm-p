@@ -169,6 +169,9 @@ class LeadController extends Controller
                 if ($request->boolean('has_duplicate') && auth()->user()?->hasRole('super_admin')) {
                     $leadsQuery->hasDuplicates();
                 }
+                if ($request->boolean('has_blacklist') && auth()->user()?->hasRole('super_admin')) {
+                    $leadsQuery->hasBlacklistDuplicate();
+                }
                 if ($request->filled('source_information')) {
                     $leadsQuery->where('source_information', 'like', "%{$request->source_information}%");
                 }
@@ -3040,44 +3043,7 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
      */
     private function leadPoolServiceDuplicateFlags($leads): array
     {
-        $phones = $leads->pluck('work_phone')->filter()->unique()->values()->all();
-        $emails = $leads->pluck('email')->filter()->unique()->values()->all();
-
-        if ($phones === [] && $emails === []) {
-            return [];
-        }
-
-        $blacklistQuery = Lead::query()
-            ->where('status_lead', 'blacklist')
-            ->where(function ($q) use ($phones, $emails) {
-                if ($phones !== []) {
-                    $q->whereIn('work_phone', $phones);
-                }
-                if ($emails !== []) {
-                    $method = $phones !== [] ? 'orWhereIn' : 'whereIn';
-                    $q->{$method}('email', $emails);
-                }
-            });
-
-        $blacklistPhones = [];
-        $blacklistEmails = [];
-        foreach ($blacklistQuery->get(['id', 'work_phone', 'email']) as $row) {
-            if ($row->work_phone) {
-                $blacklistPhones[$row->work_phone] = true;
-            }
-            if ($row->email) {
-                $blacklistEmails[$row->email] = true;
-            }
-        }
-
-        $flags = [];
-        foreach ($leads as $lead) {
-            $flags[$lead->id] =
-                ($lead->work_phone && isset($blacklistPhones[$lead->work_phone]))
-                || ($lead->email && isset($blacklistEmails[$lead->email]));
-        }
-
-        return $flags;
+        return Lead::blacklistDuplicateFlags($leads);
     }
 
 public function export()

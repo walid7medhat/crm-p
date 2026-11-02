@@ -97,7 +97,7 @@
             <LeadPoolCard
                 v-for="lead in leads"
                 :key="lead.id"
-                v-memo="[lead.id, selection.isSelected(lead.id), selectMode, lead.merged_count]"
+                v-memo="[lead.id, selection.isSelected(lead.id), selectMode, lead.merged_count, lead.has_service_duplicate]"
                 :selected="selection.isSelected(lead.id)"
                 :select-mode="selectMode"
                 @toggle="(e) => selection.handleCardClick(lead.id, e)"
@@ -105,10 +105,11 @@
             >
                 <div class="kanban-card bg-white p-12 radius-12 cursor-pointer lead-card">
                     <div class="task-header d-flex align-items-center justify-content-between gap-2 mb-12">
-                        <p class="task-title flex-grow-1 mb-0">{{ lead.lead_name || lead.name || 'Untitled Lead' }}</p>
-                        <span 
+                        <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate" :title="lead.lead_name || lead.name">{{ lead.lead_name || lead.name || 'Untitled Lead' }}</p>
+                        <span
                             v-if="lead.has_service_duplicate"
-                            class="service-dup-badge"
+                            class="lead-blacklist-badge"
+                            title="Blacklisted"
                         >
                             Blacklisted
                         </span>
@@ -1532,13 +1533,25 @@ defineExpose({
     color: #0B0736;
 }
 
-.lead-pool-wrapper .service-dup-badge {
-    background: #ff4d4f;
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 5px;
-    margin-left: 5px;
+/* Same pill as the Leads board card (leads.vue .lead-blacklist-badge). */
+.lead-pool-wrapper .lead-blacklist-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-family: Montserrat, system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+    color: #fff;
+    background: linear-gradient(135deg, #be6666 0%, #b66262 100%);
+    border: 1px solid rgba(127, 29, 29, 0.35);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 /* Person hover card styles */

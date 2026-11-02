@@ -446,21 +446,6 @@ class KanbanLeadCardResource extends JsonResource
             return static::$serviceDuplicateByLeadId[$leadId] ?? false;
         }
 
-        if (! $this->work_phone && ! $this->email) {
-            return false;
-        }
-
-        return Lead::query()
-            ->where('id', '!=', $this->id)
-            ->where('status_lead', 'blacklist')
-            ->where(function ($q) {
-                if ($this->work_phone) {
-                    $q->orWhere('work_phone', $this->work_phone);
-                }
-                if ($this->email) {
-                    $q->orWhere('email', $this->email);
-                }
-            })
-            ->exists();
+        return Lead::blacklistDuplicateFlags([$this->resource])[$leadId] ?? false;
     }
 }

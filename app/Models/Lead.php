@@ -504,6 +504,74 @@ public function activitiesWithTrashed()
     }
 
     /**
+     * "Blacklisted" card label: true when another (non-merged) lead with the same phone digits or
+     * email has status_lead = blacklist. Converted leads never get the label. All branches.
+     *
+     * @param  iterable<int, Lead>  $leads
+     * @return array<int, bool> keyed by lead id
+     */
+    public static function blacklistDuplicateFlags(iterable $leads): array
+    {
+        $keys = [];
+        foreach ($leads as $lead) {
+            $keys[(int) $lead->id] = [
+                'digits' => static::phoneDigits($lead->work_phone),
+                'email' => static::normalizeEmail($lead->email),
+            ];
+        }
+        if ($keys === []) {
+            return [];
+        }
+
+        $digitsList = array_values(array_unique(array_filter(array_column($keys, 'digits'))));
+        $emailList = array_values(array_unique(array_filter(array_column($keys, 'email'))));
+        if ($digitsList === [] && $emailList === []) {
+            return array_fill_keys(array_keys($keys), false);
+        }
+
+        $blacklistByDigits = [];
+        $blacklistByEmail = [];
+        $rows = static::query()
+            ->where('status_lead', 'blacklist')
+            ->where(function ($q) use ($digitsList, $emailList) {
+                if ($digitsList !== []) {
+                    $q->orWhereIn('work_phone_digits', $digitsList);
+                }
+                if ($emailList !== []) {
+                    $q->orWhereIn('email', $emailList);
+                }
+            })
+            ->get(['id', 'work_phone_digits', 'email']);
+        foreach ($rows as $row) {
+            if ((string) $row->work_phone_digits !== '') {
+                $blacklistByDigits[(string) $row->work_phone_digits][] = (int) $row->id;
+            }
+            if (($email = static::normalizeEmail($row->email)) !== '') {
+                $blacklistByEmail[$email][] = (int) $row->id;
+            }
+        }
+
+        $converted = static::withoutGlobalScopes()
+            ->whereIn('id', array_keys($keys))
+            ->where(fn ($q) => $q->whereNotNull('converted_to_deal_id')->orWhere('status_lead', 'converted'))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->flip();
+
+        $flags = [];
+        foreach ($keys as $id => $key) {
+            $others = array_merge(
+                $key['digits'] !== '' ? ($blacklistByDigits[$key['digits']] ?? []) : [],
+                $key['email'] !== '' ? ($blacklistByEmail[$key['email']] ?? []) : []
+            );
+            $flags[$id] = ! isset($converted[$id])
+                && array_filter($others, fn ($otherId) => $otherId !== $id) !== [];
+        }
+
+        return $flags;
+    }
+
+    /**
      * Email key for duplicate matching: trimmed + lowercased; '' when missing, not an email,
      * or listed in lead_merge.ignored_duplicate_emails (shared placeholders).
      */
@@ -644,6 +712,42 @@ public function activitiesWithTrashed()
             $w->whereIn("{$table}.work_phone_digits", $duplicatePhoneDigits)
                 ->orWhereIn("{$table}.email", $duplicateEmails);
         });
+    }
+
+    /**
+     * Leads that get the "Blacklisted" label (same rule as blacklistDuplicateFlags): another
+     * unmerged lead with the same phone digits or email has status_lead = blacklist. Converted
+     * leads are excluded. Any branch. Blacklisted leads are few, so the EXISTS stays cheap.
+     */
+    public function scopeHasBlacklistDuplicate($query)
+    {
+        $table = $query->getModel()->getTable();
+        $ignored = array_values(array_filter(array_map(
+            static fn ($value) => mb_strtolower(trim((string) $value)),
+            (array) config('lead_merge.ignored_duplicate_emails', [])
+        )));
+
+        return $query
+            ->whereNull("{$table}.converted_to_deal_id")
+            ->where(fn ($q) => $q->whereNull("{$table}.status_lead")->orWhere("{$table}.status_lead", '!=', 'converted'))
+            ->whereExists(function ($sub) use ($table, $ignored) {
+                $sub->selectRaw('1')
+                    ->from("{$table} as bl")
+                    ->where('bl.status_lead', 'blacklist')
+                    ->whereNull('bl.merged_into_lead_id')
+                    ->whereNull('bl.deleted_at')
+                    ->whereColumn('bl.id', '!=', "{$table}.id")
+                    ->where(function ($m) use ($table, $ignored) {
+                        $m->where(function ($p) use ($table) {
+                            $p->where('bl.work_phone_digits', '!=', '')
+                                ->whereColumn('bl.work_phone_digits', "{$table}.work_phone_digits");
+                        })->orWhere(function ($e) use ($table, $ignored) {
+                            $e->where('bl.email', 'like', '%@%')
+                                ->when($ignored !== [], fn ($q) => $q->whereNotIn('bl.email', $ignored))
+                                ->whereColumn('bl.email', "{$table}.email");
+                        });
+                    });
+            });
     }
 
     /**

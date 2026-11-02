@@ -73,53 +73,8 @@ class LeadResource extends JsonResource
             static::$duplicateIdsByLeadId[(int) $lead->id] = $duplicateMap[(int) $lead->id] ?? [];
         }
 
-        // Service (blacklist) duplicates — same OR phone/email rule as hasServiceDuplicate(),
-        // including exclusion of the lead itself (id != current).
-        $phones = $collection->pluck('work_phone')->filter()->unique()->values()->all();
-        $emails = $collection->pluck('email')->filter()->unique()->values()->all();
-        $blacklistIdsByPhone = [];
-        $blacklistIdsByEmail = [];
-        if ($phones !== [] || $emails !== []) {
-            $blacklistQuery = Lead::query()
-                ->where('status_lead', 'blacklist')
-                ->where(function ($q) use ($phones, $emails) {
-                    if ($phones !== []) {
-                        $q->whereIn('work_phone', $phones);
-                    }
-                    if ($emails !== []) {
-                        $method = $phones !== [] ? 'orWhereIn' : 'whereIn';
-                        $q->{$method}('email', $emails);
-                    }
-                });
-
-            foreach ($blacklistQuery->get(['id', 'work_phone', 'email']) as $row) {
-                if ($row->work_phone) {
-                    $blacklistIdsByPhone[$row->work_phone][] = (int) $row->id;
-                }
-                if ($row->email) {
-                    $blacklistIdsByEmail[$row->email][] = (int) $row->id;
-                }
-            }
-        }
-        foreach ($collection as $lead) {
-            $lid = (int) $lead->id;
-            $flag = false;
-            if ($lead->work_phone && ! empty($blacklistIdsByPhone[$lead->work_phone])) {
-                foreach ($blacklistIdsByPhone[$lead->work_phone] as $otherId) {
-                    if ($otherId !== $lid) {
-                        $flag = true;
-                        break;
-                    }
-                }
-            }
-            if (! $flag && $lead->email && ! empty($blacklistIdsByEmail[$lead->email])) {
-                foreach ($blacklistIdsByEmail[$lead->email] as $otherId) {
-                    if ($otherId !== $lid) {
-                        $flag = true;
-                        break;
-                    }
-                }
-            }
+        // Service (blacklist) duplicates — shared rule (phone digits / email, not converted, not self).
+        foreach (Lead::blacklistDuplicateFlags($collection) as $lid => $flag) {
             static::$serviceDuplicateByLeadId[$lid] = $flag;
         }
 
@@ -730,22 +685,7 @@ protected function resolveOriginalBranch(): ?string
             return static::$serviceDuplicateByLeadId[$leadId];
         }
 
-        if (! $this->work_phone && ! $this->email) {
-            return false;
-        }
-
-        return Lead::query()
-            ->where('id', '!=', $this->id)
-            ->where('status_lead', 'blacklist')
-            ->where(function ($q) {
-                if ($this->work_phone) {
-                    $q->orWhere('work_phone', $this->work_phone);
-                }
-                if ($this->email) {
-                    $q->orWhere('email', $this->email);
-                }
-            })
-            ->exists();
+        return Lead::blacklistDuplicateFlags([$this->resource])[$leadId] ?? false;
     }
 
     /**
