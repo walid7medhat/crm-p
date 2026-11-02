@@ -203,13 +203,14 @@ body.property-details-modal-open .mobile-tab-bar {
   }
 
   /* Stick flush under modal header — no gap, no second scrollbar */
+  /* BlogOne pins this with a transform while .pdm-body scrolls (not position: sticky) */
   .pdm-body :deep(.sidebar-sticky-container) {
-    position: sticky !important;
+    position: relative !important;
     top: 0 !important;
     z-index: 2 !important;
     margin-top: 0 !important;
     padding-top: 0 !important;
-    max-height: none !important;
+    /* max-height is set inline by BlogOne (capped to the visible height) */
     overflow: visible !important;
     background: #fff !important;
   }

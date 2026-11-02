@@ -533,6 +533,61 @@
                 @delete="deleteInternalUpdate"
               />
             </div>
+
+          <!-- Desktop comments (left column, under the property content) -->
+          <section class="ps-card ps-comments-card" v-if="!onlyShow && property && !isMobileViewport">
+            <div class="ps-side-card__head">
+              <span class="ps-side-card__icon"><i class="ri-chat-3-line"></i></span>
+              <div>
+                <p class="ps-side-card__title">Comments</p>
+                <p class="ps-side-card__hint">Notes from your team on this listing</p>
+              </div>
+            </div>
+
+            <div v-if="loadingComments" class="ps-side-card__empty">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            </div>
+            <div v-else-if="comments.length === 0" class="ps-side-card__empty">
+              <i class="ri-chat-3-line"></i>
+              <span>No Comments yet</span>
+            </div>
+            <div v-else class="ps-comments-list">
+              <div v-for="comment in comments" :key="comment.id" class="ps-comment-item">
+                <div class="ps-comment-item__head">
+                  <img
+                    :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                    :alt="comment.user.name"
+                    class="ps-comment-item__avatar"
+                    @error="handleAvatarError"
+                  />
+                  <div>
+                    <strong>{{ comment.user.name }}</strong>
+                    <small>{{ formatCommentDate(comment.created_at) }}</small>
+                  </div>
+                </div>
+                <p>{{ comment.comment }}</p>
+              </div>
+            </div>
+
+            <div class="ps-comments-compose" v-if="isAuthenticated">
+              <textarea
+                v-model="newComment.text"
+                placeholder="Add a comment..."
+                class="form-control"
+                rows="2"
+                :maxlength="1000"
+              ></textarea>
+              <button
+                type="button"
+                class="ps-side-card__btn"
+                @click="submitComment"
+                :disabled="!newComment.text.trim() || submittingComment"
+              >
+                <i class="ri-add-line"></i>
+                {{ submittingComment ? 'Submitting...' : 'Add Comments' }}
+              </button>
+            </div>
+          </section>
         </div>
 
       <!-- Sidebar under small images -->
@@ -676,60 +731,6 @@
             />
           </div>
 
-          <!-- Desktop comments in sidebar (Figma) -->
-          <section class="ps-card ps-comments-card" v-if="!onlyShow && property">
-            <div class="ps-side-card__head">
-              <span class="ps-side-card__icon"><i class="ri-chat-3-line"></i></span>
-              <div>
-                <p class="ps-side-card__title">Comments</p>
-                <p class="ps-side-card__hint">Notes from your team on this listing</p>
-              </div>
-            </div>
-
-            <div v-if="loadingComments" class="ps-side-card__empty">
-              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-            </div>
-            <div v-else-if="comments.length === 0" class="ps-side-card__empty">
-              <i class="ri-chat-3-line"></i>
-              <span>No Comments yet</span>
-            </div>
-            <div v-else class="ps-comments-list">
-              <div v-for="comment in comments" :key="comment.id" class="ps-comment-item">
-                <div class="ps-comment-item__head">
-                  <img
-                    :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
-                    :alt="comment.user.name"
-                    class="ps-comment-item__avatar"
-                    @error="handleAvatarError"
-                  />
-                  <div>
-                    <strong>{{ comment.user.name }}</strong>
-                    <small>{{ formatCommentDate(comment.created_at) }}</small>
-                  </div>
-                </div>
-                <p>{{ comment.comment }}</p>
-              </div>
-            </div>
-
-            <div class="ps-comments-compose" v-if="isAuthenticated">
-              <textarea
-                v-model="newComment.text"
-                placeholder="Add a comment..."
-                class="form-control"
-                rows="2"
-                :maxlength="1000"
-              ></textarea>
-              <button
-                type="button"
-                class="ps-side-card__btn"
-                @click="submitComment"
-                :disabled="!newComment.text.trim() || submittingComment"
-              >
-                <i class="ri-add-line"></i>
-                {{ submittingComment ? 'Submitting...' : 'Add Comments' }}
-              </button>
-            </div>
-          </section>
         </div>
       </aside>
 
@@ -2131,20 +2132,70 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
         return;
       }
 
-      if (pin) {
-        pin.classList.remove(
-          'is-sidebar-fixed',
-          'is-sidebar-at-bottom',
-          'is-sidebar-pinned',
-          'is-sidebar-pinned-bottom'
-        );
-        pin.style.cssText = '';
-      }
       if (spacer) spacer.style.height = '0px';
 
       const main = col.closest('.ps-layout')?.querySelector('.ps-main');
       const mainH = main ? Math.max(main.scrollHeight, main.offsetHeight) : 0;
       col.style.minHeight = mainH > 0 ? `${mainH}px` : '';
+
+      if (!pin) return;
+
+      // Pinned by hand rather than position: sticky — sticky silently breaks when any
+      // layout ancestor has overflow other than visible, and the app shell sets
+      // overflow-x: hidden (crm-background.css). This works on the page and in the modal.
+      const scroller = col.closest('.pdm-body');
+      const scrollerRect = scroller?.getBoundingClientRect();
+      // Full page: stay below the app top bar while it's on screen (it scrolls away
+      // in some layouts and stays put in others — its rect covers both).
+      const topBarBottom = scroller
+        ? 0
+        : (document.querySelector('#app main.dashboard-main > .navbar-header')?.getBoundingClientRect().bottom ?? 0);
+      const viewTop = scrollerRect
+        ? Math.max(0, scrollerRect.top)
+        : Math.max(0, topBarBottom > 0 ? topBarBottom + 12 : 0);
+      const viewBottom = scrollerRect
+        ? Math.min(window.innerHeight, scrollerRect.bottom)
+        : window.innerHeight;
+      // Never taller than the visible area (or the modal): the agent card keeps its size and
+      // the viewings / agent updates lists scroll inside (see .sidebar-sticky-container CSS).
+      // With Property Action open those sections are pushed below the menu instead, and the
+      // whole block scrolls. !important: the actions-open rules set max-height/overflow with it.
+      pin.style.setProperty('max-height', `${Math.max(0, Math.floor(viewBottom - viewTop))}px`, 'important');
+      if (showActionsDropdown.value) {
+        pin.style.setProperty('overflow-y', 'auto', 'important');
+      } else {
+        pin.style.removeProperty('overflow-y');
+        pin.scrollTop = 0;
+      }
+      const colRect = col.getBoundingClientRect();
+      const pinH = pin.offsetHeight;
+      const maxShift = Math.max(0, colRect.height - pinH);
+      // Fits on screen: hold it at the top. Taller than the screen: let it scroll until
+      // its bottom is visible, then hold it there — except while Property Action is open:
+      // the menu opens in place at the top and viewings / agent updates are pushed down.
+      const holdAtTop = showActionsDropdown.value || pinH <= viewBottom - viewTop;
+      const target = holdAtTop
+        ? viewTop - colRect.top
+        : viewBottom - pinH - colRect.top;
+      const shift = Math.round(Math.min(Math.max(target, 0), maxShift));
+
+      // While held, use position: fixed so the browser keeps it still during the scroll
+      // itself — a transform is only applied after each scroll frame and visibly lags.
+      // At the bottom of the column it goes back into the flow and stops there.
+      // !important: crm-background.css / PropertyDetailsModal.vue set position/top with it.
+      if (target > 0 && target < maxShift) {
+        pin.style.setProperty('position', 'fixed', 'important');
+        pin.style.setProperty('top', `${Math.round(colRect.top + target)}px`, 'important');
+        pin.style.left = `${Math.round(colRect.left)}px`;
+        pin.style.width = `${Math.round(colRect.width)}px`;
+        pin.style.transform = '';
+      } else {
+        pin.style.removeProperty('position');
+        pin.style.removeProperty('top');
+        pin.style.left = '';
+        pin.style.width = '';
+        pin.style.transform = shift > 0 ? `translateY(${shift}px)` : '';
+      }
     };
 
     const schedulePropertySidebarSync = () => {
@@ -2159,11 +2210,11 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
 
     const bindPropertySidebarScroll = () => {
       window.addEventListener('resize', schedulePropertySidebarSync, { passive: true });
-      const pdmBody = document.querySelector('.pdm-body');
-      if (pdmBody) {
-        propertySidebarScrollRoots = [pdmBody];
-        pdmBody.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
-      }
+      // Capture phase catches scrolling on the window and on any inner scroller
+      // (modal .pdm-body, app shell), whichever one actually scrolls. Synced directly
+      // (not via rAF) so switching between fixed and in-flow lands in the same frame.
+      document.addEventListener('scroll', syncPropertySidebarPosition, { passive: true, capture: true });
+      propertySidebarScrollRoots = [document];
       if (typeof ResizeObserver !== 'undefined') {
         propertySidebarResizeObserver = new ResizeObserver(schedulePropertySidebarSync);
         const main = propertySidebarColRef.value?.closest('.ps-layout')?.querySelector('.ps-main');
@@ -2179,7 +2230,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     const unbindPropertySidebarScroll = () => {
       window.removeEventListener('resize', schedulePropertySidebarSync);
       propertySidebarScrollRoots.forEach((root) =>
-        root.removeEventListener('scroll', schedulePropertySidebarSync)
+        root.removeEventListener('scroll', syncPropertySidebarPosition, { capture: true })
       );
       propertySidebarScrollRoots = [];
       propertySidebarResizeObserver?.disconnect();
@@ -11417,9 +11468,10 @@ margin-top: 20px;
   position: relative;
 }
 
-/* When Property Action reaches the top of the scroll area, it sticks — left keeps scrolling */
+/* Pinned while scrolling by syncPropertySidebarPosition() (translateY), not position: sticky —
+   the app shell's overflow-x: hidden breaks sticky. */
 .sidebar-sticky-container {
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 2;
   width: 100%;
@@ -11445,20 +11497,128 @@ margin-top: 20px;
   z-index: auto;
 }
 
-.sidebar-agent-updates-bottom {
-  width: 100%;
-  margin-top: 0;
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0;
-}
-
+/* Viewings / agent updates shrink when the pinned sidebar is capped to the screen height
+   (syncPropertySidebarPosition); only their lists scroll, the agent card never does. */
+.sidebar-agent-updates-bottom,
 .sidebar-approved-viewings {
   width: 100%;
   margin-top: 0;
   position: relative;
   z-index: 1;
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Thin, primary-colored scrollbars for the pinned sidebar block and its two lists */
+.sidebar-sticky-container,
+.sidebar-sticky-container :deep(.approved-viewings-panel__list),
+.sidebar-sticky-container :deep(.agent-updates-panel__list) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--color-primary-rgb), 0.45) transparent;
+}
+
+.sidebar-sticky-container::-webkit-scrollbar,
+.sidebar-sticky-container :deep(.approved-viewings-panel__list::-webkit-scrollbar),
+.sidebar-sticky-container :deep(.agent-updates-panel__list::-webkit-scrollbar) {
+  width: 4px;
+}
+
+.sidebar-sticky-container::-webkit-scrollbar-track,
+.sidebar-sticky-container :deep(.approved-viewings-panel__list::-webkit-scrollbar-track),
+.sidebar-sticky-container :deep(.agent-updates-panel__list::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+.sidebar-sticky-container::-webkit-scrollbar-thumb,
+.sidebar-sticky-container :deep(.approved-viewings-panel__list::-webkit-scrollbar-thumb),
+.sidebar-sticky-container :deep(.agent-updates-panel__list::-webkit-scrollbar-thumb) {
+  background: rgba(var(--color-primary-rgb), 0.45);
+  border-radius: 999px;
+}
+
+.sidebar-sticky-container::-webkit-scrollbar-thumb:hover,
+.sidebar-sticky-container :deep(.approved-viewings-panel__list::-webkit-scrollbar-thumb:hover),
+.sidebar-sticky-container :deep(.agent-updates-panel__list::-webkit-scrollbar-thumb:hover) {
+  background: var(--color-primary);
+}
+
+/* Property Action open: don't squeeze them — they sit below the menu and the block scrolls */
+.sidebar-sticky-container--actions-open .sidebar-approved-viewings,
+.sidebar-sticky-container--actions-open .sidebar-agent-updates-bottom {
   flex-shrink: 0;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel) {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel > *),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel > *) {
+  flex-shrink: 0;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel .approved-viewings-panel__list),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel .agent-updates-panel__list) {
+  flex: 0 1 auto;
+  min-height: 40px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+/* Compact viewings / agent updates cards in the pinned sidebar only (mobile keeps the full size) */
+.sidebar-approved-viewings :deep(.approved-viewings-panel),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel) {
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel__head),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__head) {
+  margin-bottom: 6px;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel__title-row),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__title-row) {
+  gap: 8px;
+  font-size: 13px;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel__title-row i),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__title-row i) {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel__hint),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__hint) {
+  display: none;
+}
+
+.sidebar-approved-viewings :deep(.approved-viewings-panel__state),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__state) {
+  padding: 6px;
+}
+
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__composer) {
+  margin-bottom: 6px;
+}
+
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__input) {
+  height: 34px;
+  padding: 6px 10px 2px;
+}
+
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__item) {
+  padding: 6px;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed,
@@ -11470,6 +11630,7 @@ margin-top: 20px;
 .sidebar-sticky-container .agent-sidebar-card {
   max-height: none;
   overflow: visible !important;
+  flex-shrink: 0;
 }
 
 .sidebar-sticky-container.is-sidebar-fixed .agent-sidebar-card {

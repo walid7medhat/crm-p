@@ -347,9 +347,11 @@ body.app-has-video-bg .dashboard-main-body.project-show-page {
     position: relative !important;
   }
 
+  /* Pinned by BlogOne's syncPropertySidebarPosition() (translateY). Not sticky: sticky
+     added its own offset on top of that inside the listing modal. */
   body.app-has-video-bg .property-show-sidebar-col .sidebar-sticky-container {
-    position: sticky !important;
-    top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.75rem) !important;
+    position: relative !important;
+    top: auto !important;
     z-index: 40 !important;
     align-self: flex-start !important;
   }
