@@ -1,82 +1,67 @@
 <template>
   <div v-if="hasContent" class="pd-section-wrap">
     <div class="pd-card">
-      <div class="pd-card-head">
-        <div>
-          <div class="pd-card-title">Payment details
-            <!-- <span class="badge" :class="nocType === 'Ready' || nocType === 'Completed' ? 'bg-success' : 'bg-warning text-dark'">
-            {{ nocType }}
-          </span> -->
-          </div>
-          <div class="pd-title-accent" aria-hidden="true" />
-        </div>
-      </div>
-
-      <div class="pd-section-heading">Summary</div>
       <div class="pd-summary-grid">
-        <div class="pd-cell pd-cell--hero">
-          <div class="pd-cell-label">Selling price</div>
-          <div class="pd-cell-value">{{ formatAed(sellingPrice) }}</div>
+        <div class="pd-metric pd-metric--active">
+          <div class="pd-metric__icon"><i class="ri-money-dollar-circle-line"></i></div>
+          <div class="pd-metric__label">Selling Price (AED)</div>
+          <div class="pd-metric__value">{{ formatAedRaw(sellingPrice) }}</div>
         </div>
-        <div class="pd-cell pd-cell--muted" v-if="isUnderConstruction">
-          <div class="pd-cell-label">Original price </div>
-          <div class="pd-cell-value pd-cell-value--dark">{{ formatAed(originalPrice) }}</div>
+        <div class="pd-metric" v-if="isUnderConstruction">
+          <div class="pd-metric__icon"><i class="ri-price-tag-3-line"></i></div>
+          <div class="pd-metric__label">Original Price (AED)</div>
+          <div class="pd-metric__value">{{ formatAedRaw(originalPrice) }}</div>
         </div>
-        <div class="pd-cell pd-cell--muted" v-if="paymentPlanLabel">
-          <div class="pd-cell-label">Payment plan</div>
-          <div class="pd-cell-value pd-cell-value--dark">{{ paymentPlanLabel || '—' }}</div>
+        <div class="pd-metric" v-if="paymentPlanLabel">
+          <div class="pd-metric__icon"><i class="ri-pie-chart-line"></i></div>
+          <div class="pd-metric__label">Payment Plan (%)</div>
+          <div class="pd-metric__value">{{ paymentPlanLabel || '—' }}</div>
         </div>
-        <div class="pd-cell pd-cell--muted" v-if="isUnderConstruction">
-          <div class="pd-cell-label">Premium </div>
-          <div class="pd-cell-value pd-cell-value--dark" :class="{ 'pd-text-danger': premiumAmount < 0 }">
-            {{ formatAed(premiumAmount) }}
+        <div class="pd-metric" v-if="isUnderConstruction">
+          <div class="pd-metric__icon"><i class="ri-funds-line"></i></div>
+          <div class="pd-metric__label">Premium (AED)</div>
+          <div class="pd-metric__value" :class="{ 'pd-text-danger': premiumAmount < 0 }">
+            {{ formatAedRaw(premiumAmount) }}
           </div>
+        </div>
+        <div class="pd-metric" v-if="nocPercentage > 0 && isUnderConstruction">
+          <div class="pd-metric__icon"><i class="ri-percent-line"></i></div>
+          <div class="pd-metric__label">NOC (%)</div>
+          <div class="pd-metric__value">{{ nocPercentage }}</div>
         </div>
       </div>
 
-        <!-- NOC Section - Percentage Only -->
       <div v-if="nocPercentage > 0 && isUnderConstruction" class="pd-noc-strip">
         <span class="pd-noc-strip__item">
-          <span class="badge bg-info text-white">
-            <!-- <i class="fas fa-percentage me-1"></i> -->
-            NOC 
-          </span>
-          <span class="ms-1">Required:</span>
-          <strong>{{ formatAed(nocAmount) }}</strong>
-          <span class="text-muted ms-1">({{ nocPercentage }}% of OP)</span>
+          NOC Required: <strong>{{ formatAed(nocAmount) }}</strong>
+          <span class="pd-text-muted">({{ nocPercentage }}% of OP)</span>
         </span>
-        
         <span class="pd-noc-strip__item">
-          <i class="fas fa-check-circle text-success me-1"></i>
           Paid: <strong>{{ formatAed(paidTotalAed) }}</strong>
-          <span class="text-muted">({{ paidPercentDisplay }}% of OP)</span>
+          <span class="pd-text-muted">({{ paidPercentDisplay }}%)</span>
         </span>
-        
         <span class="pd-noc-strip__item">
-          <i class="fas fa-clock text-warning me-1"></i>
           Remaining: <strong>{{ formatAed(nocRemainingAed) }}</strong>
         </span>
-        
         <span class="pd-badge" :class="nocRequirementMet ? 'pd-badge--paid' : 'pd-badge--upcoming'">
-          <i :class="nocRequirementMet ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="me-1"></i>
-          {{ nocRequirementMet ? 'NOC met ✅' : 'Below NOC ⚠️' }}
+          {{ nocRequirementMet ? 'NOC met' : 'Below NOC' }}
         </span>
       </div>
 
-      <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-section-heading">Installment breakdown</div>
+      <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-section-heading">Installment Breakdown</div>
       <div v-if="breakdownRows.length > 2 && listing.completion_status !='Completed'" class="pd-table-wrap">
         <table class="pd-table">
           <thead>
             <tr>
-              <th><span class="pd-th-pill">Payment type</span></th>
-              <th><span class="pd-th-pill">Percentage (%)</span></th>
-              <th><span class="pd-th-pill">Amount (AED)</span></th>
-              <th><span class="pd-th-pill">Date</span></th>
-              <th><span class="pd-th-pill">Status</span></th>
+              <th>Payment Type</th>
+              <th>Percentage (%)</th>
+              <th>Amount (AED)</th>
+              <th>Date</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, idx) in breakdownRows" :key="row.id" :class="idx % 2 === 1 ? 'pd-row-alt' : ''">
+            <tr v-for="row in breakdownRows" :key="row.id">
               <td>{{ row.type }}</td>
               <td>{{ formatRowPercentage(row) }}</td>
               <td :class="{ 'pd-text-danger': row.type === 'Premium' && row.amount < 0 }">
@@ -97,49 +82,47 @@
         </table>
       </div>
 
-      <div v-if="expenseRows.length > 0" class="pd-section-heading">Other costs</div>
+      <div v-if="expenseRows.length > 0" class="pd-section-heading">Other Costs</div>
       <div v-if="expenseRows.length > 0" class="pd-table-wrap pd-table-wrap--section">
         <table class="pd-table">
           <thead>
             <tr>
-              <th><span class="pd-th-pill">Label</span></th>
-              <th><span class="pd-th-pill">Detail</span></th>
-              <th class=""><span class="pd-th-pill">Amount</span></th>
-              <th class=""><span class="pd-th-pill">VAT</span></th>
-              <th class=""><span class="pd-th-pill">Total</span></th>
+              <th>Fee Type</th>
+              <th>Detail (%)</th>
+              <th>Amount (AED)</th>
+              <th>VAT (AED)</th>
+              <th>Total (AED)</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="nocFixedAmount > 0">
               <td>NOC Fees</td>
-              <td class="text-muted">
-                —
-                <!-- <span class="text-muted d-block" style="font-size:0.85em;">
-                  {{ nocType === 'Ready' || nocType === 'Completed' ? 'Ready' : 'Off-Plan' }}
-                </span> -->
-              </td>
+              <td class="pd-text-muted">—</td>
               <td>{{ formatAed(nocFixedAmount) }}</td>
               <td>—</td>
-              <td class="fw-semibold">{{ formatAed(nocFixedAmount) }}</td>
+              <td class="pd-fw-semibold">{{ formatAed(nocFixedAmount) }}</td>
             </tr>
-            <tr v-for="(row, idx) in expenseRows" :key="row.id" :class="idx % 2 === 1 ? 'pd-row-alt' : ''">
+            <tr v-for="row in expenseRows" :key="row.id">
               <td>{{ row.label }}</td>
               <td class="pd-text-muted">{{ row.detail }}</td>
-              <td class="">{{ formatAed(row.amount) }}</td>
-              <td class="">{{ row.vatEnabled ? formatAed(row.vat) : '—' }}</td>
-              <td class=" pd-fw-semibold">{{ formatAed(row.total) }}</td>
+              <td>{{ formatAed(row.amount) }}</td>
+              <td>{{ row.vatEnabled ? formatAed(row.vat) : '—' }}</td>
+              <td class="pd-fw-semibold">{{ formatAed(row.total) }}</td>
             </tr>
-           
             <tr class="pd-total-row">
               <td colspan="2"><strong>Total</strong></td>
-              <td class=""><strong>{{ formatAed(expensesSubtotal) }}</strong></td>
-              <td class=""><strong>{{ formatAed(expensesTotalVat) }}</strong></td>
-              <td class=""><strong>{{ formatAed(expensesGrandTotal) }}</strong></td>
+              <td><strong>{{ formatAed(expensesSubtotal) }}</strong></td>
+              <td><strong>{{ formatAed(expensesTotalVat) }}</strong></td>
+              <td><strong>{{ formatAed(expensesGrandTotal) }}</strong></td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="pd-noc-strip mt-3">Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.</p>
+
+      <p class="pd-disclaimer">
+        <i class="ri-information-line"></i>
+        Please note that all fees mentioned are indicative and may change based on the developer’s policy, government authority requirements, or applicable regulations at the time of purchase.
+      </p>
     </div>
   </div>
 </template>
@@ -448,6 +431,13 @@ const formatAed = (value) =>
     maximumFractionDigits: 0
   }).format(Number(value ?? 0));
 
+/** Number only (no AED prefix) for Figma metric cards that already label currency. */
+const formatAedRaw = (value) =>
+  new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+
 const formatDateDisplay = (dateLike) => {
   if (!dateLike) return '—';
   const d = dateLike instanceof Date ? dateLike : new Date(dateLike);
@@ -477,194 +467,152 @@ const badgeClass = (status) => {
 .pd-section-wrap { width: 100%; }
 
 .pd-card {
-  background: #f4f6f9;
-  border-radius: 16px;
-  padding: 1.25rem 1.35rem 1rem;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-  font-size: 12px;
-  line-height: 1.35;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.4;
   color: #1e293b;
-  position: relative;
-  overflow: hidden;
-}
-
-/* .pd-card::before {
-  content: '';
-  position: absolute;
-  inset: -8%;
-  z-index: 0;
-  pointer-events: none;
-  background-image: url('/oia-properties-logo-watermark.svg');
-  background-repeat: no-repeat;
-  background-position: center 45%;
-  background-size: min(92%, 720px) auto;
-  opacity: 0.045;
-} */
-
-.pd-card > * { position: relative; z-index: 1; }
-
-.pd-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.pd-card-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #0f1f3a;
-  line-height: 1.2;
-}
-
-.pd-title-accent {
-  width: 40px;
-  height: 3px;
-  background: #e85d1c;
-  border-radius: 2px;
-  margin-top: 0.35rem;
 }
 
 .pd-section-heading {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #64748b;
-  margin: 0.6rem 0 0.4rem;
+  color: var(--color-primary);
+  margin: 1.1rem 0 0.65rem;
 }
 
 .pd-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
-  margin-bottom: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 0.75rem;
 }
 
-@media (max-width: 900px) {
-  .pd-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 520px) {
-  .pd-summary-grid { grid-template-columns: 1fr; }
-}
-
-.pd-cell {
-  border-radius: 10px;
-  padding: 0.65rem 0.7rem 0.7rem;
+.pd-metric {
+  background: #fff;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.12);
+  border-radius: 12px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  min-height: 88px;
+}
+
+.pd-metric--active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.18);
+}
+
+.pd-metric__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  font-size: 15px;
 }
 
-.pd-cell--hero {
-  background: linear-gradient(160deg, #132043 0%, #0f1f3a 100%);
-  color: #fff;
-  border-bottom: 3px solid #e85d1c;
-  box-shadow: 0 6px 14px rgba(15, 31, 58, 0.2);
-}
-
-.pd-cell--muted {
-  background: #e8ecf2;
-  color: #0f1f3a;
-}
-
-.pd-cell-label {
+.pd-metric__label {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-  opacity: 0.92;
-  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: var(--color-text-muted, #6b7280);
   line-height: 1.25;
 }
 
-.pd-cell--hero .pd-cell-label { color: rgba(255, 255, 255, 0.88); }
-
-.pd-cell-value {
+.pd-metric__value {
   font-size: 14px;
   font-weight: 700;
+  color: var(--color-text, #0b0736);
   line-height: 1.2;
 }
-
-.pd-cell--hero .pd-cell-value { color: #fff; }
-.pd-cell-value--dark { color: #0f1f3a; }
 
 .pd-noc-strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 1rem;
-  background: #fff;
+  background: #fafafb;
+  border: 1px solid #eeeef2;
   border-radius: 10px;
-  padding: 0.55rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   margin-bottom: 0.5rem;
   font-size: 12px;
-  box-shadow: inset 0 0 0 1px rgba(15, 31, 58, 0.06);
 }
+
 .pd-noc-strip__item { white-space: nowrap; }
 
 .pd-table-wrap {
-  background: #fff;
-  border-radius: 12px;
-  padding: 0.55rem 0.55rem 0.4rem;
-  box-shadow: inset 0 0 0 1px rgba(15, 31, 58, 0.06);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
   overflow-x: auto;
 }
-.pd-table-wrap--section { margin-bottom: 0.5rem; }
+
+.pd-table-wrap--section { margin-bottom: 0.35rem; }
 
 .pd-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0;
-  font-size: 12px;
+  border-spacing: 0 8px;
+  font-size: 13px;
 }
 
 .pd-table thead th {
-  padding: 0.25rem 0.35rem 0.45rem;
+  padding: 0 12px 6px;
   border: none;
   font-weight: 600;
   font-size: 12px;
-  text-align: center;
+  text-align: left;
+  color: #9ca3af;
   vertical-align: middle;
-}
-
-.pd-th-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  box-sizing: border-box;
-  background: #0f1f3a;
-  color: #fff;
-  padding: 0.4rem 0.65rem 0.45rem;
-  border-radius: 999px;
-  font-size: 10px;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  text-transform: capitalize;
-  text-align: center;
-  white-space: nowrap;
-  font-weight: 600;
 }
 
 .pd-table tbody td {
-  padding: 0.5rem 0.45rem;
+  padding: 12px;
   border: none;
   vertical-align: middle;
-  text-align: center;
+  text-align: left;
   color: #1e293b;
-  font-size: 12px;
+  font-size: 13px;
+  background: #fff;
 }
 
-.pd-row-alt td { background: #fff; }
+.pd-table tbody tr:not(.pd-total-row) td:first-child {
+  border-radius: 10px 0 0 10px;
+  border-left: 1px solid #ececf0;
+}
+
+.pd-table tbody tr:not(.pd-total-row) td:last-child {
+  border-radius: 0 10px 10px 0;
+  border-right: 1px solid #ececf0;
+}
+
+.pd-table tbody tr:not(.pd-total-row) td {
+  border-top: 1px solid #ececf0;
+  border-bottom: 1px solid #ececf0;
+}
 
 .pd-total-row td {
-  background: #fff !important;
-  border-top: 2px solid #e2e8f0;
-  font-size: 12px;
+  background: rgba(var(--color-primary-rgb, 115, 62, 135), 0.08) !important;
+  border: none !important;
+  font-size: 13px;
+}
+
+.pd-total-row td:first-child {
+  border-radius: 10px 0 0 10px !important;
+}
+
+.pd-total-row td:last-child {
+  border-radius: 0 10px 10px 0 !important;
 }
 
 .pd-badge {
@@ -672,23 +620,38 @@ const badgeClass = (status) => {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 0.3rem 0.65rem 0.35rem;
+  padding: 5px 10px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   text-align: center;
 }
 
-.pd-badge--paid { background: #22c55e; color: #fff; }
-.pd-badge--due { background: #bae6fd; color: #075985; }
-.pd-badge--below-op { background: #fecaca; color: #b91c1c; }
-.pd-badge--remaining { background: #60a5fa; color: #fff; }
-.pd-badge--upcoming { background: #fecdd3; color: #9f1239; }
+.pd-badge--paid { background: rgba(var(--color-primary-rgb), 0.12); color: var(--color-primary); }
+.pd-badge--due { background: rgba(var(--color-primary-rgb), 0.08); color: var(--color-text, #0b0736); }
+.pd-badge--below-op { background: rgba(var(--color-primary-rgb), 0.14); color: var(--color-primary); }
+.pd-badge--remaining { background: rgba(var(--color-primary-rgb), 0.1); color: var(--color-primary); }
+.pd-badge--upcoming { background: rgba(var(--color-primary-rgb), 0.06); color: var(--color-text-muted, #6b7280); }
+
+.pd-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9ca3af;
+}
+
+.pd-disclaimer i {
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: var(--color-primary, #733e87);
+}
 
 .pd-text-muted { color: #64748b; }
 .pd-text-danger { color: #b91c1c; }
-.pd-text-end { text-align: right; }
 .pd-fw-semibold { font-weight: 600; }
 </style>

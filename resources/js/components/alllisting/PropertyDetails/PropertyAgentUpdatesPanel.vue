@@ -101,10 +101,11 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 <style scoped>
 .agent-updates-panel {
   background: #fff;
-  border: 1px solid #e8edf3;
-  border-radius: 12px;
-  padding: 12px;
+  border: 1px solid #ececf0;
+  border-radius: 16px;
+  padding: 18px 18px 16px;
   margin-top: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .agent-updates-panel--mobile {
@@ -122,7 +123,8 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 }
 
 .agent-updates-panel--under-agent .agent-updates-panel__list {
-  max-height: 200px;
+  max-height: none;
+  overflow: visible;
 }
 
 .agent-updates-panel__head {
@@ -132,15 +134,22 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 .agent-updates-panel__title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   color: #0b0736;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .agent-updates-panel__title-row i {
-  font-size: 15px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
   color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .agent-updates-panel__count {
@@ -158,9 +167,9 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 }
 
 .agent-updates-panel__hint {
-  margin: 2px 0 0;
-  font-size: 10px;
-  color: #94a3b8;
+  margin: 6px 0 0 46px;
+  font-size: 12px;
+  color: #9ca3af;
   line-height: 1.3;
 }
 
@@ -243,20 +252,23 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
 
 .agent-updates-panel__state--empty {
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  padding: 28px 12px;
+  font-size: 13px;
 }
 
 .agent-updates-panel__state--empty i {
-  font-size: 22px;
-  opacity: 0.6;
+  font-size: 36px;
+  color: rgba(var(--color-primary-rgb), 0.45);
+  opacity: 1;
 }
 
 .agent-updates-panel__list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 260px;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   padding-right: 2px;
 }
 

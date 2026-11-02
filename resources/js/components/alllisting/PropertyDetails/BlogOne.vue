@@ -8,58 +8,103 @@
       'has-mobile-action-dock': isMobileViewport && !onlyShow,
     }"
   >
-    <div class="row gy-4 property-show-row">
-      <!-- Main Content -->
-      <div class="col-12 col-lg-9">
-        <div class="card card-main p-0 radius-12 overflow-hidden">
-          <div class="card-body ">
-         
-            <!-- Desktop gallery -->
-            <div class="property-gallery property-gallery--desktop" v-if="property && property.gallery_images && !isMobileViewport">
+    <div
+      class="property-show-row ps-page"
+      :class="{ 'ps-page--mobile': isMobileViewport }"
+    >
+      <!-- One page scroll. Gallery full-width; Property Action sits under small images. -->
+      <div class="ps-shell" :class="{ 'ps-shell--mobile': isMobileViewport }">
+      <!-- Desktop gallery: hero left | small images right (same columns as content below) -->
+      <div class="ps-gallery-band property-gallery property-gallery--desktop" v-if="property && property.gallery_images && !isMobileViewport">
+        <div
+          class="gallery-container"
+          :class="{
+            'is-single': property.gallery_images.length === 1,
+            'is-side-only-tall': property.gallery_images.length > 1 && property.gallery_images.length <= 3,
+          }"
+        >
+          <div class="main-image-section" @click="openLightbox(galleryMainIndex)">
+            <img :src="getMainGalleryImage()" alt="Property main image" class="main-image" />
+
+            <div v-if="desktopGalleryBadges.length" class="gallery-badges">
+              <span
+                v-for="badge in desktopGalleryBadges"
+                :key="badge"
+                class="gallery-badge"
+              >{{ badge }}</span>
+            </div>
+
+            <button
+              v-if="property.gallery_images.length > 1"
+              type="button"
+              class="gallery-nav-btn gallery-nav-btn--prev"
+              aria-label="Previous photo"
+              @click.stop="prevMainGalleryImage"
+            >
+              <i class="ri-arrow-left-s-line"></i>
+            </button>
+            <button
+              v-if="property.gallery_images.length > 1"
+              type="button"
+              class="gallery-nav-btn gallery-nav-btn--next"
+              aria-label="Next photo"
+              @click.stop="nextMainGalleryImage"
+            >
+              <i class="ri-arrow-right-s-line"></i>
+            </button>
+
+            <div
+              class="image-overlay image-overlay-right"
+              v-if="property?.drive_link"
+              @click.stop="openDriveLink"
+            >
+              <i class="fab fa-google-drive"></i>
+              <span>GOOGLE DRIVE</span>
+            </div>
+          </div>
+
+          <div class="side-gallery" v-if="property.gallery_images.length > 1">
+            <div
+              class="side-gallery__tall"
+              :style="{ gridTemplateColumns: `repeat(${Math.min(getGalleryTallTiles().length, 2)}, minmax(0, 1fr))` }"
+            >
               <div
-                class="gallery-container"
-                :class="{ 'is-single': property.gallery_images.length === 1 }"
+                v-for="tile in getGalleryTallTiles()"
+                :key="'tall-' + tile.index"
+                class="side-image side-image--tall"
+                @click="openLightbox(tile.index)"
               >
-                <div class="main-image-section" @click="openLightbox(0)">
-                  <img :src="getFirstGalleryImage()" alt="Property main image" class="main-image" />
-                  <!-- <div class="image-overlay">
-                    <i class="ri-image-fill"></i>
-                    <span>View All Photos</span>
-                  </div> -->
-                    <div class="image-overlay image-overlay-right"   v-if="property?.drive_link"
-                        @click.stop="openDriveLink">
-                
-                        <i class="fab fa-google-drive"></i>
-                        <span>GOOGLE DRIVE</span> 
-                      </div>
-                </div>
-                <div class="side-images">
-                  <div
-                    v-for="(image, index) in getGalleryThumbnails()"
-                    :key="index"
-                    class="side-image"
-                    :class="{
-                      active: currentMainImage === getImageUrl(image.image_url_final),
-                      'has-view-all': index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3,
-                    }"
-                    @click="index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3
-                      ? openLightbox(0)
-                      : setMainImage(getImageUrl(image.image_url_final))"
-                  >
-                    <img :src="getImageUrl(image.image_url_final)" alt="Property thumbnail" />
-                    <div
-                      v-if="index === getGalleryThumbnails().length - 1 && property.gallery_images && property.gallery_images.length > 3"
-                      class="view-all-overlay"
-                    >
-                      <div class="view-all-content">
-                        <span>+{{ property.gallery_images?.length || 0 }}</span>
-                      </div>
-                    </div>
+                <img :src="getImageUrl(tile.image.image_url_final)" alt="Property thumbnail" />
+              </div>
+            </div>
+
+            <div
+              class="side-gallery__small"
+              v-if="getGallerySmallTiles().length"
+              :style="{ gridTemplateColumns: `repeat(${getGallerySmallTiles().length}, minmax(0, 1fr))` }"
+            >
+              <div
+                v-for="tile in getGallerySmallTiles()"
+                :key="'small-' + tile.index"
+                class="side-image side-image--small"
+                :class="{ 'has-view-all': tile.moreCount > 0 }"
+                @click="tile.moreCount > 0 ? openLightbox(0) : openLightbox(tile.index)"
+              >
+                <img :src="getImageUrl(tile.image.image_url_final)" alt="Property thumbnail" />
+                <div v-if="tile.moreCount > 0" class="view-all-overlay">
+                  <div class="view-all-content">
+                    <span>+{{ tile.moreCount }}</span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
+      <div class="ps-layout" :class="{ 'ps-layout--mobile': isMobileViewport }">
+        <!-- Main Content (under hero) -->
+        <div class="ps-main">
             <!-- Mobile gallery + hero (Bayut-style) -->
             <div v-if="property && property.gallery_images && isMobileViewport" class="ps-mobile-hero">
               <MobilePropertyGallery
@@ -230,334 +275,124 @@
             </div>
             <!-- Property Details Section -->
             <div class="property-content " v-if="property">
-              
-              <!-- Action Buttons for authorized users -->
-              <!-- <div class="property-actions mb-16" v-if="canEditOrDelete">
-                <button v-if="canEditProperty" class="btn-action btn-edit" @click="editProperty">
-                  <i class="ri-edit-line"></i>
-                  Edit Property
-                </button>
-                <button v-if="canDeleteProperty" class="btn-action btn-delete" @click="confirmDeleteProperty">
-                  <i class="ri-delete-bin-line"></i>
-                  Delete Property
-                </button>
-              </div> -->
 
-              <!-- Property Price and Basic Info (desktop) -->
-              <div class="property-main-info mb-16" v-if="!isMobileViewport">
-                <div class="property-actions mb-16">
-                  <button class="btn btn-primary" >
-                 {{ property.listing_status || "Not specified" }}
-                </button>
-                  <!-- Only present for the owner/super_admin/admin/manager(listing team) — see
-                       ListingResource's $canSeeStatus; null for everyone else. -->
-                  <button class="btn btn-secondary" v-if="property.status && !needsApproval" >
-                 {{ property.status }}
-                </button>
-                  <button class="btn btn-warning" v-if="needsApproval">
-                    <i class="ri-time-line me-1"></i>Needs Approval
-                  </button>
-                  <!-- <button class="btn btn-success" @click="openFloorPlanSlider(0)" v-if="property?.floor_plans?.length > 0">
-                    <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
-                    VIEW FLOOR PLAN
-                  </button> -->
-                </div>
-                <div class="price-main">
-                  <h3 class="property-price">
-                    AED {{ formatPrice(property.price) }}
-                    <span v-if="rentPriceMeta" class="property-price__period">{{ rentPriceMeta.period }}</span>
-                  </h3>
-                  <p v-if="rentPriceMeta" class="property-price__equiv">{{ rentPriceMeta.monthly }}</p>
-                  <h4 class="property-title">{{ property.area?.area_title || '' }}</h4>
-                   <!--<h4 class="property-title"> Old Area {{ property.old_area || "" }}</h4>-->
+              <!-- Desktop info card: title / price / specs / features -->
+              <section class="ps-card ps-info-card" v-if="!isMobileViewport">
+                <div class="ps-info-card__top">
+                  <div class="ps-info-card__identity">
+                    <p class="ps-info-card__title">{{ desktopListingTitle }}</p>
+                    <p v-if="desktopLocationLabel" class="ps-info-card__location">{{ desktopLocationLabel }}</p>
+                  </div>
+                  <div class="ps-info-card__price-wrap">
+                    <p class="ps-info-card__price">
+                      {{ formatPrice(property.price) }} AED
+                      <span v-if="rentPriceMeta" class="ps-info-card__period">{{ rentPriceMeta.period }}</span>
+                    </p>
+                    <p v-if="rentPriceMeta" class="ps-info-card__equiv">{{ rentPriceMeta.monthly }}</p>
+                  </div>
                 </div>
 
-                <div class="specs-grid-main">
-                    
-                 <div class="spec-main-item">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                          <!--<i class="ri-building-line"></i>-->
-                          <img :src="propertyIcon" class="imgicon"/>
-                          {{  property.property_type.name  || 'N/A' }} </span>
-                      <!-- <span class="spec-main-label"></span> -->
-                    </div>
-                  </div>
-                   <div class="spec-main-item" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                          <!--<i class="ri-hotel-bed-line"></i>-->
-                          <img :src="bedIcon" class="imgicon"/>
-                          {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +' Bedrooms' }} </span>
-                      <!-- <span class="spec-main-label">Bed</span> -->
-                    </div>
-                  </div>
-                  
-                  <div class="spec-main-item"  v-if="!hidesBedsBaths(property.property_type) && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                          <!--<i class="ri-contrast-drop-line"></i>-->
-                          <img :src="bathIcon" class="imgicon"/>
-                          {{ property.number_of_bathrooms }} Bathrooms</span>
-                      <!-- <span class="spec-main-label">Bath</span> -->
-                    </div>
-                  </div>
-                  <div class="spec-main-item" v-if="isBuildingProperty && floorsLabel">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value"><i class="ri-building-2-line"></i> {{ floorsLabel }}</span>
-                    </div>
-                  </div>
-                  <div class="spec-main-item">
-                    <div class="spec-main-info">
-                      <span class="spec-main-value">
-                          <!--<i class="ri-home-5-line"></i>-->
-                          <img :src="sqftIcon" class="imgicon"/>
-                          {{ property.size_sqft || 'N/A' }} Sq Ft</span>
-                      <!-- <span class="spec-main-label"></span> -->
-                    </div>
-                  </div>
-                  
-            
-                </div>
-              </div>
+                <div class="ps-info-card__divider" aria-hidden="true"></div>
 
-            <!-- Basic Information Section -->
-            <div class="detailed-info-section mb-16" v-if="!isMobileViewport">
-              <div class="info-section">
-                <h3 class="section-title mb-20">Property Details</h3>
-                <div class="info-grid">
-                  <div class="info-item">
-                    <span class="info-label">Sale/Rent</span>
-                    <span class="info-value">{{ property.listing_status || "Not specified" }}</span>
+                <div class="ps-specs-grid">
+                  <div class="ps-spec-tile" v-for="tile in desktopSpecTiles" :key="tile.label">
+                    <span class="ps-spec-tile__label">{{ tile.label }}</span>
+                    <span class="ps-spec-tile__value">{{ tile.value }}</span>
                   </div>
-                  
-                  <div class="info-item">
-                    <span class="info-label">Price</span>
-                    <span class="info-value">
-                      AED {{ formatPrice(property.price) }}
-                      <template v-if="rentPriceMeta"> · {{ rentPriceMeta.period }}</template>
-                    </span>
-                  </div>
-                  
-                  <div class="info-item">
-                    <span class="info-label">Property Type</span>
-                    <span class="info-value">{{ property.property_type?.name || "Not specified" }}</span>
-                  </div>
-                  <div class="info-item" v-if="property.project">
-                    <span class="info-label">Project</span>
-                    <span class="info-value">{{ property.project?.title || "Not specified" }}</span>
-                  </div>
-                  <div class="info-item"  v-if="property.project">
-                    <span class="info-label">Developer</span>
-                    <span class="info-value">{{ property.project?.developer_name || "Not specified" }}</span>
-                  </div>
-                  
-                  
-                  <div class="info-item" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
-                    <span class="info-label">Bedrooms</span>
-                    <span class="info-value"> {{ property.number_of_bedrooms==0?'Studio':property.number_of_bedrooms  +'Bedrooms' }} </span>
-                  </div>
-                  
-                  <div class="info-item"  v-if="!hidesBedsBaths(property.property_type) && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
-                    <span class="info-label">Bathrooms</span>
-                    <span class="info-value">{{ property.number_of_bathrooms || "0" }}</span>
-                  </div>
-                  <div class="info-item" v-if="isBuildingProperty && floorsLabel">
-                    <span class="info-label">Number of Floors</span>
-                    <span class="info-value">{{ property.number_of_floors }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Size</span>
-                    <span class="info-value">{{ property.size_sqft || property.size_sqmt || "N/A" }} {{ property.size_sqft ? 'Sq Ft' : property.size_sqmt ? 'Sq M' : '' }}</span>
-                  </div>
-                  <div class="info-item" v-if="plotSizeLabel">
-                    <span class="info-label">Plot Size</span>
-                    <span class="info-value">{{ plotSizeLabel }}</span>
-                  </div>
-                    <div class="info-item" v-if="property.is_hot_deal == 'Yes'">
-                    <span class="info-label">Hot Deal</span>
-                    <span class="info-value">{{ property.is_hot_deal }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">Completion Status</span>
-                    <span class="info-value">{{ property?.completion_status || "Not specified" }}</span>
-                  </div>
-                  
-                  <!--<div class="info-item" v-if="false">-->
-                  <!--  <span class="info-label">Furnished Status</span>-->
-                  <!--  <span class="info-value">{{ property.furnished_status || "Not specified" }}</span>-->
-                  <!--</div>-->
-                 
-                  <div class="info-item" v-if="property.reference_number">
-                    <span class="info-label">Reference Number</span>
-                    <span class="info-value">{{ property.reference_number }}</span>
-                  </div>
-                  
-                 
-                  
-                  <div class="info-item" v-if="property.developer?.name">
-                    <span class="info-label">Developer</span>
-                    <span class="info-value">{{ property.developer.name }}</span>
-                  </div>
-                  <div class="info-item" v-if="property.rented_status && property.rented_until">
-                    <span class="info-label">Rented</span>
-                    <span class="info-value">until {{ property.rented_until }}</span>
-                  </div>
-                
-                    <div class="info-item" v-if="hasPaymentPlans(property)">
-                      <span class="info-label">Payment Plans</span>
-                      <div class="info-value">
-                        <div class="payment-plans-container">
-                          <template v-if="isArrayPaymentPlan(property.payment_plan_json || property.payment_plan)">
-                            <span v-for="(plan, index) in parsePaymentPlans(property)" 
-                                  :key="index" 
-                                  class="badge bg-primary me-1 mb-1">
-                              {{ plan }}
-                            </span>
-                          </template>
-                          <template v-else>
-                            <span class="badge bg-primary me-1 mb-1">
-                              {{ formatPaymentPlan(property.payment_plan_json || property.payment_plan) }}
-                            </span>
-                          </template>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="info-item full-width flex-column" v-if="hasAdditionalFeatures">
-                      <span class="info-label">Features</span>
-                      <div class="info-value">
-                        <div class="payment-plans-container ">
-                          <span
-                            v-for="(feature, index) in additionalFeaturesList"
-                            :key="index"
-                            class="badge bg-primary feature me-1 mb-1"
-                          >
-                            {{ feature }}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                   
-                  <!--<div class="info-item" v-if="false">-->
-                  <!--  <span class="info-label">View</span>-->
-                  <!--  <span class="info-value">{{ property.unit_view }}</span>-->
-                  <!--</div>-->
-                  
-                  <!--<div class="info-item" v-if="false">-->
-                  <!--  <span class="info-label">Layout Type</span>-->
-                  <!--  <span class="info-value">{{ property.layout_type }}</span>-->
-                  <!--</div>-->
-                  
-                  <!--<div class="info-item" v-if="false">-->
-                  <!--  <span class="info-label">Ownership Type</span>-->
-                  <!--  <span class="info-value">{{ property.ownership_type }}</span>-->
-                  <!--</div>-->
                 </div>
-              </div>
-            </div>
+
+                <div class="ps-features" v-if="hasAdditionalFeatures">
+                  <p class="ps-card__heading">Features</p>
+                  <div class="ps-feature-pills">
+                    <span
+                      v-for="(feature, index) in additionalFeaturesList"
+                      :key="index"
+                      class="ps-feature-pill"
+                    >{{ feature }}</span>
+                  </div>
+                </div>
+              </section>
           
              
 
-            <!-- Mortgage Information Section -->
-            <div class="detailed-info-section mb-16" v-if="hasMortgageInfo">
-              <div class="info-section">
-                <h3 class="section-title mb-20">Mortgage Information</h3>
-                <div class="info-grid">
-            
-                  <div class="info-item" v-if="property.mortgage_status">
-                    <span class="info-label">Mortgage Status</span>
-                    <span class="info-value">{{ property.mortgage_status }}</span>
-                  </div>
-            
-                  <div class="info-item" v-if="property.mortgage_amount">
-                    <span class="info-label">Mortgage Amount</span>
-                    <span class="info-value">AED {{ formatPrice(property.mortgage_amount) }}</span>
-                  </div>
-            
-                  <div class="info-item" v-if="property.occupancy_status">
-                    <span class="info-label">Occupancy Status</span>
-                    <span class="info-value">{{ property.occupancy_status }}</span>
-                  </div>
-            
-                  <div class="info-item" v-if="property.rent_amount">
-                    <span class="info-label">Rent Amount</span>
-                    <span class="info-value">AED {{ formatPrice(property.rent_amount) }}</span>
-                  </div>
-            
-                  <div class="info-item" v-if="property.rent_expiry_date">
-                    <span class="info-label">Rent Expiry Date</span>
-                    <span class="info-value">{{ formatDate(property.rent_expiry_date) }}</span>
-                  </div>
-            
-                  <div class="description-content full-width" v-if="property.mortgage_comment">
-                    <span class="info-label">Mortgage Comment</span>
-                    <p class="description-text">{{ property.mortgage_comment }}</p>
-                  </div>
-            
-                </div>
-              </div>
-            </div>
-            
             <!-- Floor Plans Section -->
-            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && property.floor_plans && property.floor_plans.length > 0">
-              <div class="info-section">
-                <h3 class="section-title mb-20">
-                  <i class="ri-layout-grid-line me-2"></i>
-                  Floor Plans
-                  <small class="text-muted ms-2">({{ property.floor_plans.length }})</small>
-                </h3>
-                <div class="floor-plans-grid">
-                  <div
-                    v-for="(plan, idx) in property.floor_plans"
-                    :key="plan.id || idx"
-                    class="floor-plan-card"
-                    @click="openFloorPlanSlider(idx)"
-                  >
-                    <div class="floor-plan-card-thumb">
-                      <img
-                        v-if="plan.image_url"
-                        :src="plan.image_url"
-                        :alt="plan.name || 'Floor Plan'"
-                        loading="lazy"
-                      />
-                      <div v-else class="floor-plan-card-placeholder">
-                        <i class="ri-image-line"></i>
-                      </div>
-                      <div class="floor-plan-card-overlay">
-                        <i class="ri-zoom-in-line"></i>
-                      </div>
+            <section class="ps-card ps-floor-plans" v-if="!isMobileViewport && property.floor_plans && property.floor_plans.length > 0">
+              <p class="ps-card__heading">Floor Plans</p>
+              <div class="floor-plans-grid">
+                <div
+                  v-for="(plan, idx) in property.floor_plans"
+                  :key="plan.id || idx"
+                  class="floor-plan-card"
+                  @click="openFloorPlanSlider(idx)"
+                >
+                  <div class="floor-plan-card-thumb">
+                    <img
+                      v-if="plan.image_url"
+                      :src="plan.image_url"
+                      :alt="plan.name || 'Floor Plan'"
+                      loading="lazy"
+                    />
+                    <div v-else class="floor-plan-card-placeholder">
+                      <i class="ri-image-line"></i>
                     </div>
-                    <div class="floor-plan-card-name">{{ plan.name || `Floor Plan ${idx + 1}` }}</div>
+                    <div class="floor-plan-card-overlay">
+                      <i class="ri-zoom-in-line"></i>
+                    </div>
                   </div>
+                  <div class="floor-plan-card-name">{{ plan.name || `Floor Plan ${idx + 1}` }}</div>
                 </div>
               </div>
-            </div>
+            </section>
 
             <!-- Payment Details Section (breakdown + assignment costs) -->
-            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && hasPaymentDetails">
-              <div class="info-section">
-                <h3 class="section-title mb-20">Payment Details</h3>
-                <PaymentDetailsSection :listing="property" />
-              </div>
-            </div>
+            <section class="ps-card ps-payment-card" v-if="!isMobileViewport && hasPaymentDetails">
+              <p class="ps-card__heading">Payment Details</p>
+              <PaymentDetailsSection :listing="property" />
+            </section>
 
-            <!-- Property Documents -->
-            <div class="detailed-info-section mb-16" v-if="property.additional_documents && property.additional_documents.length > 0 && property.user_permissions?.showDocuments">
-              <div class="info-section">
-                <h3 class="section-title mb-20">
-                  <i class="ri-file-text-line me-2"></i>
-                  Property Documents
-                </h3>
-                <div class="documents-grid">
-                  <a v-for="doc in property.additional_documents" :key="doc.id"
-                     :href="doc.url" target="_blank" rel="noopener" class="document-card">
-                    <i class="ri-file-add-line document-icon"></i>
-                    <span class="document-name text-truncate">{{ doc.name || 'Document' }}</span>
-                    <i class="ri-external-link-line document-action"></i>
-                  </a>
+            <!-- Mortgage Information Section -->
+            <section class="ps-card" v-if="!isMobileViewport && hasMortgageInfo">
+              <p class="ps-card__heading">Mortgage Information</p>
+              <div class="ps-specs-grid">
+                <div class="ps-spec-tile" v-if="property.mortgage_status">
+                  <span class="ps-spec-tile__label">Mortgage Status</span>
+                  <span class="ps-spec-tile__value">{{ property.mortgage_status }}</span>
+                </div>
+                <div class="ps-spec-tile" v-if="property.mortgage_amount">
+                  <span class="ps-spec-tile__label">Mortgage Amount</span>
+                  <span class="ps-spec-tile__value">AED {{ formatPrice(property.mortgage_amount) }}</span>
+                </div>
+                <div class="ps-spec-tile" v-if="property.occupancy_status">
+                  <span class="ps-spec-tile__label">Occupancy Status</span>
+                  <span class="ps-spec-tile__value">{{ property.occupancy_status }}</span>
+                </div>
+                <div class="ps-spec-tile" v-if="property.rent_amount">
+                  <span class="ps-spec-tile__label">Rent Amount</span>
+                  <span class="ps-spec-tile__value">AED {{ formatPrice(property.rent_amount) }}</span>
+                </div>
+                <div class="ps-spec-tile" v-if="property.rent_expiry_date">
+                  <span class="ps-spec-tile__label">Rent Expiry Date</span>
+                  <span class="ps-spec-tile__value">{{ formatDate(property.rent_expiry_date) }}</span>
                 </div>
               </div>
-            </div>
+              <p class="ps-notes-text mt-3" v-if="property.mortgage_comment">{{ property.mortgage_comment }}</p>
+            </section>
+
+            <!-- Property Documents -->
+            <section class="ps-card" v-if="!isMobileViewport && property.additional_documents && property.additional_documents.length > 0 && property.user_permissions?.showDocuments">
+              <p class="ps-card__heading">
+                <i class="ri-file-text-line me-2"></i>
+                Property Documents
+              </p>
+              <div class="documents-grid">
+                <a v-for="doc in property.additional_documents" :key="doc.id"
+                   :href="doc.url" target="_blank" rel="noopener" class="document-card">
+                  <i class="ri-file-add-line document-icon"></i>
+                  <span class="document-name text-truncate">{{ doc.name || 'Document' }}</span>
+                  <i class="ri-external-link-line document-action"></i>
+                </a>
+              </div>
+            </section>
 
             <section v-if="isMobileViewport && property.comment && property.comment.trim()" class="pf-card">
               <h3 class="pf-card__title">Notes</h3>
@@ -565,221 +400,86 @@
               <button type="button" class="pf-more" @click="openPfSheet('description')">See full notes</button>
             </section>
 
-            <div class="detailed-info-section mb-16" v-if="!isMobileViewport && property.comment && property.comment.trim()">
-              <div class="info-section">
-                <h3 class="section-title mb-20">Notes</h3>
-                <div class="description-content">
-                  <p class="description-text">{{ property.comment }}</p>
+            <section class="ps-card ps-notes-card" v-if="!isMobileViewport && property.comment && property.comment.trim()">
+              <p class="ps-card__heading">Notes</p>
+              <p class="ps-notes-text">{{ property.comment }}</p>
+            </section>
+
+            <!-- Mobile comments stay in main column -->
+            <div class="comment-container" v-if="isMobileViewport && !onlyShow">
+              <div class="comments-section" v-if="property">
+                <div class="card">
+                  <div class="card-body">
+                    <h3 class="section-title mb-4">
+                      <i class="ri-chat-3-line me-2"></i>
+                      Comments
+                    </h3>
+                    <div class="add-comment-form mb-4" v-if="isAuthenticated">
+                      <div class="comment-input mb-3">
+                        <textarea
+                          v-model="newComment.text"
+                          placeholder="Share your thoughts about this property..."
+                          class="form-control"
+                          rows="4"
+                          :maxlength="1000"
+                        ></textarea>
+                        <div class="char-counter">{{ newComment.text.length }}/1000</div>
+                      </div>
+                      <button
+                        class="btn btn-primary"
+                        @click="submitComment"
+                        :disabled="!newComment.text.trim() || submittingComment"
+                      >
+                        <i class="ri-send-plane-line me-2"></i>
+                        {{ submittingComment ? 'Submitting...' : 'Submit Comment' }}
+                      </button>
+                    </div>
+                    <div class="login-prompt mb-4" v-else>
+                      <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        Please <a href="/login" class="alert-link">login</a> to add comments and reviews.
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-              <div class="comment-container" v-if="!onlyShow">
-                <!-- Comments Section -->
-                <div class="comments-section " v-if="property">
-                  <div class="card">
-                    <div class="card-body">
-                      <h3 class="section-title mb-4">
-                        <i class="ri-chat-3-line me-2"></i>
-                        Comments 
-                      </h3>
-
-                      <!-- Add Comment Form -->
-                      <div class="add-comment-form mb-4" v-if="isAuthenticated">
-                        <div class="form-header">
-                          <p class="add-comment-label">Add Your Comment</p>
-                        </div>
-                        <div class="form-body">
-                          <!-- Comment Input -->
-                          <div class="comment-input mb-3">
-                            <textarea 
-                              v-model="newComment.text" 
-                              placeholder="Share your thoughts about this property..."
-                              class="form-control"
-                              rows="4"
-                              :maxlength="1000"
-                            ></textarea>
-                            <div class="char-counter">
-                              {{ newComment.text.length }}/1000
-                            </div>
-                          </div>
-
-                          <div class="form-actions">
-                            <button 
-                              class="btn btn-primary"
-                              @click="submitComment"
-                              :disabled="!newComment.text.trim() || submittingComment"
-                            >
-                              <i class="ri-send-plane-line me-2"></i>
-                              {{ submittingComment ? 'Submitting...' : 'Submit Comment' }}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Login Prompt -->
-                      <div class="login-prompt mb-4" v-else>
-                        <div class="alert alert-info">
-                          <i class="ri-information-line me-2"></i>
-                          Please <a href="/login" class="alert-link">login</a> to add comments and reviews.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div class="comments-list">
+                <div v-if="loadingComments" class="text-center py-4">
+                  <div class="spinner-border text-primary" role="status"></div>
                 </div>
-                
-                <!-- Comments List -->
-                <div class="comments-list" v-if="!onlyShow">
-                  <div v-if="loadingComments" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Loading comments...</span>
-                    </div>
-                  </div>
-
-                  <div v-else-if="comments.length === 0" class="no-comments text-center py-5">
-                    <i class="ri-chat-3-line no-comments-icon"></i>
-                    <h5>No Comments Yet</h5>
-                    <p class="text-muted">Be the first to share your thoughts about this property!</p>
-                  </div>
-
-                  <div v-else class="comments-container">
-                    <div 
-                      v-for="comment in comments" 
-                      :key="comment.id" 
-                      class="comment-item"
-                      :class="{ 'has-replies': comment.replies && comment.replies.length > 0 }"
-                    >
-                      <div class="comment-main">
-                        <!-- Comment Header -->
-                        <div class="comment-header">
-                          <div class="user-info">
-                            <img 
-                              :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" 
-                              :alt="comment.user.name"
-                              class="user-avatar"
-                              @error="handleAvatarError"
-                            />
-                            <div class="user-details">
-                              <h6 class="user-name">{{ comment.user.name }}</h6>
-                              <span class="comment-date">{{ formatCommentDate(comment.created_at) }}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Comment Body -->
-                        <div class="comment-body">
-                          <p class="comment-text">{{ comment.comment }}</p>
-                        </div>
-
-                        <!-- Comment Actions -->
-                        <div class="comment-actions">
-                          <button 
-                            class="btn-action btn-reply"
-                            @click="toggleReply(comment.id)"
-                            v-if="isAuthenticated"
-                          >
-                            <i class="ri-reply-line"></i>
-                            Reply
-                          </button>
-                          
-                          <button 
-                            class="btn-action btn-edit"
-                            @click="editComment(comment)"
-                            v-if="canEditComment(comment)"
-                          >
-                            <i class="ri-edit-line"></i>
-                            Edit
-                          </button>
-                          
-                          <button 
-                            class="btn-action btn-delete"
-                            @click="deleteComment(comment.id)"
-                            v-if="canEditComment(comment)"
-                          >
-                            <i class="ri-delete-bin-line"></i>
-                            Delete
-                          </button>
-                        </div>
-
-                        <!-- Reply Form -->
-                        <div class="reply-form" v-if="activeReply === comment.id">
-                          <textarea 
-                            v-model="replyText" 
-                            placeholder="Write your reply..."
-                            class="form-control"
-                            rows="2"
-                          ></textarea>
-                          <div class="reply-actions">
-                            <button 
-                              class="btn btn-sm btn-primary"
-                              @click="submitReply(comment.id)"
-                              :disabled="!replyText.trim()"
-                            >
-                              Submit Reply
-                            </button>
-                            <button 
-                              class="btn btn-sm btn-secondary"
-                              @click="cancelReply"
-                            >
-                              Cancel
-                            </button>
+                <div v-else-if="comments.length === 0" class="no-comments text-center py-5">
+                  <i class="ri-chat-3-line no-comments-icon"></i>
+                  <h5>No Comments Yet</h5>
+                </div>
+                <div v-else class="comments-container">
+                  <div
+                    v-for="comment in comments"
+                    :key="comment.id"
+                    class="comment-item"
+                  >
+                    <div class="comment-main">
+                      <div class="comment-header">
+                        <div class="user-info">
+                          <img
+                            :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                            :alt="comment.user.name"
+                            class="user-avatar"
+                            @error="handleAvatarError"
+                          />
+                          <div class="user-details">
+                            <h6 class="user-name">{{ comment.user.name }}</h6>
+                            <span class="comment-date">{{ formatCommentDate(comment.created_at) }}</span>
                           </div>
                         </div>
                       </div>
-
-                      <!-- Replies -->
-                      <div class="replies-container" v-if="comment.replies && comment.replies.length > 0">
-                        <div 
-                          v-for="reply in comment.replies" 
-                          :key="reply.id" 
-                          class="reply-item"
-                        >
-                          <div class="reply-main">
-                            <div class="reply-header">
-                              <div class="user-info">
-                                <img 
-                                  :src="reply.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" 
-                                  :alt="reply.user.name"
-                                  class="user-avatar small"
-                                  @error="handleAvatarError"
-                                />
-                                <div class="user-details">
-                                  <h6 class="user-name">{{ reply.user.name }}</h6>
-                                  <span class="comment-date">{{ formatCommentDate(reply.created_at) }}</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div class="reply-body">
-                              <p class="comment-text">{{ reply.comment }}</p>
-                            </div>
-
-                            <div class="comment-actions">
-                              <button 
-                                class="btn-action btn-edit"
-                                @click="editComment(reply)"
-                                v-if="canEditComment(reply)"
-                              >
-                                <i class="ri-edit-line"></i>
-                                Edit
-                              </button>
-                              
-                              <button 
-                                class="btn-action btn-delete"
-                                @click="deleteComment(reply.id)"
-                                v-if="canEditComment(reply)"
-                              >
-                                <i class="ri-delete-bin-line"></i>
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+                      <div class="comment-body">
+                        <p class="comment-text">{{ comment.comment }}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
             </div>
 
             <!-- Loading State -->
@@ -804,41 +504,43 @@
                 </button>
               </div>
             </div>
-          </div>
+
+            <div
+              v-if="canViewPropertyViewings && !onlyShow && isMobileViewport && property"
+              class="ps-mobile-approved-viewings"
+            >
+              <PropertyApprovedViewingsPanel
+                mobile
+                :viewings="approvedViewings"
+                :loading="loadingApprovedViewings"
+              />
+            </div>
+
+            <div
+              v-if="canViewInternalUpdates && !onlyShow && isMobileViewport && property"
+              class="ps-mobile-agent-updates"
+            >
+              <PropertyAgentUpdatesPanel
+                mobile
+                :updates="internalUpdates"
+                :loading="loadingUpdates"
+                :can-add="canAddInternalUpdate"
+                :new-text="newUpdateText"
+                :submitting="submittingUpdate"
+                :can-delete="canDeleteUpdate"
+                @update:new-text="newUpdateText = $event"
+                @submit="submitInternalUpdate"
+                @delete="deleteInternalUpdate"
+              />
+            </div>
         </div>
 
-        <div
-          v-if="canViewPropertyViewings && !onlyShow && isMobileViewport && property"
-          class="ps-mobile-approved-viewings"
-        >
-          <PropertyApprovedViewingsPanel
-            mobile
-            :viewings="approvedViewings"
-            :loading="loadingApprovedViewings"
-          />
-        </div>
-
-        <div
-          v-if="canViewInternalUpdates && !onlyShow && isMobileViewport && property"
-          class="ps-mobile-agent-updates"
-        >
-          <PropertyAgentUpdatesPanel
-            mobile
-            :updates="internalUpdates"
-            :loading="loadingUpdates"
-            :can-add="canAddInternalUpdate"
-            :new-text="newUpdateText"
-            :submitting="submittingUpdate"
-            :can-delete="canDeleteUpdate"
-            @update:new-text="newUpdateText = $event"
-            @submit="submitInternalUpdate"
-            @delete="deleteInternalUpdate"
-          />
-        </div>
-      </div>
-
-      <!-- Sidebar -->
-      <div ref="propertySidebarColRef" class="col-lg-3 property-show-sidebar-col">
+      <!-- Sidebar under small images -->
+      <aside
+        ref="propertySidebarColRef"
+        class="ps-aside property-show-sidebar-col"
+        v-show="!isMobileViewport"
+      >
         <div ref="propertySidebarSpacerRef" class="property-sidebar-spacer" aria-hidden="true"></div>
         <div
           ref="propertySidebarStickyRef"
@@ -850,7 +552,7 @@
         >
           <div
             ref="propertySidebarAgentRef"
-            class="agent-sidebar-card"
+            class="agent-sidebar-card ps-card"
             :class="{ 'agent-sidebar-card--actions-open': showActionsDropdown }"
           >
             <div class="agent-profile" v-if="property && property.agent">
@@ -860,89 +562,47 @@
                 class="agent-sidebar-avatar" 
               />
               <div class="agent-sidebar-info">
-                <h5 class="agent-sidebar-name">{{ property.agent.name || 'Agent Name' }}</h5>
-                <button v-if="!onlyShow"
+                <p class="agent-sidebar-name">{{ property.agent.name || 'Agent' }}</p>
+                <button
+                  v-if="!onlyShow"
+                  type="button"
                   class="btn-show-agent-details" 
                   @click="goToAgentDetails(property.agent.id)"
                 >
-                  <i class="ri-user-line me-1"></i>
                   Show Agent Details
                 </button>
               </div>
             </div>
 
-            <div class="sidebar-section" v-if="isPropertyOwner ">
-                <br>
-              <div class="request-actions-grid">
-                <!-- Unit Number Info -->
-                <div class="request-action-item">
-                  <div class="approved-info">
-                    <div class="info-display">
-                      <i class="ri-home-4-line"></i>
-                      <span class="info-value">{{ property.unit_number || 'Not Set' }}</span>
-                    </div>
-                  
-                  </div>
+            <div class="sidebar-section ps-access-row" v-if="isPropertyOwner || ((requestStatus?.owner_info_status === 'approved' && property?.canShowOwner) || (requestStatus?.unit_number_status === 'approved' && property?.canShowUnitNumber))">
+              <div class="ps-access-pills">
+                <div
+                  v-if="isPropertyOwner || (requestStatus?.unit_number_status === 'approved' && property?.canShowUnitNumber)"
+                  class="ps-access-pill"
+                >
+                  <i class="ri-home-4-line"></i>
+                  <span>{{ isPropertyOwner ? (property.unit_number || 'Not Set') : getUnitNumber() }}</span>
+                </div>
+                <div
+                  v-else-if="requestStatus?.unit_number_status === 'pending' && !onlyShow"
+                  class="ps-access-pill ps-access-pill--pending"
+                >
+                  <i class="ri-time-line"></i>
+                  <span>Pending</span>
+                  <button type="button" class="btn-cancel-small" @click="cancelRequest('unit_number')">
+                    <i class="ri-close-line"></i>
+                  </button>
                 </div>
 
-                <!-- Owner Information -->
-                <div class="request-action-item">
-                  <div class="approved-info">
-                    <div class="info-display" @click.stop="openOwnerDetailsModal" style="cursor: pointer;">
-                      <i class="ri-user-line"></i>
-                      <span class="info-value">View Owner Info</span>
-                    </div>
-                  
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Note for owner -->
-            
-            </div>
-            <div class="sidebar-section" v-if="((requestStatus?.owner_info_status === 'approved' && property?.canShowOwner) || (requestStatus?.unit_number_status === 'approved' && property?.canShowUnitNumber)) && !onlyShow">
-              <h6 class="sidebar-title">Request Access
-                <span v-if="loadingRequest" class="loading-spinner-small"></span>
-              </h6>
-              
-              <div class="request-actions-grid">
-                <!-- Unit Number Request -->
-                <div class="request-action-item">
-                  <!-- If unit number is approved -->
-                  <div v-if="requestStatus?.unit_number_status === 'approved' && property?.canShowUnitNumber" class="approved-info">
-                    <div class="info-display">
-                      <i class="ri-home-4-line"></i>
-                      <span class="info-value">{{ getUnitNumber() }}</span>
-                    </div>
-                  </div>
-                 <div v-else-if="requestStatus?.unit_number_status === 'pending'" class="pending-info">
-                    <div class="pending-status">
-                      <i class="ri-time-line"></i>
-                      <span class="status-text">Pending</span>
-                    </div>
-                    <button class="btn-cancel-small" @click="cancelRequest('unit_number')">
-                      <i class="ri-close-line"></i>
-                    </button>
-                  </div>
-                  
-                
-
-                </div>
-
-                <!-- Owner Information Request -->
-                <div class="request-action-item">
-                  <!-- If owner info is approved -->
-                  <div v-if="requestStatus?.owner_info_status === 'approved' && property?.canShowOwner && getApprovedOwnerData()" class="approved-info">
-                    <div class="info-display" @click.stop="openOwnerDetailsModal" style="cursor: pointer;">
-                      <i class="ri-user-line"></i>
-                      <span class="info-value">view Owner Info</span>
-                    </div>
-                  </div>
-
-                 
-
-             
-                </div>
+                <button
+                  v-if="isPropertyOwner || (requestStatus?.owner_info_status === 'approved' && property?.canShowOwner && getApprovedOwnerData())"
+                  type="button"
+                  class="ps-access-pill"
+                  @click.stop="openOwnerDetailsModal"
+                >
+                  <i class="ri-user-line"></i>
+                  <span>View Owner Info</span>
+                </button>
               </div>
             </div>
            <!-- Property Actions Dropdown -->
@@ -954,7 +614,7 @@
                   :aria-expanded="showActionsDropdown"
                   @click="toggleActionsDropdown"
                 >
-                  <span class="property-actions-accordion__title">Property Actions</span>
+                  <span class="property-actions-accordion__title">Property Action</span>
                   <i class="ri-arrow-down-s-fill property-actions-accordion__chevron" :class="{ 'is-up': showActionsDropdown }" aria-hidden="true"></i>
                 </button>
 
@@ -1015,10 +675,67 @@
               @delete="deleteInternalUpdate"
             />
           </div>
+
+          <!-- Desktop comments in sidebar (Figma) -->
+          <section class="ps-card ps-comments-card" v-if="!onlyShow && property">
+            <div class="ps-side-card__head">
+              <span class="ps-side-card__icon"><i class="ri-chat-3-line"></i></span>
+              <div>
+                <p class="ps-side-card__title">Comments</p>
+                <p class="ps-side-card__hint">Notes from your team on this listing</p>
+              </div>
+            </div>
+
+            <div v-if="loadingComments" class="ps-side-card__empty">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            </div>
+            <div v-else-if="comments.length === 0" class="ps-side-card__empty">
+              <i class="ri-chat-3-line"></i>
+              <span>No Comments yet</span>
+            </div>
+            <div v-else class="ps-comments-list">
+              <div v-for="comment in comments" :key="comment.id" class="ps-comment-item">
+                <div class="ps-comment-item__head">
+                  <img
+                    :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                    :alt="comment.user.name"
+                    class="ps-comment-item__avatar"
+                    @error="handleAvatarError"
+                  />
+                  <div>
+                    <strong>{{ comment.user.name }}</strong>
+                    <small>{{ formatCommentDate(comment.created_at) }}</small>
+                  </div>
+                </div>
+                <p>{{ comment.comment }}</p>
+              </div>
+            </div>
+
+            <div class="ps-comments-compose" v-if="isAuthenticated">
+              <textarea
+                v-model="newComment.text"
+                placeholder="Add a comment..."
+                class="form-control"
+                rows="2"
+                :maxlength="1000"
+              ></textarea>
+              <button
+                type="button"
+                class="ps-side-card__btn"
+                @click="submitComment"
+                :disabled="!newComment.text.trim() || submittingComment"
+              >
+                <i class="ri-add-line"></i>
+                {{ submittingComment ? 'Submitting...' : 'Add Comments' }}
+              </button>
+            </div>
+          </section>
         </div>
-      </div>
-      
-    </div>
+      </aside>
+
+      </div><!-- /.ps-layout -->
+      </div><!-- /.ps-shell -->
+    </div><!-- /.ps-page -->
 
     <!-- Assign Agent Modal -->
     <div v-if="showAssignAgentModal" class="modal-overlay" @click="showAssignAgentModal = false">
@@ -2389,80 +2106,45 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     let propertySidebarResizeObserver = null;
     let propertySidebarSyncRaf = null;
 
-    const SIDEBAR_TOP_GAP = 10;
-
-    const getSidebarTopOffset = () => {
-      const nav = document.querySelector('#app main.dashboard-main > .navbar-header');
-      if (nav) {
-        // The navbar scrolls away with the page (position: relative inside the scrolling
-        // main), so once it's off-screen pin to the top of the viewport instead of
-        // following it (a negative offset pushed the box off-screen).
-        return Math.max(nav.getBoundingClientRect().bottom, 0) + SIDEBAR_TOP_GAP;
+    // CSS sticky needs the aside as tall as the left column. No fixed pin / no nested scroll.
+    const resetPropertySidebarStyles = (pin, spacer, col) => {
+      if (pin) {
+        pin.classList.remove(
+          'is-sidebar-fixed',
+          'is-sidebar-at-bottom',
+          'is-sidebar-pinned',
+          'is-sidebar-pinned-bottom'
+        );
+        pin.style.cssText = '';
       }
-      const root = document.documentElement;
-      const topbar =
-        parseFloat(getComputedStyle(root).getPropertyValue('--app-topbar-height')) || 44;
-      const gap =
-        parseFloat(getComputedStyle(root).getPropertyValue('--app-header-below-gap')) || 8;
-      return topbar + gap + SIDEBAR_TOP_GAP;
-    };
-
-    const resetPropertySidebarStyles = (sticky, spacer) => {
-      if (!sticky) return;
-      sticky.classList.remove('is-sidebar-fixed', 'is-sidebar-at-bottom');
-      sticky.style.cssText = '';
       if (spacer) spacer.style.height = '0px';
+      if (col) col.style.minHeight = '';
     };
 
     const syncPropertySidebarPosition = () => {
       const col = propertySidebarColRef.value;
-      const sticky = propertySidebarStickyRef.value;
+      const pin = propertySidebarStickyRef.value;
       const spacer = propertySidebarSpacerRef.value;
-      if (!col || !sticky) return;
 
-      // In the popup the section is pinned with CSS sticky (PropertyDetailsModal.vue).
-      if (window.innerWidth < 992 || isEmbedded.value) {
-        resetPropertySidebarStyles(sticky, spacer);
+      if (!col || isMobileViewport.value) {
+        resetPropertySidebarStyles(pin, spacer, col);
         return;
       }
 
-      const topOffset = getSidebarTopOffset();
-      const colRect = col.getBoundingClientRect();
-      // The spacer sits where the box would be in normal flow: same left/width as the
-      // content box (the column itself includes Bootstrap padding, which made the fixed
-      // box wider and changed its height).
-      const anchorRect = (spacer || col).getBoundingClientRect();
-      // Whole section pinned below the header; when it's taller than the space left it
-      // scrolls on its own (cards keep their natural height — see .is-sidebar-fixed CSS).
-      const fixedTop = topOffset;
-      const availableHeight = Math.max(window.innerHeight - fixedTop - SIDEBAR_TOP_GAP, 160);
-      const naturalHeight = sticky.scrollHeight;
-      const stickyHeight = Math.min(naturalHeight, availableHeight);
-
-      if (anchorRect.top >= fixedTop) {
-        resetPropertySidebarStyles(sticky, spacer);
-        return;
+      if (pin) {
+        pin.classList.remove(
+          'is-sidebar-fixed',
+          'is-sidebar-at-bottom',
+          'is-sidebar-pinned',
+          'is-sidebar-pinned-bottom'
+        );
+        pin.style.cssText = '';
       }
+      if (spacer) spacer.style.height = '0px';
 
-      sticky.style.setProperty('max-height', `${availableHeight}px`, 'important');
-      if (spacer) spacer.style.height = `${stickyHeight}px`;
-
-      if (colRect.bottom <= fixedTop + stickyHeight) {
-        sticky.classList.add('is-sidebar-fixed', 'is-sidebar-at-bottom');
-        sticky.style.top = 'auto';
-        sticky.style.bottom = '0';
-        sticky.style.setProperty('left', `${anchorRect.left - colRect.left}px`, 'important');
-        sticky.style.setProperty('width', `${anchorRect.width}px`, 'important');
-        return;
-      }
-
-      sticky.classList.add('is-sidebar-fixed');
-      sticky.classList.remove('is-sidebar-at-bottom');
-      // `style.top = '..px !important'` is invalid and silently ignored — use setProperty.
-      sticky.style.setProperty('top', `${fixedTop}px`, 'important');
-      sticky.style.bottom = 'auto';
-      sticky.style.left = `${anchorRect.left}px`;
-      sticky.style.width = `${anchorRect.width}px`;
+      const main = col.closest('.ps-layout')?.querySelector('.ps-main');
+      const mainH = main ? Math.max(main.scrollHeight, main.offsetHeight) : 0;
+      col.style.minHeight = mainH > 0 ? `${mainH}px` : '';
     };
 
     const schedulePropertySidebarSync = () => {
@@ -2475,50 +2157,38 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
       });
     };
 
-    // Every scrollable ancestor of the sidebar (the page scrolls inside main.dashboard-main,
-    // the popup inside .pdm-body) — scroll events don't bubble, so listen on each one.
-    const findSidebarScrollRoots = () => {
-      const roots = [];
-      let el = propertySidebarColRef.value?.parentElement;
-      while (el && el !== document.body && el !== document.documentElement) {
-        const { overflowY } = getComputedStyle(el);
-        if (/(auto|scroll|overlay)/.test(overflowY)) roots.push(el);
-        el = el.parentElement;
-      }
-      const fallback = document.querySelector('#app main.dashboard-main');
-      if (!isEmbedded.value && fallback && !roots.includes(fallback)) roots.push(fallback);
-      return roots;
-    };
-
     const bindPropertySidebarScroll = () => {
-      window.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
       window.addEventListener('resize', schedulePropertySidebarSync, { passive: true });
-      window.addEventListener('orientationchange', schedulePropertySidebarSync, { passive: true });
-      propertySidebarScrollRoots = findSidebarScrollRoots();
-      propertySidebarScrollRoots.forEach((root) =>
-        root.addEventListener('scroll', schedulePropertySidebarSync, { passive: true })
-      );
-      // Catch-all: scroll events don't bubble but can be captured — covers whichever
-      // element ends up scrolling the page (main, body, html).
-      document.addEventListener('scroll', schedulePropertySidebarSync, { passive: true, capture: true });
-      // Re-position when the box grows/shrinks (actions opened, widgets loaded).
-      if (typeof ResizeObserver !== 'undefined' && propertySidebarStickyRef.value) {
-        propertySidebarResizeObserver = new ResizeObserver(schedulePropertySidebarSync);
-        propertySidebarResizeObserver.observe(propertySidebarStickyRef.value);
+      const pdmBody = document.querySelector('.pdm-body');
+      if (pdmBody) {
+        propertySidebarScrollRoots = [pdmBody];
+        pdmBody.addEventListener('scroll', schedulePropertySidebarSync, { passive: true });
       }
+      if (typeof ResizeObserver !== 'undefined') {
+        propertySidebarResizeObserver = new ResizeObserver(schedulePropertySidebarSync);
+        const main = propertySidebarColRef.value?.closest('.ps-layout')?.querySelector('.ps-main');
+        if (main) propertySidebarResizeObserver.observe(main);
+        if (propertySidebarStickyRef.value) {
+          propertySidebarResizeObserver.observe(propertySidebarStickyRef.value);
+        }
+      }
+      schedulePropertySidebarSync();
+      setTimeout(schedulePropertySidebarSync, 300);
     };
 
     const unbindPropertySidebarScroll = () => {
-      window.removeEventListener('scroll', schedulePropertySidebarSync);
       window.removeEventListener('resize', schedulePropertySidebarSync);
-      window.removeEventListener('orientationchange', schedulePropertySidebarSync);
       propertySidebarScrollRoots.forEach((root) =>
         root.removeEventListener('scroll', schedulePropertySidebarSync)
       );
       propertySidebarScrollRoots = [];
-      document.removeEventListener('scroll', schedulePropertySidebarSync, { capture: true });
       propertySidebarResizeObserver?.disconnect();
       propertySidebarResizeObserver = null;
+      resetPropertySidebarStyles(
+        propertySidebarStickyRef.value,
+        propertySidebarSpacerRef.value,
+        propertySidebarColRef.value
+      );
     };
     const route = useRoute();
     const router = useRouter();
@@ -2532,6 +2202,7 @@ const LastSlide_bg = '/assets/images/lastslide-bg.png';
     const loading = ref(true);
     const error = ref(null);
     const currentMainImage = ref(null);
+    const galleryMainIndex = ref(0);
     const chatMessage = ref("");
     const showLightbox = ref(false);
     const currentImageIndex = ref(0);
@@ -3210,6 +2881,20 @@ const mobileGalleryBadges = computed(() => {
   return badges;
 });
 
+/** Desktop Figma gallery badges: Sale/Rent + listing status (e.g. Published). */
+const desktopGalleryBadges = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const badges = [];
+  const listing = String(p.listing_status || '').trim().toLowerCase();
+  if (listing === 'sale') badges.push('Sale');
+  else if (listing === 'rent') badges.push('Rent');
+  else if (p.listing_status) badges.push(p.listing_status);
+  if (needsApproval.value) badges.push('Needs Approval');
+  else if (p.status) badges.push(p.status);
+  return badges;
+});
+
 const mobilePurposeLabel = computed(() => {
   const status = property.value?.listing_status;
   if (status === 'sale') return 'For Sale';
@@ -3248,6 +2933,60 @@ const mobileLocationLabel = computed(() => {
   }
   // Location line = area only (the developer has its own "Developer" row in the details).
   return parts.filter(Boolean).join(', ') || p.area?.area_title || p.area?.title || p.title || '';
+});
+
+const desktopListingTitle = computed(() => {
+  const p = property.value;
+  if (!p) return '';
+  if (p.project?.title && p.area?.area_title && p.project.title !== p.area.area_title) {
+    return `${p.project.title}, ${p.area.area_title}`;
+  }
+  return p.project?.title || p.area?.area_title || p.title || p.reference_number || '';
+});
+
+const desktopLocationLabel = computed(() => {
+  const p = property.value;
+  if (!p) return '';
+  const hierarchy = Array.isArray(p.area?.hierarchy) ? p.area.hierarchy : [];
+  if (hierarchy.length) {
+    return hierarchy.map((h) => h.area_title || h.title || h.name).filter(Boolean).join(', ');
+  }
+  const parts = [];
+  if (p.area?.parent?.area_title) parts.push(p.area.parent.area_title);
+  if (p.area?.area_title) parts.push(p.area.area_title);
+  else if (p.area?.title) parts.push(p.area.title);
+  return [...new Set(parts.filter(Boolean))].join(', ') || mobileLocationLabel.value;
+});
+
+const desktopSpecTiles = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const tiles = [];
+  const push = (label, value) => {
+    if (value === null || value === undefined || value === '') return;
+    tiles.push({ label, value: String(value) });
+  };
+
+  push('Project', p.project?.title);
+  push('Property Type', p.property_type?.name);
+  if (!hidesBedsBaths(p.property_type) && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
+    push('Bedrooms', p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : p.number_of_bedrooms);
+  }
+  if (!hidesBedsBaths(p.property_type) && p.number_of_bathrooms) {
+    push('Bathrooms', p.number_of_bathrooms);
+  }
+  if (isBuildingProperty.value && floorsLabel.value) {
+    push('Floors', p.number_of_floors);
+  }
+  if (p.size_sqft) push('Area', `${p.size_sqft} Sq ft`);
+  else if (p.size_sqmt) push('Area', `${p.size_sqmt} Sq m`);
+  if (plotSizeLabel.value) push('Plot Area', plotSizeLabel.value);
+  push('Completion Status', p.completion_status);
+  push('Developer', p.project?.developer_name || p.developer?.name);
+  push('Reference Number', p.reference_number);
+  if (p.is_hot_deal === 'Yes') push('Hot Deal', 'Yes');
+  if (p.rented_status && p.rented_until) push('Rented', `until ${p.rented_until}`);
+  return tiles;
 });
 
 const mobileSpecs = computed(() => {
@@ -4857,6 +4596,7 @@ const revertFromConverted = async () => {
 
           if (property.value.gallery_images && property.value.gallery_images.length > 0) {
             currentMainImage.value = getImageUrl(property.value.main_image);
+            galleryMainIndex.value = 0;
           }
           if (props.offerOnly) return;
           await fetchInternalUpdates();
@@ -5513,11 +5253,35 @@ ${owner.address ? `Address: ${owner.address}` : ''}
       return '/default-property.jpg';
     };
 
+    const getMainGalleryImage = () => {
+      const images = property.value?.gallery_images;
+      if (!images?.length) return '/default-property.jpg';
+      const idx = Math.min(Math.max(galleryMainIndex.value, 0), images.length - 1);
+      return getImageUrl(images[idx].image_url_final);
+    };
+
+    /** Figma tall column: gallery indices 1–2. */
+    const getGalleryTallTiles = () => {
+      const images = property.value?.gallery_images || [];
+      return images.slice(1, 3).map((image, i) => ({ image, index: i + 1 }));
+    };
+
+    /** Figma bottom row: gallery indices 3–5; last tile shows remaining when total > 6. */
+    const getGallerySmallTiles = () => {
+      const images = property.value?.gallery_images || [];
+      const total = images.length;
+      const tiles = images.slice(3, 6).map((image, i) => ({
+        image,
+        index: i + 3,
+        moreCount: 0,
+      }));
+      if (tiles.length && total > 6) {
+        tiles[tiles.length - 1].moreCount = total - 6;
+      }
+      return tiles;
+    };
+
     const getGalleryThumbnails = () => {
-      // gallery_images[0] is already shown as the big main image on the left,
-      // so the side thumbnails start from index 1. With 2 images we render
-      // just the second one; with 3+ we show indices 1 and 2 (and the
-      // "View All" overlay on the last when length > 3).
       if (!property.value?.gallery_images) return [];
       return property.value.gallery_images.slice(1, 3);
     };
@@ -5525,6 +5289,18 @@ ${owner.address ? `Address: ${owner.address}` : ''}
     // Gallery methods
     const setMainImage = (image) => {
       currentMainImage.value = image;
+    };
+
+    const nextMainGalleryImage = () => {
+      const len = property.value?.gallery_images?.length || 0;
+      if (len < 2) return;
+      galleryMainIndex.value = (galleryMainIndex.value + 1) % len;
+    };
+
+    const prevMainGalleryImage = () => {
+      const len = property.value?.gallery_images?.length || 0;
+      if (len < 2) return;
+      galleryMainIndex.value = (galleryMainIndex.value - 1 + len) % len;
     };
 
     const openLightbox = (index) => {
@@ -9639,8 +9415,12 @@ const getHistoryIcon = (event) => {
       propertySidebarSpacerRef,
       isMobileViewport,
       mobileGalleryBadges,
+      desktopGalleryBadges,
       mobilePurposeLabel,
       mobileListingTitle,
+      desktopListingTitle,
+      desktopLocationLabel,
+      desktopSpecTiles,
       rentPriceMeta,
       mobileLocationLabel,
       mobileSpecs,
@@ -9662,6 +9442,7 @@ const getHistoryIcon = (event) => {
       loading,
       error,
       currentMainImage,
+      galleryMainIndex,
       chatMessage,
       showLightbox,
       currentImageIndex,
@@ -9687,6 +9468,8 @@ const getHistoryIcon = (event) => {
       mobileShowsUnitNumber,
       mobileShowsOwnerInfo,
       setMainImage,
+      nextMainGalleryImage,
+      prevMainGalleryImage,
       openLightbox,
       closeLightbox,
       nextImage,
@@ -9705,6 +9488,9 @@ const getHistoryIcon = (event) => {
       whatsappOwner,
       getImageUrl,
       getFirstGalleryImage,
+      getMainGalleryImage,
+      getGalleryTallTiles,
+      getGallerySmallTiles,
       getGalleryThumbnails,
       formatPrice,
       formatDate,
@@ -10003,19 +9789,19 @@ const getHistoryIcon = (event) => {
 
 .property-actions-accordion__header {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   display: grid;
   grid-template-columns: 1fr 20px;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 12px 16px;
   margin: 0;
   border: none !important;
-  border-radius: 8px;
-  background: var(--gradient-primary) !important;
+  border-radius: 999px;
+  background: var(--color-primary) !important;
   color: #ffffff !important;
   font-family: Montserrat, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
   cursor: pointer;
@@ -10033,8 +9819,8 @@ const getHistoryIcon = (event) => {
 }
 
 .property-actions-accordion.is-open .property-actions-accordion__header {
-  border-radius: 8px 8px 0 0;
-  background: var(--gradient-primary) !important;
+  border-radius: 999px;
+  background: var(--color-primary) !important;
   color: #ffffff !important;
 }
 
@@ -10297,55 +10083,701 @@ align-items: flex-start;
   100% { transform: rotate(360deg); }
 }
 
+/* ── Full-width Property Show (Figma desktop) ── */
+.ps-page:not(.ps-page--mobile) {
+  width: 100%;
+  max-width: none;
+  background: #fff;
+  padding: 12px 0 24px;
+}
+
+/* Shared width shell — gallery and cards share identical left/right edges */
+.ps-shell:not(.ps-shell--mobile) {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.ps-shell--mobile {
+  width: 100%;
+  padding: 0;
+}
+
+.ps-gallery-band {
+  width: 100%;
+  background: transparent;
+  padding: 0 0 16px;
+  margin: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* Same columns as gallery: main under hero, Property Action under small images */
+.ps-layout:not(.ps-layout--mobile) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  gap: 12px;
+  align-items: stretch;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.ps-layout--mobile {
+  display: block;
+  padding: 0;
+}
+
+.ps-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ps-main > .property-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ps-aside {
+  min-width: 0;
+  width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* One page/modal scroll — no nested column scrollers */
+.property-show-inner:not(.property-show-inner--mobile) {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.property-show-inner:not(.property-show-inner--mobile) .ps-page,
+.property-show-inner:not(.property-show-inner--mobile) .ps-shell,
+.property-show-inner:not(.property-show-inner--mobile) .ps-layout,
+.property-show-inner:not(.property-show-inner--mobile) .ps-main,
+.property-show-inner:not(.property-show-inner--mobile) .property-content {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+.property-show-inner:not(.property-show-inner--mobile) .ps-aside {
+  overflow: visible !important;
+  max-height: none !important;
+  align-self: stretch;
+}
+
+.ps-card {
+  background: #fff;
+  border: 1px solid #e8e8ee;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 3px rgba(11, 7, 54, 0.04);
+}
+
+.ps-card__heading {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text, #0b0736);
+  line-height: 1.3;
+}
+
+.ps-info-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 0;
+}
+
+.ps-info-card__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.ps-info-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text, #0b0736);
+  line-height: 1.35;
+}
+
+.ps-info-card__location {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: #8b8b9a;
+  line-height: 1.4;
+}
+
+.ps-info-card__price-wrap {
+  text-align: right;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.ps-info-card__price {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text, #0b0736);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.ps-info-card__period {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b8b9a;
+}
+
+.ps-info-card__equiv {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #8b8b9a;
+}
+
+.ps-info-card__divider {
+  height: 1px;
+  background: #ececf0;
+  margin: 16px 0;
+  border: 0;
+}
+
+.ps-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .ps-specs-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ps-spec-tile {
+  background: #fff;
+  border: 1px solid #e6e6ec;
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ps-spec-tile__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9a9aa8;
+  line-height: 1.2;
+}
+
+.ps-spec-tile__value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text, #0b0736);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.ps-features {
+  margin-top: 20px;
+}
+
+.ps-feature-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ps-feature-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #e0e0e6;
+  background: #fff;
+  color: var(--color-text, #0b0736);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.ps-notes-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+
+.ps-payment-card :deep(.pd-card) {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.ps-payment-card :deep(.pd-card-head),
+.ps-payment-card :deep(.pd-card-title),
+.ps-payment-card :deep(.pd-title-accent) {
+  display: none;
+}
+
+.ps-side-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ps-side-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.ps-side-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0b0736;
+}
+
+.ps-side-card__hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.ps-side-card__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 12px;
+  color: #9ca3af;
+  text-align: center;
+  font-size: 13px;
+}
+
+.ps-side-card__empty i {
+  font-size: 36px;
+  color: rgba(var(--color-primary-rgb), 0.45);
+}
+
+.ps-side-card__btn {
+  width: 100%;
+  margin-top: 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.ps-side-card__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ps-comments-compose textarea {
+  font-size: 13px;
+  border-radius: 10px;
+  resize: vertical;
+}
+
+.ps-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: none;
+  overflow: visible;
+  margin-bottom: 8px;
+}
+
+.ps-comment-item p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.45;
+}
+
+.ps-comment-item__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-comment-item__head strong {
+  display: block;
+  font-size: 13px;
+  color: #0b0736;
+}
+
+.ps-comment-item__head small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.ps-comment-item__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.ps-aside .agent-sidebar-card.ps-card {
+  margin-bottom: 0;
+  background: #fff !important;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08) !important;
+  border-radius: 14px !important;
+  padding: 16px !important;
+  box-shadow: none !important;
+  margin-top: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.ps-aside .sidebar-approved-viewings,
+.ps-aside .sidebar-agent-updates-bottom,
+.ps-aside .ps-comments-card {
+  margin-top: 14px;
+}
+
+.ps-aside .agent-sidebar-card.ps-card,
+.ps-aside .agent-sidebar-card {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #e8e8ee !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+  box-shadow: 0 1px 3px rgba(11, 7, 54, 0.04) !important;
+  margin-top: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.ps-aside .agent-profile {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 0 0 16px !important;
+  padding: 0 0 16px !important;
+  border-bottom: 1px solid #ececf0 !important;
+  text-align: left !important;
+}
+
+.ps-aside .agent-sidebar-avatar {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 2px solid var(--color-primary) !important;
+  box-shadow: none !important;
+  flex-shrink: 0;
+}
+
+.ps-aside .agent-sidebar-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ps-aside .agent-sidebar-name {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--color-text, #0b0736) !important;
+  line-height: 1.3 !important;
+}
+
+.ps-aside .btn-show-agent-details {
+  color: var(--color-primary) !important;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: none !important;
+}
+
+.ps-aside .sidebar-section--property-actions {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border: none !important;
+}
+
+.ps-aside .property-actions-accordion {
+  margin: 0;
+}
+
+.ps-aside .property-actions-accordion__header {
+  min-height: 46px !important;
+  border-radius: 999px !important;
+  background: var(--gradient-primary, var(--color-primary)) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.ps-aside .ps-access-row {
+  margin: 12px 0 0 !important;
+  order: 3;
+}
+
+.ps-aside .agent-sidebar-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-aside .agent-profile { order: 1; }
+.ps-aside .sidebar-section--property-actions { order: 2; }
+
+.ps-access-row {
+  margin-top: 0;
+}
+
+.ps-access-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ps-access-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.22);
+  background: #fff;
+  color: var(--color-text, #0b0736);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  width: 100%;
+  cursor: default;
+}
+
+button.ps-access-pill {
+  cursor: pointer;
+}
+
+.ps-access-pill i {
+  color: var(--color-primary);
+  font-size: 14px;
+}
+
+.ps-access-pill--pending {
+  color: var(--color-primary);
+}
+
+.ps-spec-tile__label {
+  color: var(--color-text-muted, #6b7280) !important;
+}
+
+.ps-spec-tile__value,
+.ps-notes-text,
+.ps-side-card__title {
+  color: var(--color-text, #0b0736) !important;
+}
+
+.ps-feature-pill {
+  border-color: rgba(var(--color-primary-rgb), 0.2) !important;
+  color: var(--color-text, #0b0736) !important;
+}
+
+.ps-side-card__icon {
+  background: rgba(var(--color-primary-rgb), 0.1) !important;
+  color: var(--color-primary) !important;
+}
+
+.ps-side-card__btn {
+  background: var(--color-primary) !important;
+}
+
+@media (max-width: 1100px) {
+  .ps-shell:not(.ps-shell--mobile) {
+    padding: 0 12px;
+  }
+
+  .gallery-container,
+  .ps-layout:not(.ps-layout--mobile) {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+    gap: 12px;
+  }
+
+  .ps-layout:not(.ps-layout--mobile) {
+    padding: 0;
+  }
+}
+
 /* Gallery Styles */
 .property-gallery {
   position: relative;
-  /* height: 490px; */
-margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+
+.property-gallery--desktop {
+  padding: 0;
+  background: transparent;
+}
+
+.ps-gallery-band.property-gallery--desktop {
+  padding: 0 0 16px;
+  background: transparent;
+  width: 100%;
+}
+
+.ps-shell:not(.ps-shell--mobile) .gallery-container,
+.ps-shell:not(.ps-shell--mobile) .ps-layout {
+  width: 100%;
 }
 
 .gallery-container {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
   gap: 12px;
-  height: 400px;
+  height: 440px;
 }
 
-/* Only one image → main section takes the full width and the empty
-   side-panel column is collapsed. */
 .gallery-container.is-single {
   grid-template-columns: 1fr;
 }
-.gallery-container.is-single .side-images {
-  display: none;
-}
+
 .gallery-container.is-single .main-image {
   object-fit: cover;
 }
 
 .main-image-section {
-  border-radius: 12px ;
+  border-radius: 14px;
   overflow: hidden;
   position: relative;
   cursor: pointer;
+  height: 100%;
+  background: rgba(var(--color-primary-rgb), 0.06);
 }
 
 .main-image {
   width: 100%;
   height: 100%;
-  /* object-fit: cover; */
-  transition: transform 0.3s ease;
-      max-height: 400px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
 }
 
 .main-image-section:hover .main-image {
-  transform: scale(1.05);
+  transform: scale(1.02);
+}
+
+.gallery-badges {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  max-width: calc(100% - 100px);
+  pointer-events: none;
+}
+
+.gallery-badge {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0b0736;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  box-shadow: 0 2px 10px rgba(11, 7, 54, 0.12);
+}
+
+.gallery-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #ffffff;
+  color: #0b0736;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(11, 7, 54, 0.16);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gallery-nav-btn i {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.gallery-nav-btn:hover {
+  transform: translateY(-50%) scale(1.06);
+  box-shadow: 0 4px 16px rgba(11, 7, 54, 0.2);
+}
+
+.gallery-nav-btn--prev {
+  left: 14px;
+}
+
+.gallery-nav-btn--next {
+  right: 14px;
 }
 
 .image-overlay {
   position: absolute;
-  left: 16px; 
-  bottom: 16px; 
+  left: 16px;
+  bottom: 16px;
+  z-index: 3;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -10356,7 +10788,7 @@ margin-bottom: 20px;
   opacity: 1;
   transform: translateY(0px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 15px ;
+  padding: 15px;
   gap: 12px;
   min-width: 214px;
   height: 50px;
@@ -10364,8 +10796,6 @@ margin-bottom: 20px;
   box-shadow: 0 4px 12px rgba(11, 7, 54, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
-
-
 
 .image-overlay i {
   font-size: 28px;
@@ -10386,39 +10816,55 @@ margin-bottom: 20px;
   opacity: 1;
 }
 
-
-
-
-.side-images {
+.side-gallery {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   height: 100%;
-      max-height: 400px;
+  min-height: 0;
+}
+
+.side-gallery__tall {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1.7;
+  min-height: 0;
+}
+
+.gallery-container.is-side-only-tall .side-gallery__tall {
+  flex: 1;
+}
+
+.side-gallery__small {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
 }
 
 .side-image {
-  height: calc(50% - 4px);
-  border-radius: 8px;
+  border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
   position: relative;
-}
-
-.side-image.active {
-  border-color: var(--color-primary);
+  height: 100%;
+  min-height: 0;
+  background: rgba(var(--color-primary-rgb), 0.06);
+  border: none;
+  transition: transform 0.25s ease;
 }
 
 .side-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .side-image:hover {
-  transform: scale(1.02);
+  transform: scale(1.015);
 }
 
 .side-image.has-view-all {
@@ -10428,26 +10874,22 @@ margin-bottom: 20px;
 .view-all-overlay {
   position: absolute;
   inset: 0;
-  /* background: rgba(11, 7, 54, 0.65);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px); */
+  background: rgba(0, 0, 0, 0.48);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  transition: background 0.3s ease;
+  transition: background 0.25s ease;
 }
 
 .side-image.has-view-all:hover .view-all-overlay {
-  background: rgba(11, 7, 54, 0.78);
+  background: rgba(0, 0, 0, 0.58);
 }
 
 .view-all-content {
   text-align: center;
-  padding: 10px;
+  padding: 8px;
   background: transparent;
-  /* backdrop-filter: blur(2px); */
-    /* -webkit-backdrop-filter: blur(2px); */
   border-radius: 10px;
 }
 
@@ -10459,14 +10901,44 @@ margin-bottom: 20px;
 }
 
 .view-all-content span {
-  font-size: 30px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   display: block;
+  line-height: 1;
 }
 
 .view-all-content small {
   font-size: 11px;
   opacity: 0.85;
+}
+
+@media (max-width: 1200px) {
+  .gallery-container {
+    height: 380px;
+  }
+}
+
+@media (max-width: 992px) {
+  .gallery-container,
+  .gallery-container,
+  .ps-layout:not(.ps-layout--mobile) {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+
+  .gallery-container {
+    height: 340px;
+  }
+
+  .gallery-badge {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .gallery-nav-btn {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 /* Lightbox Styles */
@@ -10920,12 +11392,18 @@ margin-top: 20px;
 }
 .property-show-row {
   align-items: stretch;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .property-show-sidebar-col {
   align-self: stretch;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: none;
+  flex: none;
 }
 
 .property-sidebar-spacer {
@@ -10939,20 +11417,32 @@ margin-top: 20px;
   position: relative;
 }
 
+/* When Property Action reaches the top of the scroll area, it sticks — left keeps scrolling */
 .sidebar-sticky-container {
   position: sticky;
-  top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.75rem);
-  z-index: 40;
+  top: 0;
+  z-index: 2;
   width: 100%;
   flex: 0 0 auto;
-  align-self: flex-start;
-  height: fit-content;
-  background: transparent;
+  align-self: start;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  background: #fff;
   border: none;
   box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  box-sizing: border-box;
+}
+
+.property-show-inner:not(.property-show-inner--mobile) .ps-aside .agent-sidebar-card.ps-card {
+  position: static;
+  top: auto;
+  z-index: auto;
 }
 
 .sidebar-agent-updates-bottom {
@@ -10971,47 +11461,20 @@ margin-top: 20px;
   flex-shrink: 0;
 }
 
-/* Pinned: the whole section scrolls on its own when taller than the screen (the JS sets
-   max-height to the space below the header). Cards don't shrink — the section scrolls. */
-.sidebar-sticky-container.is-sidebar-fixed {
-  position: fixed !important;
-  z-index: 45;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 transparent;
-  overscroll-behavior: contain;
+.sidebar-sticky-container.is-sidebar-fixed,
+.sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
+  overflow: visible !important;
+  max-height: none !important;
 }
 
-.sidebar-sticky-container.is-sidebar-fixed > * {
-  flex-shrink: 0;
-}
-
-.sidebar-sticky-container.is-sidebar-fixed::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-sticky-container.is-sidebar-fixed::-webkit-scrollbar-thumb {
-  background-color: #c1c1c1;
-  border-radius: 3px;
-}
-
-/* Let the sticky column scroll as a whole — do not clip the agent card */
 .sidebar-sticky-container .agent-sidebar-card {
   max-height: none;
   overflow: visible !important;
 }
 
-.sidebar-sticky-container.is-sidebar-fixed.is-sidebar-at-bottom {
-  position: absolute !important;
-  top: auto !important;
-  left: 0 !important;
-  width: 100% !important;
-}
-
 .sidebar-sticky-container.is-sidebar-fixed .agent-sidebar-card {
-  box-shadow: 0 8px 28px rgba(11, 7, 54, 0.18);
-  background-color: #161c38;
+  box-shadow: 0 8px 28px rgba(11, 7, 54, 0.12);
+  background-color: #fff;
 }
 
 /* Agent Sidebar Card - Improved Styles */
@@ -11031,13 +11494,20 @@ margin-top: 20px;
   margin-top: 20px;
 }
 .agent-sidebar-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(180deg, rgb(255 255 255) 0%, rgb(20 30 80 / 79%) 0%, rgba(5, 10, 40, 0.95) 100%);
-  border-radius: 20px;
+  content: none;
+}
 
+.ps-aside .agent-sidebar-card.ps-card {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #e8e8ee !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+  box-shadow: 0 1px 3px rgba(11, 7, 54, 0.04) !important;
+  margin-top: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 .agent-sidebar-card::-webkit-scrollbar {
@@ -11091,6 +11561,13 @@ margin-top: 20px;
   color: #ffffff;
   margin: 0 0 6px 0;
   line-height: 1.3;
+}
+
+/* Desktop Figma sidebar: dark glass styles above must not win */
+.ps-aside .agent-sidebar-name {
+  color: var(--color-text, #0b0736) !important;
+  font-size: 14px !important;
+  margin: 0 !important;
 }
 
 .agent-sidebar-company {
@@ -12419,24 +12896,37 @@ margin-top: 20px;
     font-size: 14px;
   }
 
+  .property-gallery--desktop {
+    padding: 12px 12px 0;
+  }
+
   .gallery-container {
     grid-template-columns: 1fr;
-    grid-template-rows: 250px 70px;
-    min-height: 330px;
+    grid-template-rows: 240px auto;
+    min-height: 0;
     height: auto;
   }
-    .gallery-container .is-single{
-    min-height: 300px;
 
+  .gallery-container.is-single {
+    grid-template-rows: 280px;
   }
-  
-  .side-images {
-    flex-direction: row;
+
+  .main-image-section {
+    min-height: 240px;
   }
-  
-  .side-image {
-    height: 70px;
-    flex: 1;
+
+  .side-gallery {
+    gap: 8px;
+  }
+
+  .side-gallery__tall {
+    flex: none;
+    height: 120px;
+  }
+
+  .side-gallery__small {
+    flex: none;
+    height: 72px;
   }
   
   .info-grid {
@@ -12565,12 +13055,15 @@ margin-top: 20px;
   }
 
   .gallery-container {
-    grid-template-rows: 200px 60px;
+    grid-template-rows: 200px auto;
   }
-  
-  .side-image {
-    height: 60px;
+
+  .main-image-section {
+    min-height: 200px;
   }
+
+  .side-gallery__tall { height: 100px; }
+  .side-gallery__small { height: 60px; }
   
   .spec-main-item {
     padding: 8px;
@@ -12638,19 +13131,19 @@ margin-top: 20px;
   }
 }
 
-/* Tablet sidebar — agent card + widgets share one scrollable column */
+/* Tablet sidebar */
 @media (min-width: 769px) and (max-width: 1199px) {
   .property-show-sidebar-col {
-    margin-top: 4px;
+    margin-top: 0;
   }
 
   .sidebar-sticky-container {
     gap: 10px;
-    top: calc(var(--app-topbar-height, 2.75rem) + var(--app-header-below-gap, 0.5rem) + 0.5rem);
+    top: 0;
   }
 
   .sidebar-sticky-container .agent-sidebar-card {
-    margin-top: 12px;
+    margin-top: 0;
     padding: 12px;
     flex-shrink: 0;
   }
@@ -12708,12 +13201,10 @@ margin-top: 20px;
     height: auto;
   }
 
-  .sidebar-sticky-container--has-widgets .approved-viewings-panel__list {
-    max-height: 108px;
-  }
-
+  .sidebar-sticky-container--has-widgets .approved-viewings-panel__list,
   .sidebar-sticky-container--has-widgets .agent-updates-panel--under-agent .agent-updates-panel__list {
-    max-height: 140px;
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -12778,8 +13269,15 @@ margin-top: 20px;
 
 @media (max-width: 768px) and (orientation: landscape) {
   .gallery-container {
-    grid-template-rows: 150px 50px;
+    grid-template-rows: 150px auto;
   }
+
+  .main-image-section {
+    min-height: 150px;
+  }
+
+  .side-gallery__tall { height: 80px; }
+  .side-gallery__small { height: 50px; }
   
   .agent-sidebar-card:not(.agent-sidebar-card--actions-open) {
     max-height: 80vh;
@@ -13501,12 +13999,19 @@ body.property-actions-open .sidebar-approved-viewings {
 }
 
 .property-show-inner{
-  padding:0 1rem 1rem 1rem !important;
+  padding: 0 !important;
+  width: 100%;
+  max-width: none;
+}
+
+.property-show-inner:not(.property-show-inner--mobile) {
+  background: #fff;
 }
 
 @media (max-width: 768px) {
   .property-show-inner {
     padding: 0 !important;
+    background: transparent;
   }
 }
 .flex-column{

@@ -112,7 +112,7 @@ body.property-details-modal-open .mobile-tab-bar {
 }
 
 .pdm-dialog {
-  background: #f5f6fa;
+  background: #fff;
   border-radius: 16px;
   width: min(1400px, 100%);
   max-height: calc(100dvh - 3rem);
@@ -166,55 +166,62 @@ body.property-details-modal-open .mobile-tab-bar {
   background: #f1f2f6;
 }
 
+/* ONE scrollbar for the whole property modal */
 .pdm-body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1rem 1.25rem;
   flex: 1 1 auto;
+  min-height: 0;
 }
 
-/* Agent + actions box: start level with the left column and pin to the popup top
-   (BlogOne switches it to position:fixed while scrolling; the page version offsets it
-   below the app header, which doesn't exist here). */
-/* Popup (desktop): the whole right section (agent + actions, Viewings, Agent Updates) is
-   pinned at the top of the popup body and scrolls on its own when it's taller than the
-   popup. The column stretches to the full content height so it stays pinned all the way down. */
 @media (min-width: 992px) {
-  .pdm-body :deep(.property-show-row) {
+  .pdm-body :deep(.ps-page),
+  .pdm-body :deep(.ps-shell),
+  .pdm-body :deep(.ps-layout),
+  .pdm-body :deep(.ps-main),
+  .pdm-body :deep(.ps-aside),
+  .pdm-body :deep(.property-content) {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .pdm-body :deep(.ps-layout:not(.ps-layout--mobile)) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px) !important;
+    gap: 12px !important;
     align-items: stretch !important;
   }
 
+  .pdm-body :deep(.ps-aside),
   .pdm-body :deep(.property-show-sidebar-col) {
     display: flex !important;
     flex-direction: column !important;
     align-self: stretch !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Stick flush under modal header — no gap, no second scrollbar */
+  .pdm-body :deep(.sidebar-sticky-container) {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 2 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #fff !important;
   }
 
   .pdm-body :deep(.property-sidebar-spacer) {
     display: none !important;
+    height: 0 !important;
   }
 
-  .pdm-body :deep(.property-show-sidebar-col .sidebar-sticky-container) {
-    position: sticky !important;
-    top: 0 !important;
-    flex: 0 0 auto !important;
-    align-self: stretch !important;
-    height: auto !important;
+  .pdm-body :deep(.ps-aside .agent-sidebar-card),
+  .pdm-body :deep(.sidebar-sticky-container .agent-sidebar-card) {
     margin-top: 0 !important;
-    /* popup height − header − body padding */
-    max-height: calc(100dvh - 3rem - 60px - 2rem) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    scrollbar-width: thin;
-    overscroll-behavior: contain;
-  }
-
-  /* Cards keep their natural height — the section scrolls, not the cards. */
-  .pdm-body :deep(.property-show-sidebar-col .sidebar-sticky-container > *) {
-    flex-shrink: 0 !important;
-  }
-
-  .pdm-body :deep(.property-show-sidebar-col .agent-sidebar-card) {
     max-height: none !important;
     overflow: visible !important;
   }
