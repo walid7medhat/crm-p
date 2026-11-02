@@ -513,11 +513,15 @@ public function activitiesWithTrashed()
     public static function blacklistDuplicateFlags(iterable $leads): array
     {
         $keys = [];
+        $selfBlacklisted = [];
         foreach ($leads as $lead) {
             $keys[(int) $lead->id] = [
                 'digits' => static::phoneDigits($lead->work_phone),
                 'email' => static::normalizeEmail($lead->email),
             ];
+            if ($lead->status_lead === 'blacklist') {
+                $selfBlacklisted[(int) $lead->id] = true;
+            }
         }
         if ($keys === []) {
             return [];
@@ -526,7 +530,7 @@ public function activitiesWithTrashed()
         $digitsList = array_values(array_unique(array_filter(array_column($keys, 'digits'))));
         $emailList = array_values(array_unique(array_filter(array_column($keys, 'email'))));
         if ($digitsList === [] && $emailList === []) {
-            return array_fill_keys(array_keys($keys), false);
+            return array_map(fn ($id) => isset($selfBlacklisted[$id]), array_combine(array_keys($keys), array_keys($keys)));
         }
 
         $blacklistByDigits = [];
@@ -553,7 +557,7 @@ public function activitiesWithTrashed()
 
         $converted = static::withoutGlobalScopes()
             ->whereIn('id', array_keys($keys))
-            ->where(fn ($q) => $q->whereNotNull('converted_to_deal_id')->orWhere('status_lead', 'converted'))
+            ->where(fn ($q) => static::whereConverted($q))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->flip();
@@ -564,8 +568,9 @@ public function activitiesWithTrashed()
                 $key['digits'] !== '' ? ($blacklistByDigits[$key['digits']] ?? []) : [],
                 $key['email'] !== '' ? ($blacklistByEmail[$key['email']] ?? []) : []
             );
-            $flags[$id] = ! isset($converted[$id])
-                && array_filter($others, fn ($otherId) => $otherId !== $id) !== [];
+            // The blacklisted lead itself is labelled too (its status is the reason).
+            $flags[$id] = isset($selfBlacklisted[$id]) || (! isset($converted[$id])
+                && array_filter($others, fn ($otherId) => $otherId !== $id) !== []);
         }
 
         return $flags;
@@ -715,9 +720,34 @@ public function activitiesWithTrashed()
     }
 
     /**
-     * Leads that get the "Blacklisted" label (same rule as blacklistDuplicateFlags): another
-     * unmerged lead with the same phone digits or email has status_lead = blacklist. Converted
-     * leads are excluded. Any branch. Blacklisted leads are few, so the EXISTS stays cheap.
+     * "Converted" for the Blacklisted label: has a deal, converted_at / status converted, or sits in
+     * a Converted lead stage (some leads are there without a deal). Same stage rule as the dashboard.
+     */
+    protected static function whereConverted($query)
+    {
+        $convertedStageIds = static::convertedStageIds();
+
+        return $query->whereNotNull('converted_to_deal_id')
+            ->orWhereNotNull('converted_at')
+            ->orWhere('status_lead', 'converted')
+            ->when($convertedStageIds !== [], fn ($q) => $q->orWhereIn('stage_id', $convertedStageIds));
+    }
+
+    /** Lead stages named "…Converted…" (dashboard rule), once per request. @return int[] */
+    protected static function convertedStageIds(): array
+    {
+        return once(fn () => Stage::query()
+            ->where('stage_type', 'lead')
+            ->whereRaw('LOWER(name) LIKE ?', ['%converted%'])
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all());
+    }
+
+    /**
+     * Leads that get the "Blacklisted" label (same rule as blacklistDuplicateFlags): the lead is
+     * blacklisted itself, or another unmerged lead with the same phone digits or email is
+     * (converted leads excluded there). Any branch. Blacklisted leads are few, so EXISTS is cheap.
      */
     public function scopeHasBlacklistDuplicate($query)
     {
@@ -727,9 +757,17 @@ public function activitiesWithTrashed()
             (array) config('lead_merge.ignored_duplicate_emails', [])
         )));
 
-        return $query
+        // NOT converted, written out (a plain NOT(...) would drop NULL status_lead / stage_id rows).
+        $convertedStageIds = static::convertedStageIds();
+
+        // Not converted, and another blacklisted lead shares the phone digits or email.
+        $duplicateOfBlacklisted = fn ($dup) => $dup
             ->whereNull("{$table}.converted_to_deal_id")
+            ->whereNull("{$table}.converted_at")
             ->where(fn ($q) => $q->whereNull("{$table}.status_lead")->orWhere("{$table}.status_lead", '!=', 'converted'))
+            ->when($convertedStageIds !== [], fn ($q) => $q->where(fn ($s) => $s
+                ->whereNull("{$table}.stage_id")
+                ->orWhereNotIn("{$table}.stage_id", $convertedStageIds)))
             ->whereExists(function ($sub) use ($table, $ignored) {
                 $sub->selectRaw('1')
                     ->from("{$table} as bl")
@@ -748,6 +786,10 @@ public function activitiesWithTrashed()
                         });
                     });
             });
+
+        return $query->where(fn ($q) => $q
+            ->where("{$table}.status_lead", 'blacklist')
+            ->orWhere($duplicateOfBlacklisted));
     }
 
     /**
