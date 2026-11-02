@@ -3497,6 +3497,56 @@ public function validateUnitNumber(Request $request)
     }
 
     /**
+     * Shared part of the sales offer PDF (every slide except the agent's thank-you page).
+     * The browser builds it once per listing version and stores it here; `key` is a hash
+     * of those slides' content, so any listing/photo/project/payment change gives a new
+     * key and the old file is simply never asked for again.
+     */
+    private function offerBasePath(int $listingId, string $key): string
+    {
+        return "offer-bases/{$listingId}/{$key}.pdf";
+    }
+
+    public function offerBase(Request $request, $id)
+    {
+        $request->validate(['key' => ['required', 'string', 'regex:/^[a-f0-9]{16,64}$/']]);
+        $listing = Listing::findOrFail($id);
+        $path = $this->offerBasePath($listing->id, $request->input('key'));
+
+        if (!Storage::disk('local')->exists($path)) {
+            return response()->noContent();
+        }
+
+        return Storage::disk('local')->response($path, 'offer-base.pdf', [
+            'Content-Type' => 'application/pdf',
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
+    }
+
+    public function storeOfferBase(Request $request, $id)
+    {
+        $request->validate([
+            'key' => ['required', 'string', 'regex:/^[a-f0-9]{16,64}$/'],
+            'file' => 'required|file|mimes:pdf|max:51200',
+        ]);
+        $listing = Listing::findOrFail($id);
+        $disk = Storage::disk('local');
+        $path = $this->offerBasePath($listing->id, $request->input('key'));
+
+        if (!$disk->exists($path)) {
+            $disk->putFileAs(dirname($path), $request->file('file'), basename($path));
+            // Older versions of this listing's offer are stale now.
+            foreach ($disk->files(dirname($path)) as $file) {
+                if ($file !== $path) {
+                    $disk->delete($file);
+                }
+            }
+        }
+
+        return response()->json(['status' => true]);
+    }
+
+    /**
      * Get all offers for a property
      */
     public function getOffers($id)

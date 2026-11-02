@@ -39,6 +39,7 @@
         "leaflet": "^1.9.4",
         "leaflet.markercluster": "^1.5.3",
         "libphonenumber-js": "^1.12.42",
+        "pdf-lib": "^1.17.1",
         "pdfjs-dist": "^5.7.284",
         "pusher-js": "^8.4.0",
         "sweetalert2": "^11.26.3",

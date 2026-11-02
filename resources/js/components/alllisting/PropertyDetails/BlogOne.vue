@@ -6576,6 +6576,8 @@ const generateMobileOffer = async () => {
       area: property.value.area?.area_title
     }
   };
+  pdfMobileMode = false;
+  const baseReady = loadOfferBase();
   const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
     offer_data: offerData,
     client_name: 'Potential Client'
@@ -6586,15 +6588,12 @@ const generateMobileOffer = async () => {
   const offerNumber = saveResponse.data?.data?.offer?.offer_number;
   if (!offerNumber) throw new Error('Offer number was not returned');
   offerDateLabel = formatOfferDate(saveResponse.data?.data?.offer?.created_at);
-  setMobileOfferBusyText('Preparing images…');
   // Same slides as desktop (renderOfferSlidesPdf). The old jsPDF-only mobile pages
   // (buildMobileOfferPdf) drifted from the desktop design; html2canvas is fine on phones
   // now that photos are downscaled first and the CRM page isn't cloned per slide.
-  pdfMobileMode = false;
-  await Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
-  const pdf = await renderOfferSlidesPdf(currentUser, setMobileOfferBusyText);
+  const blob = await buildOfferBlob(currentUser, setMobileOfferBusyText, baseReady);
   showMobileOfferReady({
-    blob: pdf.output('blob'),
+    blob,
     filename: `sales-offer-${offerNumber}.pdf`,
     offerNumber,
     creatorName: currentUser?.name,
@@ -6679,10 +6678,11 @@ const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }
  * by BOTH desktop and mobile so the two offers are identical. Call after the photos and
  * card icons are preloaded (preloadDesktopOfferImages / preloadOfferCardIcons).
  * onProgress(text) updates whatever progress UI the caller shows.
+ * part: see createNewDesignContent — 'thanks' needs no photo preloading.
  */
-const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}) => {
+const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}, part = 'all') => {
   pdfDesktopMode = true;
-  const pdfContent = createNewDesignContent(currentUser);
+  const pdfContent = createNewDesignContent(currentUser, part);
   onProgress('Building the offer pages…');
 
   // Load every slide's images up front, in parallel, instead of letting each
@@ -6736,11 +6736,114 @@ const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}) => {
   }
 
   onProgress('Finishing the PDF…');
-  await paintPaymentDetailsPage(pdf, pdfContent);
-  await paintAmenitiesPage(pdf, pdfContent);
-  paintCoverBadge(pdf, pdfContent);
-  await paintThankYouCallLink(pdf, pdfContent);
+  if (part !== 'thanks') {
+    await paintPaymentDetailsPage(pdf, pdfContent);
+    await paintAmenitiesPage(pdf, pdfContent);
+    paintCoverBadge(pdf, pdfContent);
+  }
+  if (part !== 'base') await paintThankYouCallLink(pdf, pdfContent);
   return pdf;
+};
+
+// Shared offer file: every slide except the thank-you page is the same for every agent,
+// so it is built once per listing version, stored on the server (offer-base endpoints)
+// and reused. Only the thank-you page (agent name, phone, date) is drawn per download.
+// Bump when the slide design changes so stored files from the old design are not reused.
+const OFFER_BASE_DESIGN_VERSION = 1;
+
+// Two 53-bit string hashes (cyrb53) → 28 hex chars. Only a cache key, not security.
+const hashOfferString = (str) => {
+  const cyrb53 = (seed) => {
+    let h1 = 0xdeadbeef ^ seed;
+    let h2 = 0x41c6ce57 ^ seed;
+    for (let i = 0; i < str.length; i++) {
+      const ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
+  };
+  return cyrb53(1) + cyrb53(2);
+};
+
+// Key = hash of exactly what the shared slides show, so editing the listing, its photos,
+// project or payment plan gives a new key and the stored file is rebuilt on its own.
+// Built as an HTML string (no DOM) so no photos are fetched just to compute it. Canvas-
+// drawn data: images vary by browser/OS fonts, so they are left out; the listing values
+// they draw (status badge, feature pills) are added to the key instead.
+const offerBaseKey = () => {
+  const desktopMode = pdfDesktopMode;
+  pdfDesktopMode = false; // original photo URLs, not this session's downscaled copies
+  try {
+    const html = buildOfferSlidesHtml(null, 'base').replace(/data:[^"')\s]*/g, '');
+    return hashOfferString(JSON.stringify([
+      OFFER_BASE_DESIGN_VERSION,
+      html,
+      paymentSlideModel,
+      property.value?.listing_status,
+      property.value?.project?.features,
+    ]));
+  } finally {
+    pdfDesktopMode = desktopMode;
+  }
+};
+
+// Start this before saving the offer record so the download overlaps with it.
+const loadOfferBase = async () => {
+  const listingId = property.value.id;
+  const key = offerBaseKey();
+  try {
+    const response = await api.get(`/listings/properties/${listingId}/offer-base`, {
+      params: { key },
+      responseType: 'arraybuffer',
+    });
+    const bytes = response.status === 200 && response.data?.byteLength ? response.data : null;
+    return { listingId, key, bytes };
+  } catch (error) {
+    console.warn('Stored offer file unavailable, building it:', error?.message);
+    return { listingId, key, bytes: null };
+  }
+};
+
+const renderOfferBase = async (currentUser, onProgress) => {
+  onProgress('Preparing images…');
+  await Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
+  return (await renderOfferSlidesPdf(currentUser, onProgress, 'base')).output('arraybuffer');
+};
+
+const storeOfferBase = (base, bytes) => {
+  const form = new FormData();
+  form.append('key', base.key);
+  form.append('file', new Blob([bytes], { type: 'application/pdf' }), 'offer-base.pdf');
+  return api.post(`/listings/properties/${base.listingId}/offer-base`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+/**
+ * The finished offer: the stored shared part (built and uploaded here when this listing
+ * version has none yet) plus a freshly drawn thank-you page for currentUser.
+ */
+const buildOfferBlob = async (currentUser, onProgress, baseReady) => {
+  const base = await baseReady;
+  let baseBytes = base.bytes;
+  if (!baseBytes) {
+    baseBytes = await renderOfferBase(currentUser, onProgress);
+    // Not awaited: a failed upload only means the next download builds it again.
+    storeOfferBase(base, baseBytes)
+      .catch((error) => console.warn('Could not store the offer file:', error?.message));
+  }
+
+  onProgress('Adding your contact page…');
+  const thanksBytes = (await renderOfferSlidesPdf(currentUser, onProgress, 'thanks')).output('arraybuffer');
+  onProgress('Finishing the PDF…');
+  const { PDFDocument } = await import('pdf-lib');
+  const doc = await PDFDocument.load(baseBytes);
+  const thanks = await PDFDocument.load(thanksBytes);
+  (await doc.copyPages(thanks, thanks.getPageIndices())).forEach((page) => doc.addPage(page));
+  return new Blob([await doc.save()], { type: 'application/pdf' });
 };
 
 const OFFER_LOADING_STYLE_ID = 'offer-3d-loading-styles-v4';
@@ -6914,8 +7017,9 @@ const generatePDF = async () => {
       }
     };
 
-    // Start fetching/downscaling the photos now so it overlaps with saving the offer.
-    const imagesReady = Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
+    // Start fetching the stored offer file now so it overlaps with saving the offer.
+    pdfMobileMode = false;
+    const baseReady = loadOfferBase();
 
     // First, save offer to database
     const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
@@ -6933,12 +7037,7 @@ const generatePDF = async () => {
     const filename = `sales-offer-${offerNumber}.pdf`;
     offerDateLabel = formatOfferDate(saveResponse.data.data.offer.created_at);
 
-    pdfMobileMode = false;
-    setOfferLoadingStatus('Preparing images…');
-    await imagesReady;
-    const pdf = await renderOfferSlidesPdf(currentUser, setOfferLoadingStatus);
-
-    const pdfBlob = pdf.output('blob');
+    const pdfBlob = await buildOfferBlob(currentUser, setOfferLoadingStatus, baseReady);
 
     proxy.$showNotification(`Sales Offer ${offerNumber} generated successfully!`, 'success');
 
@@ -7008,7 +7107,8 @@ const buildOfferPdf = async ({ clientName = 'Potential Client', onProgress = () 
       }
     };
 
-    const imagesReady = Promise.all([preloadDesktopOfferImages(), preloadOfferCardIcons()]);
+    pdfMobileMode = false;
+    const baseReady = loadOfferBase();
     onProgress('Saving the offer…');
     const saveResponse = await api.post(`/listings/properties/${property.value.id}/generate-offer`, {
       offer_data: offerData,
@@ -7018,12 +7118,9 @@ const buildOfferPdf = async ({ clientName = 'Potential Client', onProgress = () 
 
     const offerNumber = saveResponse.data.data.offer.offer_number;
     offerDateLabel = formatOfferDate(saveResponse.data.data.offer.created_at);
-    pdfMobileMode = false;
-    onProgress('Preparing images…');
-    await imagesReady;
-    const pdf = await renderOfferSlidesPdf(currentUser, onProgress);
+    const blob = await buildOfferBlob(currentUser, onProgress, baseReady);
 
-    return { blob: pdf.output('blob'), filename: `sales-offer-${offerNumber}.pdf`, offerNumber };
+    return { blob, filename: `sales-offer-${offerNumber}.pdf`, offerNumber };
   } finally {
     pdfMobileMode = false;
     pdfDesktopMode = false;
@@ -7084,9 +7181,16 @@ const showOfferHistory = async () => {
   }
 };
 
-const createNewDesignContent = (currentUser) => {
+// part: 'all' | 'base' (every slide except the thank-you page) | 'thanks' (only that page).
+const createNewDesignContent = (currentUser, part = 'all') => {
   const container = document.createElement('div');
   container.style.cssText = 'margin:0 !important; font-family:Arial, sans-serif !important; background:#ffffff !important; width:100% !important; height:100% !important;';
+  container.innerHTML = buildOfferSlidesHtml(currentUser, part);
+  return container;
+};
+
+const buildOfferSlidesHtml = (currentUser, part = 'all') => {
+  if (part === 'thanks') return createSlide9(currentUser);
 
   const hasFloorPlans = property.value?.floor_plans && Array.isArray(property.value.floor_plans) && property.value.floor_plans.length > 0;
   const hasProject = property.value?.project && property.value.project.id;
@@ -7094,7 +7198,7 @@ const createNewDesignContent = (currentUser) => {
   const gallerySlides = createGallerySlides() || [];
   const paymentDetailsSlide = createPaymentDetailsSlide();
 
-  container.innerHTML = `
+  return `
  <!-- Slide 1 - Cover -->
     ${createSlide1(currentUser)}
 <!-- Slide 2 - Property Details -->
@@ -7116,10 +7220,8 @@ const createNewDesignContent = (currentUser) => {
     ${features.length > 0 ? createSlide3() : ''}
 
     <!-- Slide 9 - Thank You Page -->
-    ${createSlide9(currentUser)}
+    ${part === 'all' ? createSlide9(currentUser) : ''}
   `;
-
-  return container;
 };
 
 // Offer gallery: up to 4 slides × 2 photos (Figma GALLERY layout).

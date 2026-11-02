@@ -942,6 +942,8 @@ Route::post('{id}/duplicate', [ListingController::class, 'duplicate']);
     Route::post('hot-deal-requests/{requestId}/process', [HotDealApprovalController::class, 'processRequest']);
     
     Route::post('/properties/{id}/generate-offer', [ListingController::class, 'generateOffer']);
+    Route::get('/properties/{id}/offer-base', [ListingController::class, 'offerBase']);
+    Route::post('/properties/{id}/offer-base', [ListingController::class, 'storeOfferBase']);
 Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
     Route::get('/{id}/comments', [ListingCommentController::class, 'index']);
     Route::get('/{id}/comments/stats', [ListingCommentController::class, 'getStats']);
