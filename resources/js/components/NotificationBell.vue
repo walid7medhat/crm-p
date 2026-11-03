@@ -233,6 +233,12 @@ export default {
         return
       }
 
+      if (type === 'App\\Notifications\\AgentJoinedNotification') {
+        const agentId = notification?.data?.agent_id
+        if (agentId) this.$router.push(`/users/${agentId}`)
+        return
+      }
+
       if (type === 'App\\Notifications\\EvaluationCompletedHrNotification') {
         const employeeId = notification?.data?.employee_id
         if (employeeId) this.$router.push(`/hr/employees/${employeeId}`)

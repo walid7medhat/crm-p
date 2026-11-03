@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use App\Notifications\UserStatusUpdated;
+use App\Services\NewAgentJoinedNotifier;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\AccountActivatedMail;
 use Illuminate\Validation\Rule;
@@ -351,9 +352,12 @@ class UserController extends Controller
 
             $user->load(['roles', 'parent']);
 
+            // "<name> joined the CRM" for super admins, their admins and branch admins
+            NewAgentJoinedNotifier::notify($user, Auth::id());
+
             return ApiResponse::success(
                 new UserResource($user),
-                'User created successfully', 
+                'User created successfully',
                 201
             );
         } catch (\Exception $e) {

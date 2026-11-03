@@ -141,6 +141,9 @@ public function registerWithInvitation(Request $request)
 
         DB::commit();
 
+        // No parent yet, so in practice only super admins are told
+        \App\Services\NewAgentJoinedNotifier::notify($user);
+
         return response()->json([
             'success' => true,
             'message' => 'Account created successfully!',
