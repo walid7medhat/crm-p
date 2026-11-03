@@ -1619,6 +1619,21 @@
     display: none;
   }
 
+  /* Listing opened in PropertyDetailsModal (backdrop z-index 15050): the dock and its
+     sheets are teleported to <body>, so lift them above the popup, same order as above. */
+  body.property-details-modal-open .pf-dock,
+  body.property-details-modal-open .ps-action-dock {
+    z-index: 15100;
+  }
+
+  body.property-details-modal-open .pf-sheet {
+    z-index: 15200;
+  }
+
+  body.property-details-modal-open .ps-actions-sheet {
+    z-index: 15300;
+  }
+
   body:has(.property-show-inner--mobile) .chat-floating-btn {
     display: none !important;
   }
