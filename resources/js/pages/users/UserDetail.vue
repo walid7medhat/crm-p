@@ -21,145 +21,147 @@
             </div>
 
             <!-- User Data -->
-            <div v-else-if="user">
-                <!-- User Header Section -->
-                <div class="user-header-section mb-5">
-                    <div class="row align-items-center">
-                        <div class="col-md-3">
-                            <div class="profile-avatar-wrapper position-relative">
-                                <img :src="user.avatar || userPlaceholder" 
-                                     alt="User Avatar" 
-                                     class="profile-avatar  "
+            <div v-else-if="user" class="ud-layout">
+                <!-- Profile Sidebar -->
+                <aside class="ud-side">
+                    <section class="ud-card ud-profile">
+                        <div class="ud-profile__cover">
+                            <span class="ud-profile__eyebrow">
+                                <i class="ri-user-star-line"></i>
+                                Team Member
+                            </span>
+                            <span
+                                v-if="isSuperAdminViewer"
+                                class="ud-presence"
+                                :class="isUserOnline ? 'is-online' : 'is-offline'"
+                            >
+                                <span class="ud-presence__dot"></span>
+                                {{ isUserOnline ? 'Online' : 'Offline' }}
+                            </span>
+                        </div>
+
+                        <div class="ud-profile__head">
+                            <div class="ud-avatar">
+                                <img :src="user.avatar || userPlaceholder"
+                                     alt="User Avatar"
                                      @error="handleImageError">
-                                <div
+                                <span
                                     v-if="isSuperAdminViewer && isUserOnline"
-                                    class="online-status active"
+                                    class="ud-avatar__online"
                                     title="Online"
-                                ></div>
+                                ></span>
+                            </div>
+                            <h2 class="ud-profile__name">{{ user.name }}</h2>
+                            <div class="ud-chips">
+                                <span v-if="user.role_name" class="ud-chip ud-chip--brand">
+                                    <i class="ri-shield-user-line"></i>{{ user.role_name }}
+                                </span>
+                                <span class="ud-chip" :class="user.status === 'active' ? 'ud-chip--success' : 'ud-chip--danger'">
+                                    <span class="ud-chip__dot"></span>
+                                    {{ user.status === 'active' ? 'Active' : 'Inactive' }}
+                                </span>
                             </div>
                         </div>
-                        <div class="col-md-5">
-                            <div class="">
-                                <div class="user-info mb-3 mb-md-0">
-                                    <div class="user-head">
-                                    <h5 class="user-name mb-2">{{ user.name }}</h5>
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 buttons-status">
-                                        <span class="user-role">{{ user.role_name }}</span>
-                                        <span class="user-status" :class="user.status">
-                                            {{ user.status === 'active' ? 'Active' : 'Inactive' }}
-                                        </span>
-                                        <span
-                                            v-if="isSuperAdminViewer && isUserOnline"
-                                            class="user-online-badge"
-                                        >Online</span>
-                                    </div>
-                                    </div>
-                                    <div class="user-contact">
-                                         <div class="col-12" v-if="user.email" >
-                                                <label class="col-3">Email:</label>
-                                                <span v-if="user.email" class=" text-muted col-6 mb-0">
-                                                    {{ user.email }}
-                                                </span>
-                                        </div>
-                                        <div class="col-12" v-if="user.phone" >
-                                                <label class="col-3">Phone:</label>
-                                                <span v-if="user.phone" class=" text-muted col-6 mb-0">
-                                                    {{ user.phone }}
-                                                </span>
-                                        </div>
-                                        <div class="col-12" v-if="user.role_name" >
-                                                <label class="col-3">Role:</label>
-                                                <span v-if="user.role_name" class=" text-muted col-6 mb-0">
-                                                    {{ user.role_name }}
-                                                </span>
-                                        </div>
-                                         <div class="col-12" v-if="user.admin_parent_name" >
-                                                <label class="col-3 capital"> {{ user.parent_role ? user.parent_role.replace(/_/g, ' ') : 'SYSTEM ADMIN' }}:</label>
-                                                <span v-if="user.admin_parent_name" class=" text-muted col-6 mb-0">
-                                                    {{ user.parent_name }}
-                                                </span>
-                                        </div>
-                                        <div class="col-12" v-if="user.admin_parent_name" >
-                                                <label class="col-3">Branch:</label>
-                                                <span v-if="user.admin_parent_name" class=" text-muted col-6 mb-0">
-                                                    {{ user.admin_parent_name }}
-                                                </span>
-                                        </div>
-                                        <div class="col-12">
-                                                <label class="col-3">Last Login:</label>
-                                                <span class="text-muted col-6 mb-0">
-                                                    {{ formatLastLoginDetail(user.last_login_at) }}
-                                                </span>
-                                        </div>
-                                        <div class="col-12" v-if="isSuperAdminViewer">
-                                            <UserDeviceLocation
-                                                :latitude="user.last_login_lat"
-                                                :longitude="user.last_login_lng"
-                                                :accuracy="user.last_login_accuracy"
-                                                :captured-at="user.last_login_location_at"
-                                                :address="user.last_login_location"
-                                                :source="user.last_login_location_source"
-                                            />
-                                        </div>
 
-                                    </div>
-                                </div>
-                              
+                        <div class="ud-actions">
+                            <button class="ud-btn ud-btn--icon" title="Back" @click="$router.back()">
+                                <i class="ri-arrow-left-line"></i>
+                            </button>
+                            <button v-if="$hasPermission('users-edit')"
+                                    class="ud-btn ud-btn--primary"
+                                    @click="$router.push(`/users/${user.id}/edit`)">
+                                <i class="ri-edit-line"></i>
+                                <span>Edit User</span>
+                            </button>
+                            <button v-if="canManageVacation"
+                                    class="ud-btn ud-btn--soft"
+                                    @click="openVacationModal">
+                                <i class="ri-suitcase-line"></i>
+                                <span>Vacation</span>
+                            </button>
+                        </div>
+
+                        <div v-if="isAgent && !agentPropertiesLoading && totalAgentProperties" class="ud-stats">
+                            <div class="ud-stat">
+                                <span class="ud-stat__value">{{ totalAgentProperties }}</span>
+                                <span class="ud-stat__label">Listings</span>
                             </div>
-                            
-                             <div class="user-actions">
-                                <div class="d-flex flex-sm-row gap-2 flex-wrap">
-                                    <button class="btn btn-outline-secondary btn-sm" @click="$router.back()">
-                                        <i class="ri-arrow-left-line me-1"></i>
-                                        <span class="d-sm-inline">Back</span>
-                                    </button>
-                                    <button v-if="$hasPermission('users-edit')"
-                                            class="btn btn-success btn-sm"
-                                            @click="$router.push(`/users/${user.id}/edit`)">
-                                        <i class="ri-edit-line me-1"></i>
-                                        <span class="d-sm-inline">Edit User</span>
-                                    </button>
-                                    <button v-if="canManageVacation"
-                                            class="btn btn-warning btn-sm"
-                                            @click="openVacationModal">
-                                        <i class="ri-suitcase-line me-1"></i>
-                                        <span class="d-sm-inline">Vacation</span>
-                                    </button>
-                                </div>
+                            <div class="ud-stat">
+                                <span class="ud-stat__value">{{ activeAgentProperties }}</span>
+                                <span class="ud-stat__label">Active</span>
+                            </div>
+                            <div class="ud-stat">
+                                <span class="ud-stat__value">{{ soldAgentProperties }}</span>
+                                <span class="ud-stat__label">Sold</span>
                             </div>
                         </div>
-                        <!--<div class="col-md-1 d-none d-sm-block"></div>-->
-                        <!-- <div class="col-md-1 d-none d-sm-block">-->
-                        <!--    <div class="line-before"></div>-->
-                        <!--</div>-->
 
-                        <!--<div class="col-md-2 ">-->
-                        <!--     <div class="profile-avatar-wrapper mb-3">-->
-                        <!--        <img :src="user.parent_avatar || userPlaceholder" -->
-                        <!--             alt="User Avatar" -->
-                        <!--             class="profile-avatar2  rounded-circle  "-->
-                        <!--             @error="handleImageError">-->
-                                  
-                        <!--    </div>-->
-                        <!--       <label class="col-12">supervisor:</label>-->
-                        <!--       <span class="col-12">{{user.parent_name}}</span>-->
-                        <!--</div>-->
-                    </div>
-                </div>
+                        <ul class="ud-info">
+                            <li v-if="user.email">
+                                <span class="ud-info__icon"><i class="ri-mail-line"></i></span>
+                                <span class="ud-info__text">
+                                    <span class="ud-info__label">Email</span>
+                                    <a :href="`mailto:${user.email}`" class="ud-info__value" :title="user.email">{{ user.email }}</a>
+                                </span>
+                            </li>
+                            <li v-if="user.phone">
+                                <span class="ud-info__icon"><i class="ri-phone-line"></i></span>
+                                <span class="ud-info__text">
+                                    <span class="ud-info__label">Phone</span>
+                                    <a :href="`tel:${user.phone}`" class="ud-info__value">{{ user.phone }}</a>
+                                </span>
+                            </li>
+                            <li v-if="user.admin_parent_name">
+                                <span class="ud-info__icon"><i class="ri-building-2-line"></i></span>
+                                <span class="ud-info__text">
+                                    <span class="ud-info__label">Branch</span>
+                                    <span class="ud-info__value">{{ user.admin_parent_name }}</span>
+                                </span>
+                            </li>
+                            <li v-if="user.admin_parent_name">
+                                <span class="ud-info__icon"><i class="ri-user-follow-line"></i></span>
+                                <span class="ud-info__text">
+                                    <span class="ud-info__label">{{ user.parent_role ? user.parent_role.replace(/_/g, ' ') : 'System Admin' }}</span>
+                                    <span class="ud-info__value">{{ user.parent_name || '—' }}</span>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="ud-info__icon"><i class="ri-time-line"></i></span>
+                                <span class="ud-info__text">
+                                    <span class="ud-info__label">Last Login</span>
+                                    <span class="ud-info__value">{{ formatLastLoginDetail(user.last_login_at) }}</span>
+                                </span>
+                            </li>
+                        </ul>
+                    </section>
 
+                    <section v-if="isSuperAdminViewer" class="ud-card ud-location">
+                        <UserDeviceLocation
+                            :latitude="user.last_login_lat"
+                            :longitude="user.last_login_lng"
+                            :accuracy="user.last_login_accuracy"
+                            :captured-at="user.last_login_location_at"
+                            :address="user.last_login_location"
+                            :source="user.last_login_location_source"
+                        />
+                    </section>
 
-                <!-- Tab Content -->
-                <div class="tab-content" id="userTabContent">
-                          <!-- Main Content Tabs -->
-                <div class="user-content-tabs mb-4">
-                    <nav>
-                        <div class="nav nav-tabs" id="userTab" role="tablist">
-                            <button v-if="isAgent" class="nav-link active" id="properties-tab" data-bs-toggle="tab"
+                    <!-- Section menu (Bootstrap tabs) -->
+                    <!-- On desktop these tabs show in the top navbar; kept in the DOM so they still drive Bootstrap -->
+                    <nav v-show="isMobileViewport" class="ud-card ud-nav">
+                        <div class="nav ud-nav__list" id="userTab" role="tablist">
+                            <button v-if="isAgent" class="nav-link active" id="overview-tab" data-bs-toggle="tab"
+                                    data-bs-target="#overview" type="button" role="tab">
+                                <span class="ud-nav__icon"><i class="ri-dashboard-3-line"></i></span>
+                                <span class="ud-nav__label">Overview</span>
+                                <i class="ri-arrow-right-s-line ud-nav__chevron"></i>
+                            </button>
+                            <button v-if="isAgent" class="nav-link" id="properties-tab" data-bs-toggle="tab"
                                     data-bs-target="#properties" type="button" role="tab">
-                                <i class="ri-home-4-line me-2"></i>
-                                <span class="d-none d-md-inline">Properties</span>
-                                <span class="d-inline d-md-none">Properties</span>
-                                <span v-if="agentProperties.length > 0" class="badge bg-primary ms-2">{{ agentProperties.length }}</span>
+                                <span class="ud-nav__icon"><i class="ri-home-4-line"></i></span>
+                                <span class="ud-nav__label">Properties</span>
+                                <span v-if="agentProperties.length > 0" class="ud-nav__badge">{{ agentProperties.length }}</span>
+                                <i class="ri-arrow-right-s-line ud-nav__chevron"></i>
                             </button>
                             <!-- <button v-if="isAgent && canViewAgentPerformance" class="nav-link" id="performance-tab" data-bs-toggle="tab"
                                     data-bs-target="#performance" type="button" role="tab" @click="loadSalesPerformance">
@@ -168,21 +170,218 @@
                             </button> -->
                             <button v-if="canViewAgentAttendance" class="nav-link" :class="{ active: !isAgent }" id="attendance-tab" data-bs-toggle="tab"
                                     data-bs-target="#attendance" type="button" role="tab">
-                                <i class="ri-calendar-check-line me-2"></i>
-                                <span>Attendance</span>
+                                <span class="ud-nav__icon"><i class="ri-calendar-check-line"></i></span>
+                                <span class="ud-nav__label">Attendance</span>
+                                <i class="ri-arrow-right-s-line ud-nav__chevron"></i>
                             </button>
                             <button v-if="canViewEvaluations" class="nav-link" id="evaluations-tab" data-bs-toggle="tab"
                                     data-bs-target="#evaluations" type="button" role="tab" @click="loadUserEvaluations">
-                                <i class="ri-clipboard-line me-2"></i>
-                                <span>Evaluations</span>
-                                <span v-if="userEvaluations.length > 0" class="badge bg-primary ms-2">{{ userEvaluations.length }}</span>
+                                <span class="ud-nav__icon"><i class="ri-clipboard-line"></i></span>
+                                <span class="ud-nav__label">Evaluations</span>
+                                <span v-if="userEvaluations.length > 0" class="ud-nav__badge">{{ userEvaluations.length }}</span>
+                                <i class="ri-arrow-right-s-line ud-nav__chevron"></i>
                             </button>
                         </div>
                     </nav>
-                </div>
+                </aside>
+
+                <!-- Tab Content -->
+                <div class="tab-content ud-main" id="userTabContent">
+
+                    <!-- Overview Tab: analytics for this agent -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel" v-if="isAgent">
+                        <div v-if="agentPropertiesLoading" class="ud-card text-center text-muted py-5">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <p class="mb-0">Loading analytics...</p>
+                        </div>
+                        <div v-else class="ua">
+                            <div class="ua-kpis">
+                                <div class="ud-card ua-kpi">
+                                    <span class="ua-kpi__label"><i class="ri-home-4-line"></i>Total Listings</span>
+                                    <strong class="ua-kpi__value">{{ totalAgentProperties }}</strong>
+                                    <span class="ua-kpi__sub">{{ activeAgentProperties }} active now</span>
+                                </div>
+                                <div class="ud-card ua-kpi">
+                                    <span class="ua-kpi__label"><i class="ri-money-dollar-circle-line"></i>Portfolio Value</span>
+                                    <strong class="ua-kpi__value">{{ formatCompactAed(listingAnalytics.portfolioValue) }}</strong>
+                                    <span class="ua-kpi__sub">Active listings</span>
+                                </div>
+                                <div class="ud-card ua-kpi">
+                                    <span class="ua-kpi__label"><i class="ri-price-tag-3-line"></i>Average Price</span>
+                                    <strong class="ua-kpi__value">{{ formatCompactAed(listingAnalytics.avgPrice) }}</strong>
+                                    <span class="ua-kpi__sub">Across all listings</span>
+                                </div>
+                                <div class="ud-card ua-kpi">
+                                    <span class="ua-kpi__label"><i class="ri-checkbox-circle-line"></i>Sold</span>
+                                    <strong class="ua-kpi__value">{{ soldAgentProperties }}</strong>
+                                    <span class="ua-kpi__sub">{{ listingAnalytics.hotDeals }} hot deals · {{ listingAnalytics.needsApproval }} awaiting approval</span>
+                                </div>
+                            </div>
+
+                            <div class="ua-grid">
+                                <section class="ud-card ua-card ua-card--wide">
+                                    <header class="ua-card__head">
+                                        <h3 class="ua-card__title">Listings added</h3>
+                                        <span class="ua-card__meta">Last 12 months</span>
+                                    </header>
+                                    <apexchart
+                                        type="bar"
+                                        height="220"
+                                        :options="monthlyChartOptions"
+                                        :series="monthlyChartSeries"
+                                    />
+                                </section>
+
+                                <section class="ud-card ua-card">
+                                    <header class="ua-card__head">
+                                        <h3 class="ua-card__title">Listing status</h3>
+                                    </header>
+                                    <ul class="ua-bars">
+                                        <li v-for="row in listingAnalytics.status" :key="row.label" :title="`${row.label}: ${row.value}`">
+                                            <span class="ua-bars__label">{{ row.label }}</span>
+                                            <span class="ua-bars__track"><span class="ua-bars__fill" :style="{ width: barWidth(row.value, listingAnalytics.statusMax) }"></span></span>
+                                            <span class="ua-bars__value">{{ row.value }}</span>
+                                        </li>
+                                    </ul>
+                                </section>
+
+                                <section class="ud-card ua-card">
+                                    <header class="ua-card__head">
+                                        <h3 class="ua-card__title">Sale vs Rent</h3>
+                                    </header>
+                                    <div class="ua-split" :title="`For Sale: ${listingAnalytics.forSale} · For Rent: ${listingAnalytics.forRent}`">
+                                        <span class="ua-split__part ua-split__part--sale" :style="{ flexGrow: listingAnalytics.forSale }"></span>
+                                        <span class="ua-split__part ua-split__part--rent" :style="{ flexGrow: listingAnalytics.forRent }"></span>
+                                    </div>
+                                    <div class="ua-split__legend">
+                                        <span><i class="ua-dot ua-dot--sale"></i>For Sale <strong>{{ listingAnalytics.forSale }}</strong></span>
+                                        <span><i class="ua-dot ua-dot--rent"></i>For Rent <strong>{{ listingAnalytics.forRent }}</strong></span>
+                                    </div>
+
+                                    <h4 class="ua-card__subtitle">Top property types</h4>
+                                    <ul v-if="listingAnalytics.types.length" class="ua-bars">
+                                        <li v-for="row in listingAnalytics.types" :key="row.label" :title="`${row.label}: ${row.value}`">
+                                            <span class="ua-bars__label">{{ row.label }}</span>
+                                            <span class="ua-bars__track"><span class="ua-bars__fill" :style="{ width: barWidth(row.value, listingAnalytics.typesMax) }"></span></span>
+                                            <span class="ua-bars__value">{{ row.value }}</span>
+                                        </li>
+                                    </ul>
+                                    <p v-else class="ua-empty">No listings yet.</p>
+                                </section>
+                            </div>
+
+                            <section v-if="canViewLeadAnalytics" class="ud-card ua-card">
+                                <header class="ua-card__head ua-card__head--tools">
+                                    <h3 class="ua-card__title">Leads</h3>
+                                    <div class="ua-range">
+                                        <input v-model="leadReportFilters.date_from" type="date" aria-label="From date" @change="loadLeadReport" />
+                                        <span>to</span>
+                                        <input v-model="leadReportFilters.date_to" type="date" aria-label="To date" @change="loadLeadReport" />
+                                    </div>
+                                </header>
+                                <div v-if="leadReportError" class="alert alert-danger py-2 px-3 mb-2">{{ leadReportError }}</div>
+                                <div v-if="leadReportLoading" class="ua-empty">Loading leads...</div>
+                                <template v-else-if="leadReport">
+                                    <div class="ua-perf">
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Assigned</span>
+                                            <strong>{{ leadReport.total_assigned_leads }}</strong>
+                                        </div>
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Active</span>
+                                            <strong>{{ leadReport.active_leads }}</strong>
+                                        </div>
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Converted</span>
+                                            <strong>{{ leadReport.converted_leads }}</strong>
+                                        </div>
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Conversion Rate</span>
+                                            <strong>{{ leadConversionRate }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="ua-grid ua-grid--flush">
+                                        <div>
+                                            <h4 class="ua-card__subtitle">Leads by stage</h4>
+                                            <ul v-if="leadStageRows.length" class="ua-bars">
+                                                <li v-for="row in leadStageRows" :key="row.stage_id" :title="`${row.stage_name}: ${row.count}`">
+                                                    <span class="ua-bars__label">
+                                                        <i class="ua-dot" :style="{ background: row.stage_color || 'var(--color-primary-muted)' }"></i>
+                                                        {{ row.stage_name }}
+                                                    </span>
+                                                    <span class="ua-bars__track"><span class="ua-bars__fill" :style="{ width: barWidth(row.count, leadStageMax) }"></span></span>
+                                                    <span class="ua-bars__value">{{ row.count }}</span>
+                                                </li>
+                                            </ul>
+                                            <p v-else class="ua-empty">No leads in this date range.</p>
+                                        </div>
+                                        <div>
+                                            <h4 class="ua-card__subtitle">Latest leads</h4>
+                                            <ul v-if="recentLeads.length" class="ua-recent">
+                                                <li v-for="lead in recentLeads" :key="lead.id">
+                                                    <span class="ua-recent__main">
+                                                        <strong>{{ lead.lead_name || '—' }}</strong>
+                                                        <small>{{ lead.lead_number }} · {{ formatDate(lead.created_at) }}</small>
+                                                    </span>
+                                                    <span v-if="lead.stage" class="ua-recent__stage">
+                                                        <i class="ua-dot" :style="{ background: lead.stage.color || 'var(--color-primary-muted)' }"></i>
+                                                        {{ lead.stage.name }}
+                                                    </span>
+                                                </li>
+                                            </ul>
+                                            <p v-else class="ua-empty">No leads yet.</p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </section>
+
+                            <section v-if="canViewAgentPerformance" class="ud-card ua-card">
+                                <header class="ua-card__head ua-card__head--tools">
+                                    <h3 class="ua-card__title">Sales performance</h3>
+                                    <div class="ua-range">
+                                        <input v-model="salesPerformanceFilters.from_date" type="date" aria-label="From date" @change="loadSalesPerformance" />
+                                        <span>to</span>
+                                        <input v-model="salesPerformanceFilters.to_date" type="date" aria-label="To date" @change="loadSalesPerformance" />
+                                    </div>
+                                </header>
+                                <div v-if="salesPerformanceError" class="alert alert-danger py-2 px-3 mb-2">{{ salesPerformanceError }}</div>
+                                <div v-if="salesPerformanceLoading" class="ua-empty">Loading performance...</div>
+                                <template v-else>
+                                    <div class="ua-perf">
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Converted Deals</span>
+                                            <strong>{{ salesPerformanceSummary.converted_count }}</strong>
+                                        </div>
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Deal Value</span>
+                                            <strong>{{ formatCurrency(salesPerformanceSummary.total_amount) }}</strong>
+                                        </div>
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Agent Commission</span>
+                                            <strong>{{ formatCurrency(salesPerformanceSummary.total_agent_commission) }}</strong>
+                                        </div>
+                                        <div class="ua-perf__item">
+                                            <span class="ua-kpi__label">Avg Lead Score</span>
+                                            <strong>{{ salesPerformanceSummary.avg_lead_score ?? '—' }}</strong>
+                                        </div>
+                                    </div>
+                                    <h4 class="ua-card__subtitle">Lead quality of converted deals</h4>
+                                    <ul v-if="salesPerformanceDeals.length" class="ua-bars">
+                                        <li v-for="row in leadQualityRows" :key="row.label" :title="`${row.label}: ${row.value}`">
+                                            <span class="ua-bars__label">{{ row.label }}</span>
+                                            <span class="ua-bars__track"><span class="ua-bars__fill" :style="{ width: barWidth(row.value, leadQualityMax) }"></span></span>
+                                            <span class="ua-bars__value">{{ row.value }}</span>
+                                        </li>
+                                    </ul>
+                                    <p v-else class="ua-empty">No converted deals in this date range.</p>
+                                </template>
+                            </section>
+                        </div>
+                    </div>
 
                     <!-- Properties Tab -->
-                    <div class="tab-pane fade show active" id="properties" role="tabpanel" v-if="isAgent">
+                    <div class="tab-pane fade" id="properties" role="tabpanel" v-if="isAgent">
                         <div class="properties-section">
                             <div class="card border-0 shadow-sm">
                               
@@ -197,121 +396,21 @@
                                     <div v-else-if="agentProperties.length > 0">
                                         
 
-                                        <div class="row g-3">
-                                            <div 
-                                                v-for="property in filteredProperties" 
-                                                :key="property.id" 
-                                                class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
+                                        <div class="ud-prop-grid">
+                                            <div
+                                                v-for="property in filteredProperties"
+                                                :key="property.id"
                                             >
-                                                <a
-                                                    :href="`/property-details/${property.id}`"
-                                                    class="property-card-link"
-                                                    @click="openPropertyDetailsFromClick($event, property.id)"
-                                                >
-                                                    <div class="property-card h-100">
-                                                        <!-- Image -->
-                                                        <div class="property-image position-relative">
-                                                            <img 
-                                                                :src="getPropertyImage(property)" 
-                                                                :alt="property.title"
-                                                                class="w-100 h-100 object-fit-cover property-img" 
-                                                                loading="lazy" 
-                                                                @load="handlePropertyImageLoad" 
-                                                                @error="handlePropertyImageError" 
-                                                            />
-                                                            
-                                                            <div class="status-badges">
-                                                                <span v-if="property.status === 'converted'" class="badge bg-danger">
-                                                                    <i class="ri-checkbox-circle-fill me-1"></i>Sold Out
-                                                                </span>
-                                                                <span v-else-if="property.status === 'draft'" class="badge bg-secondary">
-                                                                    <i class="ri-draft-line me-1"></i>Draft
-                                                                </span>
-                                                                <span v-else-if="property.is_archived" class="badge bg-warning">
-                                                                    <i class="ri-archive-fill me-1"></i>Archived
-                                                                </span>
-                                                                <span v-else-if="!property.is_active" class="badge bg-secondary">
-                                                                    <i class="ri-eye-off-fill me-1"></i>Inactive
-                                                                </span>
-                                                                <span v-else class="badge bg-success">
-                                                                    <i class="ri-checkbox-circle-line me-1"></i>Active
-                                                                </span>
-                                                                <span v-if="property.listing_status" class="status-badge">
-                                                                         {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
-                                                                </span>
-                                                                 <span v-if="property.is_hot_deal== 'Yes'" class="badge-off_plan">
-                                                                    Hot Deal
-                                                                  </span>
-                                                                 <span v-if="property.occupancy_status && property.completion_status != 'Under Construction'" class="badge-occupancy_status">
-                                                                    {{property.occupancy_status}}
-                                                                  </span>
-                                                                  <span v-if="!property.approved && property.rejection_reason && property.is_active" class="badge-sold bg-danger">
-                                                                    <i class="ri-close-circle-fill me-1"></i>Rejected
-                                                                  </span>
-                                                                  <span v-else-if="!property.approved && !property.rejection_reason && property.status === 'published'" class="badge-sold bg-danger">
-                                                                    <i class="ri-time-line me-1"></i>Need Approve
-                                                                  </span>
-                                                            </div>
-                                                            
-                                                            <span class="image-count" v-if="property.gallery_images && property.gallery_images.length">
-                                                                <i class="ri-image-line me-1"></i>{{ property.gallery_images.length }}
-                                                            </span>
-                                                        </div>
-
-                                                        <!-- Content -->
-                                                        <div class="property-content p-3">
-                                                            <div class="property-price mb-2">
-                                                                <span class="price">{{ formatPrice(property.price) }}</span>
-                                                                <span class="currency">AED</span>
-                                                            </div>
-
-                                                            <h6 class="property-title mb-2">{{ property.title || 'No Title' }}</h6>
-                                                            <p class="property-location mb-3 text-muted" :title="property.area">
-                                                                <i class="ri-map-pin-line me-1"></i>{{ getPropertyLocation(property) }}
-                                                            </p>
-
-                                                                <div class="property-details d-flex justify-content-between text-muted small mb-3">
-                                                                      <span class="d-flex justify-content-between icons">
-                                                                          <img :src="propertyIcon" class="imgicon"/>
-                                                                          <!--<i class="ri-building-4-line me-1"></i>-->
-                                                                          <span>
-                                                                          {{ getPropertyType(property) }}
-                                                                          </span>
-                                                                          
-                                                                    </span>
-                                                                      <span class="d-flex justify-content-between icons" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
-                                                                          <!--<i class="ri-hotel-bed-line me-1"></i>-->
-                                                                          <img :src="bedIcon" class="imgicon"/>
-                                                                           <span>
-                                                                          {{ property.number_of_bedrooms || 0 }}
-                                                                          </span>
-                                                                     </span>
-                                                                      <span class="d-flex justify-content-between icons" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms!=0">
-                                                                          <!--<i class="ri-water-flash-line me-1"></i>-->
-                                                                          <img :src="bathIcon" class="imgicon"/>
-                                                                           <span>
-                                                                          {{ property.number_of_bathrooms || 0 }}
-                                                                          </span>
-                                                                    </span>
-                                                                      <span class="d-flex justify-content-between icons">
-                                                                          <!--<i class="ri-ruler-line me-1"></i>-->
-                                                                          <img :src="sqftIcon" class="imgicon"/>
-                                                                           <span>
-                                                                          {{ property.size_sqft || property.size_sqmt || 0 }} {{ getAreaUnit(property) }}
-                                                                          </span>
-                                                                    </span>
-                                                                    </div>
-
-                                                                    <div class="property-listed-date mb-2">
-                                                                        <i class="ri-calendar-line me-1"></i>
-                                                                        <small class="text-muted">Listed at: {{ formatDate(property.created_at) }}</small>
-                                                                      </div>
-                                                                 <span class="view-more-btn mt-2">
-                                                                      View Details
-                                                                    </span>
-                                                        </div>
-                                                    </div>
-                                                </a>
+                                                <MobileListingCard
+                                                    v-if="isMobileViewport"
+                                                    :property="property"
+                                                    fallback-image="/assets/images/a.jpeg"
+                                                />
+                                                <PropertyListingCard
+                                                    v-else
+                                                    :property="property"
+                                                    @open="(event) => openPropertyDetailsFromClick(event, property.id)"
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -542,6 +641,10 @@ import api from '@/plugins/axios';
 import apexchart from 'vue3-apexcharts';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
 import { hidesBedsBaths } from '@/composables/listingPropertyType';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import { publishPageHeaderTabs, clearPageHeaderTabs } from '@/composables/usePageHeaderTabs.js';
+import MobileListingCard from '@/components/listings/MobileListingCard.vue';
+import PropertyListingCard from '@/components/listings/PropertyListingCard.vue';
 
 export default {
     name: 'ViewUser',
@@ -550,6 +653,12 @@ export default {
         UserAttendanceCarousel,
         UserDeviceLocation,
         apexchart,
+        MobileListingCard,
+        PropertyListingCard,
+    },
+    setup() {
+        const { isMobileViewport } = useMobileNavigation();
+        return { isMobileViewport };
     },
     data() {
         return {
@@ -597,9 +706,206 @@ export default {
             // Evaluations
             userEvaluations: [],
             userEvaluationsLoading: false,
+
+            // Section tab currently shown (mirrors the Bootstrap tabs)
+            activeSection: null,
+
+            // Lead report (Overview tab)
+            leadReport: null,
+            leadReportLoading: false,
+            leadReportError: '',
+            leadReportFilters: (() => {
+                const { from_date, to_date } = this.defaultSalesRange();
+                return { date_from: from_date, date_to: to_date };
+            })(),
         };
     },
     computed: {
+        /** Overview tab: listing figures derived from the agent's properties. */
+        listingAnalytics() {
+            const list = this.agentProperties;
+            // Buckets are exclusive, in the same priority the property badges use
+            const status = { Active: 0, Sold: 0, Draft: 0, Archived: 0, Inactive: 0 };
+            const types = {};
+            let forSale = 0;
+            let forRent = 0;
+            let hotDeals = 0;
+            let needsApproval = 0;
+            let portfolioValue = 0;
+            let priced = 0;
+            let priceSum = 0;
+
+            for (const p of list) {
+                if (p.status === 'converted') status.Sold += 1;
+                else if (p.status === 'draft') status.Draft += 1;
+                else if (p.is_archived) status.Archived += 1;
+                else if (!p.is_active) status.Inactive += 1;
+                else {
+                    status.Active += 1;
+                    portfolioValue += Number(p.price) || 0;
+                }
+
+                const purpose = String(p.listing_status || '').toLowerCase();
+                if (purpose === 'sale') forSale += 1;
+                else if (purpose === 'rent') forRent += 1;
+
+                if (p.is_hot_deal === 'Yes') hotDeals += 1;
+                if (!p.approved && p.status === 'published') needsApproval += 1;
+
+                const price = Number(p.price);
+                if (price > 0) {
+                    priced += 1;
+                    priceSum += price;
+                }
+
+                const type = p.property_type || p.type || 'Other';
+                types[type] = (types[type] || 0) + 1;
+            }
+
+            const statusRows = Object.entries(status).map(([label, value]) => ({ label, value }));
+            const sortedTypes = Object.entries(types)
+                .map(([label, value]) => ({ label, value }))
+                .sort((a, b) => b.value - a.value);
+            // Keep the list short: top five, the rest folded into "Other"
+            const typeRows = sortedTypes.slice(0, 5);
+            const rest = sortedTypes.slice(5).reduce((sum, row) => sum + row.value, 0);
+            if (rest) typeRows.push({ label: 'Other', value: rest });
+
+            return {
+                status: statusRows,
+                statusMax: Math.max(0, ...statusRows.map((r) => r.value)),
+                types: typeRows,
+                typesMax: Math.max(0, ...typeRows.map((r) => r.value)),
+                forSale,
+                forRent,
+                hotDeals,
+                needsApproval,
+                portfolioValue,
+                avgPrice: priced ? priceSum / priced : 0,
+            };
+        },
+
+        /** Listings created per month over the last 12 months. */
+        monthlyListings() {
+            const now = new Date();
+            const months = [];
+            for (let i = 11; i >= 0; i -= 1) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push({
+                    key: `${d.getFullYear()}-${d.getMonth()}`,
+                    label: d.toLocaleDateString('en-US', { month: 'short' }),
+                    title: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                    count: 0,
+                });
+            }
+            const byKey = Object.fromEntries(months.map((m) => [m.key, m]));
+            for (const p of this.agentProperties) {
+                const created = new Date(p.created_at);
+                if (Number.isNaN(created.getTime())) continue;
+                const bucket = byKey[`${created.getFullYear()}-${created.getMonth()}`];
+                if (bucket) bucket.count += 1;
+            }
+            return months;
+        },
+
+        monthlyChartSeries() {
+            return [{ name: 'Listings added', data: this.monthlyListings.map((m) => m.count) }];
+        },
+
+        monthlyChartOptions() {
+            const css = getComputedStyle(document.documentElement);
+            const brand = css.getPropertyValue('--color-primary').trim() || '#733E87';
+            const muted = css.getPropertyValue('--color-text-muted').trim() || '#6b7280';
+            const grid = css.getPropertyValue('--color-border').trim() || '#e8e6ee';
+            const months = this.monthlyListings;
+            return {
+                chart: { toolbar: { show: false }, fontFamily: 'inherit', foreColor: muted, parentHeightOffset: 0 },
+                colors: [brand],
+                plotOptions: {
+                    bar: { columnWidth: '55%', borderRadius: 4, borderRadiusApplication: 'end' },
+                },
+                dataLabels: { enabled: false },
+                legend: { show: false },
+                grid: {
+                    borderColor: grid,
+                    strokeDashArray: 0,
+                    xaxis: { lines: { show: false } },
+                    padding: { left: 4, right: 4 },
+                },
+                xaxis: {
+                    categories: months.map((m) => m.label),
+                    axisTicks: { show: false },
+                    axisBorder: { color: grid },
+                },
+                yaxis: {
+                    min: 0,
+                    forceNiceScale: true,
+                    labels: { formatter: (v) => Math.round(v) },
+                },
+                states: { hover: { filter: { type: 'darken', value: 0.85 } } },
+                tooltip: {
+                    x: { formatter: (_, { dataPointIndex }) => months[dataPointIndex]?.title || '' },
+                    y: { formatter: (v) => `${v} ${v === 1 ? 'listing' : 'listings'}` },
+                },
+            };
+        },
+
+        /** The lead report API only answers admins / super admins, or the user about themself. */
+        canViewLeadAnalytics() {
+            if (!this.user || !this.isAgent) return false;
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                if (!me) return false;
+                const roles = me.roles || [];
+                return roles.includes('super_admin') || roles.includes('admin') || Number(me.id) === Number(this.user.id);
+            } catch {
+                return false;
+            }
+        },
+
+        leadStageRows() {
+            // Pipeline order from the API; empty stages left out to keep the list short
+            return (this.leadReport?.leads_by_stage || []).filter((row) => row.count > 0);
+        },
+
+        leadStageMax() {
+            return Math.max(0, ...this.leadStageRows.map((r) => r.count));
+        },
+
+        recentLeads() {
+            return (this.leadReport?.recent_leads || []).slice(0, 5);
+        },
+
+        leadConversionRate() {
+            const assigned = Number(this.leadReport?.total_assigned_leads) || 0;
+            if (!assigned) return '—';
+            const rate = ((Number(this.leadReport.converted_leads) || 0) / assigned) * 100;
+            return `${rate.toFixed(1)}%`;
+        },
+
+        leadQualityRows() {
+            const b = this.perfScoreBuckets;
+            return [
+                { label: 'Hot (70+)', value: b.hot },
+                { label: 'Warm (40–69)', value: b.warm },
+                { label: 'Cold (<40)', value: b.cold },
+            ];
+        },
+
+        leadQualityMax() {
+            return Math.max(0, ...this.leadQualityRows.map((r) => r.value));
+        },
+
+        /** Same tabs as the in-page menu, for the top navbar on desktop. */
+        headerTabs() {
+            const tabs = [];
+            if (this.isAgent) tabs.push({ id: 'overview', label: 'Overview' });
+            if (this.isAgent) tabs.push({ id: 'properties', label: 'Properties', count: this.agentProperties.length });
+            if (this.canViewAgentAttendance) tabs.push({ id: 'attendance', label: 'Attendance' });
+            if (this.canViewEvaluations) tabs.push({ id: 'evaluations', label: 'Evaluations', count: this.userEvaluations.length });
+            return tabs;
+        },
+
         isAgent() {
             if (!this.user) return false;
             
@@ -761,11 +1067,57 @@ export default {
             return this.$hasPermission('view-evaluations') || this.isAdminOrDirectManager();
         },
     },
+    watch: {
+        user(value) {
+            // Matches the tab marked active in the template
+            if (value && !this.activeSection) {
+                this.activeSection = this.isAgent ? 'overview' : (this.canViewAgentAttendance ? 'attendance' : null);
+            }
+        },
+        headerTabs() {
+            this.publishHeaderTabs();
+        },
+        activeSection() {
+            this.publishHeaderTabs();
+        },
+    },
+    created() {
+        this.headerTabsOwner = Symbol('user-detail');
+    },
     mounted() {
         this.fetchUser();
+        document.addEventListener('shown.bs.tab', this.onSectionTabShown);
+    },
+    beforeUnmount() {
+        document.removeEventListener('shown.bs.tab', this.onSectionTabShown);
+        clearPageHeaderTabs(this.headerTabsOwner);
     },
     methods: {
         hidesBedsBaths,
+        barWidth(value, max) {
+            if (!max || !value) return '0%';
+            return `${Math.max(2, (value / max) * 100)}%`;
+        },
+        formatCompactAed(value) {
+            if (!value) return 'AED 0';
+            return `AED ${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
+        },
+        publishHeaderTabs() {
+            publishPageHeaderTabs(this.headerTabsOwner, {
+                tabs: this.headerTabs,
+                active: this.activeSection,
+                select: this.selectSection,
+            });
+        },
+        /** Navbar pick: click the real tab button so Bootstrap and its @click run as usual. */
+        selectSection(id) {
+            document.getElementById(`${id}-tab`)?.click();
+        },
+        onSectionTabShown(event) {
+            const tab = event.target;
+            if (!tab?.closest?.('#userTab')) return;
+            this.activeSection = tab.id.replace(/-tab$/, '');
+        },
         openPropertyDetailsFromClick,
         formatLastLoginDetail(timestamp) {
             if (!timestamp) return 'Never';
@@ -824,6 +1176,9 @@ export default {
                         promises.push(this.fetchAgentProperties());
                         if (this.canViewAgentPerformance) {
                             promises.push(this.loadSalesPerformance());
+                        }
+                        if (this.canViewLeadAnalytics) {
+                            promises.push(this.loadLeadReport());
                         }
                     }
 
@@ -1196,6 +1551,27 @@ export default {
             }
         },
 
+        async loadLeadReport() {
+            if (!this.user?.id) return;
+            this.leadReportLoading = true;
+            this.leadReportError = '';
+            try {
+                const { data } = await api.get(`/leads/reports/users/${this.user.id}`, {
+                    params: {
+                        date_from: this.leadReportFilters.date_from,
+                        date_to: this.leadReportFilters.date_to,
+                    },
+                });
+                this.leadReport = data?.data?.statistics || null;
+            } catch (error) {
+                console.error('Error loading lead report:', error);
+                this.leadReport = null;
+                this.leadReportError = error?.response?.data?.message || 'Failed to load leads.';
+            } finally {
+                this.leadReportLoading = false;
+            }
+        },
+
         async loadUserEvaluations() {
             if (!this.user?.id) return;
             this.userEvaluationsLoading = true;
@@ -1218,7 +1594,7 @@ export default {
 .dashboard-main-body {
     padding: 1rem;
     min-height: calc(100vh - 60px);
-    background: #f8f9fa;
+    background: var(--color-background);
 }
 
 .user-details-container {
@@ -1226,216 +1602,909 @@ export default {
     margin: 0 auto;
 }
 
-/* ============ USER HEADER SECTION ============ */
-.user-header-section {
-    background: white;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+/* ============ LAYOUT: PROFILE SIDEBAR + CONTENT ============ */
+.ud-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
 }
 
-.profile-avatar-wrapper {
+.ud-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.tab-content.ud-main {
+    min-width: 0;
+    padding-top: 0;
+}
+
+.ud-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px rgba(var(--color-primary-rgb), 0.06);
+}
+
+/* ============ PROFILE CARD ============ */
+.ud-profile {
+    overflow: hidden;
+}
+
+.ud-profile__cover {
     position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    height: 88px;
+    padding: 10px 12px;
+    background:
+        radial-gradient(circle at 90% -40%, rgba(212, 175, 55, 0.6), transparent 50%),
+        radial-gradient(circle at 0% 140%, rgba(255, 255, 255, 0.22), transparent 45%),
+        var(--gradient-primary);
+    color: var(--color-on-primary);
 }
 
-.profile-avatar {
-    width: 10rem;
-    height: 10rem;
-    object-fit: cover;
-    /*box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);*/
-    border-radius: 10px;
-}
-
-.online-status {
+/* Soft dot texture fading in from the right edge */
+.ud-profile__cover::after {
+    content: '';
     position: absolute;
-    bottom: 0.5rem;
-    right: 0.5rem;
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: 50%;
-    border: 0.1875rem solid white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+    background-size: 14px 14px;
+    -webkit-mask-image: linear-gradient(to left, #000, transparent 70%);
+    mask-image: linear-gradient(to left, #000, transparent 70%);
+    pointer-events: none;
 }
 
-.online-status.active {
-    background-color: #22c55e;
+.ud-profile__eyebrow,
+.ud-presence {
+    position: relative;
+    z-index: 1;
 }
 
-.online-status.inactive {
-    background-color: #dc3545;
+.ud-profile__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.6;
+    text-transform: uppercase;
+    opacity: 0.92;
 }
 
-.user-online-badge {
+.ud-presence {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 2px 10px;
+    padding: 3px 10px;
     border-radius: 999px;
-    background: #dcfce7;
-    color: #166534;
-    font-size: 12px;
+    font-size: 0.6875rem;
     font-weight: 600;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(6px);
 }
 
-.user-online-badge::before {
-    content: '';
+.ud-presence__dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #22c55e;
 }
 
-.user-name {
-    color: #2c3e50;
-    font-weight: 700;
-    font-size: 18px !important;
-    line-height: 1.2;
-    margin-bottom: 0.5rem;
-    display: inline;
+.ud-presence.is-online .ud-presence__dot {
+    background: #4ade80;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.3);
 }
 
-.user-role {
-    /* background: linear-gradient(
-
-        90deg,                       
-
-        rgba(255, 255, 255, 0.25) 0%, 
-
-        rgba(20, 30, 80, 0.79) 0%,  
-
-        rgba(5, 10, 40, 0.95) 100%    
-
-    ); */
-    background: var(--gradient-primary) !important;
-    color: #ffffff !important;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    display: inline-block;
+.ud-presence.is-offline .ud-presence__dot {
+    background: #fca5a5;
 }
 
-.user-status {
-    /* background-color: #B8B8B8; */
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    display: inline-block;
-}
-
-.user-status.active {
-    background-color: #B8B8B8;
-    color: white;
-}
-
-.user-status.inactive {
-    background: linear-gradient(135deg, #d63031, #fab1a0);
-    color: white;
-}
-
-.user-email, .user-phone {
-    font-size: 0.875rem;
-    margin-bottom: 0.25rem;
-}
-
-.user-actions {
-    margin-top: 0.5rem;
-}
-
-.user-action-buttons {
+.ud-profile__head {
+    position: relative;
+    z-index: 1;
     display: flex;
-    gap: 0.5rem;
-    max-width: 180px;
-    margin-left: auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: -48px;
+    padding: 0 14px 12px;
+    text-align: center;
 }
 
-.user-action-buttons .btn {
-    padding: 0.25rem 0.75rem;
-    font-size: 0.75rem;
-    border-radius: 0.375rem;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 70px;
-}
-
-/* للشاشات الصغيرة */
-@media (max-width: 576px) {
-    .user-action-buttons {
-        max-width: 100%;
-        justify-content: flex-start;
-    }
-    
-    .user-action-buttons .btn {
-        flex: none;
-        padding: 0.25rem 0.5rem;
-    }
-}
-
-/* للشاشات المتوسطة والكبيرة */
-@media (min-width: 577px) {
-    .user-action-buttons {
-        justify-content: flex-end;
-    }
-}
-
-/* ============ TABS SECTION ============ */
-.user-content-tabs {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    overflow-x: auto;
-}
-
-.nav-tabs {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    flex-wrap: nowrap;
-    min-width: max-content;
-}
-
-.nav-tabs .nav-link {
-    border: none;
-    background: none;
-    color: #6c757d;
-    font-weight: 500;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    margin-right: 0.25rem;
-    font-size: 0.875rem;
-    white-space: nowrap;
-    transition: all 0.3s;
-}
-
-.nav-tabs .nav-link:hover {
-    background: rgba(0, 0, 0, 0.03);
-    color: #495057;
-}
-
-.nav-tabs .nav-link.active {
-    background: linear-gradient(
-
-        90deg,                       
-
-        rgba(255, 255, 255, 0.25) 0%, 
-
-        rgba(20, 30, 80, 0.79) 0%,  
-
-        rgba(5, 10, 40, 0.95) 100%    
-
+/* Gradient ring around the avatar */
+.ud-avatar {
+    position: relative;
+    padding: 3px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 210deg,
+        var(--color-primary-glow),
+        var(--color-primary),
+        var(--color-primary-bright),
+        var(--color-primary-glow)
     );
-    color: white;
-    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.25);
+    box-shadow: 0 8px 20px rgba(var(--color-primary-rgb), 0.25);
 }
 
-.nav-tabs .nav-link i {
+.ud-avatar img {
+    display: block;
+    width: 92px;
+    height: 92px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--color-surface);
+    background: var(--color-surface);
+}
+
+.ud-avatar__online {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid var(--color-surface);
+}
+
+.ud-profile__name {
+    margin: 4px 0 0 !important;
+    font-size: 1.125rem !important;
+    font-weight: 700;
+    line-height: 1.25 !important;
+    color: var(--color-primary-ink);
+    word-break: break-word;
+}
+
+.ud-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+}
+
+.ud-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    color: var(--color-text-nav);
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+}
+
+.ud-chip i {
+    font-size: 0.8125rem;
+}
+
+.ud-chip--brand {
+    color: var(--color-on-primary);
+    background: var(--gradient-primary);
+    border-color: transparent;
+}
+
+.ud-chip--success {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #bbf7d0;
+}
+
+.ud-chip--danger {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.ud-chip__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ud-actions {
+    display: flex;
+    gap: 6px;
+    padding: 0 14px 12px;
+}
+
+.ud-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.ud-btn i {
     font-size: 1rem;
 }
 
-.nav-tabs .nav-link .badge {
+.ud-btn--icon {
+    flex: 0 0 34px;
+    padding: 0;
+    color: var(--color-text-nav);
+    background: var(--color-surface);
+    border-color: var(--color-border);
+}
+
+.ud-btn--icon:hover {
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary-border);
+}
+
+.ud-btn--soft {
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary-border);
+}
+
+.ud-btn--soft:hover {
+    background: var(--color-primary-border);
+}
+
+.ud-btn--primary {
+    color: var(--color-on-primary);
+    background: var(--gradient-primary);
+    box-shadow: 0 6px 14px rgba(var(--color-primary-rgb), 0.22);
+}
+
+.ud-btn--primary:hover {
+    background: var(--gradient-primary-hover);
+    transform: translateY(-1px);
+}
+
+.ud-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 0 14px 12px;
+}
+
+.ud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 7px 4px;
+    border-radius: 10px;
+    background: var(--color-primary-soft);
+    border: 1px solid var(--color-primary-border);
+}
+
+.ud-stat__value {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+
+.ud-stat__label {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+}
+
+.ud-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    border-top: 1px solid var(--color-border);
+}
+
+.ud-info li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 7px 8px;
+}
+
+.ud-info li + li {
+    border-top: 1px dashed var(--color-border);
+}
+
+
+
+.ud-info__icon {
+    display: inline-flex;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 18px;
+    font-size: 1rem;
+    color: var(--color-primary);
+}
+
+
+
+.ud-info__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ud-info__label {
     font-size: 0.625rem;
-    padding: 0.125rem 0.375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.ud-info__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary-ink);
+    text-decoration: none;
+}
+
+a.ud-info__value:hover {
+    color: var(--color-primary);
+}
+
+.ud-location {
+    padding: 12px;
+}
+
+/* ============ CONTENT CARDS ============ */
+.ud-main .card {
+    border: 1px solid var(--color-border) !important;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 20px rgba(var(--color-primary-rgb), 0.06) !important;
+}
+
+.ud-main .card:hover {
+    transform: none;
+}
+
+.ud-main .card-body {
+    padding: 14px;
+}
+
+@media (max-width: 1199px) {
+    .ud-layout {
+        grid-template-columns: 270px minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 991px) {
+    .ud-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .ud-info {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575px) {
+    .ud-info {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============ SECTION MENU (TABS) ============ */
+.ud-nav {
+    padding: 6px;
+}
+
+.ud-nav__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ud-nav__list .nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 6px 8px 6px 6px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--color-text-nav);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s;
+}
+
+.ud-nav__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    font-size: 1rem;
+    color: var(--color-primary);
+    background: var(--color-surface-muted);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.ud-nav__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ud-nav__badge {
+    min-width: 20px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
+    border: 1px solid var(--color-primary-border);
+}
+
+.ud-nav__chevron {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+    transition: transform 0.2s, color 0.2s;
+}
+
+.ud-nav__list .nav-link:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-primary);
+}
+
+/* Active: soft tint, gradient accent bar and gradient icon tile */
+.ud-nav__list .nav-link.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.ud-nav__list .nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--gradient-primary);
+}
+
+.ud-nav__list .nav-link.active .ud-nav__icon {
+    color: var(--color-on-primary);
+    background: var(--gradient-primary);
+    box-shadow: 0 4px 10px rgba(var(--color-primary-rgb), 0.25);
+}
+
+.ud-nav__list .nav-link.active .ud-nav__badge {
+    color: var(--color-on-primary);
+    background: var(--gradient-primary);
+    border-color: transparent;
+}
+
+.ud-nav__list .nav-link.active .ud-nav__chevron {
+    color: var(--color-primary);
+    transform: translateX(2px);
+}
+
+@media (max-width: 991px) {
+    .ud-profile { order: 0; }
+    .ud-location { order: 1; }
+
+    /* Menu becomes a swipeable pill row right above the content */
+    .ud-nav {
+        order: 2;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .ud-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .ud-nav__list {
+        flex-direction: row;
+        gap: 4px;
+        min-width: max-content;
+    }
+
+    .ud-nav__list .nav-link {
+        width: auto;
+        padding: 5px 12px 5px 5px;
+    }
+
+    .ud-nav__list .nav-link.active::before,
+    .ud-nav__chevron {
+        display: none;
+    }
+}
+
+/* ============ AGENT ANALYTICS (OVERVIEW TAB) ============ */
+.ua {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ua-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.ua-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 12px 14px;
+}
+
+.ua-kpi__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.ua-kpi__label i {
+    font-size: 0.9375rem;
+    color: var(--color-primary);
+}
+
+.ua-kpi__value {
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--color-primary-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ua-kpi__sub {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.ua-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.ua-card {
+    min-width: 0;
+    padding: 14px;
+}
+
+.ua-card--wide {
+    grid-column: 1 / -1;
+}
+
+.ua-card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.ua-card__head--tools {
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ua-card__title {
+    margin: 0 !important;
+    font-size: 0.875rem !important;
+    font-weight: 700;
+    line-height: 1.4 !important;
+    color: var(--color-primary-ink);
+}
+
+.ua-card__meta {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.ua-card__subtitle {
+    margin: 14px 0 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600;
+    line-height: 1.4 !important;
+    color: var(--color-text-nav);
+}
+
+/* Horizontal bar list: label · track · value */
+.ua-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ua-bars li {
+    display: grid;
+    grid-template-columns: minmax(70px, 30%) minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 10px;
+}
+
+.ua-bars__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    color: var(--color-text-nav);
+}
+
+.ua-bars__track {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--color-surface-muted);
+    overflow: hidden;
+}
+
+.ua-bars__fill {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--color-primary);
+    transition: width 0.4s ease;
+}
+
+.ua-bars li:hover .ua-bars__fill {
+    background: var(--color-primary-hover);
+}
+
+.ua-bars__value {
+    text-align: right;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-primary-ink);
+}
+
+/* Sale vs Rent split bar (2px gap between parts) */
+.ua-split {
+    display: flex;
+    gap: 2px;
+    height: 12px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--color-surface-muted);
+}
+
+.ua-split__part {
+    flex-basis: 0;
+    min-width: 0;
+}
+
+.ua-split__part--sale,
+.ua-dot--sale {
+    background: #733E87;
+}
+
+.ua-split__part--rent,
+.ua-dot--rent {
+    background: #c9a227;
+}
+
+.ua-split__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 0.8125rem;
+    color: var(--color-text-nav);
+}
+
+.ua-split__legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ua-split__legend strong {
+    color: var(--color-primary-ink);
+}
+
+.ua-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.ua-range {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.ua-range input {
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--color-primary-ink);
+    background: var(--color-surface);
+}
+
+.ua-perf {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.ua-perf__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--color-primary-soft);
+}
+
+.ua-perf__item strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.0625rem;
+    color: var(--color-primary-ink);
+}
+
+.ua-grid--flush {
+    gap: 20px;
+}
+
+.ua-bars__label .ua-dot {
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    border-radius: 50%;
+}
+
+.ua-recent {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ua-recent li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 0;
+}
+
+.ua-recent li + li {
+    border-top: 1px dashed var(--color-border);
+}
+
+.ua-recent__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ua-recent__main strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    color: var(--color-primary-ink);
+}
+
+.ua-recent__main small {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+}
+
+.ua-recent__stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-nav);
+    background: var(--color-surface-muted);
+}
+
+.ua-recent__stage .ua-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.ua-empty {
+    margin: 0;
+    padding: 12px 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+/* Properties tab: three cards per row on desktop */
+.ud-prop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 1199px) {
+    .ua-kpis,
+    .ua-perf {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991px) {
+    .ua-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    .ud-prop-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 575px) {
+    .ua-kpis,
+    .ua-perf {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ============ OVERVIEW TAB ============ */
@@ -1553,143 +2622,6 @@ export default {
     font-size: 0.875rem;
 }
 
-/* ============ PROPERTY CARDS ============ */
-.property-card {
-    background: white;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    transition: all 0.3s;
-    height: 100%;
-}
-
-.property-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-}
-
-.property-card-link {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    height: 100%;
-}
-
-.property-image {
-    height: 10rem;
-    overflow: hidden;
-    position: relative;
-}
-
-.property-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s;
-}
-
-.property-card:hover .property-img {
-    transform: scale(1.05);
-}
-
-.status-badges {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    display: flex;
-    flex-direction: row;
-    gap: 0.25rem;
-      flex-wrap: wrap;
-
-}
-
-.status-badges .badge {
-       padding: 4px 8px;
-    border-radius: 6px;
-    font-size: .7rem;
-    font-weight: 500;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.image-count {
-    position: absolute;
-    bottom: 0.5rem;
-    right: 0.5rem;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 0.25rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.property-content {
-    padding: 1rem;
-}
-
-.property-price {
-    display: flex;
-    align-items: baseline;
-    gap: 0.25rem;
-    margin-bottom: 0.5rem;
-}
-
-.property-price .price {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #2c3e50;
-}
-
-.property-price .currency {
-    font-size: 0.75rem;
-    color: #6c757d;
-}
-
-.property-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #2c3e50;
-    line-height: 1.3;
-    margin-bottom: 0.5rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    height: 2.5rem;
-}
-
-.property-location {
-    font-size: 0.75rem;
-    margin-bottom: 0.75rem;
-    color: #6c757d;
-     overflow: hidden;
-  text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.property-details {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.detail-item {
-    padding: 0.25rem;
-}
-
-.detail-item i {
-    font-size: 1rem;
-    color: var(--color-primary);
-    margin-bottom: 0.25rem;
-}
-
-.detail-item small {
-    font-size: 0.625rem;
-    color: #6c757d;
-    line-height: 1.2;
-    display: block;
-}
-
 /* ============ TEAM SECTION ============ */
 .team-member-card {
     border-radius: 0.75rem;
@@ -1740,29 +2672,6 @@ export default {
         padding: 0.75rem;
     }
     
-    .user-header-section {
-        padding: 1rem;
-        border-radius: 0.75rem;
-    }
-    
-    .profile-avatar {
-        width: 4rem;
-        height: 4rem;
-    }
-    
-    .user-name {
-        font-size: 1.25rem;
-    }
-    
-    .user-role, .user-status {
-        font-size: 0.625rem;
-        padding: 0.1875rem 0.5rem;
-    }
-    
-    .user-email, .user-phone {
-        font-size: 0.75rem;
-    }
-    
     .user-actions .btn {
         padding: 0.375rem 0.75rem;
         font-size: 0.75rem;
@@ -1806,23 +2715,6 @@ export default {
         font-size: 1.25rem;
     }
     
-    .property-image {
-        height: 8rem;
-    }
-    
-    .property-content {
-        padding: 0.75rem;
-    }
-    
-    .property-price .price {
-        font-size: 1rem;
-    }
-    
-    .property-title {
-        font-size: 0.8125rem;
-        height: 2.25rem;
-    }
-    
     .detail-item i {
         font-size: 0.875rem;
     }
@@ -1844,25 +2736,8 @@ export default {
 
 /* Small Mobile (376px - 575px) */
 @media (min-width: 376px) and (max-width: 575px) {
-    .user-header-section {
-        padding: 1.25rem;
-    }
-    
-    .profile-avatar {
-        width: 4.5rem;
-        height: 4.5rem;
-    }
-    
-    .user-name {
-              font-size: 16px !important;
-    }
-    
     .user-actions .btn {
         font-size: 0.8125rem;
-    }
-    
-    .property-image {
-        height: 9rem;
     }
     
     .detail-item small {
@@ -1876,94 +2751,15 @@ export default {
         padding: 1.25rem;
     }
     
-    .profile-avatar {
-        width: 5rem;
-        height: 5rem;
-    }
-    
-    .user-name {
-        font-size: 1.5rem;
-    }
-    
-    .user-role, .user-status {
-        font-size: 0.75rem;
-    }
-    
     .nav-tabs .nav-link {
         font-size: 0.875rem;
         padding: 0.5rem 1rem;
     }
-    
-    .property-image {
-        height: 10rem;
-    }
-    
-    .property-title {
-        font-size: 0.875rem;
-    }
 }
-
-/* Tablet (768px - 991px) */
-@media (min-width: 768px) and (max-width: 991px) {
-    .user-header-section {
-        padding: 1.5rem;
-    }
-    
-    .profile-avatar {
-        width: 5.5rem;
-        height: 5.5rem;
-    }
-    
-    .user-name {
-        font-size: 1.75rem;
-    }
-    
-    .property-image {
-        height: 11rem;
-    }
-    
-    .property-title {
-        font-size: 0.9375rem;
-    }
-}
-
 /* Desktop (992px - 1199px) */
 @media (min-width: 992px) {
     .dashboard-main-body {
         padding: 1.5rem;
-    }
-    
-    .user-header-section {
-        padding: 2rem;
-    }
-    
-    .profile-avatar {
-        width: 6rem;
-        height: 6rem;
-    }
-    
-    .user-name {
-        font-size: 2rem;
-    }
-    
-    .property-image {
-        height: 12rem;
-    }
-}
-
-/* Large Desktop (≥1200px) */
-@media (min-width: 1200px) {
-    .profile-avatar {
-        width: 14rem;
-        height: 14rem;
-    }
-    
-    .user-name {
-        font-size: 2.25rem;
-    }
-    
-    .property-image {
-        height: 13rem;
     }
 }
 
@@ -1985,138 +2781,6 @@ export default {
         margin-right: 0;
     }
 }
-.view-more-btn {
-  display: inline-block;
-  text-align: center;
-  width: 100%;
-  background: var(--gradient-primary) !important;
-  color: #ffffff !important;
-  font-weight: 500;
-  border-radius: 10px;
-  padding: 8px 0;
-  font-size: 0.85rem;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.view-more-btn:hover {
-  background: #581c87;
-  color: #fff;
-}
-.property-card-link .view-more-btn {
-  display: inline-block;
-  pointer-events: none; /* لمنع النقر على الزر نفسه بشكل منفصل */
-}
-.btn-success{
-    background: var(--gradient-primary) !important;
-    border: 1px solid var(--color-primary) !important ;
-    border-radius: 5px !important;
-}
-.btn-outline-secondary{
-    background-color: #B8B8B8 !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 5px !important;
-}
-.buttons-status{
-    float: right;
-}
-
-.user-contact label {
-    font-weight: 700;
-    color: #000;
-    text-align: start;
-}
- .user-contact span {
-   
-    text-align: start;
-}
-
-
-
-.user-head {
-    margin-bottom: 20px;
-    position: relative; /* لو حابة تتحكم في العنصر المطلق */
-}
-
-.user-head:after {
-    content: "";
-    display: block;        /* مهم عشان يظهر كعنصر */
-    width: 100%;           /* عرض الخط بالكامل */
-    height: 2px;           /* سمك الخط */
-    background-color: #ddd8d8b1; /* لون الخط */
-    margin-top: 10px;      /* مسافة بين العنصر والخط */
-}
-
-.profile-avatar2 {
-    margin-top: 2rem;
-    width: 10rem;
-    height: 10rem;
-}
-.line-before {
-    width: 2px;                  
-    height: 10rem;                 
-    background-color: #ddd8d8b1;  
-        margin-top: 2rem;
-
-}
-.imgicon{
-    max-width:15px;
-    max-height:15px;
-}
-.capital{
-    text-transform: capitalize;
-}
-/*============*/
-
-
-.status-badge {
-   background: var(--gradient-primary) !important ;
-  color: #ffffff !important;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-
-
-
-.property-listed-date {
-  font-size: 0.75rem;
-  /*color: #666;*/
-  margin-bottom:0 !important;
-  display: flex;
-
-}
-
-.property-listed-date i {
-  font-size: 0.8rem;
-  color: var(--color-primary);
-}
-.justify-between{
-    justify-content:space-between;
-}
-.badge-off_plan {
-  background: #B60F1C;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-.badge-occupancy_status{
-    background: #EDEBEB !important;
-    color: #0B0736 !important;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;  
-}
-.icons img{
-    width: 17px;
-    height: 17px;
-}
-
 /* ============ PERFORMANCE & ATTENDANCE TABS ============ */
 .perf-card {
     border-radius: 0.75rem;

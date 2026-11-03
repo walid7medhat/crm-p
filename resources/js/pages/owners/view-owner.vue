@@ -11,20 +11,23 @@
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="nav nav-pills owner-tabs mb-3" id="ownerTab" role="tablist">
-                            <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" 
+                            <button class="nav-link active" id="personal-tab" data-bs-toggle="tab"
                                     data-bs-target="#personal" type="button" role="tab">
+                                <i class="ri-user-3-line"></i>
                                 Personal Info
                             </button>
-                            <button class="nav-link" id="documents-tab" data-bs-toggle="tab" 
+                            <button class="nav-link" id="documents-tab" data-bs-toggle="tab"
                                     data-bs-target="#documents" type="button" role="tab">
+                                <i class="ri-file-text-line"></i>
                                 Documents
-                                <span v-if="hasDocuments" class="badge bg-primary ms-2">{{ getDocumentCount() }}</span>
+                                <span v-if="hasDocuments" class="badge">{{ getDocumentCount() }}</span>
                             </button>
                             <!-- إضافة تاب Properties -->
-                            <button class="nav-link" id="properties-tab" data-bs-toggle="tab" 
+                            <button class="nav-link" id="properties-tab" data-bs-toggle="tab"
                                     data-bs-target="#properties" type="button" role="tab">
+                                <i class="ri-home-4-line"></i>
                                 Properties
-                                <span v-if="totalProperties > 0" class="badge bg-primary ms-2">{{ totalProperties }}</span>
+                                <span v-if="totalProperties > 0" class="badge">{{ totalProperties }}</span>
                             </button>
                         </div>
                     </div>
@@ -90,7 +93,7 @@
                                 <div class="card">
                                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0">
-                                            <iconify-icon icon="lucide:folder" class="me-2 text-primary"></iconify-icon>
+                                            <iconify-icon icon="lucide:folder" class="me-2 owner-doc-head__icon"></iconify-icon>
                                             Owner Documents
                                         </h6>
                                     </div>
@@ -133,105 +136,21 @@
                                 </div>
 
                                 <div v-else class="row g-3">
-                                    <div 
-                                        v-for="property in filteredProperties" 
-                                        :key="property.id" 
-                                        class="col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600"
+                                    <div
+                                        v-for="property in filteredProperties"
+                                        :key="property.id"
+                                        :class="isMobileViewport ? 'col-12' : 'col-12 col-md-6 col-xl-4 col-xxl-4 custom-1600'"
                                     >
-                                           <a
-                                        :href="`/property-details/${property.id}`"
-                                        class="property-card-link"
-                                        @click="openPropertyDetailsFromClick($event, property.id)"
-                                        :class="{ 'converted-card': property.status === 'converted' }"
-                                      >
-                                        <div class="property-card">
-                                          <!-- Image -->
-                                          <div class="property-image position-relative">
-                                            <img 
-                                              :src="getPropertyImage(property)" 
-                                              :alt="property.title"
-                                              class="w-100 object-fit-cover" 
-                                              :class="{ 'converted-image': property.status === 'converted' }"
-                                              loading="lazy" 
-                                              @load="handleImageLoad" 
-                                              @error="handleImageError" 
-                                            />
-                                            
-                                            <div class="status-badges">
-                                              <span v-if="property.status === 'converted'" class="badge-sold">
-                                                <i class="ri-checkbox-circle-fill me-1"></i>Sold Out
-                                              </span>
-                                              <span v-else-if="property.status === 'draft'" class="badge-sold">
-                                                <i class="ri-checkbox-circle-fill me-1"></i>draft
-                                              </span>
-                                              <span v-if="property.is_archived" class="badge-archived">
-                                                <i class="ri-archive-fill me-1"></i>Archived
-                                              </span>
-                                              <span v-if="!property.is_active" class="badge-inactive">
-                                                <i class="ri-eye-off-fill me-1"></i>Inactive
-                                              </span>
-                                            </div>
-                                            
-                                            <span class="badge-images" v-if="property.gallery_images && property.gallery_images.length">
-                                              <i class="ri-image-line me-1"></i>{{ property.gallery_images.length }}
-                                            </span>
-                                          </div>
-                            
-                                          <!-- Content -->
-                                          <div class="property-content p-3">
-                                            <div class="d-flex align-items-end mb-1">
-                                              <h6 class="property-price mb-0 me-1">{{ formatPrice(property.price) }}</h6>
-                                              <small class="text-muted price-unit">AED</small>
-                                            </div>
-                            
-                                            <h5 class="property-title mb-2">{{ property.title || 'No Title' }}</h5>
-                                            <p class="property-location mb-3">
-                                              <i class="ri-map-pin-line me-1"></i>{{ getLocation(property) }}
-                                            </p>
-                            
-                                            <div class="property-details d-flex justify-content-between text-muted small mb-3">
-                                              <span class="d-flex justify-content-between icons">
-                                                  <img :src="propertyIcon" class="imgicon"/>
-                                                  <!--<i class="ri-building-4-line me-1"></i>-->
-                                                  <span>
-                                                  {{ getPropertyType(property) }}
-                                                  </span>
-                                                  
-                                            </span>
-                                              <span class="d-flex justify-content-between icons">
-                                                  <!--<i class="ri-hotel-bed-line me-1"></i>-->
-                                                  <img :src="bedIcon" class="imgicon"/>
-                                                   <span>
-                                                  {{ property.number_of_bedrooms || 0 }}
-                                                  </span>
-                                             </span>
-                                              <span class="d-flex justify-content-between icons">
-                                                  <!--<i class="ri-water-flash-line me-1"></i>-->
-                                                  <img :src="bathIcon" class="imgicon"/>
-                                                   <span>
-                                                  {{ property.number_of_bathrooms || 0 }}
-                                                  </span>
-                                            </span>
-                                              <span class="d-flex justify-content-between icons">
-                                                  <!--<i class="ri-ruler-line me-1"></i>-->
-                                                  <img :src="sqftIcon" class="imgicon"/>
-                                                   <span>
-                                                  {{ property.size_sqft || property.size_sqmt || 0 }} {{ getAreaUnit(property) }}
-                                                  </span>
-                                            </span>
-                                            </div>
-                                            
-                                            <p class="property-agent text-muted small mb-2" v-if="property.agent">
-                                              Listed by: {{ getAgentName(property.agent) }}
-                                            </p>
-                            
-                                            <!-- Button - يمكن إزالته أو إبقاؤه حسب الحاجة -->
-                                            <span class="view-more-btn">
-                                              View Details
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </a>
+                                        <MobileListingCard
+                                            v-if="isMobileViewport"
+                                            :property="property"
+                                            fallback-image="/assets/images/a.jpeg"
+                                        />
+                                        <PropertyListingCard
+                                            v-else
+                                            :property="property"
+                                            @open="(event) => openPropertyDetailsFromClick(event, property.id)"
+                                        />
                                     </div>
                                 </div>
 
@@ -275,11 +194,20 @@ import { API_ENDPOINTS } from '@/config/api';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import userPlaceholder from '@/assets/images/avatar/avatar1.png';
 import { openPropertyDetailsFromClick } from '@/composables/usePropertyDetailsModal';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import MobileListingCard from '@/components/listings/MobileListingCard.vue';
+import PropertyListingCard from '@/components/listings/PropertyListingCard.vue';
 
 export default {
     name: 'ViewOwner',
     components: {
-        Breadcrumb
+        Breadcrumb,
+        MobileListingCard,
+        PropertyListingCard,
+    },
+    setup() {
+        const { isMobileViewport } = useMobileNavigation();
+        return { isMobileViewport };
     },
     data() {
         return {
@@ -761,44 +689,89 @@ export default {
 
 <style scoped>
 /* ============ TABS ============ */
+/* Segmented control: soft brand track, active tab lifts as a white pill */
 .owner-tabs {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    max-width: 100%;
+    padding: 3px;
+    border-radius: 11px;
+    background: var(--color-primary-soft);
+    border: 1px solid var(--color-primary-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.owner-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* Colors are !important: global theme pill/button rules otherwise paint these grey/navy */
+.owner-tabs.nav-pills .nav-link {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-}
-
-.owner-tabs .nav-link {
-    border-radius: 999px;
-    padding: 4px 10px;
-    margin-right: 0;
-    border: 1px solid #e8eaef;
-    background-color: #ffffff;
-    color: #475569;
-    font-size: 12px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 6px 14px;
+    border: none !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--color-text-nav) !important;
+    -webkit-text-fill-color: currentColor !important;
+    font-size: 0.8125rem;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.4;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
-.owner-tabs .nav-link.active {
-    background: var(--gradient-primary) !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border-color: var(--color-primary);
+.owner-tabs.nav-pills .nav-link i {
+    font-size: 1rem;
+    color: var(--color-text-muted) !important;
+    transition: color 0.2s;
 }
 
-.owner-tabs .badge {
-    font-size: 10px;
+.owner-tabs.nav-pills .nav-link:hover,
+.owner-tabs.nav-pills .nav-link:hover i {
+    color: var(--color-primary) !important;
+}
+
+.owner-tabs.nav-pills .nav-link.active,
+.owner-tabs.nav-pills .nav-link.active:hover,
+.owner-tabs.nav-pills .nav-link.active:focus {
+    background: var(--color-surface) !important;
+    color: var(--color-primary) !important;
+    box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.15) !important;
+}
+
+.owner-tabs.nav-pills .nav-link.active i {
+    color: var(--color-primary) !important;
+}
+
+.owner-tabs.nav-pills .badge {
+    min-width: 20px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
     font-weight: 700;
-    padding: 1px 5px;
-    background: var(--color-primary-soft) !important;
-    color: var(--color-primary-ink) !important;
+    line-height: 1.5;
+    color: var(--color-primary) !important;
+    -webkit-text-fill-color: currentColor !important;
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-primary-border);
 }
 
-.owner-tabs .nav-link.active .badge {
-    background: rgba(255, 255, 255, 0.28) !important;
-    color: #ffffff !important;
+.owner-tabs.nav-pills .nav-link.active .badge {
+    color: var(--color-on-primary) !important;
+    background: var(--gradient-primary) !important;
+    border-color: transparent;
 }
 
 .owner-id-card {
-    border: 1px solid #efe4f3;
+    border: 1px solid var(--color-primary-border);
     border-radius: 14px;
     background: #ffffff;
     overflow: hidden;
@@ -829,7 +802,7 @@ export default {
     font-size: 16px !important;
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: #171717;
+    color: var(--color-primary-ink);
     line-height: 1.2;
 }
 
@@ -857,12 +830,12 @@ export default {
     gap: 1px;
     min-width: 0;
     padding: 8px 14px;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .info-label {
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     font-size: 10px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -871,7 +844,7 @@ export default {
 .info-value {
     font-size: 13px;
     font-weight: 600;
-    color: #171717;
+    color: var(--color-primary-ink);
     text-align: left;
     line-height: 1.3;
     word-break: break-word;
@@ -907,7 +880,7 @@ export default {
     padding: 8px 14px 10px;
     font-size: 12px;
     line-height: 1.45;
-    color: #475569;
+    color: var(--color-text-nav);
 }
 
 .owner-doc-list {
@@ -921,7 +894,7 @@ export default {
     gap: 8px;
     min-height: 36px;
     padding: 4px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .owner-doc-row__icon {
@@ -935,13 +908,13 @@ export default {
     flex: 1;
     font-size: 13px;
     font-weight: 600;
-    color: #171717;
+    color: var(--color-primary-ink);
 }
 
 .owner-doc-row__btn {
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     background: #ffffff;
-    color: #171717;
+    color: var(--color-primary-ink);
     border-radius: 999px;
     height: 26px;
     padding: 0 10px;
@@ -958,13 +931,33 @@ export default {
 .owner-empty {
     padding: 16px 0;
     font-size: 13px;
-    color: #94a3b8;
+    color: var(--color-text-muted);
 }
 
 @media (max-width: 640px) {
     .owner-id-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Bootstrap "primary" bits on this page follow the brand, not the template blue */
+.owner-doc-head__icon {
+    color: var(--color-primary);
+}
+
+.spinner-border.text-primary {
+    color: var(--color-primary) !important;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: var(--color-on-primary);
+}
+
+.btn-primary:hover {
+    background: var(--gradient-primary-hover);
+    color: var(--color-on-primary);
 }
 
 /* ============ DOCUMENT ITEMS ============ */
@@ -980,7 +973,7 @@ export default {
 }
 
 .document-icon {
-    color: #0B0736;
+    color: var(--color-primary);
 }
 
 .document-title {
@@ -1003,151 +996,29 @@ export default {
 /*}*/
 
 /* تحسين الـ performance للـ animations */
-.property-card {
-  will-change: transform;
-}
-
-.property-image img {
-  will-change: transform;
-  height:100%;
-}
-.property-card {
-  background: #fff;
-  border-radius: 18px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-}
-
-.property-agent {
-  font-size: 0.75rem;   
-  color: #555;
-}
-
-.property-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.1);
-}
 
 
 
-.property-card:hover .property-image img {
-  transform: scale(1.03);
-}
 
-.badge-status {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  background: #1e1e1e;
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 5px 12px;
-  border-radius: 10px;
-  letter-spacing: 0.3px;
-}
+
+
+
 
 /* Converted Badge */
-.badge-converted {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  background: rgba(40, 167, 69, 0.9);
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 5px 12px;
-  border-radius: 10px;
-  letter-spacing: 0.3px;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
-}
 
-.badge-images {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  background: #fff;
-  color: #333;
-  font-size: 0.8rem;
-  padding: 4px 9px;
-  border-radius: 10px;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
 
-.property-content {
-  background: #fff;
-}
 
-.property-price {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1d1d1d;
-  letter-spacing: -0.2px;
-}
 
-.price-unit {
-  font-size: 0.75rem;
-}
 
-.property-title {
-  font-size: 0.9rem !important;
-  font-weight: 500;
-  color: #2a2a2a;
-  line-height: 1.4;
-}
 
-.property-location {
-  font-size: 0.8rem;
-  color: #777;
-}
 
-.view-more-btn {
-  display: inline-block;
-  text-align: center;
-  width: 100%;
-  background: var(--gradient-primary) !important;
-  color: #ffffff !important;
-  font-weight: 500;
-  border-radius: 10px;
-  padding: 8px 0;
-  font-size: 0.85rem;
-  text-decoration: none;
-  transition: all 0.3s;
-}
 
-.view-more-btn:hover {
-  background: #581c87;
-  color: #fff;
-}
 
 /* Converted Card Styles */
-.converted-card {
-  opacity: 0.7;
-}
 
-.converted-card:hover {
-  transform: none;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-  cursor: not-allowed;
-}
 
-.converted-image {
-  filter: grayscale(20%);
-}
 
-.converted-btn {
-  background: #e9ecef !important;
-  color: #6c757d !important;
-  cursor: not-allowed;
-  border: none;
-}
 
-.converted-btn:hover {
-  background: #e9ecef !important;
-  color: #6c757d !important;
-}
 
 /* Pagination Styles */
 .pagination {
@@ -1237,88 +1108,18 @@ export default {
     font-size: 0.9rem;
   }
 }
-.status-badges {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
 
-.badge-sold {
-  background: #28a745;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
 
-.badge-archived {
-  background: #ffc107;
-  color: #212529;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
 
-.badge-inactive {
-  background: #6c757d;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
 
 /* Card States */
-.sold-card {
-  opacity: 0.8;
-  border: 2px solid #28a745;
-}
 
-.archived-card {
-  opacity: 0.8;
-  border: 2px solid #ffc107;
-}
 
-.sold-image {
-  filter: grayscale(30%) sepia(30%);
-}
 
-.archived-image {
-  filter: grayscale(20%);
-}
 
-.inactive-image {
-  filter: grayscale(40%);
-}
-.property-card-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
 
-.property-card-link:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-}
 
-.property-card-link:hover .property-card {
-  box-shadow: none; /* إزالة الظل الداخلي إذا كان موجودًا */
-}
 
-.property-card-link .view-more-btn {
-  display: inline-block;
-  pointer-events: none; /* لمنع النقر على الزر نفسه بشكل منفصل */
-}
-.icons{
-    gap:2px
-}
 /* ============ CARDS ============ */
 .card {
     border-radius: 14px;
@@ -1370,9 +1171,8 @@ export default {
     }
     
     .owner-tabs .nav-link {
-        padding: 0.375rem 0.5rem;
+        padding: 5px 10px;
         font-size: 0.75rem;
-        margin-right: 5px;
     }
 }
 
@@ -1387,11 +1187,6 @@ export default {
 }
 
 @media (min-width: 576px) and (max-width: 767px) {
-    .owner-tabs .nav-link {
-        font-size: 0.875rem;
-        padding: 0.5rem 1rem;
-    }
-    
     .property-image {
         height: 10rem;
     }
@@ -1423,33 +1218,11 @@ export default {
     }
 }
 
-.property-image {
-    height: 7.25rem !important;
-}
 
-.property-card .property-content {
-    padding: 8px 10px !important;
-}
 
-.property-price {
-    font-size: 13px !important;
-    font-weight: 700;
-}
 
-.property-title {
-    font-size: 12px !important;
-    margin-bottom: 4px !important;
-}
 
-.property-location {
-    font-size: 11px !important;
-    margin-bottom: 6px !important;
-}
 
-.property-details {
-    font-size: 11px !important;
-    margin-bottom: 0 !important;
-}
 
 .card-body {
     padding: 12px;

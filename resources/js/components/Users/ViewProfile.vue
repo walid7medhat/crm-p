@@ -1,9 +1,14 @@
 <template>
   <div class="vp-page">
-    <!-- Profile Details hero -->
+    <div class="vp-body">
+    <!-- Profile sidebar: card, menu, personal info -->
+    <aside class="vp-side">
     <section class="vp-hero">
-      <div class="vp-hero__top">
-        <h2 class="vp-hero__title">Profile Details</h2>
+      <div class="vp-hero__cover">
+        <h2 class="vp-hero__title">
+          <iconify-icon icon="lucide:sparkles" />
+          Profile Details
+        </h2>
         <span class="vp-presence" :class="isOnline ? 'is-online' : 'is-offline'">
           <span class="vp-presence__dot" />
           {{ isOnline ? 'Online' : 'Offline' }}
@@ -35,12 +40,21 @@
 
         <div class="vp-hero__meta">
           <h3 class="vp-hero__name">{{ user.name || 'User' }}</h3>
-          <p class="vp-hero__email">{{ user.email || '—' }}</p>
-          <p class="vp-hero__role">{{ user.role_name || 'User' }}</p>
+          <div class="vp-hero__chips">
+            <span class="vp-hero__role">
+              <iconify-icon icon="lucide:shield-check" />
+              {{ user.role_name || 'User' }}
+            </span>
+            <span class="vp-hero__email">
+              <iconify-icon icon="lucide:mail" />
+              {{ user.email || '—' }}
+            </span>
+          </div>
         </div>
 
         <p class="vp-hero__last-active">
-          Last Active :
+          <iconify-icon icon="lucide:clock" />
+          Last Active
           <span>{{ lastActiveText }}</span>
         </p>
       </div>
@@ -103,10 +117,11 @@
         :source="user.last_login_location_source"
       />
     </section>
+    </aside>
 
-    <!-- Nav + content (single card) -->
-    <div class="vp-body">
-      <aside class="vp-nav" role="tablist">
+      <main class="vp-content">
+      <!-- On desktop these tabs live in the top navbar -->
+      <div v-if="isMobileViewport" class="vp-nav" role="tablist">
         <button
           type="button"
           class="vp-nav__item"
@@ -236,9 +251,8 @@
               <span v-if="unreadAnnouncementsCount > 0" class="vp-nav__badge">{{ unreadAnnouncementsCount }}</span>
             </button>
 
-      </aside>
+      </div>
 
-      <main class="vp-content">
         <!-- Edit Profile -->
         <div v-if="activeTab === 'edit-profile'" class="vp-panel">
           <div class="vp-panel__head">
@@ -1662,6 +1676,8 @@ import SearchableSelect from '@/components/ui/SearchableSelect.vue';
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue';
 import { aiSalesIntelligenceApi } from '@/services/aiSalesIntelligenceApi';
 import Swal from 'sweetalert2';
+import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import { publishPageHeaderTabs, clearPageHeaderTabs } from '@/composables/usePageHeaderTabs.js';
 export default {
   name: 'UserProfile',
   components: {
@@ -3291,7 +3307,37 @@ const openLeaveDetail = (lv) => {
   viewingLeave.value = lv;
   showLeaveDetailModal.value = true;
 };
+
+// ===== Navbar tabs (desktop): same sections as the in-page tab bar =====
+const { isMobileViewport } = useMobileNavigation();
+const headerTabsOwner = Symbol('view-profile');
+
+const selectTab = (id) => {
+  activeTab.value = id;
+  if (id === 'announcements') loadMyAnnouncements();
+};
+
+watch(
+  () => [activeTab.value, unreadAnnouncementsCount.value],
+  () => {
+    publishPageHeaderTabs(headerTabsOwner, {
+      tabs: [
+        { id: 'edit-profile', label: 'Edit Profile' },
+        { id: 'change-password', label: 'Change Password' },
+        { id: 'vacation', label: 'Vacation' },
+        { id: 'attendance', label: 'Attendance' },
+        { id: 'announcements', label: 'Announcements', count: unreadAnnouncementsCount.value },
+      ],
+      active: activeTab.value,
+      select: selectTab,
+    });
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => clearPageHeaderTabs(headerTabsOwner));
     return {
+      isMobileViewport,
       user,
       activeTab,
       editProfileSubTab,

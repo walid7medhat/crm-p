@@ -357,11 +357,26 @@
             </option>
           </select>
           <nav
-            v-if="!isDashboardHome && moduleHeaderTabs.length"
+            v-if="!isDashboardHome && (pageHeaderTabs.length || moduleHeaderTabs.length)"
             class="module-tabs-nav module-tabs-nav--sub"
             :class="{ 'module-tabs-nav--hide-on-mobile': isMobileViewport }"
             aria-label="Section navigation"
           >
+            <!-- Tabs published by the current page (e.g. profile / agent details) -->
+            <template v-if="pageHeaderTabs.length">
+              <button
+                v-for="tab in pageHeaderTabs"
+                :key="'page-' + tab.id"
+                type="button"
+                class="module-tab-btn"
+                :class="{ active: activePageHeaderTab === tab.id }"
+                @click="selectPageHeaderTab(tab.id)"
+              >
+                {{ tab.label }}
+                <span v-if="tab.count > 0" class="module-tab-count">{{ tab.count }}</span>
+              </button>
+            </template>
+            <template v-else>
             <template v-for="tab in moduleHeaderTabs" :key="tab.id">
               <button
                 v-if="tab.type === 'event'"
@@ -417,6 +432,7 @@
                   <span v-if="tab.count > 0" class="module-tab-count">{{ tab.count }}</span>
                 </a>
               </router-link>
+            </template>
             </template>
           </nav>
         </div>
@@ -908,6 +924,7 @@ import { useTheme } from '@/composables/useTheme.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
+import { usePageHeaderTabs, selectPageHeaderTab } from '@/composables/usePageHeaderTabs.js';
 import NotificationBell from '@/components/NotificationBell.vue';
 import MobilePushToggle from '@/components/layout/MobilePushToggle.vue';
 import ProfileThemeModal from '@/components/shared/ProfileThemeModal.vue';
@@ -1014,6 +1031,7 @@ const isCustomAdmin = computed(() => {
 const isShowOnlyListingNav = computed(() => user.value?.roles?.includes('only show listings') ?? false);
 
 const { counts: sidebarCounts, fetchCounts } = useSidebarCounts();
+const { pageHeaderTabs, activePageHeaderTab } = usePageHeaderTabs();
 
 const listingTabCounts = computed(() => {
   const counts = sidebarCounts.value || {};

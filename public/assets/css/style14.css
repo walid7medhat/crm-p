@@ -32349,30 +32349,6 @@ a.property-card-link .property-details {
     padding-top: 0;
     border: none;
 }
-div#ownerTab button {
-    border: none !important;
-    background: #EDEBEB !important;
-    font-size: 16px !important;
-    color: #0B0736 !important;
-}
-div#ownerTab button:hover{
-    background: #0B0736 !important;
-    color: #fff !important;
-}
-div#ownerTab button.active{
-    background: #0B0736 !important;
-    color: #fff !important;
-}
-div#ownerTab button.active span.badge {
-    background: #fff !important;
-    color: #000 !important;
-    border-radius: 50px;
-}
-div#ownerTab button span.badge {
-    background: #0B0736 !important;
-    color: #fff !important;
-    border-radius: 50px;
-}
 button.btn, .btn, button.btn span{
     display: inline-flex;
     align-items: center;

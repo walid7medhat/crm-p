@@ -586,17 +586,18 @@ export default {
 }
 
 .sortable:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-primary-border) !important;
 }
 
 .loading, .no-data {
-    color: #7f8c8d;
+    color: var(--color-text-muted);
     font-size: 16px;
 }
 
 .table th {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
+    background-color: var(--color-primary-soft) !important;
+    color: var(--color-primary-ink) !important;
+    border-bottom: 1px solid var(--color-primary-border);
 }
 
 .table td {
@@ -615,8 +616,40 @@ export default {
     height: 32px;
 }
 
+/* Template "primary" (blue) utilities follow the brand on this list */
+.btn-primary {
+    background: var(--gradient-primary) !important;
+    border-color: transparent !important;
+    color: var(--color-on-primary) !important;
+}
+
+.btn-primary:hover {
+    background: var(--gradient-primary-hover) !important;
+}
+
+.spinner-border.text-primary {
+    color: var(--color-primary) !important;
+}
+
 .bg-primary-light {
-    background-color: rgba(13, 110, 253, 0.1);
+    background-color: var(--color-primary-soft) !important;
+}
+
+.text-primary-600 {
+    color: var(--color-primary) !important;
+}
+
+.bg-primary-600 {
+    background: var(--gradient-primary) !important;
+    color: var(--color-on-primary) !important;
+}
+
+.bg-primary-50 {
+    background-color: var(--color-primary-soft) !important;
+}
+
+.page-link:hover {
+    color: var(--color-primary) !important;
 }
 
 .bg-success-focus {
