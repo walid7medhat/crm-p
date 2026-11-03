@@ -1,6 +1,8 @@
 <template>
   <Teleport to="#shortcut-dock">
+    <!-- Only when a client has homes waiting; stays while the panel is open. -->
     <button
+      v-if="waitingCount > 0 || open"
       ref="floatRef"
       type="button"
       class="mm-root shortcut-item shortcut-item--matches"

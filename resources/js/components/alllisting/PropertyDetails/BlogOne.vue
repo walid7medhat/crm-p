@@ -1980,8 +1980,6 @@ import ProfilePopup from '@/components/kanban/shared/ProfilePopup.vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/plugins/axios';
 import Swal from 'sweetalert2';
-import html2pdf from 'html2pdf.js';
-import jsPDF from 'jspdf';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
@@ -4653,14 +4651,24 @@ const revertFromConverted = async () => {
             galleryMainIndex.value = 0;
           }
           if (props.offerOnly) return;
-          await fetchInternalUpdates();
-          await fetchApprovedViewings();
-          await fetchRequestStatus();
 
-           const hasAccess = checkAccessAndRedirect();
-              if (!hasAccess) {
-                return;
-              }
+          const hasAccess = checkAccessAndRedirect();
+          if (!hasAccess) {
+            return;
+          }
+
+          // Show the listing as soon as the property itself arrives. Agent updates,
+          // viewings and request status used to load one after another before the page
+          // appeared; now they load together in the background (the panels have their own
+          // spinners). Callers that await fetchProperty() still wait for all of them.
+          // markKanbanReady() also drops the app's full-page logo loader for /property-details/.
+          loading.value = false;
+          markKanbanReady();
+          await Promise.allSettled([
+            fetchInternalUpdates(),
+            fetchApprovedViewings(),
+            fetchRequestStatus(),
+          ]);
         } else {
           throw new Error(response.data.message || 'Failed to fetch property');
         }
@@ -6362,9 +6370,22 @@ const rememberAmenitiesModel = () => {
   return true;
 };
 
+// jspdf + html2pdf are ~720 KB; load them on the first offer, not with the listing page.
+let offerPdfLibs = null;
+const loadOfferPdfLibs = () => {
+  offerPdfLibs ||= Promise.all([import('jspdf'), import('html2pdf.js')])
+    .then(([jspdf, html2pdfModule]) => ({ jsPDF: jspdf.default, html2pdf: html2pdfModule.default }))
+    .catch((error) => {
+      offerPdfLibs = null; // let the next click retry
+      throw error;
+    });
+  return offerPdfLibs;
+};
+
 // html2canvas walks every style in JavaScript and stalls on a phone. Draw the
 // same pages with jsPDF instead so generation stays on a small canvas.
 const buildMobileOfferPdf = async (currentUser) => {
+  const { jsPDF } = await loadOfferPdfLibs();
   const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
   const logo = await imgUrlToPng(OiaLogo, 160);
   const paymentHtml = createPaymentDetailsSlide();
@@ -6684,6 +6705,7 @@ const presentMobileOfferDownload = ({ blob, filename, offerNumber, creatorName }
  * part: see createNewDesignContent — 'thanks' needs no photo preloading.
  */
 const renderOfferSlidesPdf = async (currentUser, onProgress = () => {}, part = 'all') => {
+  const { jsPDF, html2pdf } = await loadOfferPdfLibs();
   pdfDesktopMode = true;
   const pdfContent = createNewDesignContent(currentUser, part);
   onProgress('Building the offer pages…');
