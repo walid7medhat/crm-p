@@ -188,7 +188,17 @@ const canManage = ref(false)
 const stages = ref([])
 const boardLoading = ref(false)
 const search = ref('')
-const filters = reactive({ assignee: null, type: '', deliverable: '', due: '', sort: '', dateFrom: '', dateTo: '' })
+
+/** First and last day of the current calendar month (local). */
+function currentMonthRange() {
+  const now = new Date()
+  const from = new Date(now.getFullYear(), now.getMonth(), 1)
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  return { dateFrom: isoDate(from), dateTo: isoDate(to) }
+}
+
+// Default: only cards created from the 1st through the last day of this month
+const filters = reactive({ assignee: null, type: '', deliverable: '', due: '', sort: '', ...currentMonthRange() })
 
 function shiftDate(days) {
   const d = new Date()
@@ -197,15 +207,24 @@ function shiftDate(days) {
   return isoDate(d)
 }
 const dateShortcuts = [
+  { id: 'month', label: 'This month', kind: 'month' },
   { id: 'today', label: 'Today', from: 0, to: 0 },
   { id: 'yesterday', label: 'Yesterday', from: -1, to: -1 },
   { id: 'week', label: 'Last 7 days', from: -6, to: 0 },
 ]
-const activeDateShortcut = computed(() => dateShortcuts.find((s) => filters.dateFrom === shiftDate(s.from) && filters.dateTo === shiftDate(s.to))?.id || '')
+const activeDateShortcut = computed(() => {
+  const month = currentMonthRange()
+  if (filters.dateFrom === month.dateFrom && filters.dateTo === month.dateTo) return 'month'
+  return dateShortcuts.find((s) => s.kind !== 'month' && filters.dateFrom === shiftDate(s.from) && filters.dateTo === shiftDate(s.to))?.id || ''
+})
 function applyDateShortcut(shortcut) {
   if (activeDateShortcut.value === shortcut.id) {
     filters.dateFrom = ''
     filters.dateTo = ''
+    return
+  }
+  if (shortcut.kind === 'month') {
+    Object.assign(filters, currentMonthRange())
     return
   }
   filters.dateFrom = shiftDate(shortcut.from)
@@ -268,7 +287,15 @@ const sortOptions = [
   { value: 'asc', label: 'Created: oldest first', icon: 'lucide:arrow-up-narrow-wide' },
 ]
 const sortLabel = computed(() => sortOptions.find((o) => o.value === filters.sort)?.label || 'Sorted')
-const activeFilterCount = computed(() => [search.value, filters.assignee, filters.type, filters.deliverable, filters.due, filters.dateFrom, filters.dateTo].filter(Boolean).length)
+/** Date range counts as a filter only when it differs from the default (this month). */
+const isDefaultMonthRange = computed(() => {
+  const m = currentMonthRange()
+  return filters.dateFrom === m.dateFrom && filters.dateTo === m.dateTo
+})
+const activeFilterCount = computed(() => {
+  const customDates = (filters.dateFrom || filters.dateTo) && !isDefaultMonthRange.value
+  return [search.value, filters.assignee, filters.type, filters.deliverable, filters.due, customDates].filter(Boolean).length
+})
 
 
 // ---------- Data ----------
@@ -315,7 +342,8 @@ async function loadBoard() {
 
 function clearFilters() {
   search.value = ''
-  Object.assign(filters, { assignee: null, type: '', deliverable: '', due: '' , sort: '', dateFrom: '', dateTo: ''})
+  // Reset to the default monthly window (not all-time)
+  Object.assign(filters, { assignee: null, type: '', deliverable: '', due: '', sort: '', ...currentMonthRange() })
 }
 
 // ---------- Tabs (driven by the header, like Deal types) ----------
@@ -328,7 +356,7 @@ function onTabChange(e) { setTab(e?.detail) }
 watch(activeTab, (tab) => {
   try { localStorage.setItem(MARKETING_TAB_KEY, tab) } catch { /* ignore */ }
   search.value = ''
-  Object.assign(filters, { type: '', deliverable: '', due: '' , sort: '', dateFrom: '', dateTo: ''})
+  Object.assign(filters, { type: '', deliverable: '', due: '', sort: '', ...currentMonthRange() })
   stages.value = []
   loadBoard()
 })
@@ -598,8 +626,12 @@ onBeforeUnmount(() => {
 }
 .mk-filter:focus { box-shadow: none; }
 .mk-hero :deep(.mk-btn) { min-height: 38px; border-radius: 10px; }
-.mk-hero :deep(.mk-btn--primary) { background: var(--color-primary); box-shadow: none; }
-.mk-hero :deep(.mk-btn--primary:not(:disabled):hover) { background: var(--color-primary-hover); }
+.mk-hero :deep(.mk-btn--primary) {
+  color: var(--color-on-primary, #fff);
+  background: var(--gradient-primary);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.22);
+}
+.mk-hero :deep(.mk-btn--primary:not(:disabled):hover) { background: var(--gradient-primary-hover); }
 .mk-hero :deep(.mk-btn--primary svg) { transition: transform 0.35s cubic-bezier(.2,.8,.2,1.6); }
 .mk-hero :deep(.mk-btn--primary:hover svg) { transform: rotate(90deg) scale(1.15); }
 .mk-hero__icon { transition: transform 0.4s cubic-bezier(.2,.8,.2,1.6); }
@@ -643,11 +675,17 @@ onBeforeUnmount(() => {
   font-size: 13px !important;
   font-weight: 600 !important;
   cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
-.mk-date-shortcut:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.mk-date-shortcut:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.06);
+}
 .mk-date-shortcut.is-on {
-  border-color: transparent;
-  background: var(--color-primary);
-  color: #fff;
+  border-color: var(--color-primary);
+  background: var(--gradient-primary);
+  color: var(--color-on-primary, #fff);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.22);
 }
 </style>

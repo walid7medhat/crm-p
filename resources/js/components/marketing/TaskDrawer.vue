@@ -206,10 +206,38 @@
                     <MkAvatar :user="c.user" :size="34" />
                     <div class="mk-comments__bubble">
                       <header>
-                        <b>{{ c.user?.name }}</b><small>{{ timeAgo(c.created_at) }}</small>
-                        <!-- <span v-if="mentionsMe(c)" class="mk-mention-tag"><iconify-icon icon="lucide:at-sign" /> Mentioned you</span> -->
+                        <b>{{ c.user?.name }}</b>
+                        <small>{{ timeAgo(c.created_at) }}<template v-if="c.edited"> · edited</template></small>
+                        <button
+                          v-if="canEditComment(c) && editingId !== c.id"
+                          type="button"
+                          class="mk-comments__action"
+                          title="Edit comment"
+                          @click="startEdit(c)"
+                        >
+                          <iconify-icon icon="lucide:pencil" />
+                        </button>
                       </header>
-                      <p v-html="renderComment(c)" />
+                      <template v-if="editingId === c.id">
+                        <div class="mk-comments__edit">
+                          <textarea
+                            ref="editEl"
+                            v-model="editBody"
+                            class="mk-input"
+                            rows="3"
+                            @keydown.meta.enter.prevent="saveEdit"
+                            @keydown.ctrl.enter.prevent="saveEdit"
+                            @keydown.esc.stop.prevent="cancelEdit"
+                          />
+                          <div class="mk-comments__edit-actions">
+                            <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm" :disabled="busy" @click="cancelEdit">Cancel</button>
+                            <button type="button" class="mk-btn mk-btn--primary mk-btn--sm" :disabled="busy || !editBody.trim()" @click="saveEdit">
+                              <iconify-icon icon="lucide:check" /> Save
+                            </button>
+                          </div>
+                        </div>
+                      </template>
+                      <p v-else v-html="renderComment(c)" />
                     </div>
                   </li>
                 </ul>
@@ -264,7 +292,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import Swal from 'sweetalert2'
 import api from '@/plugins/axios'
 import MkAvatar from './shared/MkAvatar.vue'
@@ -308,6 +336,9 @@ const tabs = computed(() => [
 const commentEl = ref(null)
 const picked = ref([]) // members chosen via the picker
 const mention = reactive({ open: false, query: '', start: -1, index: 0 })
+const editingId = ref(null)
+const editBody = ref('')
+const editEl = ref(null)
 let deleted = false
 
 const mentionOptions = computed(() => {
@@ -352,6 +383,8 @@ watch(() => [props.modelValue, props.taskId], ([open, id], [wasOpen, oldId] = []
     newLink.url = ''
     newLink.label = ''
     newComment.value = ''
+    editingId.value = null
+    editBody.value = ''
     reassignTo.value = null
     load()
   }
@@ -367,7 +400,12 @@ function close() {
   emit('update:modelValue', false)
 }
 function onKey(e) {
-  if (e.key === 'Escape' && props.modelValue && !document.querySelector('.mk-modal')) close()
+  if (e.key !== 'Escape' || !props.modelValue || document.querySelector('.mk-modal')) return
+  if (editingId.value) {
+    cancelEdit()
+    return
+  }
+  close()
 }
 window.addEventListener('keydown', onKey)
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
@@ -456,6 +494,43 @@ async function addComment() {
     await refresh()
   } catch (err) {
     Swal.fire({ icon: 'error', title: 'Could not post comment', text: apiError(err) })
+  } finally {
+    busy.value = false
+  }
+}
+
+function canEditComment(c) {
+  if (!me || !c?.user) return false
+  return c.user.id === me.id || props.canManage
+}
+
+function startEdit(c) {
+  editingId.value = c.id
+  editBody.value = c.body || ''
+  nextTick(() => {
+    const el = Array.isArray(editEl.value) ? editEl.value[0] : editEl.value
+    el?.focus()
+    el?.setSelectionRange?.(el.value.length, el.value.length)
+  })
+}
+
+function cancelEdit() {
+  editingId.value = null
+  editBody.value = ''
+}
+
+async function saveEdit() {
+  const body = editBody.value.trim()
+  if (!body || !editingId.value || busy.value || !task.value) return
+  const mentions = props.members.filter((m) => body.includes('@' + m.name)).map((m) => m.id)
+  busy.value = true
+  try {
+    await api.put(`/marketing/tasks/${task.value.id}/comments/${editingId.value}`, { body, mentions })
+    cancelEdit()
+    await refresh()
+    toast('Comment updated', 'updated')
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'Could not update comment', text: apiError(err) })
   } finally {
     busy.value = false
   }
@@ -749,11 +824,11 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   font-weight: 600 !important;
 }
 .mk-reassign__list button.is-on {
-  border-color: #7c3aed;
-  background: #f6f1fc;
+  border-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 .mk-reassign__list span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mk-reassign__list iconify-icon { color: #7c3aed; }
+.mk-reassign__list iconify-icon { color: var(--color-primary); }
 .mk-reassign .mk-btn { align-self: flex-start; }
 
 /* Comments */
@@ -764,8 +839,25 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 .mk-comments__bubble { flex: 1; padding: 10px 13px; border-radius: 4px 14px 14px 14px; background: var(--neutral-50); border: 1px solid var(--border-color); }
 .mk-comments__bubble header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
 .mk-comments__bubble header b { font-size: 13px !important; }
-.mk-comments__bubble header small { font-size: 11.5px !important; color: var(--text-secondary-light); }
+.mk-comments__bubble header small { font-size: 11.5px !important; color: var(--text-secondary-light); flex: 1; min-width: 0; }
 .mk-comments__bubble p { margin: 0; font-size: 14px !important; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.mk-comments__action {
+  margin-left: auto;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8b8498;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mk-comments__action:hover { color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.08); }
+.mk-comments__edit { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.mk-comments__edit textarea { min-height: 72px; resize: vertical; }
+.mk-comments__edit-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
 /* History timeline */
 .mk-timeline { list-style: none; margin: 0; padding: 0; position: relative; }
@@ -829,7 +921,7 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
   display: flex; align-items: center; gap: 8px; padding: 6px 8px;
   border-radius: 8px; font-size: 13.5px !important; font-weight: 600 !important; cursor: pointer;
 }
-.mk-mention-pop li.is-on, .mk-mention-pop li:hover { background: #f6f1fc; }
+.mk-mention-pop li.is-on, .mk-mention-pop li:hover { background: rgba(var(--color-primary-rgb), 0.08); }
 .mk-comments__bubble p :deep(.mk-mention),
 .mk-comments__bubble :deep(.mk-mention) {
   color: var(--color-primary); font-weight: 650; background: color-mix(in srgb, var(--color-primary) 10%, transparent);

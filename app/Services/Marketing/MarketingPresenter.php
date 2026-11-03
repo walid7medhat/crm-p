@@ -97,12 +97,18 @@ class MarketingPresenter
 
     public static function comment(MarketingTaskComment $comment): array
     {
+        $updatedAt = $comment->updated_at?->toIso8601String();
+        $createdAt = $comment->created_at?->toIso8601String();
+
         return [
             'id' => $comment->id,
             'body' => $comment->body,
             'user' => self::user($comment->user),
             'mentions' => $comment->mentions ?? [],
-            'created_at' => $comment->created_at?->toIso8601String(),
+            'created_at' => $createdAt,
+            'updated_at' => $updatedAt,
+            'edited' => $comment->updated_at && $comment->created_at
+                && $comment->updated_at->gt($comment->created_at->copy()->addSecond()),
         ];
     }
 

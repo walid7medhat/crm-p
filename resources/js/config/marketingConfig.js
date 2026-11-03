@@ -86,6 +86,7 @@ export const HISTORY_ACTIONS = {
   approved: { label: 'approved the design', icon: 'lucide:badge-check', color: '#16a34a' },
   unapproved: { label: 'removed approval', icon: 'lucide:badge-x', color: '#dc2626' },
   commented: { label: 'commented', icon: 'lucide:message-circle', color: '#d97706' },
+  comment_updated: { label: 'edited a comment', icon: 'lucide:message-square-pen', color: '#d97706' },
   scheduled: { label: 'scheduled a post', icon: 'lucide:calendar-plus', color: '#9333ea' },
   posted: { label: 'marked as posted', icon: 'lucide:send', color: '#16a34a' },
   unposted: { label: 'unmarked posted', icon: 'lucide:undo-2', color: '#64748b' },
