@@ -7,20 +7,35 @@
           :alt="agentName"
           @error="avatarFailed = true"
         />
-        <span>
-          <strong>{{ agentName }}</strong>
-          <small>Property agent</small>
+        <span class="pf-dock__who-text">
+          <span class="pf-dock__line"><em>Name :</em> {{ agentName }}</span>
+          <span v-if="agentEmail" class="pf-dock__line"><em>Email :</em> {{ agentEmail }}</span>
         </span>
       </button>
-      <div class="pf-dock__actions">
-        <button v-if="canChat" type="button" class="pf-dock__btn" @click="emit('chat')">
-          <i class="ri-chat-3-line"></i>
-          Chat
-        </button>
-        <button v-if="showActions" type="button" class="pf-dock__btn pf-dock__btn--action" @click="emit('actions')">
-          Action
-        </button>
-      </div>
+      <button type="button" class="pf-dock__profile" @click="emit('profile')">
+        View Agent
+      </button>
+    </div>
+
+    <div class="pf-dock__actions">
+      <button
+        v-if="showActions"
+        type="button"
+        class="pf-dock__btn pf-dock__btn--action"
+        @click.stop="emit('actions')"
+      >
+        Property Action
+        <i class="ri-arrow-up-s-line" aria-hidden="true"></i>
+      </button>
+      <button
+        v-if="canChat"
+        type="button"
+        class="pf-dock__chat"
+        aria-label="Chat with agent"
+        @click="emit('chat')"
+      >
+        <i class="ri-chat-3-fill"></i>
+      </button>
     </div>
   </div>
 </template>
@@ -43,4 +58,6 @@ const agentName = computed(() => {
   const a = props.agent
   return a.name || [a.first_name, a.last_name].filter(Boolean).join(' ') || 'Agent'
 })
+
+const agentEmail = computed(() => props.agent?.email || props.agent?.user_email || '')
 </script>

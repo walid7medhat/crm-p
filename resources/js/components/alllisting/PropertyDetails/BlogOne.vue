@@ -110,106 +110,69 @@
               <MobilePropertyGallery
                 :images="property.gallery_images"
                 :get-image-url="getImageUrl"
-                :badges="mobileGalleryBadges"
+                :badges="[]"
                 @open="openLightbox"
               />
             </div>
 
             <div v-if="isMobileViewport && property" class="pf-page">
-              <section class="pf-card" :class="{ 'pf-card--overlap': property.gallery_images && property.gallery_images.length }">
-                <p class="pf-price">
-                  <span>AED {{ formatPrice(property.price) }}</span>
-                  <span v-if="rentPriceMeta" class="pf-price__period">{{ rentPriceMeta.period }}</span>
-                </p>
+              <section class="pf-card pf-card--hero" :class="{ 'pf-card--overlap': property.gallery_images && property.gallery_images.length }">
+                <div class="pf-price-row">
+                  <p class="pf-price">
+                    <span>{{ formatPrice(property.price) }} AED</span>
+                    <span v-if="rentPriceMeta" class="pf-price__period">{{ rentPriceMeta.period }}</span>
+                  </p>
+                  <div class="pf-status-badges" v-if="mobileStatusBadges.length">
+                    <span
+                      v-for="badge in mobileStatusBadges"
+                      :key="badge.label"
+                      class="pf-status-badge"
+                      :class="badge.tone"
+                    >{{ badge.label }}</span>
+                  </div>
+                </div>
                 <p v-if="rentPriceMeta" class="pf-price__equiv">{{ rentPriceMeta.monthly }}</p>
                 <h2 v-if="mobileListingTitle" class="pf-title">{{ mobileListingTitle }}</h2>
-                <p v-if="mobileLocationLabel" class="pf-location">{{ mobileLocationLabel }}</p>
-                <p v-if="mobileSpecSentence" class="pf-specs">{{ mobileSpecSentence }}</p>
-                <div v-if="(property.floor_plans && property.floor_plans.length) || property.drive_link" class="pf-quick">
-                  <button v-if="property.floor_plans && property.floor_plans.length" type="button" class="pf-quick__btn" @click="openFloorPlanSlider(0)">
-                    <i class="ri-layout-grid-line"></i>
-                    <span>Floor plans</span>
-                  </button>
-                  <button v-if="property.drive_link" type="button" class="pf-quick__btn" @click="openDriveLink">
-                    <i class="fab fa-google-drive"></i>
-                    <span>Drive</span>
-                  </button>
-                </div>
+                <p v-if="mobileLocationLabel" class="pf-location">
+                  <i class="ri-map-pin-line" aria-hidden="true"></i>
+                  <span>{{ mobileLocationLabel }}</span>
+                </p>
               </section>
 
-              <!-- Unit number / owner info (desktop shows these in the sidebar, which is hidden on mobile) -->
               <section v-if="mobileShowsUnitNumber || mobileShowsOwnerInfo" class="pf-card">
                 <h3 class="pf-card__title">Unit &amp; Owner</h3>
-                <div class="pf-rows">
+                <div class="pf-rows pf-rows--plain">
                   <div v-if="mobileShowsUnitNumber" class="pf-row">
-                    <span class="pf-row__label"><i class="ri-home-4-line"></i>Unit Number</span>
+                    <span class="pf-row__label">Unit Number:</span>
                     <span class="pf-row__value">{{ getUnitNumber() }}</span>
                   </div>
                   <div v-if="mobileShowsOwnerInfo" class="pf-row" style="cursor: pointer;" @click.stop="openOwnerDetailsModal">
-                    <span class="pf-row__label"><i class="ri-user-line"></i>Owner</span>
-                    <span class="pf-row__value" style="color: var(--color-primary);">View Owner Info</span>
+                    <span class="pf-row__label">Owner:</span>
+                    <span class="pf-row__value pf-row__value--link">View Owner Info</span>
                   </div>
                 </div>
               </section>
 
               <section v-if="mobileDetailRows.length" class="pf-card">
                 <h3 class="pf-card__title">Property Details</h3>
-                <div class="pf-rows">
-                  <div v-for="row in mobileDetailPreview" :key="row.label" class="pf-row">
-                    <span class="pf-row__label"><i :class="row.icon"></i>{{ row.label }}</span>
+                <div class="pf-rows pf-rows--plain">
+                  <div v-for="row in mobileDetailRows" :key="row.label" class="pf-row">
+                    <span class="pf-row__label">{{ row.label }}:</span>
                     <span class="pf-row__value">{{ row.value }}</span>
-                  </div>
-                </div>
-                <button v-if="mobileDetailRows.length > mobileDetailPreview.length" type="button" class="pf-more" @click="openPfSheet('details')">
-                  View all details
-                </button>
-              </section>
-
-              <section v-if="property.project" class="pf-card">
-                <h3 class="pf-card__title">Project Details</h3>
-                <div v-if="property.gallery_images && property.gallery_images.length" class="pf-project-photo">
-                  <img :src="getImageUrl(property.gallery_images[0].image_url_final || property.gallery_images[0].image_url)" alt="" />
-                  <span v-if="property.completion_status" class="pf-project-photo__badge">{{ property.completion_status }}</span>
-                </div>
-                <h4 class="pf-project-name">{{ property.project.title }}</h4>
-                <p v-if="property.project.developer_name || property.developer?.name" class="pf-project-dev">
-                  {{ property.project.developer_name || property.developer?.name }}
-                </p>
-                <div class="pf-rows">
-                  <div v-if="property.completion_status" class="pf-row">
-                    <span class="pf-row__label"><i class="ri-calendar-check-line"></i>Completion</span>
-                    <span class="pf-row__value">{{ property.completion_status }}</span>
-                  </div>
-                  <div v-if="projectDeveloperLogo || property.project.developer_name || property.developer?.name" class="pf-row">
-                    <span class="pf-row__label"><i class="ri-building-line"></i>Developer</span>
-                    <span class="pf-row__value">
-                      <img v-if="projectDeveloperLogo" :src="projectDeveloperLogo" alt="" class="pf-dev-logo" />
-                      <template v-else>{{ property.project.developer_name || property.developer?.name }}</template>
-                    </span>
                   </div>
                 </div>
               </section>
 
               <section v-if="hasAdditionalFeatures" class="pf-card">
-                <h3 class="pf-card__title">Amenities</h3>
-                <div class="pf-amenities">
-                  <span v-for="feature in additionalFeaturesList.slice(0, 8)" :key="feature" class="pf-amenity">
-                    <i class="ri-checkbox-circle-line"></i>{{ feature }}
+                <h3 class="pf-card__title">Features</h3>
+                <div class="pf-features">
+                  <span v-for="feature in additionalFeaturesList" :key="feature" class="pf-feature-pill">
+                    {{ feature }}
                   </span>
                 </div>
-                <button v-if="additionalFeaturesList.length > 8" type="button" class="pf-more" @click="openPfSheet('amenities')">
-                  Show more amenities
-                </button>
               </section>
 
-              <section v-if="hasPaymentDetails" class="pf-card">
-                <h3 class="pf-card__title">Payment Details</h3>
-                <div class="pf-scroll">
-                  <PaymentDetailsSection :listing="property" />
-                </div>
-              </section>
-
-              <section v-if="property.floor_plans && property.floor_plans.length" class="pf-card">
+              <section v-if="property.floor_plans && property.floor_plans.length" class="pf-card pf-card--floor">
                 <h3 class="pf-card__title">Floor Plans</h3>
                 <div class="pf-plans">
                   <button
@@ -219,28 +182,34 @@
                     class="pf-plan"
                     @click="openFloorPlanSlider(idx)"
                   >
-                    <img v-if="plan.image_url" :src="plan.image_url" alt="" />
-                    <span>{{ plan.name || 'Floor plan ' + (idx + 1) }}</span>
+                    <div class="pf-plan__media">
+                      <img v-if="plan.image_url" :src="plan.image_url" alt="" />
+                      <div v-else class="pf-plan__placeholder">
+                        <i class="ri-layout-grid-line"></i>
+                      </div>
+                    </div>
+                    <div class="pf-plan__foot">
+                      <span>{{ plan.name || 'Floor plan ' + (idx + 1) }}</span>
+                      <i class="ri-expand-diagonal-line" aria-hidden="true"></i>
+                    </div>
                   </button>
                 </div>
               </section>
 
-              <section v-if="property.reference_number || property.created_at" class="pf-card">
-                <h3 class="pf-card__title">Regulatory information</h3>
-                <div class="pf-rows">
-                  <div v-if="property.reference_number" class="pf-row">
-                    <span class="pf-row__label">Reference</span>
-                    <span class="pf-row__value">{{ property.reference_number }}</span>
-                  </div>
-                  <div v-if="property.created_at" class="pf-row">
-                    <span class="pf-row__label">Listed</span>
-                    <span class="pf-row__value">{{ formatDate(property.created_at) }}</span>
-                  </div>
-                  <div v-if="property.agent?.name" class="pf-row">
-                    <span class="pf-row__label">Agent</span>
-                    <span class="pf-row__value">{{ property.agent.name }}</span>
-                  </div>
+              <section v-if="hasPaymentDetails" class="pf-card pf-card--payment">
+                <div class="pf-section-banner">
+                  <h3 class="pf-card__title">Payment Details</h3>
                 </div>
+                <div class="pf-scroll">
+                  <PaymentDetailsSection :listing="property" />
+                </div>
+              </section>
+
+              <section v-if="property.drive_link" class="pf-card">
+                <button type="button" class="pf-drive-btn" @click="openDriveLink">
+                  <i class="fab fa-google-drive"></i>
+                  <span>Open Drive folder</span>
+                </button>
               </section>
             </div>
 
@@ -394,10 +363,13 @@
               </div>
             </section>
 
-            <section v-if="isMobileViewport && property.comment && property.comment.trim()" class="pf-card">
-              <h3 class="pf-card__title">Notes</h3>
-              <p class="pf-clamp">{{ property.comment }}</p>
-              <button type="button" class="pf-more" @click="openPfSheet('description')">See full notes</button>
+            <section v-if="isMobileViewport && property.comment && property.comment.trim()" class="pf-card pf-card--notes">
+              <div class="pf-section-banner">
+                <h3 class="pf-card__title">Notes</h3>
+              </div>
+              <div class="pf-notes-body">
+                <p class="pf-notes-text">{{ property.comment }}</p>
+              </div>
             </section>
 
             <section class="ps-card ps-notes-card" v-if="!isMobileViewport && property.comment && property.comment.trim()">
@@ -405,81 +377,79 @@
               <p class="ps-notes-text">{{ property.comment }}</p>
             </section>
 
-            <!-- Mobile comments stay in main column -->
-            <div class="comment-container" v-if="isMobileViewport && !onlyShow">
-              <div class="comments-section" v-if="property">
-                <div class="card">
-                  <div class="card-body">
-                    <h3 class="section-title mb-4">
-                      <i class="ri-chat-3-line me-2"></i>
-                      Comments
-                    </h3>
-                    <div class="add-comment-form mb-4" v-if="isAuthenticated">
-                      <div class="comment-input mb-3">
-                        <textarea
-                          v-model="newComment.text"
-                          placeholder="Share your thoughts about this property..."
-                          class="form-control"
-                          rows="4"
-                          :maxlength="1000"
-                        ></textarea>
-                        <div class="char-counter">{{ newComment.text.length }}/1000</div>
-                      </div>
-                      <button
-                        class="btn btn-primary"
-                        @click="submitComment"
-                        :disabled="!newComment.text.trim() || submittingComment"
-                      >
-                        <i class="ri-send-plane-line me-2"></i>
-                        {{ submittingComment ? 'Submitting...' : 'Submit Comment' }}
-                      </button>
-                    </div>
-                    <div class="login-prompt mb-4" v-else>
-                      <div class="alert alert-info">
-                        <i class="ri-information-line me-2"></i>
-                        Please <a href="/login" class="alert-link">login</a> to add comments and reviews.
-                      </div>
-                    </div>
-                  </div>
+            <!-- Mobile comments -->
+            <section class="pf-card pf-card--comments comment-container" v-if="isMobileViewport && !onlyShow && property">
+              <div class="pf-panel-head">
+                <span class="pf-panel-head__icon"><i class="ri-chat-3-line"></i></span>
+                <div>
+                  <p class="pf-panel-head__title">Comments</p>
+                  <p class="pf-panel-head__hint">Add comments for this listing</p>
                 </div>
               </div>
-              <div class="comments-list">
-                <div v-if="loadingComments" class="text-center py-4">
-                  <div class="spinner-border text-primary" role="status"></div>
+
+              <div v-if="loadingComments" class="pf-empty">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              </div>
+
+              <div v-else-if="comments.length === 0 && !mobileCommentComposeOpen" class="pf-empty">
+                <i class="ri-chat-3-line"></i>
+                <strong>No Comments yet</strong>
+                <span>Be the first to share your thoughts about this property!</span>
+                <button
+                  v-if="isAuthenticated"
+                  type="button"
+                  class="pf-cta-btn"
+                  @click="mobileCommentComposeOpen = true"
+                >
+                  <i class="ri-chat-3-line"></i>
+                  Add Comments
+                </button>
+              </div>
+
+              <div v-else class="pf-comments-body">
+                <div v-if="comments.length" class="pf-comments-list">
+                  <article v-for="comment in comments" :key="comment.id" class="pf-comment">
+                    <img
+                      :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
+                      :alt="comment.user.name"
+                      class="pf-comment__avatar"
+                      @error="handleAvatarError"
+                    />
+                    <div>
+                      <div class="pf-comment__meta">
+                        <strong>{{ comment.user.name }}</strong>
+                        <small>{{ formatCommentDate(comment.created_at) }}</small>
+                      </div>
+                      <p>{{ comment.comment }}</p>
+                    </div>
+                  </article>
                 </div>
-                <div v-else-if="comments.length === 0" class="no-comments text-center py-5">
-                  <i class="ri-chat-3-line no-comments-icon"></i>
-                  <h5>No Comments Yet</h5>
-                </div>
-                <div v-else class="comments-container">
-                  <div
-                    v-for="comment in comments"
-                    :key="comment.id"
-                    class="comment-item"
+
+                <div class="pf-comments-compose" v-if="isAuthenticated && (mobileCommentComposeOpen || comments.length)">
+                  <textarea
+                    v-model="newComment.text"
+                    placeholder="Add a comment..."
+                    class="form-control"
+                    rows="3"
+                    :maxlength="1000"
+                  ></textarea>
+                  <button
+                    type="button"
+                    class="pf-cta-btn"
+                    @click="submitComment"
+                    :disabled="!newComment.text.trim() || submittingComment"
                   >
-                    <div class="comment-main">
-                      <div class="comment-header">
-                        <div class="user-info">
-                          <img
-                            :src="comment.user.avatar || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'"
-                            :alt="comment.user.name"
-                            class="user-avatar"
-                            @error="handleAvatarError"
-                          />
-                          <div class="user-details">
-                            <h6 class="user-name">{{ comment.user.name }}</h6>
-                            <span class="comment-date">{{ formatCommentDate(comment.created_at) }}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="comment-body">
-                        <p class="comment-text">{{ comment.comment }}</p>
-                      </div>
-                    </div>
+                    <i class="ri-chat-3-line"></i>
+                    {{ submittingComment ? 'Submitting...' : 'Add Comments' }}
+                  </button>
+                </div>
+                <div class="login-prompt" v-else-if="!isAuthenticated">
+                  <div class="alert alert-info mb-0">
+                    Please <a href="/login" class="alert-link">login</a> to add comments.
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
             </div>
 
             <!-- Loading State -->
@@ -800,184 +770,148 @@
 <!-- Owner Details Modal — teleported so fixed overlay escapes sidebar/router stacking contexts -->
 <Teleport to="body">
 <div v-if="showOwnerDetailsModal" class="modal-overlay owner-details-modal-overlay" @click="showOwnerDetailsModal = false">
-  <div class="modal-content owner-details-modal" @click.stop>
-    <div class="modal-header">
-      <div class="header-content">
-        <i class="ri-user-3-line header-icon"></i>
-        <div>
-          <h4 class="modal-title">Owner Information</h4>
-          <p class="modal-subtitle">Complete owner details</p>
-        </div>
-      </div>
-      <button class="modal-close" @click="showOwnerDetailsModal = false">
-        <i class="ri-close-line"></i>
-      </button>
-    </div>
-    
-    <div class="modal-body">
-      <!-- Owner Summary Card -->
-      <div class="owner-summary-card" v-if="getOwnerDataForModal()">
-        <div class="owner-name-section">
-          <h3 class="owner-name">
-            {{ getOwnerDataForModal()?.first_name || '' }} 
-            {{ getOwnerDataForModal()?.last_name || '' }}
-          </h3>
-          <div class="owner-identifiers">
-            <span class="owner-id" v-if="getOwnerDataForModal()?.salutation">
-              {{ getOwnerDataForModal()?.salutation }}
-            </span>
-            <span class="owner-nationality" v-if="getOwnerDataForModal()?.nationality">
-              {{ getOwnerDataForModal()?.nationality }}
-            </span>
-            <span class="owner-status" 
-                  v-if="getOwnerDataForModal()?.residency_status"
-                  :class="getOwnerDataForModal()?.residency_status === 'resident' ? 'resident' : 'non-resident'">
-              {{ getOwnerDataForModal()?.residency_status === 'resident' ? 'Resident' : 'Non-Resident' }}
-            </span>
-          </div>
-        </div>
-      </div>
+  <div class="owner-card" role="dialog" aria-modal="true" aria-label="Owner Information" @click.stop>
+    <button type="button" class="owner-card__close" aria-label="Close" @click="showOwnerDetailsModal = false">
+      <i class="ri-close-line"></i>
+    </button>
 
-      <!-- Contact Information -->
-      <div class="contact-section">
-        <h5 class="section-title">
+    <div class="owner-card__hero">
+      <div class="owner-card__avatar" aria-hidden="true">{{ ownerCardInitials }}</div>
+      <div class="owner-card__identity">
+        <p class="owner-card__eyebrow">Owner</p>
+        <h3 class="owner-card__name">{{ ownerCardFullName }}</h3>
+        <div class="owner-card__chips" v-if="ownerCardChips.length">
+          <span
+            v-for="chip in ownerCardChips"
+            :key="chip.label"
+            class="owner-card__chip"
+            :class="chip.tone"
+          >{{ chip.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="owner-card__body">
+      <section class="owner-card__section" v-if="ownerHasContact">
+        <h4 class="owner-card__section-title">
           <i class="ri-phone-line"></i>
-          Contact Information
-        </h5>
-        
-        <div class="contact-list">
-          <!-- Primary Phone -->
-          <div class="contact-item" v-if="getOwnerDataForModal()?.phone_number">
-            <div class="contact-label">Primary Phone:</div>
-            <div class="contact-value">
-              {{ getOwnerDataForModal()?.phone_number }}
-              <div class="contact-actions">
-                <button class="contact-btn call" @click="callOwner(getOwnerDataForModal()?.phone_number)" title="Call">
-                  <i class="ri-phone-line"></i>
-                </button>
-                <button class="contact-btn whatsapp" @click="whatsappOwner(getOwnerDataForModal()?.phone_number)" title="WhatsApp">
-                  <i class="ri-whatsapp-line"></i>
-                </button>
-              </div>
+          Contact
+        </h4>
+        <div class="owner-card__rows">
+          <div class="owner-card__row" v-if="getOwnerDataForModal()?.phone_number">
+            <div class="owner-card__row-text">
+              <span class="owner-card__label">Primary phone</span>
+              <strong class="owner-card__value">{{ getOwnerDataForModal()?.phone_number }}</strong>
+            </div>
+            <div class="owner-card__actions">
+              <button type="button" class="owner-card__action owner-card__action--call" title="Call" @click="callOwner(getOwnerDataForModal()?.phone_number)">
+                <i class="ri-phone-fill"></i>
+              </button>
+              <button type="button" class="owner-card__action owner-card__action--wa" title="WhatsApp" @click="whatsappOwner(getOwnerDataForModal()?.phone_number)">
+                <i class="ri-whatsapp-line"></i>
+              </button>
             </div>
           </div>
 
-          <!-- WhatsApp Number -->
-          <div class="contact-item" v-if="getOwnerDataForModal()?.whatsapp_number">
-            <div class="contact-label">WhatsApp:</div>
-            <div class="contact-value">
-              {{ getOwnerDataForModal()?.whatsapp_number }}
-              <div class="contact-actions">
-                <button class="contact-btn whatsapp" @click="whatsappOwner(getOwnerDataForModal()?.whatsapp_number)" title="Open WhatsApp">
-                  <i class="ri-whatsapp-line"></i>
-                </button>
-              </div>
+          <div class="owner-card__row" v-if="getOwnerDataForModal()?.whatsapp_number">
+            <div class="owner-card__row-text">
+              <span class="owner-card__label">WhatsApp</span>
+              <strong class="owner-card__value">{{ getOwnerDataForModal()?.whatsapp_number }}</strong>
+            </div>
+            <div class="owner-card__actions">
+              <button type="button" class="owner-card__action owner-card__action--wa" title="Open WhatsApp" @click="whatsappOwner(getOwnerDataForModal()?.whatsapp_number)">
+                <i class="ri-whatsapp-line"></i>
+              </button>
             </div>
           </div>
 
-          <!-- Secondary Phone -->
-          <div class="contact-item" v-if="getOwnerDataForModal()?.second_phone_number">
-            <div class="contact-label">Secondary Phone:</div>
-            <div class="contact-value">
-              {{ getOwnerDataForModal()?.second_phone_number }}
-              <div class="contact-actions">
-                <button class="contact-btn call" @click="callOwner(getOwnerDataForModal()?.second_phone_number)" title="Call">
-                  <i class="ri-phone-line"></i>
-                </button>
-              </div>
+          <div class="owner-card__row" v-if="getOwnerDataForModal()?.second_phone_number">
+            <div class="owner-card__row-text">
+              <span class="owner-card__label">Secondary phone</span>
+              <strong class="owner-card__value">{{ getOwnerDataForModal()?.second_phone_number }}</strong>
+            </div>
+            <div class="owner-card__actions">
+              <button type="button" class="owner-card__action owner-card__action--call" title="Call" @click="callOwner(getOwnerDataForModal()?.second_phone_number)">
+                <i class="ri-phone-fill"></i>
+              </button>
             </div>
           </div>
 
-          <!-- Email -->
-          <div class="contact-item" v-if="getOwnerDataForModal()?.email">
-            <div class="contact-label">Email:</div>
-            <div class="contact-value">
-              {{ getOwnerDataForModal()?.email }}
-              <div class="contact-actions">
-                <button class="contact-btn email" @click="emailOwner(getOwnerDataForModal()?.email)" title="Send Email">
-                  <i class="ri-mail-line"></i>
-                </button>
-              </div>
+          <div class="owner-card__row" v-if="getOwnerDataForModal()?.email">
+            <div class="owner-card__row-text">
+              <span class="owner-card__label">Email</span>
+              <strong class="owner-card__value">{{ getOwnerDataForModal()?.email }}</strong>
+            </div>
+            <div class="owner-card__actions">
+              <button type="button" class="owner-card__action owner-card__action--mail" title="Send Email" @click="emailOwner(getOwnerDataForModal()?.email)">
+                <i class="ri-mail-fill"></i>
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Personal Information -->
-      <div class="personal-section" v-if="hasPersonalInfo">
-        <h5 class="section-title">
-          <i class="ri-user-line"></i>
-          Personal Information
-        </h5>
-        
-        <div class="info-grid">
-          <div class="info-item" v-if="getOwnerDataForModal()?.first_name">
-            <span class="info-label">First Name</span>
-            <span class="info-value">{{ getOwnerDataForModal()?.first_name }}</span>
-          </div>
-          
-          <div class="info-item" v-if="getOwnerDataForModal()?.last_name">
-            <span class="info-label">Last Name</span>
-            <span class="info-value">{{ getOwnerDataForModal()?.last_name }}</span>
-          </div>
-          
-          <div class="info-item" v-if="getOwnerDataForModal()?.nationality">
-            <span class="info-label">Nationality</span>
-            <span class="info-value">{{ getOwnerDataForModal()?.nationality }}</span>
-          </div>
-          
-          <div class="info-item" v-if="getOwnerDataForModal()?.location_name || getOwnerDataForModal()?.location_id">
-            <span class="info-label">{{ getLocationLabel() }}</span>
-            <span class="info-value">{{ getOwnerDataForModal()?.location_name || getOwnerDataForModal()?.location_id }}</span>
+      <section class="owner-card__section" v-if="hasPersonalInfo">
+        <h4 class="owner-card__section-title">
+          <i class="ri-map-pin-line"></i>
+          Location
+        </h4>
+        <div class="owner-card__meta owner-card__meta--single">
+          <div class="owner-card__meta-item">
+            <span>{{ getLocationLabel() }}</span>
+            <strong>{{ getOwnerDataForModal()?.location_name || getOwnerDataForModal()?.location_id }}</strong>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Documents -->
-      <div class="documents-section" v-if="hasOwnerDocuments">
-        <h5 class="section-title">
-          <i class="ri-file-text-line"></i>
+      <section class="owner-card__section" v-if="hasOwnerDocuments">
+        <h4 class="owner-card__section-title">
+          <i class="ri-folder-2-line"></i>
           Documents
-        </h5>
-        
-        <div class="documents-grid">
-          <button class="document-card" 
-                  v-if="getOwnerDataForModal()?.id_front_path || getOwnerDataForModal()?.id_front_url"
-                  @click="viewDocument(getOwnerDataForModal()?.id_front_path || getOwnerDataForModal()?.id_front_url)">
-            <i class="ri-id-card-line document-icon"></i>
-            <span class="document-name">ID Front</span>
-            <i class="ri-external-link-line document-action"></i>
+        </h4>
+        <div class="owner-card__docs">
+          <button
+            type="button"
+            class="owner-card__doc"
+            v-if="getOwnerDataForModal()?.id_front_path || getOwnerDataForModal()?.id_front_url"
+            @click="viewDocument(getOwnerDataForModal()?.id_front_path || getOwnerDataForModal()?.id_front_url)"
+          >
+            <i class="ri-id-card-line"></i>
+            <span>ID Front</span>
           </button>
-          
-          <button class="document-card" 
-                  v-if="getOwnerDataForModal()?.id_back_path || getOwnerDataForModal()?.id_back_url"
-                  @click="viewDocument(getOwnerDataForModal()?.id_back_path || getOwnerDataForModal()?.id_back_url)">
-            <i class="ri-id-card-line document-icon"></i>
-            <span class="document-name">ID Back</span>
-            <i class="ri-external-link-line document-action"></i>
+          <button
+            type="button"
+            class="owner-card__doc"
+            v-if="getOwnerDataForModal()?.id_back_path || getOwnerDataForModal()?.id_back_url"
+            @click="viewDocument(getOwnerDataForModal()?.id_back_path || getOwnerDataForModal()?.id_back_url)"
+          >
+            <i class="ri-id-card-line"></i>
+            <span>ID Back</span>
           </button>
-          
-          <button class="document-card" 
-                  v-if="getOwnerDataForModal()?.passport_copy_path || getOwnerDataForModal()?.passport_copy_url"
-                  @click="viewDocument(getOwnerDataForModal()?.passport_copy_path || getOwnerDataForModal()?.passport_copy_url)">
-            <i class="ri-passport-line document-icon"></i>
-            <span class="document-name">Passport</span>
-            <i class="ri-external-link-line document-action"></i>
+          <button
+            type="button"
+            class="owner-card__doc"
+            v-if="getOwnerDataForModal()?.passport_copy_path || getOwnerDataForModal()?.passport_copy_url"
+            @click="viewDocument(getOwnerDataForModal()?.passport_copy_path || getOwnerDataForModal()?.passport_copy_url)"
+          >
+            <i class="ri-passport-line"></i>
+            <span>Passport</span>
           </button>
-          
-          <button class="document-card" 
-                  v-if="getOwnerDataForModal()?.visa_copy_path || getOwnerDataForModal()?.visa_copy_url"
-                  @click="viewDocument(getOwnerDataForModal()?.visa_copy_path || getOwnerDataForModal()?.visa_copy_url)">
-            <i class="ri-file-text-line document-icon"></i>
-            <span class="document-name">Visa Copy</span>
-            <i class="ri-external-link-line document-action"></i>
+          <button
+            type="button"
+            class="owner-card__doc"
+            v-if="getOwnerDataForModal()?.visa_copy_path || getOwnerDataForModal()?.visa_copy_url"
+            @click="viewDocument(getOwnerDataForModal()?.visa_copy_path || getOwnerDataForModal()?.visa_copy_url)"
+          >
+            <i class="ri-file-text-line"></i>
+            <span>Visa</span>
           </button>
         </div>
-      </div>
+      </section>
     </div>
-    
-    <div class="modal-footer">
-      <button class="btn-close-modal" @click="showOwnerDetailsModal = false">
+
+    <div class="owner-card__footer">
+      <button type="button" class="owner-card__done" @click="showOwnerDetailsModal = false">
         Close
       </button>
     </div>
@@ -1957,8 +1891,9 @@
         v-else-if="isMobileViewport && property && !onlyShow"
         class="ps-action-dock"
       >
-        <button type="button" class="ps-action-dock__btn" @click="openMobilePropertyActions">
-          Action
+        <button type="button" class="ps-action-dock__btn" @click.stop="openMobilePropertyActions">
+          Property Action
+          <i class="ri-arrow-up-s-line" aria-hidden="true"></i>
         </button>
       </div>
     </Teleport>
@@ -2932,6 +2867,28 @@ const mobileGalleryBadges = computed(() => {
   return badges;
 });
 
+/** Status chips next to the mobile price (Published + For Sale/Rent). */
+const mobileStatusBadges = computed(() => {
+  const p = property.value;
+  if (!p) return [];
+  const badges = [];
+  if (needsApproval.value) {
+    badges.push({ label: 'Needs Approval', tone: 'pf-status-badge--soft' });
+  } else if (p.status) {
+    badges.push({ label: p.status, tone: 'pf-status-badge--soft' });
+  } else if (p.is_active) {
+    badges.push({ label: 'Published', tone: 'pf-status-badge--soft' });
+  }
+  if (p.listing_status === 'sale') {
+    badges.push({ label: 'For Sale', tone: 'pf-status-badge--solid' });
+  } else if (p.listing_status === 'rent') {
+    badges.push({ label: 'For Rent', tone: 'pf-status-badge--solid' });
+  }
+  return badges;
+});
+
+const mobileCommentComposeOpen = ref(false);
+
 /** Desktop Figma gallery badges: Sale/Rent + listing status (e.g. Published). */
 const desktopGalleryBadges = computed(() => {
   const p = property.value;
@@ -3094,26 +3051,25 @@ const mobileDetailRows = computed(() => {
   };
   const typeName = (p.property_type?.name || '').toLowerCase();
   const isLand = hidesBedsBaths(typeName); // plot / land / office
-  add('ri-price-tag-3-line', 'Sale/Rent', p.listing_status);
+  add('ri-community-line', 'Project', p.project?.title);
   add('ri-building-4-line', 'Property Type', p.property_type?.name);
   if (!isLand && p.number_of_bedrooms !== null && p.number_of_bedrooms !== undefined) {
     add('ri-hotel-bed-line', 'Bedrooms', p.number_of_bedrooms === 0 || p.number_of_bedrooms === '0' ? 'Studio' : String(p.number_of_bedrooms));
   }
   if (!isLand && p.number_of_bathrooms) add('ri-drop-line', 'Bathrooms', p.number_of_bathrooms);
   if (isBuildingProperty.value && Number(p.number_of_floors) > 0) add('ri-building-2-line', 'Floors', p.number_of_floors);
-  if (p.size_sqft) add('ri-ruler-line', 'Property Size', `${p.size_sqft} Sq Ft`);
-  else if (p.size_sqmt) add('ri-ruler-line', 'Property Size', `${p.size_sqmt} m²`);
-  if (plotSizeLabel.value) add('ri-landscape-line', 'Plot Size', plotSizeLabel.value);
-  add('ri-checkbox-circle-line', 'Completion', p.completion_status);
-  add('ri-home-smile-line', 'Occupancy', p.occupancy_status);
-  add('ri-community-line', 'Project', p.project?.title);
+  if (p.size_sqft) add('ri-ruler-line', 'Area', `${p.size_sqft} Sq ft`);
+  else if (p.size_sqmt) add('ri-ruler-line', 'Area', `${p.size_sqmt} m²`);
+  if (plotSizeLabel.value) add('ri-landscape-line', 'Plot Area', plotSizeLabel.value);
+  add('ri-checkbox-circle-line', 'Completion Status', p.completion_status);
   add('ri-building-line', 'Developer', p.project?.developer_name || p.developer?.name);
-  add('ri-hashtag', 'Reference', p.reference_number);
+  add('ri-hashtag', 'Reference Number', p.reference_number);
+  add('ri-home-smile-line', 'Occupancy', p.occupancy_status);
   if (p.is_hot_deal === 'Yes') add('ri-fire-line', 'Hot Deal', 'Yes');
   return rows;
 });
 
-const mobileDetailPreview = computed(() => mobileDetailRows.value.slice(0, 6));
+const mobileDetailPreview = computed(() => mobileDetailRows.value);
 const projectDeveloperLogo = computed(() => {
   const project = property.value?.project;
   return project?.developerData?.avatar || project?.developer?.avatar || '';
@@ -3179,6 +3135,48 @@ const canMarkAsConverted = computed(() => {
     const getOwnerDataForModal = () => {
       return getApprovedOwnerData();
     };
+
+    const ownerCardFullName = computed(() => {
+      const o = getOwnerDataForModal();
+      if (!o) return 'Owner';
+      return [o.first_name, o.last_name].filter(Boolean).join(' ').trim() || 'Owner';
+    });
+
+    const ownerCardInitials = computed(() => {
+      const o = getOwnerDataForModal();
+      if (!o) return 'O';
+      const first = (o.first_name || '').trim().charAt(0);
+      const last = (o.last_name || '').trim().charAt(0);
+      const initials = `${first}${last}`.toUpperCase();
+      return initials || 'O';
+    });
+
+    const ownerCardChips = computed(() => {
+      const o = getOwnerDataForModal();
+      if (!o) return [];
+      const chips = [];
+      if (o.salutation) chips.push({ label: o.salutation, tone: 'owner-card__chip--soft' });
+      if (o.nationality) chips.push({ label: o.nationality, tone: 'owner-card__chip--mint' });
+      if (o.residency_status) {
+        chips.push({
+          label: o.residency_status === 'resident' ? 'Resident' : 'Non-Resident',
+          tone: o.residency_status === 'resident' ? 'owner-card__chip--mint' : 'owner-card__chip--warm',
+        });
+      }
+      return chips;
+    });
+
+    const ownerHasContact = computed(() => {
+      const o = getOwnerDataForModal();
+      if (!o) return false;
+      return !!(o.phone_number || o.whatsapp_number || o.second_phone_number || o.email);
+    });
+
+    const hasPersonalInfo = computed(() => {
+      const o = getOwnerDataForModal();
+      if (!o) return false;
+      return !!(o.location_name || o.location_id);
+    });
 
     const getUnitNumber = () => {
       if (isPropertyOwner.value) {
@@ -3266,6 +3264,7 @@ const closeActionsDropdown = async () => {
 const mobilePropertyActionsOpen = ref(false);
 
 const openMobilePropertyActions = () => {
+  if (!property.value || onlyShow.value) return;
   mobilePropertyActionsOpen.value = true;
   document.body.classList.add('mobile-listing-sheet-open');
 };
@@ -3274,6 +3273,10 @@ const closeMobilePropertyActions = () => {
   mobilePropertyActionsOpen.value = false;
   document.body.classList.remove('mobile-listing-sheet-open');
 };
+
+watch(isMobileViewport, (mobile) => {
+  if (!mobile) closeMobilePropertyActions();
+});
 
 const runPropertyMenuAction = (action) => {
   closeMobilePropertyActions();
@@ -9568,6 +9571,8 @@ const getHistoryIcon = (event) => {
       propertySidebarSpacerRef,
       isMobileViewport,
       mobileGalleryBadges,
+      mobileStatusBadges,
+      mobileCommentComposeOpen,
       desktopGalleryBadges,
       mobilePurposeLabel,
       mobileListingTitle,
@@ -9617,6 +9622,11 @@ const getHistoryIcon = (event) => {
       hasOwnerDocuments,
       getApprovedOwnerData,
       getOwnerDataForModal,
+      ownerCardFullName,
+      ownerCardInitials,
+      ownerCardChips,
+      ownerHasContact,
+      hasPersonalInfo,
       getUnitNumber,
       mobileShowsUnitNumber,
       mobileShowsOwnerInfo,
@@ -10543,15 +10553,15 @@ align-items: flex-start;
 }
 
 .ps-side-card__btn {
-  width: 100%;
-  margin-top: 12px;
+  width: auto;
+  margin-top: 10px;
   border: none;
   border-radius: 999px;
   background: var(--color-primary);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
-  padding: 10px 14px;
+  padding: 9px 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10564,7 +10574,15 @@ align-items: flex-start;
   cursor: not-allowed;
 }
 
+.ps-comments-compose {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
 .ps-comments-compose textarea {
+  width: 100%;
   font-size: 13px;
   border-radius: 10px;
   resize: vertical;
@@ -11714,9 +11732,16 @@ margin-top: 20px;
   margin-bottom: 6px;
 }
 
-.sidebar-agent-updates-bottom :deep(.agent-updates-panel__input) {
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__input),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__input:focus),
+.sidebar-agent-updates-bottom :deep(.agent-updates-panel__input:active) {
   height: 34px;
   padding: 6px 10px 2px;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
 }
 
 .sidebar-agent-updates-bottom :deep(.agent-updates-panel__item) {
@@ -12077,7 +12102,7 @@ margin-top: 20px;
   font-size: 13px;
 }
 
-/* Owner Details Modal - Clean Design */
+/* Shared modal overlay (kept for other property modals) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -12098,34 +12123,399 @@ margin-top: 20px;
   to { opacity: 1; }
 }
 
-.owner-details-modal {
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.4s ease;
-}
-
-@keyframes slideUp {
+@keyframes ownerCardIn {
   from {
-    transform: translateY(30px);
+    transform: translateY(18px) scale(0.98);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
 
-/* Header */
+/* Compact owner card — mobile + desktop */
+.owner-details-modal-overlay {
+  padding: 16px;
+  align-items: center;
+  background: rgba(17, 10, 28, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.owner-card {
+  position: relative;
+  width: min(400px, 100%);
+  max-height: min(86vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--color-primary-border, #e7dcec);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(49, 20, 72, 0.14);
+  animation: ownerCardIn 0.28s ease;
+}
+
+.owner-card__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--color-primary-border, #e7dcec);
+  border-radius: 50%;
+  background: #fff !important;
+  color: var(--color-primary) !important;
+  -webkit-text-fill-color: var(--color-primary) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(49, 20, 72, 0.08);
+}
+
+.owner-card__close i {
+  display: block;
+  line-height: 1;
+}
+
+.owner-card__close:hover {
+  background: var(--color-primary-soft, #f7f2f8) !important;
+}
+
+.owner-card__hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 52px 16px 16px;
+  background: var(--color-primary-soft, #f7f2f8);
+  border-bottom: 1px solid var(--color-primary-border, #e7dcec);
+  color: #0b0736;
+}
+
+.owner-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-primary-rgb), 0.14);
+  border: 1px solid var(--color-primary-border, #e7dcec);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+}
+
+.owner-card__identity {
+  min-width: 0;
+}
+
+.owner-card__eyebrow {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.owner-card__name {
+  margin: 0;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  line-height: 1.25;
+  color: #0b0736 !important;
+  word-break: break-word;
+}
+
+.owner-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.owner-card__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  background: #fff;
+  border: 1px solid var(--color-primary-border, #e7dcec);
+  color: var(--color-primary);
+}
+
+.owner-card__chip--soft {
+  background: #fff;
+  color: var(--color-primary);
+}
+
+.owner-card__chip--mint {
+  background: #ecfdf3;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.owner-card__chip--warm {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
+
+.owner-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 14px 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.owner-card__section {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--color-primary-soft, #f7f2f8);
+  border: 1px solid var(--color-primary-border, #e7dcec);
+  border-radius: 14px;
+}
+
+.owner-card__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primary) !important;
+}
+
+.owner-card__section-title i {
+  font-size: 15px;
+}
+
+.owner-card__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.owner-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  background: #fff;
+  border: 1px solid #f0eaf6;
+  border-radius: 12px;
+}
+
+.owner-card__row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.owner-card__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.owner-card__value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0b0736;
+  word-break: break-word;
+}
+
+.owner-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.owner-card__action {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.owner-card__action:active {
+  transform: scale(0.94);
+}
+
+.owner-card__action--call {
+  background: rgba(var(--color-primary-rgb), 0.12);
+  color: var(--color-primary);
+}
+
+.owner-card__action--wa {
+  background: #e8f8ef;
+  color: #16a34a;
+}
+
+.owner-card__action--mail {
+  background: #fff4e5;
+  color: #d97706;
+}
+
+.owner-card__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.owner-card__meta--single {
+  grid-template-columns: 1fr;
+}
+
+.owner-card__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #f0eaf6;
+  border-radius: 12px;
+}
+
+.owner-card__meta-item span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.owner-card__meta-item strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0b0736;
+  word-break: break-word;
+}
+
+.owner-card__docs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.owner-card__doc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--color-primary-border, #e7dcec);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.owner-card__doc i {
+  font-size: 15px;
+}
+
+.owner-card__doc:hover {
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+.owner-card__footer {
+  padding: 12px 14px 14px;
+  border-top: 1px solid #f0eaf6;
+  background: #fff;
+}
+
+.owner-card__done {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  height: auto;
+  margin: 0;
+  padding: 12px 18px !important;
+  border: 1px solid var(--color-primary-border, #e7dcec) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: var(--color-primary) !important;
+  -webkit-text-fill-color: var(--color-primary) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: normal;
+  text-align: center !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap;
+  overflow: visible;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.owner-card__done:hover {
+  background: var(--color-primary-soft, #f7f2f8) !important;
+}
+
+.owner-card__done:active {
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .owner-details-modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .owner-card {
+    width: 100%;
+    max-height: min(88vh, 720px);
+    border-radius: 20px 20px 16px 16px;
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .owner-card__hero {
+    padding: 18px 52px 14px 14px;
+  }
+
+  .owner-card__name {
+    font-size: 16px !important;
+  }
+
+  .owner-card__meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Keep generic modal pieces for other dialogs in this file */
 .modal-header {
   padding: 24px 32px;
-  background:linear-gradient(180deg,#fff,#141e50c9 0%,#050a28f2);
+  background: var(--gradient-primary);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -12138,16 +12528,11 @@ margin-top: 20px;
   gap: 16px;
 }
 
-.header-icon {
-  font-size: 28px;
-  opacity: 0.9;
-}
-
 .modal-title {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color:white !important;
+  color: white !important;
 }
 
 .modal-subtitle {
@@ -12171,182 +12556,29 @@ margin-top: 20px;
   transition: all 0.3s;
 }
 
-.modal-close:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: rotate(90deg);
-}
-
-/* Body */
 .modal-body {
   padding: 32px;
   flex: 1;
   overflow-y: auto;
 }
 
-/* Owner Summary */
-.owner-summary-card {
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.owner-name {
-  margin: 0 0 12px 0;
-  font-size: 28px !important;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.owner-identifiers {
+.modal-footer {
+  padding: 24px 32px;
+  border-top: 1px solid #eaeaea;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: flex-end;
 }
 
-.owner-id,
-.owner-nationality,
-.owner-status {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.owner-id {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.owner-nationality {
-  background: #e8f5e9;
-  color: #388e3c;
-}
-
-.owner-status.resident {
-  background: #f1f8e9;
-  color: #689f38;
-}
-
-.owner-status.non-resident {
-  background: #fff3e0;
-  color: #f57c00;
-}
-
-/* Sections */
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 20px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
-}
-
-.section-title i {
-  font-size: 20px;
-}
-
-/* Contact Section */
-.contact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.contact-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.contact-label {
-  min-width: 140px;
-  font-size: 14px;
-  color: #666;
-  font-weight: 500;
-}
-
-.contact-value {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 16px;
-  color: #333;
-  font-weight: 500;
-}
-
-.contact-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.contact-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.btn-close-modal {
+  padding: 12px 32px;
+  background: var(--gradient-primary) !important;
+  color: #fff !important;
   border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s;
-  font-size: 16px;
 }
-
-.contact-btn.call {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.contact-btn.call:hover {
-  background: #1976d2;
-  color: white;
-}
-
-.contact-btn.whatsapp {
-  background: #e8f5e9;
-  color: #25d366;
-}
-
-.contact-btn.whatsapp:hover {
-  background: #25d366;
-  color: white;
-}
-
-.contact-btn.email {
-  background: #fff3e0;
-  color: #ff9800;
-}
-
-.contact-btn.email:hover {
-  background: #ff9800;
-  color: white;
-}
-
-/* Personal Information */
-.personal-section {
-  margin-top: 32px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
-}
-
-/*.info-item {*/
-/*  display: flex;*/
-  /*flex-direction: column;*/
-/*  gap: 4px;*/
-/*  padding: 12px;*/
-/*  background: #f8f9fa;*/
-/*  border-radius: 8px;*/
-/*  border: 1px solid #eaeaea;*/
-/*}*/
 
 .info-label {
   font-size: 12px;
@@ -12359,121 +12591,6 @@ margin-top: 20px;
   font-size: 14px;
   color: #333;
   font-weight: 500;
-}
-
-/* Documents Section */
-.documents-section {
-  margin-top: 32px;
-}
-
-.documents-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.document-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-decoration: none;
-}
-
-.document-card:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
-}
-
-.document-icon {
-  font-size: 32px;
-  color: #667eea;
-}
-
-.document-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #2c3e50;
-  text-align: center;
-}
-
-.document-action {
-  font-size: 16px;
-  color: #999;
-}
-
-/* Footer */
-.modal-footer {
-  padding: 24px 32px;
-  border-top: 1px solid #eaeaea;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.btn-close-modal {
-  padding: 12px 32px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-close-modal:hover {
-  background: #5a6fd8;
-  transform: translateY(-1px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .owner-details-modal {
-    max-height: 95vh;
-  }
-  
-  .modal-header {
-    padding: 20px;
-  }
-  
-  .modal-body {
-    padding: 20px;
-  }
-  
-  .modal-title {
-    font-size: 20px;
-  }
-  
-  .contact-item {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .contact-label {
-    min-width: auto;
-    width: 100%;
-  }
-  
-  .contact-value {
-    width: 100%;
-  }
-  
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .documents-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 .badge {
   padding: 4px 8px;
@@ -13218,21 +13335,6 @@ margin-top: 20px;
   .lightbox-thumbnail {
     width: 50px;
     height: 40px;
-  }
-  
-  .owner-details-modal {
-    margin: 8px;
-    max-height: 95vh;
-  }
-  
-  .owner-profile-section {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
-  }
-  
-  .documents-grid {
-    grid-template-columns: 1fr;
   }
   
   .modal-info-item {
@@ -14233,6 +14335,10 @@ margin: 0 2px;
 /* Owner details modal must sit above app header/nav (style.css forces .modal-overlay to z-index 100). */
 body .owner-details-modal-overlay {
   z-index: 105000 !important;
+}
+
+body .owner-details-modal-overlay .owner-card {
+  z-index: 105001;
 }
 
 /* Property actions open — allow sidebar to grow, keep same width/position */

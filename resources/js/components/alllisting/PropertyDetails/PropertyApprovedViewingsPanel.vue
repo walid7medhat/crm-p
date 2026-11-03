@@ -15,7 +15,8 @@
 
     <div v-else-if="!viewings.length" class="approved-viewings-panel__state approved-viewings-panel__state--empty">
       <i class="ri-calendar-line"></i>
-      <span>No viewings yet</span>
+      <strong>No viewings yet</strong>
+      <span>Scheduled visits for this property will show up here.</span>
     </div>
 
     <ul v-else class="approved-viewings-panel__list">
@@ -194,6 +195,20 @@ function displayWhen(viewing) {
   gap: 8px;
   padding: 28px 12px;
   font-size: 13px;
+  text-align: center;
+}
+
+.approved-viewings-panel__state--empty strong {
+  color: #0b0736;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.approved-viewings-panel__state--empty span {
+  max-width: 240px;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .approved-viewings-panel__state--empty i {

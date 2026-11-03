@@ -9,7 +9,7 @@
       <p class="agent-updates-panel__hint">Internal · Team lead & manager</p>
     </div>
 
-    <div v-if="canAdd" class="agent-updates-panel__composer">
+    <div v-if="canAdd && showComposer" class="agent-updates-panel__composer">
       <textarea
         :value="newText"
         class="agent-updates-panel__input"
@@ -38,8 +38,17 @@
     </div>
 
     <div v-else-if="!updates.length" class="agent-updates-panel__state agent-updates-panel__state--empty">
-      <i class="ri-chat-3-line"></i>
-      <span>No updates yet</span>
+      <i class="ri-refresh-line"></i>
+      <strong>No updates yet</strong>
+      <button
+        v-if="canAdd && mobile && !composeOpen"
+        type="button"
+        class="agent-updates-panel__cta"
+        @click="composeOpen = true"
+      >
+        <i class="ri-add-line"></i>
+        Add Update
+      </button>
     </div>
 
     <div v-else class="agent-updates-panel__list">
@@ -75,7 +84,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   updates: { type: Array, default: () => [] },
@@ -89,6 +98,21 @@ const props = defineProps({
 })
 
 defineEmits(['update:newText', 'submit', 'delete'])
+
+const composeOpen = ref(false)
+
+const showComposer = computed(() => {
+  if (!props.canAdd) return false
+  if (!props.mobile) return true
+  return composeOpen.value || props.updates.length > 0 || !!props.newText?.trim()
+})
+
+watch(
+  () => props.updates.length,
+  (len) => {
+    if (len > 0) composeOpen.value = true
+  },
+)
 
 const panelClasses = computed(() => ({
   'agent-updates-panel--mobile': props.mobile,
@@ -181,16 +205,32 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
   overflow: hidden;
 }
 
+.agent-updates-panel__composer:focus-within {
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+
 .agent-updates-panel__input {
   width: 100%;
-  border: none;
-  background: transparent;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  background: transparent !important;
   padding: 8px 10px 4px;
   font-size: 12px;
   line-height: 1.45;
   color: #334155;
   resize: none;
-  outline: none;
+  outline: none !important;
+}
+
+.agent-updates-panel__input:focus,
+.agent-updates-panel__input:active {
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
 }
 
 .agent-updates-panel__input::placeholder {
@@ -257,10 +297,43 @@ const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
   font-size: 13px;
 }
 
+.agent-updates-panel__state--empty strong {
+  color: #0b0736;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .agent-updates-panel__state--empty i {
   font-size: 36px;
   color: rgba(var(--color-primary-rgb), 0.45);
   opacity: 1;
+}
+
+.agent-updates-panel__cta {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  min-width: 0;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agent-updates-panel__cta i {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .agent-updates-panel__list {

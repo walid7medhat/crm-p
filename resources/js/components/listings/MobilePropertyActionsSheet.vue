@@ -23,7 +23,7 @@ const emit = defineEmits(['close'])
 .ps-actions-sheet {
   position: fixed;
   inset: 0;
-  z-index: 12500;
+  z-index: 13000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
