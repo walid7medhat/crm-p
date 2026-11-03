@@ -7,6 +7,7 @@ export const paymentPlanOptions = [
   { label: '65/35', initial_percent: 65, handover_percent: 35 },
   { label: '63/37', initial_percent: 63, handover_percent: 37 },
   { label: '59/41', initial_percent: 59, handover_percent: 41 },
+  { label: '58/42', initial_percent: 58, handover_percent: 42 },
   { label: '53/47', initial_percent: 53, handover_percent: 47 },
   { label: '44/56', initial_percent: 44, handover_percent: 56 },
   { label: '43/57', initial_percent: 43, handover_percent: 57 },
