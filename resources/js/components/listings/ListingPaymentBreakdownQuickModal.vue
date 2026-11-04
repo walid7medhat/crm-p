@@ -616,6 +616,7 @@ const form = ref({
   noc_percentage: 0,
   noc_fixed_amount: 0,
   completionStatus: 'Under Construction',
+  listingStatus: '',
 });
 
 const breakdownInstallments = ref([]);
@@ -630,6 +631,11 @@ const isUnderConstruction = computed(() => {
   const s = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
   return s === 'under construction' || s === 'off plan';
 });
+
+/** Breakdown rules apply only to off-plan SALE listings (rent / completed are skipped). */
+const breakdownRulesApply = computed(
+  () => isUnderConstruction.value && String(form.value.listingStatus ?? '').trim().toLowerCase() !== 'rent',
+);
 
 const nocFixedAmount = computed(() => {
   return Number(form.value.noc_fixed_amount || 0);
@@ -711,7 +717,7 @@ const {
   form,
   breakdownInstallments,
   installmentDraft,
-  isUnderConstruction,
+  isUnderConstruction: breakdownRulesApply,
 });
 
 // ============ useListingAssignmentExpenses ============
@@ -873,6 +879,7 @@ const hydrateFromProperty = (propertyData) => {
     noc_percentage: propertyData.noc_percentage ,
     noc_fixed_amount: nocValue,
     completionStatus: propertyData.completion_status || 'Under Construction',
+    listingStatus: propertyData.listing_status || '',
   };
 
   const rawPb = propertyData.payment_breakdown;
