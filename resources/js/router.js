@@ -169,7 +169,7 @@ const baseRoutes = [
   
   { path: '/team-tree', name: 'TeamTree', component: () => import('./components/Table/TeamTree.vue'), meta: { requiresAuth: true } },
   { path: '/notifications', component: () => import('./components/allNotifications.vue'), name: 'notifications', meta: { requiresAuth: true } },
-  { path: '/admin/chat', component: () => import('./pages/chat/AdminChatDashboard.vue'), name: 'admin-chat', meta: { requiresAuth: true } },
+  { path: '/admin/chat', component: () => import('./pages/chat/AdminChatDashboard.vue'), name: 'admin-chat', meta: { requiresAuth: true, requiresSuperAdmin: true } },
 
   // Email (SUPER_ADMIN only)
   { path: '/email', component: () => import('./pages/email/email.vue'), name: 'email', meta: { requiresAuth: true, requiresSuperAdmin: true } },

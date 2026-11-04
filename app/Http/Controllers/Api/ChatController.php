@@ -157,7 +157,7 @@ class ChatController extends Controller
     public function conversations(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isSuperAdmin = $user->hasRole('super_admin') || $user->id==30 || $user->id == 33;
+        $isSuperAdmin = $user->hasRole('super_admin');
 
         $query = Conversation::with([
             'users:id,name,email,avatar',
@@ -199,7 +199,8 @@ class ChatController extends Controller
     public function messages(Request $request, Conversation $conversation): JsonResponse
     {
         $user = $request->user();
-        if ((!$request->user()->hasRole('super_admin') &&  !($user->id == 30 || $user->id == 33)  ) && !$conversation->users()->where('user_id', $user->id)->exists()) {
+        // Only members of the conversation — or super_admin (All Chats) — may read it.
+        if (! $user->hasRole('super_admin') && ! $conversation->users()->where('user_id', $user->id)->exists()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -251,7 +252,8 @@ class ChatController extends Controller
         $user = $request->user();
         $conversation = Conversation::findOrFail($validated['conversation_id']);
 
-        if ((!$request->user()->hasRole('super_admin') && !($user->id == 30 || $user->id == 33)) && !$conversation->users()->where('user_id', $user->id)->exists()) {
+        // Only members of the conversation — or super_admin (All Chats) — may write in it.
+        if (! $user->hasRole('super_admin') && ! $conversation->users()->where('user_id', $user->id)->exists()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -299,7 +301,7 @@ class ChatController extends Controller
         $user = $request->user();
         $conversation = Conversation::findOrFail($validated['conversation_id']);
 
-        if ((!$request->user()->hasRole('super_admin') && !($user->id == 30 || $user->id == 33))&& !$conversation->users()->where('user_id', $user->id)->exists()) {
+        if (! $user->hasRole('super_admin') && ! $conversation->users()->where('user_id', $user->id)->exists()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -319,9 +321,8 @@ class ChatController extends Controller
      */
     public function adminConversations(Request $request): JsonResponse
     {
-        $user=auth()->user();
-        
-        if (  !$request->user()->hasRole('super_admin') && !($user->id == 30 || $user->id == 33)) {
+        // All Chats (every conversation in the system): super_admin only.
+        if (! $request->user()->hasRole('super_admin')) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -462,7 +463,7 @@ public function adminDeleteConversation(Request $request, Conversation $conversa
     $user = $request->user();
 
     // تحقق صلاحيات السوبر ادمن
-    $isSuperAdmin = $user->hasRole('super_admin') || $user->id == 30 || $user->id == 33;
+    $isSuperAdmin = $user->hasRole('super_admin');
     if (!$isSuperAdmin) {
         return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
     }

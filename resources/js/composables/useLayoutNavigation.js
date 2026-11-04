@@ -395,7 +395,8 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       });
     }
 
-    if (isCustomAdmin) {
+    // All Chats (every conversation in the system): super_admin only.
+    if (isSuperAdmin) {
       tabs.push({
         id: 'chat',
         label: 'Chat',

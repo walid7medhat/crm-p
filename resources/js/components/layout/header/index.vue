@@ -1401,7 +1401,8 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/settings/location-tracking', label: 'Location Tracking', icon: 'lucide:map-pin' });
   }
 
-  const chat = isCustomAdmin.value
+  // All Chats (every conversation in the system): super_admin only.
+  const chat = isSuperAdmin.value
     ? [{ path: '/admin/chat', label: 'All Chats', iconSrc: allChatsIcon.value }]
     : [];
 
