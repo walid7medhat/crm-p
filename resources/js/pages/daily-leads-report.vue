@@ -6,9 +6,24 @@
       <div class="dlr-toolbar">
         <div class="dlr-filters">
           <label class="dlr-field">
-            <span class="dlr-label">Day</span>
-            <input v-model="date" type="date" class="dlr-input" :max="todayUae" @change="load" />
+            <span class="dlr-label">From</span>
+            <input v-model="dateFrom" type="date" class="dlr-input" :max="dateTo || todayUae" @change="load" />
           </label>
+          <label class="dlr-field">
+            <span class="dlr-label">To</span>
+            <input v-model="dateTo" type="date" class="dlr-input" :min="dateFrom" :max="todayUae" @change="load" />
+          </label>
+          <div class="dlr-presets">
+            <button
+              v-for="p in presets"
+              :key="p.key"
+              type="button"
+              class="dlr-preset"
+              :class="{ 'dlr-preset--active': dateFrom === p.from && dateTo === p.to }"
+              :disabled="loading"
+              @click="applyPreset(p)"
+            >{{ p.label }}</button>
+          </div>
           <label class="dlr-field dlr-field--title">
             <span class="dlr-label">File title</span>
             <input v-model="title" type="text" class="dlr-input" maxlength="150" />
@@ -30,7 +45,7 @@
         </div>
       </div>
       <p class="dlr-hint">
-        Leads a branch admin assigned to each active sales agent on this day (UAE time), by source.
+        Leads a branch admin assigned to each active sales agent in this period (UAE time), by source.
         You can fix any number or agent name, remove a row, then export — the Excel file has exactly what you see.
       </p>
 
@@ -107,7 +122,30 @@ import Swal from 'sweetalert2'
 
 const todayUae = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' })
 
-const date = ref(todayUae)
+// Day before a YYYY-MM-DD date (pure date math, no timezone drift).
+const dayBefore = (ymd) => {
+  const d = new Date(`${ymd}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+const yesterdayUae = dayBefore(todayUae)
+
+const presets = [
+  { key: 'two-days', label: 'Yesterday + Today', from: yesterdayUae, to: todayUae },
+  { key: 'yesterday', label: 'Yesterday', from: yesterdayUae, to: yesterdayUae },
+  { key: 'today', label: 'Today', from: todayUae, to: todayUae },
+]
+
+// Default when the page opens: the last 2 days (yesterday + today).
+const dateFrom = ref(yesterdayUae)
+const dateTo = ref(todayUae)
+
+function applyPreset(p) {
+  dateFrom.value = p.from
+  dateTo.value = p.to
+  load()
+}
+
 const title = ref('')
 const columns = ref([])
 const rows = ref([])
@@ -157,10 +195,15 @@ function toggleRow(row) {
 }
 
 async function load() {
+  if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+    ;[dateFrom.value, dateTo.value] = [dateTo.value, dateFrom.value]
+  }
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/leads/reports/daily-leads', { params: { date: date.value } })
+    const res = await api.get('/leads/reports/daily-leads', {
+      params: { date_from: dateFrom.value, date_to: dateTo.value },
+    })
     const data = res?.data?.data || {}
     columns.value = data.columns || []
     title.value = data.title || ''
@@ -240,6 +283,12 @@ onMounted(load)
 .dlr-input:focus { outline: none; border-color: var(--dlr-primary); }
 .dlr-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dlr-text); cursor: pointer; }
 .dlr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dlr-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.dlr-preset { height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid #e3d6ea; background: #fff; color: var(--dlr-primary); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.dlr-preset:hover:not(:disabled) { background: var(--dlr-primary-soft); }
+.dlr-preset:disabled { opacity: 0.55; cursor: not-allowed; }
+.dlr-preset--active { background: var(--dlr-primary); border-color: var(--dlr-primary); color: #fff; }
+.dlr-preset--active:hover:not(:disabled) { background: var(--dlr-primary); }
 .dlr-hint { margin: 10px 0 14px; color: var(--dlr-muted); font-size: 12px; }
 
 .dlr-btn { display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; border-radius: 8px; padding: 0 14px; font-size: 13px; font-weight: 600; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }

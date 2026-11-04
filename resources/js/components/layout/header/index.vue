@@ -1370,10 +1370,10 @@ const mainMenuItems = computed(() => {
     items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', iconSrc: leadsIcon.value });
   }
 
-  // Daily Leads Report (DailyLeadsReport::canView): super_admin, user #33 (every agent)
+  // Daily Leads Report (DailyLeadsReport::canView): super_admin (every agent)
   // and branch_admin (their own branch).
   const roles = user.value?.roles || [];
-  if (roles.includes('super_admin') || roles.includes('branch_admin') || Number(user.value?.id) === 33) {
+  if (roles.includes('super_admin') || roles.includes('branch_admin')) {
     items.push({ path: '/daily-leads-report', label: 'Daily Leads Report', iconSrc: insightsIcon.value });
   }
 

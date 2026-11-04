@@ -449,8 +449,9 @@ class ReportController extends Controller
     }
 
     /**
-     * Daily Leads Report (preview): per sales agent, leads assigned to them on one UAE day,
-     * counted per source. super_admin / user #33 see every agent; branch_admin their branch.
+     * Daily Leads Report (preview): per sales agent, leads assigned to them in a UAE date
+     * range (default yesterday + today), counted per source. super_admin sees every agent;
+     * branch_admin their branch.
      */
     public function dailyLeadsReport(Request $request)
     {
@@ -459,11 +460,20 @@ class ReportController extends Controller
             return ApiResponse::error('Unauthorized', 403);
         }
 
-        $request->validate(['date' => 'nullable|date']);
-        $date = $request->input('date') ?: now(config('app.timezone'))->toDateString();
+        $request->validate([
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+        ]);
+        $today = now(config('app.timezone'));
+        $dateFrom = $request->input('date_from') ?: $today->copy()->subDay()->toDateString();
+        $dateTo = $request->input('date_to') ?: $today->toDateString();
+
+        if (\Carbon\Carbon::parse($dateFrom)->diffInDays(\Carbon\Carbon::parse($dateTo)) >= \App\Services\Reports\DailyLeadsReport::MAX_RANGE_DAYS) {
+            return ApiResponse::error('The range can be at most ' . \App\Services\Reports\DailyLeadsReport::MAX_RANGE_DAYS . ' days', 422);
+        }
 
         return ApiResponse::success(
-            \App\Services\Reports\DailyLeadsReport::build($user, $date),
+            \App\Services\Reports\DailyLeadsReport::build($user, $dateFrom, $dateTo),
             'Daily leads report retrieved successfully'
         );
     }

@@ -17,17 +17,21 @@ use Illuminate\Support\Facades\DB;
  * agent (no assignment), and assignments by anyone else (team lead, auto-assign, super
  * admin, …). History stores the assigned person by name only; see the agent matching in build().
  *
- * Who may run it: super_admin, user #33 (all agents) and branch_admin (their branch).
+ * Who may run it: super_admin (all agents) and branch_admin (their branch).
+ * Covers a date range (the page defaults to yesterday + today).
  */
 class DailyLeadsReport
 {
-    /** User id with access besides the super_admin / branch_admin roles. */
-    public const EXTRA_VIEWER_ID = 33;
+    /** Roles that see every agent. */
+    public const FULL_ACCESS_ROLES = ['super_admin'];
+
+    /** Longest range (in days) one report may cover. */
+    public const MAX_RANGE_DAYS = 31;
 
     public static function canView(?User $user): bool
     {
         return $user !== null
-            && ($user->hasAnyRole(['super_admin', 'branch_admin']) || (int) $user->id === self::EXTRA_VIEWER_ID);
+            && $user->hasAnyRole([...self::FULL_ACCESS_ROLES, 'branch_admin']);
     }
 
     /**
@@ -85,7 +89,7 @@ class DailyLeadsReport
     /** Agents (user ids) this viewer may report on; null = everyone. */
     public static function scopeUserIds(User $viewer): ?array
     {
-        if ($viewer->hasRole('super_admin') || (int) $viewer->id === self::EXTRA_VIEWER_ID) {
+        if ($viewer->hasAnyRole(self::FULL_ACCESS_ROLES)) {
             return null;
         }
 
@@ -93,14 +97,18 @@ class DailyLeadsReport
     }
 
     /**
-     * @return array{date: string, title: string, columns: array<int, array{key: string, label: string}>, rows: array, totals: array, agents: int}
+     * @return array{date_from: string, date_to: string, title: string, columns: array<int, array{key: string, label: string}>, rows: array, totals: array, agents: int}
      */
-    public static function build(User $viewer, string $date): array
+    public static function build(User $viewer, string $dateFrom, ?string $dateTo = null): array
     {
         $tz = config('app.timezone');
-        $day = Carbon::parse($date, $tz);
-        $start = $day->copy()->startOfDay()->format('Y-m-d H:i:s');
-        $end = $day->copy()->endOfDay()->format('Y-m-d H:i:s');
+        $from = Carbon::parse($dateFrom, $tz)->startOfDay();
+        $to = Carbon::parse($dateTo ?: $dateFrom, $tz)->startOfDay();
+        if ($to->lt($from)) {
+            [$from, $to] = [$to, $from];
+        }
+        $start = $from->copy()->startOfDay()->format('Y-m-d H:i:s');
+        $end = $to->copy()->endOfDay()->format('Y-m-d H:i:s');
         $scope = self::scopeUserIds($viewer);
 
         $branchAdminIds = User::role('branch_admin')->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -144,7 +152,7 @@ class DailyLeadsReport
             $agentId = ($owner && $nameKey($owner->name) === $assignedTo)
                 ? (int) $owner->id
                 : ($idsByName[$assignedTo] ?? 0);
-            // One lead counts once per agent per day, even if assigned to them twice.
+            // One lead counts once per agent in the range, even if assigned to them twice.
             if (! $agentId || isset($seen[$row->lead_id . ':' . $agentId])) {
                 continue;
             }
@@ -191,9 +199,14 @@ class DailyLeadsReport
             $totals[$column['key']] = array_sum(array_map(fn ($r) => $r['counts'][$column['key']], $rows));
         }
 
+        $period = $from->isSameDay($to)
+            ? $from->format('F j, Y')
+            : $from->format('F j, Y') . ' - ' . $to->format('F j, Y');
+
         return [
-            'date' => $day->format('Y-m-d'),
-            'title' => 'Daily Leads Report_' . $day->format('F j, Y'),
+            'date_from' => $from->format('Y-m-d'),
+            'date_to' => $to->format('Y-m-d'),
+            'title' => 'Daily Leads Report_' . $period,
             'columns' => $columns,
             'rows' => $rows,
             'totals' => $totals,

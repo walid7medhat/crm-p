@@ -67,8 +67,8 @@ const baseRoutes = [
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
   { path: '/lead-export', component: () => import('./pages/lead-export.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  // Daily Leads Report: super_admin, user #33 and branch_admin (their branch only — scoped server-side).
-  { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true, allowBranchAdmin: true } },
+  // Daily Leads Report: super_admin and branch_admin (their branch only — scoped server-side).
+  { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowBranchAdmin: true } },
   { path: '/agent-performance', component: () => import('./components/lead-reports/AgentPerformanceReport.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/sales-intelligence', component: () => import('./pages/sales-intelligence/index.vue'), meta: { requiresAuth: true } },
   // HR dashboard: `resources/js/pages/hr/index.vue`
