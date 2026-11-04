@@ -705,6 +705,8 @@ const {
   formatDateShort,
   installmentToAmount,
   initialPaymentTarget,
+  publishPaymentBreakdownBlocked,
+  publishPaymentBreakdownBlockTitle,
 } = useListingPaymentBreakdown({
   form,
   breakdownInstallments,
@@ -1032,8 +1034,12 @@ const addExpenseLine = () => {
 
 const save = async () => {
   if (!props.listingId) return;
-  isSaving.value = true;
   saveError.value = '';
+  if (publishPaymentBreakdownBlocked.value) {
+    saveError.value = publishPaymentBreakdownBlockTitle.value || 'Complete the payment breakdown before saving.';
+    return;
+  }
+  isSaving.value = true;
   try {
     const planLabel = paymentPlanSelectionLabel(form.value.payment_plans);
     const payload = {

@@ -200,12 +200,114 @@ $listingId = $this->route('property');
      * Configure the validator instance.
      * For updates, we need to check total gallery images count
      */
+    /** Non "X/Y" preset labels → initial (under-construction) %. Keep in sync with listingPaymentPlanPresets.js. */
+    private const PAYMENT_PLAN_SPECIAL_LABELS = [
+        '10/1% Monthly' => 10,
+        '20/1% Monthly' => 20,
+        '30/1% Monthly' => 30,
+        '1% Monthly' => 53,
+        '100%' => 100,
+    ];
+
+    public static function isUnderConstructionStatus($status): bool
+    {
+        $s = str_replace('_', ' ', strtolower(trim((string) $status)));
+        return $s === 'under construction' || $s === 'off plan';
+    }
+
+    /** Returns the initial (installment) % of a payment plan, or null when it cannot be parsed. */
+    public static function paymentPlanInitialPercent($plan): ?float
+    {
+        if (is_string($plan)) {
+            $decoded = json_decode($plan, true);
+            if (json_last_error() === JSON_ERROR_NONE && $decoded !== null) {
+                $plan = $decoded;
+            }
+        }
+        if (is_array($plan)) {
+            $plan = $plan['label'] ?? ($plan[0] ?? null);
+            if (is_array($plan)) {
+                $plan = $plan['label'] ?? $plan['value'] ?? null;
+            }
+        }
+        $label = trim((string) $plan);
+        if ($label === '') {
+            return null;
+        }
+        if (array_key_exists($label, self::PAYMENT_PLAN_SPECIAL_LABELS)) {
+            return (float) self::PAYMENT_PLAN_SPECIAL_LABELS[$label];
+        }
+        if (preg_match('/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/', $label, $m)) {
+            $lo = (float) $m[1];
+            $hi = (float) $m[2];
+            if ($lo >= 0 && $hi >= 0 && abs($lo + $hi - 100) <= 0.01) {
+                return $lo;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Off-plan payment breakdown completeness: a payment plan must be selected and
+     * installments (% of original price) + handover % must total 100%.
+     * Returns an error message, or null when valid.
+     */
+    public static function paymentBreakdownError($plan, $breakdown, $originalPrice): ?string
+    {
+        if ($plan === null || $plan === '' || $plan === [] || $plan === '[]' || $plan === 'null') {
+            return 'Select a payment plan.';
+        }
+        $initial = self::paymentPlanInitialPercent($plan);
+        if ($initial === null) {
+            return 'This payment plan cannot be used for automated checks. Choose a standard split plan (for example 30/70).';
+        }
+
+        $op = (float) $originalPrice;
+        if ($op <= 0) {
+            return 'Enter the original price to complete the payment breakdown.';
+        }
+
+        if (is_string($breakdown)) {
+            $breakdown = json_decode($breakdown, true);
+        }
+        $rows = is_array($breakdown) ? $breakdown : [];
+
+        if ($initial > 0 && count($rows) === 0) {
+            return sprintf('Add installments totaling %s%% to complete the payment breakdown.', round($initial, 2));
+        }
+
+        $installmentsAed = 0.0;
+        foreach ($rows as $row) {
+            $value = (float) ($row['value'] ?? 0);
+            $installmentsAed += (($row['type'] ?? 'percentage') === 'amount') ? $value : ($op * $value / 100);
+        }
+        $total = ($installmentsAed / $op) * 100 + (100 - $initial);
+
+        if (abs($total - 100) > 0.01) {
+            return sprintf('Payment breakdown must total 100%% (currently %s%%).', number_format($total, 2));
+        }
+
+        return null;
+    }
+
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
             $isUpdate = $this->isMethod('put') || $this->isMethod('patch');
             $isPublish = $this->input('action') === 'publish';
-            
+
+            $isRent = strtolower(trim((string) $this->input('listing_status'))) === 'rent';
+            if ($isPublish && ! $isRent && self::isUnderConstructionStatus($this->input('completion_status'))) {
+                $error = self::paymentBreakdownError(
+                    $this->input('payment_plan'),
+                    $this->input('payment_breakdown'),
+                    $this->input('original_price') ?: ($this->input('selling_price') ?: $this->input('price'))
+                );
+                if ($error) {
+                    $validator->errors()->add('payment_breakdown', $error);
+                }
+            }
+
             if ($isUpdate && $isPublish) {
                 // Get the listing ID from route
                 $listingId = $this->route('listing');

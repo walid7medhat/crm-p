@@ -2754,6 +2754,22 @@ public function updatePaymentBreakdown(Request $request, $id): JsonResponse
             'handover_date' => 'nullable|date',
         ]);
 
+        $isRent = strtolower(trim((string) $listing->listing_status)) === 'rent';
+        if (! $isRent && ListingRequest::isUnderConstructionStatus($listing->completion_status)) {
+            $sellingForCheck = $validated['selling_price'] ?? $validated['price'] ?? $listing->price;
+            $opForCheck = array_key_exists('original_price', $validated)
+                ? $validated['original_price']
+                : $listing->original_price;
+            $breakdownError = ListingRequest::paymentBreakdownError(
+                $request->has('payment_plan') ? $request->input('payment_plan') : $listing->payment_plan,
+                $request->has('payment_breakdown') ? $request->input('payment_breakdown') : $listing->payment_breakdown,
+                $opForCheck ?: $sellingForCheck
+            );
+            if ($breakdownError) {
+                return ApiResponse::error($breakdownError, 422);
+            }
+        }
+
         $updates = [];
 
         if (array_key_exists('original_price', $validated)) {

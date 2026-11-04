@@ -262,6 +262,26 @@ const nocRequiredAed = computed(() => {
     return '';
   });
 
+  /** Installments (as % of OP) + handover % must equal 100%. Catches an empty / incomplete breakdown. */
+  const breakdownTotalPercent = computed(() => {
+    const op = originalPriceNum.value;
+    const instPct = op > 0 ? (scheduledInstallmentsAed.value / op) * 100 : 0;
+    return instPct + installmentPercentForm.value;
+  });
+
+  const breakdownIncompleteError = computed(() => {
+    if (!isUnderConstruction.value) return '';
+    if (paymentPlanMissingForPublish.value || !isPaymentPlanSelectionParseValid.value) return '';
+    if (!(originalPriceNum.value > 0)) return 'Enter the original price to complete the payment breakdown.';
+    if (initialPercentForm.value > 0 && !breakdownInstallments.value.length) {
+      return `Add installments totaling ${initialPercentForm.value.toFixed(0)}% to complete the payment breakdown.`;
+    }
+    if (Math.abs(breakdownTotalPercent.value - 100) > 0.01) {
+      return `Payment breakdown must total 100% (currently ${breakdownTotalPercent.value.toFixed(2)}%).`;
+    }
+    return '';
+  });
+
   const handoverAmountNegativeBlock = computed(
     () => isUnderConstruction.value && handoverAmountForm.value < -0.01,
   );
@@ -360,6 +380,7 @@ const nocRequiredAed = computed(() => {
     }
     if (hasMixedInstallmentTypes.value) return true;
     if (percentageInstallmentPlanMismatchError.value) return true;
+    if (breakdownIncompleteError.value) return true;
     if (breakdownSellingPriceMismatchActive.value) return true;
     if (handoverAmountNegativeBlock.value) return true;
     if (getHandoverDateError()) return true;
@@ -372,6 +393,7 @@ const nocRequiredAed = computed(() => {
     if (!isPaymentPlanSelectionParseValid.value) return PAYMENT_PLAN_PARSE_ERROR;
     if (hasMixedInstallmentTypes.value) return MIXED_INSTALLMENT_TYPES_MSG;
     if (percentageInstallmentPlanMismatchError.value) return percentageInstallmentPlanMismatchError.value;
+    if (breakdownIncompleteError.value) return breakdownIncompleteError.value;
     if (breakdownSellingPriceMismatchActive.value) return 'Payment breakdown total does not match selling price.';
     if (handoverAmountNegativeBlock.value) return 'Handover amount is invalid.';
     if (getHandoverDateError()) return getHandoverDateError();
@@ -405,6 +427,12 @@ const nocRequiredAed = computed(() => {
           ? `Installment percentages match payment plan (${initialPercentForm.value.toFixed(0)}%).`
           : percentageInstallmentPlanMismatchError.value,
       });
+    }
+
+    if (breakdownIncompleteError.value) {
+      rows.push({ id: 'total100', level: 'err', icon: '✕', text: breakdownIncompleteError.value });
+    } else if (!paymentPlanMissingForPublish.value && isPaymentPlanSelectionParseValid.value) {
+      rows.push({ id: 'total100', level: 'ok', icon: '✓', text: 'Payment breakdown totals 100%.' });
     }
 
     if (breakdownMatchesSelling.value) {
@@ -492,6 +520,8 @@ const nocRequiredAed = computed(() => {
     breakdownSellingPriceMismatchActive,
     mixedInstallmentTypesError,
     percentageInstallmentPlanMismatchError,
+    breakdownTotalPercent,
+    breakdownIncompleteError,
     handoverAmountNegativeBlock,
     paymentHandoverDateError,
     paymentBreakdownRows,
