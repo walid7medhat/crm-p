@@ -3191,8 +3191,10 @@ public function getAgents(Request $request)
                     $q->where('name', $request->role);
                 });
             }
-            if($request->has('listings')){
-                $user=auth()->user();
+            // Listing-team managers see every agent's listings in My Listings (see
+            // getListingsData), so the agent filter isn't limited to their own team either.
+            $user=auth()->user();
+            if($request->has('listings') && !($user->hasRole('manager') && $user->listing_team)){
                 $allowedAgentIds = $user->getAllSubordinatesIds();
                 $agents=$agents->whereIn('id',$allowedAgentIds);
             }
