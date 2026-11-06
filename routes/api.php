@@ -773,6 +773,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::put('users/{id}/biometric-code',[UserController::class,'updateBiometricCode']);
     Route::get('/users/{user}/permissions', [UserController::class, 'permissions']);
     Route::post('/users/{user}/permissions', [UserController::class, 'assignPermissions']);
+    Route::delete('/users/{user}/permissions/{permission}', [UserController::class, 'revokePermission']);
     Route::get('/users/{user}', [UserController::class, 'show']);
     Route::put('/users/{user}/status', [UserController::class, 'updateStatus']);
     Route::post('/users/{user}/impersonate', [AuthController::class, 'impersonate']);

@@ -219,11 +219,23 @@
                                         <div v-if="userEffectivePermissions.length" class="permissions-preview mb-2">
                                             <span v-for="permission in userEffectivePermissions"
                                                   :key="permission"
-                                                  class="badge bg-primary-subtle text-primary me-2 mb-2">
+                                                  class="badge bg-primary-subtle text-primary me-2 mb-2"
+                                                  :title="directPermissions.includes(permission) ? 'Added directly to this user' : 'From role'">
                                                 {{ formatPermissionName(permission) }}
+                                                <button
+                                                    v-if="canRevokePermissions && directPermissions.includes(permission)"
+                                                    type="button"
+                                                    class="permission-remove-btn"
+                                                    :aria-label="`Remove ${formatPermissionName(permission)}`"
+                                                    :disabled="revokingPermission === permission"
+                                                    @click="revokePermission(permission)"
+                                                >
+                                                    <iconify-icon icon="lucide:x"></iconify-icon>
+                                                </button>
                                             </span>
                                         </div>
                                         <small v-else class="text-muted d-block mb-2">This user has no permissions yet.</small>
+                                        <small v-if="canRevokePermissions && userEffectivePermissions.length" class="text-muted d-block mb-2">Only permissions added directly can be removed here. Those without × come from the role.</small>
 
                                         <div class="d-flex gap-2 permission-select-wrapper">
                                                 <v-select
@@ -291,6 +303,7 @@ import { ref, onMounted, computed ,watch} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
+import Swal from "sweetalert2";
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import userPlaceholder from '@/assets/images/avatar/avatar1.png';
 
@@ -317,6 +330,8 @@ export default {
         const selectedRolePermissions = ref([]);
         const allPermissions = ref([]);
         const userEffectivePermissions = ref([]);
+        const directPermissions = ref([]);
+        const revokingPermission = ref(null);
         const permissionsToAssign = ref([]);
         const assigningPermissions = ref(false);
         const isMobileLayout = ref(window.matchMedia('(max-width: 768px)').matches);
@@ -349,6 +364,16 @@ export default {
                 const me = JSON.parse(localStorage.getItem('user') || 'null');
                 const myRoles = me?.roles || [];
                 return myRoles.includes('super_admin') || Number(me?.id) === 33;
+            } catch {
+                return false;
+            }
+        });
+
+        // Matches UserController::revokePermission — super_admin only (user 33 can only add).
+        const canRevokePermissions = computed(() => {
+            try {
+                const me = JSON.parse(localStorage.getItem('user') || 'null');
+                return (me?.roles || []).includes('super_admin');
             } catch {
                 return false;
             }
@@ -552,12 +577,53 @@ watch(roles, (newRoles) => {
                     const data = await response.json();
                     const list = data.data || data || [];
                     userEffectivePermissions.value = list.map(perm => perm.name || perm);
+                    directPermissions.value = list.filter(perm => perm.is_direct).map(perm => perm.name);
                 } else {
                     userEffectivePermissions.value = [];
+                    directPermissions.value = [];
                 }
             } catch (error) {
                 console.error("❌ Error fetching user permissions:", error);
                 userEffectivePermissions.value = [];
+                directPermissions.value = [];
+            }
+        };
+
+        // Remove a permission that was added directly to this user
+        const revokePermission = async (permission) => {
+            const result = await Swal.fire({
+                title: 'Remove this permission?',
+                text: formatPermissionName(permission),
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Remove',
+                cancelButtonText: 'Cancel',
+            });
+            if (!result.isConfirmed) return;
+
+            revokingPermission.value = permission;
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/users/${userId.value}/permissions/${encodeURIComponent(permission)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    await fetchUserPermissions();
+                    showNotification("✅ Permission removed successfully", "success");
+                } else {
+                    showNotification(`❌ ${data.message || 'Failed to remove permission'}`, "error");
+                }
+            } catch (error) {
+                console.error("❌ Error removing permission:", error);
+                showNotification("❌ Failed to remove permission", "error");
+            } finally {
+                revokingPermission.value = null;
             }
         };
 
@@ -579,8 +645,8 @@ watch(roles, (newRoles) => {
 
                 const data = await response.json();
                 if (response.ok) {
-                    const granted = data.data?.permissions || [];
-                    userEffectivePermissions.value = granted;
+                    // Refetch rather than use the response: it doesn't say which are direct.
+                    await fetchUserPermissions();
                     permissionsToAssign.value = [];
                     showNotification("✅ Permissions assigned successfully", "success");
                 } else {
@@ -909,6 +975,10 @@ watch(roles, (newRoles) => {
             availablePermissionsToAssign,
             formatPermissionName,
             assignSelectedPermissions,
+            directPermissions,
+            revokingPermission,
+            canRevokePermissions,
+            revokePermission,
             isMobileLayout,
             placePermissionDropdown
         };
@@ -929,6 +999,27 @@ watch(roles, (newRoles) => {
 .badge {
     font-size: 0.7rem;
     padding: 4px 8px;
+}
+
+.permission-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.permission-remove-btn:hover:not(:disabled) {
+    color: #dc2626;
+}
+
+.permission-remove-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .card {

@@ -196,6 +196,10 @@ class UserController extends Controller
     try {
         $permissions = $user->getAllPermissions(); // من spatie/permission
 
+        // is_direct: granted to this user directly (revocable) rather than through a role.
+        $directIds = $user->getDirectPermissions()->pluck('id');
+        $permissions->each(fn ($permission) => $permission->setAttribute('is_direct', $directIds->contains($permission->id)));
+
         return ApiResponse::success(
             $permissions,
             'User permissions retrieved successfully'
@@ -231,6 +235,29 @@ class UserController extends Controller
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to assign permissions: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove a permission granted directly to a user. Super admin only. Permissions
+     * that come from a role can't be removed per user, only through the role itself.
+     */
+    public function revokePermission(User $user, string $permission): JsonResponse
+    {
+        try {
+            if (! Auth::user()?->hasRole('super_admin')) {
+                return ApiResponse::error('Only super admins can remove permissions from a user', 403);
+            }
+
+            if (! $user->getDirectPermissions()->contains('name', $permission)) {
+                return ApiResponse::error('This permission was not added directly to this user', 422);
+            }
+
+            $user->revokePermissionTo($permission);
+
+            return ApiResponse::success(null, 'Permission removed successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to remove permission: ' . $e->getMessage());
         }
     }
 
