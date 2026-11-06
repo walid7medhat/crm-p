@@ -596,6 +596,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/smart-search', [SmartSearchController::class, 'index'])->middleware('throttle:120,1');
       Route::get('/my-clients', [LeadController::class, 'getMyClients']);
     Route::get('/logs', [DashboardController::class, 'index'])->name('logs');
+    Route::get('/logs/filters', [DashboardController::class, 'logFilters']);
     // أو يمكنك استخدام هذا الاسم
     Route::get('/leads/clients', [LeadController::class, 'getClientsList']);
     

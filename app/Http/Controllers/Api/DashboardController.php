@@ -61,36 +61,138 @@ class DashboardController extends Controller
         return $query;
     }
 
+/**
+ * System Logs page. Paged and filtered here rather than in the browser, and each row only
+ * carries what the table shows: the whole table with full users and subjects took seconds.
+ */
 public function index(Request $request)
 {
-    $query = Activity::query()->with(['causer','subject' => function ($morphTo) {
+    $query = Activity::query()->with(['causer:id,name', 'subject' => function ($morphTo) {
             $morphTo->morphWith([
-                Listing::class => ['area'], 
+                Listing::class => ['area:id,name'],
             ]);
         }]);
-    // Filter by model (log_name)
+
+    // Filter by log_name
     if ($request->model) {
         $query->where('log_name', $request->model);
     }
-    
-    // Filter by date range
-    if ($request->date_from) {
-        $query->whereDate('created_at', '>=', $request->date_from);
+
+    if ($request->subject_type) {
+        $query->where('subject_type', $request->subject_type);
     }
-    
-    if ($request->date_to) {
-        $query->whereDate('created_at', '<=', $request->date_to);
-    }
-    
-    // Filter by user
+
+    [$from, $to] = $this->resolveDashboardDateRange($request);
+    $this->applyCreatedBetween($query, $from, $to);
+
+    // causer_type too, so this uses the (causer_type, causer_id) index
     if ($request->user_id) {
-        $query->where('causer_id', $request->user_id);
+        $query->where('causer_type', (new User)->getMorphClass())->where('causer_id', $request->user_id);
     }
-    
-    $logs = $query->latest()->get();
-    
-    return response()->json($logs);
-}public function getStats(Request $request)
+
+    if ($request->filled('roles')) {
+        $roles = (array) $request->input('roles');
+        $query->where('causer_type', (new User)->getMorphClass())
+            ->whereIn('causer_id', User::whereHas('roles', fn ($q) => $q->whereIn('name', $roles))->select('id'));
+    }
+
+    if ($request->filled('search')) {
+        $term = trim((string) $request->search);
+        $like = '%' . addcslashes(mb_strtolower($term), '%_\\') . '%';
+        $query->where(function ($q) use ($term, $like) {
+            $q->where('description', 'like', $like)
+                ->orWhere('event', 'like', $like)
+                ->orWhere('subject_type', 'like', $like)
+                ->orWhereRaw('LOWER(CAST(properties AS CHAR)) LIKE ?', [$like])
+                ->orWhereIn('causer_id', User::where('name', 'like', $like)->select('id'));
+            if (ctype_digit($term)) {
+                $q->orWhere('subject_id', (int) $term);
+            }
+        });
+    }
+
+    if ($request->filled('level')) {
+        $this->applyLogLevel($query, (string) $request->level);
+    }
+
+    $perPage = min(max((int) $request->input('per_page', 16), 1), 500);
+    // id follows creation order and needs no sort, unlike created_at.
+    $logs = $query->orderByDesc('id')->paginate($perPage);
+
+    return response()->json([
+        'data' => collect($logs->items())->map(fn (Activity $log) => [
+            'id' => $log->id,
+            'description' => $log->description,
+            'event' => $log->event,
+            'log_name' => $log->log_name,
+            'subject_type' => $log->subject_type,
+            'subject_id' => $log->subject_id,
+            'subject_name' => $this->logSubjectName($log),
+            'causer_id' => $log->causer_id,
+            'causer' => $log->causer ? ['id' => $log->causer->id, 'name' => $log->causer->name] : null,
+            'properties' => $log->properties,
+            'created_at' => $log->created_at,
+        ])->all(),
+        'current_page' => $logs->currentPage(),
+        'last_page' => $logs->lastPage(),
+        'total' => $logs->total(),
+    ]);
+}
+
+/** Options for the System Logs filters — replaces loading every user's full profile. */
+public function logFilters()
+{
+    $userMorph = (new User)->getMorphClass();
+
+    return response()->json([
+        'modules' => Activity::query()->whereNotNull('subject_type')->distinct()->orderBy('subject_type')->pluck('subject_type'),
+        'users' => User::whereIn('id', Activity::query()->where('causer_type', $userMorph)->select('causer_id'))
+            ->orderBy('name')
+            ->get(['id', 'name']),
+        'roles' => DB::table('roles')->orderBy('name')->pluck('name'),
+    ]);
+}
+
+private function logSubjectName(Activity $log): string
+{
+    $subject = $log->subject;
+    if (! $subject) {
+        return '#' . $log->subject_id;
+    }
+
+    if ($subject->relationLoaded('area') && $subject->getRelation('area')?->name) {
+        return $subject->getRelation('area')->name;
+    }
+
+    return $subject->name
+        ?: $subject->title
+        ?: $subject->first_name
+        ?: $subject->deal_name
+        ?: $subject->full_name
+        ?: $subject->email
+        ?: '#' . $log->subject_id;
+}
+
+/** Same words and priority as inferLevel() on the logs page: error, warning, success, then info. */
+private function applyLogLevel($query, string $level): void
+{
+    $text = "LOWER(CONCAT(COALESCE(description, ''), ' ', COALESCE(CAST(properties AS CHAR), '')))";
+    $matchesAny = fn (array $words) => '(' . implode(' OR ', array_map(fn ($w) => "{$text} LIKE '%{$w}%'", $words)) . ')';
+
+    $error = $matchesAny(['error', 'fail', 'exception']);
+    $warning = $matchesAny(['warn']);
+    $success = $matchesAny(['create', 'updated', 'saved', 'success']);
+
+    match ($level) {
+        'error' => $query->whereRaw($error),
+        'warning' => $query->whereRaw("NOT {$error} AND {$warning}"),
+        'success' => $query->whereRaw("NOT {$error} AND NOT {$warning} AND {$success}"),
+        'info' => $query->whereRaw("NOT {$error} AND NOT {$warning} AND NOT {$success}"),
+        default => null,
+    };
+}
+
+public function getStats(Request $request)
 {
     [$rangeFrom, $rangeTo] = $this->resolveDashboardDateRange($request);
 

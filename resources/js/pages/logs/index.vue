@@ -91,9 +91,7 @@
         <section class="logs-main card-surface">
           <div class="table-toolbar">
             <div class="table-stats">
-              <span>{{ filteredLogs.length }} matching logs</span>
-              <span>•</span>
-              <span>{{ logs.length }} total</span>
+              <span>{{ total }} matching logs</span>
             </div>
             <div class="table-legend">
               <span class="legend-dot info"></span>Info
@@ -104,7 +102,7 @@
           </div>
 
           <div v-if="loading" class="state-view">Loading logs...</div>
-          <div v-else-if="paginatedLogs.length === 0" class="state-view">No logs match the current filters.</div>
+          <div v-else-if="logs.length === 0" class="state-view">No logs match the current filters.</div>
 
           <div v-else class="table-wrap">
             <table class="logs-table">
@@ -120,7 +118,7 @@
                 </tr>
               </thead>
               <tbody>
-                <template v-for="log in paginatedLogs" :key="log.id">
+                <template v-for="log in logs" :key="log.id">
                   <tr
                     class="log-row"
                     :class="`row-${inferLevel(log)}`"
@@ -222,8 +220,14 @@ export default {
   data() {
     return {
       logs: [],
+      total: 0,
+      totalPages: 1,
       users: [],
+      modules: [],
+      roleOptions: [],
       loading: false,
+      fetchToken: 0,
+      searchTimer: null,
       searchQuery: '',
       autoRefresh: false,
       refreshTimer: null,
@@ -255,19 +259,11 @@ export default {
         })),
       ]
     },
-    modelOptions() {
-      const set = new Set(this.logs.map((log) => this.getModelName(log.subject_type)).filter(Boolean))
-      return Array.from(set).sort((a, b) => a.localeCompare(b))
-    },
     modelSelectOptions() {
       return [
         { value: '', label: 'All Modules' },
-        ...this.modelOptions.map((model) => ({ value: model, label: model })),
+        ...this.modules.map((type) => ({ value: type, label: this.getModelName(type) })),
       ]
-    },
-    roleOptions() {
-      const set = new Set(this.users.map((u) => (u.role || '').trim()).filter(Boolean))
-      return Array.from(set).sort((a, b) => a.localeCompare(b))
     },
     userSelectOptions() {
       return [
@@ -278,7 +274,7 @@ export default {
     activeFilterChips() {
       const chips = []
       if (this.filters.level) chips.push({ key: `level-${this.filters.level}`, type: 'level', value: this.filters.level, label: `Level: ${this.filters.level}` })
-      if (this.filters.model) chips.push({ key: `model-${this.filters.model}`, type: 'model', value: this.filters.model, label: `Module: ${this.filters.model}` })
+      if (this.filters.model) chips.push({ key: `model-${this.filters.model}`, type: 'model', value: this.filters.model, label: `Module: ${this.getModelName(this.filters.model)}` })
       if (this.filters.user_id) {
         const user = this.users.find((u) => String(u.id) === String(this.filters.user_id))
         chips.push({ key: `user-${this.filters.user_id}`, type: 'user_id', value: this.filters.user_id, label: `User: ${user?.name || this.filters.user_id}` })
@@ -287,40 +283,6 @@ export default {
       if (this.filters.date_to) chips.push({ key: `to-${this.filters.date_to}`, type: 'date_to', value: this.filters.date_to, label: `To: ${this.filters.date_to}` })
       this.filters.roles.forEach((role) => chips.push({ key: `role-${role}`, type: 'role', value: role, label: `Role: ${role}` }))
       return chips
-    },
-    filteredLogs() {
-      const query = this.searchQuery.toLowerCase()
-      return this.logs.filter((log) => {
-        if (this.filters.model && !this.getModelName(log.subject_type).toLowerCase().includes(this.filters.model)) {
-          return false
-        }
-        if (this.filters.level && this.inferLevel(log) !== this.filters.level) {
-          return false
-        }
-        if (this.filters.user_id && String(log.causer_id || '') !== String(this.filters.user_id)) {
-          return false
-        }
-        if (this.filters.roles.length) {
-          const currentRole = (this.userRole(log.causer_id) || '').toLowerCase()
-          if (!this.filters.roles.map((r) => r.toLowerCase()).includes(currentRole)) return false
-        }
-        if (this.filters.date_from && log.created_at && new Date(log.created_at) < new Date(this.filters.date_from)) {
-          return false
-        }
-        if (this.filters.date_to && log.created_at && new Date(log.created_at) > new Date(`${this.filters.date_to}T23:59:59`)) {
-          return false
-        }
-        if (!query) return true
-        const blob = JSON.stringify(log).toLowerCase()
-        return blob.includes(query)
-      })
-    },
-    totalPages() {
-      return Math.max(1, Math.ceil(this.filteredLogs.length / this.perPage))
-    },
-    paginatedLogs() {
-      const start = (this.page - 1) * this.perPage
-      return this.filteredLogs.slice(start, start + this.perPage)
     },
     visiblePages() {
       const start = Math.max(1, this.page - 2)
@@ -339,45 +301,85 @@ export default {
         this.refreshTimer = null
       }
     },
-    filteredLogs() {
-      if (this.page > this.totalPages) this.page = 1
+    page() {
+      this.fetchLogs()
     },
     filters: {
       deep: true,
       handler() {
-        this.page = 1
+        this.reloadFromFirstPage()
       },
     },
     searchQuery() {
-      this.page = 1
+      window.clearTimeout(this.searchTimer)
+      this.searchTimer = window.setTimeout(() => this.reloadFromFirstPage(), 350)
     },
   },
   mounted() {
-    this.fetchUsers()
+    this.fetchFilterOptions()
     this.fetchLogs()
   },
   beforeUnmount() {
     if (this.refreshTimer) window.clearInterval(this.refreshTimer)
+    window.clearTimeout(this.searchTimer)
   },
   methods: {
+    logParams(page, perPage) {
+      const params = { page, per_page: perPage }
+      if (this.searchQuery) params.search = this.searchQuery
+      if (this.filters.model) params.subject_type = this.filters.model
+      if (this.filters.level) params.level = this.filters.level
+      if (this.filters.user_id) params.user_id = this.filters.user_id
+      if (this.filters.date_from) params.date_from = this.filters.date_from
+      if (this.filters.date_to) params.date_to = this.filters.date_to
+      if (this.filters.roles.length) params.roles = this.filters.roles
+      return params
+    },
+    reloadFromFirstPage() {
+      // Changing page fires the page watcher, which fetches.
+      if (this.page !== 1) this.page = 1
+      else this.fetchLogs()
+    },
     async fetchLogs() {
+      const token = ++this.fetchToken
       this.loading = true
       try {
-        const res = await api.get('/logs')
-        this.logs = Array.isArray(res.data) ? res.data : (res.data.data || [])
+        const res = await api.get('/logs', { params: this.logParams(this.page, this.perPage) })
+        if (token !== this.fetchToken) return
+        this.logs = res.data.data || []
+        this.total = res.data.total || 0
+        this.totalPages = res.data.last_page || 1
       } catch (e) {
+        if (token !== this.fetchToken) return
         this.logs = []
+        this.total = 0
+        this.totalPages = 1
       } finally {
-        this.loading = false
+        if (token === this.fetchToken) this.loading = false
       }
     },
-    async fetchUsers() {
+    async fetchFilterOptions() {
       try {
-        const res = await api.get('/users')
-        this.users = res.data.data || res.data || []
+        const res = await api.get('/logs/filters')
+        this.users = res.data.users || []
+        this.modules = res.data.modules || []
+        this.roleOptions = res.data.roles || []
       } catch {
         this.users = []
       }
+    },
+    // Exports cover every log matching the filters, not just the page on screen.
+    async fetchAllMatchingLogs() {
+      const all = []
+      let page = 1
+      let lastPage = 1
+      do {
+        const res = await api.get('/logs', { params: this.logParams(page, 500) })
+        all.push(...(res.data.data || []))
+        lastPage = res.data.last_page || 1
+        page += 1
+      } while (page <= lastPage)
+      return all
     },
     refreshNow() {
       this.fetchLogs()
@@ -418,25 +420,7 @@ export default {
       return this.getAttributes(log)?.[field]
     },
      getSubjectName(log) {
-          const subject = log.subject
-        
-          if (!subject) return `#${log.subject_id}`
-        
-          // لو Listing وعنده area
-          if (subject.area?.name) {
-            return `${subject.area.name}`
-          }
-        
-          return (
-            subject.name ||
-            subject.title ||
-             subject.first_name ||
-            subject.deal_name ||
-            subject.full_name ||
-            
-            subject.email ||
-            `#${log.subject_id}`
-          )
+          return log.subject_name || `#${log.subject_id}`
         },
     getOldValue(log, field) {
       return this.getOld(log)?.[field]
@@ -457,10 +441,6 @@ export default {
     },
     getLogMessage(log) {
       return log?.properties?.message || log?.description || log?.event || 'No message available.'
-    },
-    userRole(userId) {
-      const user = this.users.find((u) => String(u.id) === String(userId))
-      return user?.role || user?.user_type || ''
     },
     getMeta(log, key) {
       const meta = log?.properties?.meta || log?.properties?.context || {}
@@ -508,8 +488,9 @@ export default {
         await navigator.clipboard.writeText(this.prettyLog(log))
       } catch {}
     },
-    exportJson() {
-      const blob = new Blob([JSON.stringify(this.filteredLogs, null, 2)], { type: 'application/json' })
+    async exportJson() {
+      const logs = await this.fetchAllMatchingLogs()
+      const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -517,8 +498,9 @@ export default {
       a.click()
       URL.revokeObjectURL(url)
     },
-    exportCsv() {
-      const rows = this.filteredLogs.map((log) => ({
+    async exportCsv() {
+      const logs = await this.fetchAllMatchingLogs()
+      const rows = logs.map((log) => ({
         id: log.id,
         timestamp: log.created_at,
         level: this.inferLevel(log),
