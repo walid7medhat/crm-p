@@ -1103,7 +1103,10 @@ const initializeForm = () => {
         budget_from: budgetFrom,
         budget_to: budgetTo,
         currency: props.lead?.currency || 'AED',
-        bedrooms: props.lead?.bedrooms || null,
+        // API sends Studio as 'studio' (stored as 0) — map it to the select's Studio option.
+        bedrooms: String(props.lead?.bedrooms ?? '').toLowerCase() === 'studio' || props.lead?.bedrooms === 0
+            ? '0'
+            : (props.lead?.bedrooms || null),
         purpose_buying: props.lead?.purpose_buying || null,
         lead_source: props.lead?.lead_source || '',
         source_information: props.lead?.source_information || '',
@@ -1119,7 +1122,17 @@ const initializeForm = () => {
     }
     selectedPerson.value = props.lead?.responsible_person || null
     syncBudgetDisplayFields()
+    // Baseline for "what changed" on save. stage_id compares with the lead's real stage,
+    // so opening the form for another stage (props.stageId) still sends the move.
+    initialForm.value = { ...form.value, stage_id: props.lead?.stage?.id ?? null }
 }
+
+// Values as loaded — save sends (and the API validates) only fields that differ from these,
+// so editing one section isn't blocked by other data on the lead.
+const initialForm = ref({})
+const sameValue = (a, b) => String(a ?? '') === String(b ?? '')
+const changedFields = () =>
+    Object.keys(form.value).filter((key) => !sameValue(form.value[key], initialForm.value[key]))
 
 const EDIT_DRAFT_FIELDS = [
     'lead_name', 'salutation', 'first_name', 'last_name', 'work_phone', 'email', 'secondary_email', 'whatsapp_username', 
@@ -1491,7 +1504,15 @@ const handleSave = async () => {
         errorMessage.value = ''
         showPhoneFieldErrors.value = true
         validationErrors.value = {}
-          const budgetError = validateBudget()
+        const changed = changedFields()
+        // Budget lives in Client Required Info: check it whenever that section is open (even if
+        // unchanged, so a bad saved range is caught there) — not when editing another section.
+        const budgetInView = !props.showOnlySection || props.showOnlySection === 'clientRequirement'
+        if (budgetInView) {
+            ['budget_from', 'budget_to'].forEach((key) => { if (!changed.includes(key)) changed.push(key) })
+        }
+        const budgetChanged = changed.includes('budget_from') || changed.includes('budget_to')
+        const budgetError = budgetChanged ? validateBudget() : null
         if (budgetError) {
             validationErrors.value.budget = [budgetError]
             if (window.$showNotification) {
@@ -1499,31 +1520,31 @@ const handleSave = async () => {
             }
             return false
         }
-        form.value.work_phone = normalizePhoneValue(form.value.work_phone)
-        form.value.work_phone_2 = normalizePhoneValue(form.value.work_phone_2)
-        if (form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
+        // Phones are only checked when edited — a saved number in an old format doesn't block other edits.
+        if (changed.includes('work_phone')) form.value.work_phone = normalizePhoneValue(form.value.work_phone)
+        if (changed.includes('work_phone_2')) form.value.work_phone_2 = normalizePhoneValue(form.value.work_phone_2)
+        if (changed.includes('work_phone') && form.value.work_phone && !isNonEmptyPhoneValid(form.value.work_phone)) {
             validationErrors.value.work_phone = ['Enter a valid phone number']
             if (window.$showNotification) {
                 window.$showNotification('Primary phone is not valid', 'warning')
             }
             return false
         }
-        if (form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
+        if (changed.includes('work_phone_2') && form.value.work_phone_2 && !isNonEmptyPhoneValid(form.value.work_phone_2)) {
             validationErrors.value.work_phone_2 = ['Enter a valid phone number']
             if (window.$showNotification) {
                 window.$showNotification('Secondary phone is not valid', 'warning')
             }
             return false
         }
-        const payload = {
-            ...form.value,
-            responsible_person_id: form.value.responsible_person_id,
-            stage_id: form.value.stage_id
-        }
+        // Only the fields that changed — the API keeps every other saved value as it is.
+        const payload = Object.fromEntries(changed.map((key) => [key, form.value[key]]))
         // The leads column is why_lost_lead — "lost_reason" alone was dropped by the API,
         // so editing a Lost lead's reason never saved.
-        payload.why_lost_lead = form.value.lost_reason || null
-        delete payload.lost_reason
+        if ('lost_reason' in payload) {
+            payload.why_lost_lead = form.value.lost_reason || null
+            delete payload.lost_reason
+        }
 
         console.log('Updating lead with data:', payload)
         const response = await api.put(`/leads/${props.lead.id}`, payload)
@@ -1536,7 +1557,8 @@ const handleSave = async () => {
         }
 
         leadDraft.acceptCurrent()
-        
+        initialForm.value = { ...form.value }
+
         // Emit the updated lead data to parent component
         emit('updated', response.data)
         

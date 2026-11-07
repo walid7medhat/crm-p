@@ -20,6 +20,11 @@ class LeadRequest extends FormRequest
         } elseif ($this->has('website') && $link === '') {
             $this->merge(['website' => null]);
         }
+
+        // Studio is stored as 0, but LeadResource returns it as 'studio' and forms send it back.
+        if (strtolower(trim((string) $this->input('bedrooms', ''))) === 'studio') {
+            $this->merge(['bedrooms' => 0]);
+        }
     }
 
     public function rules(): array
@@ -129,6 +134,12 @@ class LeadRequest extends FormRequest
             // may change the phone at all is still decided there.)
             $rules['first_name'] = 'nullable|string|max:255';
             $rules['work_phone'] = ['nullable', 'max:20'];
+
+            // EditLead sends only the fields that changed, so a field it leaves out keeps
+            // its saved value — still required (can't be emptied) when it is sent.
+            $rules['lead_name'] = 'sometimes|required|string|max:255';
+            $rules['stage_id'] = 'sometimes|required|exists:stages,id';
+            $rules['lead_source'] = 'sometimes|required|string|max:255';
         }
 
         // Creating: branch_admin and listing-team sales may leave the client's first name
