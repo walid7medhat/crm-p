@@ -66,6 +66,8 @@ const baseRoutes = [
   { path: '/lead-reports', component: () => import('./pages/lead-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
+  // Owner Financial Intelligence: super admins + user #30 (OwnerFinancialReport::canView).
+  { path: '/owner-financial-intelligence', component: () => import('./pages/owner-financial-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
   { path: '/lead-export', component: () => import('./pages/lead-export.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   // Daily Leads Report: super_admin and branch_admin (their branch only — scoped server-side).
   { path: '/daily-leads-report', component: () => import('./pages/daily-leads-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowBranchAdmin: true } },

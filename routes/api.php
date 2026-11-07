@@ -70,6 +70,7 @@ use App\Http\Controllers\Api\CityInvestmentSettingsController;
 use App\Http\Controllers\Api\AbuDhabiBenchmarkController;
 use App\Http\Controllers\Api\AdminEmailController;
 use App\Http\Controllers\Api\AgentPerformanceReportController;
+use App\Http\Controllers\Api\OwnerFinancialReportController;
 use App\Http\Controllers\Api\AltCRMLeadController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\LeadImportController;
@@ -592,6 +593,14 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('leads/integration', [LeadController::class,'storeIntegration']);
 
 Route::middleware(['jwt.auth'])->group(function () {
+    // Owner Financial Intelligence: super_admin + user #30 (checked in the controller).
+    Route::prefix('reports/owner-financial')->group(function () {
+        Route::get('/options', [OwnerFinancialReportController::class, 'options']);
+        Route::get('/', [OwnerFinancialReportController::class, 'index']);
+        Route::get('/export', [OwnerFinancialReportController::class, 'export']);
+        Route::get('/deals/{deal}', [OwnerFinancialReportController::class, 'show'])->whereNumber('deal');
+    });
+
     // Autocomplete: debounce ~250ms; allow burst typing without 429. Still below the outer 300/min group.
     Route::get('/smart-search', [SmartSearchController::class, 'index'])->middleware('throttle:120,1');
       Route::get('/my-clients', [LeadController::class, 'getMyClients']);

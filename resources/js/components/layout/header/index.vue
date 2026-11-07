@@ -1363,6 +1363,8 @@ const mainMenuItems = computed(() => {
   // ReportController::leadPoolAssignmentsReport).
   if (isSuperAdmin.value || Number(user.value?.id) === 30) {
     items.push({ path: '/lead-pool-report', label: 'Lead Pool Assignments', iconSrc: insightsIcon.value });
+    // Owner Financial Intelligence: same audience (OwnerFinancialReport::canView).
+    items.push({ path: '/owner-financial-intelligence', label: 'Owner Financial Intelligence', iconSrc: dealsIcon.value });
   }
 
   if (isAdmin.value) {
