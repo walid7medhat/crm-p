@@ -312,7 +312,14 @@
             <i class="ri-equalizer-line"></i>
           </button>
           <div v-if="showMoreFilters" class="listing-more-filter-popover" @click.stop>
-            <div class="listing-pop-title">More Filters</div>
+            <!-- Pinned header: Reset / Done stay visible while the filters scroll -->
+            <div class="listing-more-filter-head">
+              <div class="listing-pop-title">More Filters</div>
+              <div class="listing-pop-actions">
+                <button type="button" class="btn btn-outline-secondary" @click="resetFilters">Reset</button>
+                <button type="button" class="btn btn-primary" @click="showMoreFilters = false; applyFilters()">Done</button>
+              </div>
+            </div>
 
             <div class="listing-filter-section">
               <label class="listing-pop-label">Reference Number</label>
@@ -433,11 +440,6 @@
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div class="listing-pop-actions">
-              <button type="button" class="btn btn-outline-secondary" @click="resetFilters">Reset</button>
-              <button type="button" class="btn btn-primary" @click="showMoreFilters = false; applyFilters()">Done</button>
             </div>
           </div>
         </div>
@@ -4483,6 +4485,37 @@ const featuresButtonLabel = computed(() => {
       height: 465px;
     overflow-y: scroll;
 }
+/* Title + Reset/Done pinned to the top of the scrolling popover (cancels its 16px padding). */
+.listing-more-filter-head {
+  position: sticky;
+  top: -16px;
+  z-index: 3;
+  margin: -16px -16px 12px;
+  padding: 14px 16px 10px;
+  background: #fff;
+  border-bottom: 1px solid #eef1f6;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.listing-more-filter-head .listing-pop-title {
+  margin-bottom: 0 !important;
+}
+
+.listing-more-filter-head .listing-pop-actions {
+  margin-top: 0;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.listing-more-filter-head .listing-pop-actions .btn {
+  width: auto;
+  padding: 4px 16px;
+}
+
 .listing-filter-wrap .listing-more-filter-popover::-webkit-scrollbar {
   width: 6px;
 }

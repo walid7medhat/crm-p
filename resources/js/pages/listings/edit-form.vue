@@ -815,15 +815,6 @@
                 <i class="fas fa-eye me-1"></i>
                 Preview
               </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                @click="handleSubmit('draft')"
-                :disabled="isSubmitting"
-              >
-                <i class="fas fa-save me-1"></i>
-                Save
-              </button>
             </div>
           </div>
         </div>

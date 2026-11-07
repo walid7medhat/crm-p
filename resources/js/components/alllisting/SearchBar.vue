@@ -4,6 +4,7 @@
     :initial-filters="initialFilters"
     :result-count="resultCount"
     :show-status-tabs="showStatusTabs"
+    :show-rejected-tab="showRejectedTab"
     :active-status="activeStatus"
     @filters-changed="(filters, meta) => $emit('filters-changed', filters, meta)"
     @status-changed="$emit('status-changed', $event)"
@@ -26,6 +27,10 @@ defineProps({
     default: null,
   },
   showStatusTabs: {
+    type: Boolean,
+    default: false,
+  },
+  showRejectedTab: {
     type: Boolean,
     default: false,
   },

@@ -10,6 +10,7 @@
           :initial-filters="initialFilters"
           :result-count="pagination?.total || properties.length"
           :show-status-tabs="isAdmin"
+          :show-rejected-tab="isSuperAdmin"
           :active-status="activeStatus"
         />
       </div>
@@ -178,6 +179,7 @@ export default {
     const isAdmin = computed(() => {
       return userRole.value === 'super_admin' || userRole.value === 'admin';
     });
+    const isSuperAdmin = computed(() => userRole.value === 'super_admin');
 
     const defaultImages = [property1, property2, property3, property4];
 
@@ -300,6 +302,9 @@ export default {
            return properties.value.filter(property => property.status === 'rented');
         case 'draft':
           return properties.value.filter(property => property.status === 'draft');
+        case 'rejected':
+          // Already filtered by the API (`rejected` param).
+          return properties.value;
         case 'off_plan':
           return properties.value.filter(property => property.is_off_plan && property.is_off_plan === 'Yes');
         default:
@@ -439,6 +444,9 @@ export default {
               break;
             case 'draft':
               params.status = 'draft';
+              break;
+            case 'rejected':
+              params.rejected = true;
               break;
             case 'off_plan':
               params.status = 'off_plan';
@@ -994,6 +1002,7 @@ const decodeFiltersFromQuery = async (query) => {
       pagination,
       activeStatus,
       isAdmin,
+      isSuperAdmin,
       showingFrom,
       showingTo,
       displayedPages,
