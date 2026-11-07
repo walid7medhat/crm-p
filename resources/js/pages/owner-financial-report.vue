@@ -12,11 +12,8 @@
         </div>
       </div>
       <div class="ofr-header-meta">
-        <span class="ofr-scope-chip">
-          <iconify-icon icon="lucide:filter" width="13" height="13" />
-          {{ applied.deal_status === 'all' ? 'All deals' : 'Closed deals only' }}
-        </span>
-        <span class="ofr-updated" v-if="lastLoaded">Updated {{ lastLoaded }}</span>
+        <span class="ofr-scope-chip">{{ applied.deal_status === 'all' ? 'All deals' : 'Closed deals only' }}</span>
+        <span v-if="lastLoaded" class="ofr-updated">Updated {{ lastLoaded }}</span>
       </div>
     </header>
 
@@ -87,14 +84,173 @@
     </div>
 
     <div class="ofr-body">
-      <!-- Filters -->
+      <!-- Deals table (left) -->
+      <section class="ofr-panel ofr-deals">
+        <div class="ofr-deals-head">
+          <h2 class="ofr-h2">Deals Overview</h2>
+          <div class="ofr-deals-tools">
+            <span class="ofr-total">{{ pagination.total.toLocaleString('en-US') }} deals</span>
+            <v-select
+              v-model="perPage"
+              :options="PER_PAGE_OPTIONS"
+              :reduce="(o) => o.value"
+              label="label"
+              :clearable="false"
+              :searchable="false"
+              :append-to-body="true"
+              :calculate-position="placeMenu"
+              class="ofr-vs ofr-vs--sm"
+            />
+            <button
+              type="button"
+              class="ofr-btn ofr-btn--export"
+              :disabled="exporting || !pagination.total"
+              :title="dirty ? 'Exports the applied filters (press Apply Filters first to include your changes)' : 'Download every deal in this view as Excel'"
+              @click="exportExcel"
+            >
+              <iconify-icon :icon="exporting ? 'lucide:loader-2' : 'lucide:download'" :class="{ 'ofr-spin': exporting }" width="15" height="15" />
+              {{ exporting ? 'Exporting…' : 'Export Excel' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="error" class="ofr-error">
+          <iconify-icon icon="lucide:alert-circle" width="16" height="16" />
+          <span>{{ error }}</span>
+          <button type="button" class="ofr-link" @click="fetchReport">Retry</button>
+        </div>
+
+        <div class="ofr-table-shell">
+          <div ref="tableWrapRef" class="ofr-table-wrap" :class="{ 'is-loading': loading }" @scroll="updateScrollArrows">
+            <table class="ofr-table">
+              <thead>
+                <tr>
+                  <th v-for="col in columns" :key="col.key" :class="[col.num && 'ofr-num', col.key === 'net_revenue' && 'ofr-col-net']">
+                    <button v-if="col.sort" type="button" class="ofr-sort" :class="{ 'is-active': sort === col.sort }" @click="toggleSort(col.sort)">
+                      <span>{{ col.label }}</span>
+                      <iconify-icon :icon="sortIcon(col.sort)" width="12" height="12" />
+                    </button>
+                    <template v-else>{{ col.label }}</template>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!loading && !rows.length">
+                  <td :colspan="columns.length" class="ofr-empty">
+                    <iconify-icon icon="lucide:search-x" width="22" height="22" />
+                    <span>No deals match these filters.</span>
+                  </td>
+                </tr>
+                <tr
+                  v-for="row in rows"
+                  :key="row.id"
+                  class="ofr-row"
+                  :class="{ 'is-incomplete': row.is_incomplete, 'is-selected': openDealId === row.id }"
+                  tabindex="0"
+                  @click="openDeal(row.id)"
+                  @keydown.enter="openDeal(row.id)"
+                >
+                  <td>
+                    <button
+                      type="button"
+                      class="ofr-cell-link ofr-trunc ofr-trunc--deal"
+                      :title="row.deal_number || `#${row.id}`"
+                      @click.stop="showDeal(row)"
+                    >{{ row.deal_number || `#${row.id}` }}</button>
+                  </td>
+                  <td><span class="ofr-trunc ofr-trunc--property ofr-property" :title="row.property || ''">{{ row.property || '—' }}</span></td>
+                  <td>
+                    <span class="ofr-trunc" :title="row.client?.name || ''">{{ row.client?.name || '—' }}</span>
+                    <span v-if="row.client?.phone" class="ofr-sub">{{ row.client.phone }}</span>
+                  </td>
+                  <td><span class="ofr-trunc" :title="row.agent?.name || ''">{{ row.agent?.name || '—' }}</span></td>
+                  <td class="ofr-nowrap">{{ row.branch || '—' }}</td>
+                  <td><span class="ofr-trunc" :title="row.source || ''">{{ row.source || '—' }}</span></td>
+                  <td class="ofr-nowrap">
+                    {{ formatDate(row.deal_date) }}
+                    <span v-if="!row.deal_date_is_won" class="ofr-sub" title="Won date not recorded; showing the date the deal was created">created</span>
+                  </td>
+                  <td class="ofr-num" :class="{ 'ofr-missing': row.deal_amount === null }">{{ row.deal_amount === null ? 'Missing' : aedShort(row.deal_amount) }}</td>
+                  <td class="ofr-num" :class="{ 'ofr-missing': row.gross_commission === null }">{{ row.gross_commission === null ? 'Missing' : aedShort(row.gross_commission) }}</td>
+                  <td class="ofr-num">
+                    {{ aedShort(row.agent_commission) }}
+                    <span
+                      v-if="row.agent_commission !== null"
+                      class="ofr-sub"
+                      :title="row.commission_source === 'breakdown' ? 'From the commission breakdown saved on the deal' : 'Agent commission % from the agent\'s user profile'"
+                    >{{ row.commission_source === 'breakdown' ? 'Deal breakdown' : `${row.agent_rate}% · profile` }}</span>
+                  </td>
+                  <td class="ofr-num">{{ aedShort(row.external_commission) }}</td>
+                  <td class="ofr-num ofr-col-net">
+                    <span v-if="row.is_incomplete" class="ofr-pill" :title="row.issues.map((i) => i.label).join('\n')">
+                      <iconify-icon icon="lucide:triangle-alert" width="12" height="12" />
+                      Incomplete
+                    </span>
+                    <strong v-else>{{ aedShort(row.net_revenue) }}</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-if="loading" class="ofr-loading"><span class="ofr-spinner" /> Loading…</div>
+          </div>
+
+          <!-- Hover zones to scroll the table sideways (same as the leads list). -->
+          <div
+            v-show="showLeftZone"
+            class="ofr-nav-zone ofr-nav-zone--left"
+            title="Move left"
+            aria-label="Move left"
+            @mouseenter="startScroll(-1)"
+            @mouseleave="stopScroll"
+          >
+            <span class="ofr-nav-arrow ofr-nav-arrow--left"><iconify-icon icon="lucide:chevron-left" class="ofr-nav-arrow-icon" /></span>
+          </div>
+          <div
+            v-show="showRightZone"
+            class="ofr-nav-zone ofr-nav-zone--right"
+            title="Move right"
+            aria-label="Move right"
+            @mouseenter="startScroll(1)"
+            @mouseleave="stopScroll"
+          >
+            <span class="ofr-nav-arrow ofr-nav-arrow--right"><iconify-icon icon="lucide:chevron-right" class="ofr-nav-arrow-icon" /></span>
+          </div>
+        </div>
+
+        <div v-if="pagination.total" class="ofr-pager">
+          <span class="ofr-pager-info">Showing {{ rangeStart }}–{{ rangeEnd }} of {{ pagination.total.toLocaleString('en-US') }}</span>
+          <div class="ofr-pager-controls">
+            <button type="button" class="ofr-page-btn" :disabled="page <= 1 || loading" aria-label="Previous page" @click="goTo(page - 1)">
+              <iconify-icon icon="lucide:chevron-left" width="15" height="15" />
+            </button>
+            <button
+              v-for="p in pageList"
+              :key="p.key"
+              type="button"
+              class="ofr-page-btn"
+              :class="{ 'is-on': p.n === page }"
+              :disabled="p.gap || loading"
+              @click="!p.gap && goTo(p.n)"
+            >{{ p.gap ? '…' : p.n }}</button>
+            <button type="button" class="ofr-page-btn" :disabled="page >= pagination.last_page || loading" aria-label="Next page" @click="goTo(page + 1)">
+              <iconify-icon icon="lucide:chevron-right" width="15" height="15" />
+            </button>
+          </div>
+        </div>
+
+        <p class="ofr-footnote">
+          Collected amount, outstanding amount and expenses are not shown because the CRM has no payment ledger.
+          Agent commission comes from the commission breakdown saved on the deal; when there is none, from the
+          agent's commission % on their user profile (same as the profile's Sales Performance). Deals missing amount,
+          rate or agent % are left out of the agent, external and net totals.
+        </p>
+      </section>
+
+      <!-- Filters (left, fixed; two fields per row) -->
       <aside class="ofr-panel ofr-filters" :class="{ 'is-open': filtersOpen }">
         <button type="button" class="ofr-panel-head" @click="filtersOpen = !filtersOpen">
           <span>Filters &amp; Search</span>
-          <span class="ofr-panel-head-right">
-            <span v-if="activeCount" class="ofr-count">{{ activeCount }}</span>
-            <iconify-icon icon="lucide:sliders-horizontal" width="17" height="17" />
-          </span>
+          <span v-if="activeCount" class="ofr-count">{{ activeCount }}</span>
         </button>
 
         <form class="ofr-filter-form" @submit.prevent="applyFilters">
@@ -106,9 +262,9 @@
               :reduce="(a) => String(a.id)"
               label="name"
               placeholder="All agents"
-              :clearable="true"
               :append-to-body="true"
-              class="ofr-agent-select"
+              :calculate-position="placeMenu"
+              class="ofr-vs"
             >
               <template #option="a">
                 <div class="ofr-agent-opt">
@@ -135,57 +291,67 @@
           </label>
 
           <div class="ofr-field">
-            <span>Deal Date Range</span>
-            <div class="ofr-pair">
-              <input v-model="draft.date_from" type="date" class="ofr-input" aria-label="From date" />
-              <input v-model="draft.date_to" type="date" class="ofr-input" aria-label="To date" />
-            </div>
-          </div>
-
-          <div class="ofr-field">
             <span>Lead Source</span>
-            <div class="ofr-chips">
-              <button
-                v-for="s in options.sources"
-                :key="s"
-                type="button"
-                class="ofr-chip"
-                :class="{ 'is-on': draft.source.includes(s) }"
-                @click="toggleSource(s)"
-              >
-                <iconify-icon v-if="draft.source.includes(s)" icon="lucide:check" width="12" height="12" />
-                {{ s }}
-              </button>
-              <span v-if="!options.sources.length" class="ofr-muted">No sources</span>
+            <v-select
+              v-model="draft.source"
+              :options="options.sources"
+              multiple
+              :close-on-select="false"
+              placeholder="All sources"
+              :append-to-body="true"
+              :calculate-position="placeMenu"
+              class="ofr-vs ofr-vs--multi"
+            >
+              <template #no-options>No sources</template>
+            </v-select>
+          </div>
+
+          <!-- Deal date: From and To on one row -->
+          <div class="ofr-field ofr-field--full">
+            <span>Deal Date</span>
+            <div class="ofr-pair">
+              <AdvancedDatePicker v-model="draft.date_from" date-only placeholder="From" class="ofr-date" />
+              <AdvancedDatePicker v-model="draft.date_to" date-only placeholder="To" class="ofr-date" />
             </div>
           </div>
 
-          <div class="ofr-pair">
-            <label class="ofr-field">
-              <span>Branch</span>
-              <select v-model="draft.branch_id" class="ofr-input">
-                <option value="">All</option>
-                <option v-for="b in options.branches" :key="b.id" :value="String(b.id)">{{ b.name }}</option>
-              </select>
-            </label>
-            <label class="ofr-field">
-              <span>Deal Type</span>
-              <select v-model="draft.deal_type" class="ofr-input">
-                <option value="">All</option>
-                <option value="sale">Sale</option>
-                <option v-for="t in options.deal_types" :key="t.value" :value="t.value">{{ t.label }}</option>
-              </select>
-            </label>
+          <div class="ofr-field">
+            <span>Branch</span>
+            <v-select
+              v-model="draft.branch_id"
+              :options="branchOptions"
+              :reduce="(o) => o.value"
+              label="label"
+              placeholder="All branches"
+              :searchable="false"
+              :append-to-body="true"
+              :calculate-position="placeMenu"
+              class="ofr-vs"
+            />
+          </div>
+          <div class="ofr-field">
+            <span>Deal Type</span>
+            <v-select
+              v-model="draft.deal_type"
+              :options="dealTypeOptions"
+              :reduce="(o) => o.value"
+              label="label"
+              placeholder="All types"
+              :searchable="false"
+              :append-to-body="true"
+              :calculate-position="placeMenu"
+              class="ofr-vs"
+            />
           </div>
 
-          <div class="ofr-field">
+          <div class="ofr-field ofr-field--full">
             <span>Deal Amount (AED)</span>
             <div class="ofr-pair">
               <input v-model="draft.min_amount" type="number" min="0" class="ofr-input" placeholder="Min" />
               <input v-model="draft.max_amount" type="number" min="0" class="ofr-input" placeholder="Max" />
             </div>
           </div>
-          <div class="ofr-field">
+          <div class="ofr-field ofr-field--full">
             <span>Gross Commission (AED)</span>
             <div class="ofr-pair">
               <input v-model="draft.min_commission" type="number" min="0" class="ofr-input" placeholder="Min" />
@@ -196,23 +362,28 @@
           <div class="ofr-field">
             <span>Deal Status</span>
             <div class="ofr-segment" role="group">
-              <button type="button" :class="{ 'is-on': draft.deal_status === 'closed' }" @click="draft.deal_status = 'closed'">Closed Only</button>
-              <button type="button" :class="{ 'is-on': draft.deal_status === 'all' }" @click="draft.deal_status = 'all'">All Deals</button>
+              <button type="button" :class="{ 'is-on': draft.deal_status === 'closed' }" @click="draft.deal_status = 'closed'">Closed</button>
+              <button type="button" :class="{ 'is-on': draft.deal_status === 'all' }" @click="draft.deal_status = 'all'">All</button>
             </div>
           </div>
 
-          <label class="ofr-field">
+          <div class="ofr-field">
             <span>Financial Data</span>
-            <select v-model="draft.data_status" class="ofr-input">
-              <option value="all">All</option>
-              <option value="complete">Complete only</option>
-              <option value="missing">Missing data only</option>
-            </select>
-          </label>
+            <v-select
+              v-model="draft.data_status"
+              :options="DATA_STATUS_OPTIONS"
+              :reduce="(o) => o.value"
+              label="label"
+              :clearable="false"
+              :searchable="false"
+              :append-to-body="true"
+              :calculate-position="placeMenu"
+              class="ofr-vs"
+            />
+          </div>
 
-          <div class="ofr-filter-actions">
+          <div class="ofr-filter-actions ofr-field--full">
             <button type="submit" class="ofr-btn ofr-btn--primary" :disabled="loading">
-              <iconify-icon icon="lucide:filter" width="15" height="15" />
               Apply Filters
               <span v-if="dirty" class="ofr-dirty-dot" title="Changes not applied yet" />
             </button>
@@ -222,150 +393,6 @@
           </div>
         </form>
       </aside>
-
-      <!-- Deals table -->
-      <section class="ofr-panel ofr-deals">
-        <div class="ofr-deals-head">
-          <h2 class="ofr-h2">Deals Overview</h2>
-          <div class="ofr-deals-tools">
-            <span class="ofr-total">{{ pagination.total.toLocaleString('en-US') }} deals</span>
-            <button
-              type="button"
-              class="ofr-btn ofr-btn--export"
-              :disabled="exporting || !pagination.total"
-              :title="dirty ? 'Exports the applied filters (press Apply Filters first to include your changes)' : 'Download every deal in this view as Excel'"
-              @click="exportExcel"
-            >
-              <iconify-icon :icon="exporting ? 'lucide:loader-2' : 'lucide:download'" :class="{ 'ofr-spin': exporting }" width="15" height="15" />
-              {{ exporting ? 'Exporting…' : 'Export Excel' }}
-            </button>
-            <select v-model.number="perPage" class="ofr-input ofr-input--sm" aria-label="Rows per page">
-              <option v-for="n in [25, 50, 100]" :key="n" :value="n">{{ n }} / page</option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="error" class="ofr-error">
-          <iconify-icon icon="lucide:alert-circle" width="16" height="16" />
-          <span>{{ error }}</span>
-          <button type="button" class="ofr-link" @click="fetchReport">Retry</button>
-        </div>
-
-        <div class="ofr-table-wrap" :class="{ 'is-loading': loading }">
-          <table class="ofr-table">
-            <thead>
-              <tr>
-                <th v-for="col in columns" :key="col.key" :class="[col.num && 'ofr-num', col.key === 'net_revenue' && 'ofr-col-net']">
-                  <button v-if="col.sort" type="button" class="ofr-sort" :class="{ 'is-active': sort === col.sort }" @click="toggleSort(col.sort)">
-                    <span>{{ col.label }}</span>
-                    <iconify-icon :icon="sortIcon(col.sort)" width="12" height="12" />
-                  </button>
-                  <template v-else>{{ col.label }}</template>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="!loading && !rows.length">
-                <td :colspan="columns.length" class="ofr-empty">
-                  <iconify-icon icon="lucide:search-x" width="22" height="22" />
-                  <span>No deals match these filters.</span>
-                </td>
-              </tr>
-              <tr
-                v-for="row in rows"
-                :key="row.id"
-                class="ofr-row"
-                :class="{ 'is-incomplete': row.is_incomplete, 'is-selected': openDealId === row.id }"
-                tabindex="0"
-                @click="openDeal(row.id)"
-                @keydown.enter="openDeal(row.id)"
-              >
-                <td class="ofr-nowrap">
-                  <button type="button" class="ofr-cell-link" title="Open deal" @click.stop="showDeal(row)">
-                    {{ row.deal_number || `#${row.id}` }}
-                  </button>
-                </td>
-                <td>
-                  <span v-if="row.lead_id && row.lead_archived" class="ofr-lead-archived" title="This lead is archived and can't be opened">
-                    <span class="ofr-clip">{{ row.lead_name || `Lead #${row.lead_id}` }}</span>
-                    <span class="ofr-tag">Archived</span>
-                  </span>
-                  <button
-                    v-else-if="row.lead_id"
-                    type="button"
-                    class="ofr-cell-link"
-                    :title="`Open lead: ${row.lead_name || 'Lead #' + row.lead_id}`"
-                    @click.stop="showLead(row.lead_id)"
-                  >
-                    <iconify-icon icon="lucide:user-round" width="13" height="13" />
-                    {{ row.lead_name || `Lead #${row.lead_id}` }}
-                  </button>
-                  <span v-else class="ofr-muted" title="This deal was created directly, not converted from a lead">No lead</span>
-                </td>
-                <td><span class="ofr-property" :title="row.property">{{ row.property || '—' }}</span></td>
-                <td>
-                  <span class="ofr-clip">{{ row.client?.name || '—' }}</span>
-                  <span v-if="row.client?.phone" class="ofr-sub">{{ row.client.phone }}</span>
-                </td>
-                <td><span class="ofr-clip">{{ row.agent?.name || '—' }}</span></td>
-                <td class="ofr-nowrap">{{ row.branch || '—' }}</td>
-                <td><span class="ofr-clip">{{ row.source || '—' }}</span></td>
-                <td class="ofr-nowrap">
-                  {{ formatDate(row.deal_date) }}
-                  <span v-if="!row.deal_date_is_won" class="ofr-sub" title="Won date not recorded; showing the date the deal was created">created</span>
-                </td>
-                <td class="ofr-num" :class="{ 'ofr-missing': row.deal_amount === null }">{{ row.deal_amount === null ? 'Missing' : aedShort(row.deal_amount) }}</td>
-                <td class="ofr-num" :class="{ 'ofr-missing': row.gross_commission === null }">{{ row.gross_commission === null ? 'Missing' : aedShort(row.gross_commission) }}</td>
-                <td class="ofr-num">
-                  {{ aedShort(row.agent_commission) }}
-                  <span
-                    v-if="row.agent_commission !== null"
-                    class="ofr-sub"
-                    :title="row.commission_source === 'breakdown' ? 'From the commission breakdown saved on the deal' : 'Agent commission % from the agent\'s user profile'"
-                  >{{ row.commission_source === 'breakdown' ? 'Deal breakdown' : `${row.agent_rate}% · profile` }}</span>
-                </td>
-                <td class="ofr-num">{{ aedShort(row.external_commission) }}</td>
-                <td class="ofr-num ofr-col-net">
-                  <span v-if="row.is_incomplete" class="ofr-pill" :title="row.issues.map((i) => i.label).join('\n')">
-                    <iconify-icon icon="lucide:triangle-alert" width="12" height="12" />
-                    Incomplete
-                  </span>
-                  <strong v-else>{{ aedShort(row.net_revenue) }}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="loading" class="ofr-loading"><span class="ofr-spinner" /> Loading…</div>
-        </div>
-
-        <div v-if="pagination.total" class="ofr-pager">
-          <span class="ofr-pager-info">Showing {{ rangeStart }}–{{ rangeEnd }} of {{ pagination.total.toLocaleString('en-US') }}</span>
-          <div class="ofr-pager-controls">
-            <button type="button" class="ofr-page-btn" :disabled="page <= 1 || loading" @click="goTo(page - 1)" aria-label="Previous page">
-              <iconify-icon icon="lucide:chevron-left" width="15" height="15" />
-            </button>
-            <button
-              v-for="p in pageList"
-              :key="p.key"
-              type="button"
-              class="ofr-page-btn"
-              :class="{ 'is-on': p.n === page }"
-              :disabled="p.gap || loading"
-              @click="!p.gap && goTo(p.n)"
-            >{{ p.gap ? '…' : p.n }}</button>
-            <button type="button" class="ofr-page-btn" :disabled="page >= pagination.last_page || loading" @click="goTo(page + 1)" aria-label="Next page">
-              <iconify-icon icon="lucide:chevron-right" width="15" height="15" />
-            </button>
-          </div>
-        </div>
-
-        <p class="ofr-footnote">
-          Collected amount, outstanding amount and expenses are not shown because the CRM has no payment ledger.
-          Agent commission comes from the commission breakdown saved on the deal; when there is none, from the
-          agent's commission % on their user profile (same as the profile's Sales Performance). Deals missing amount,
-          rate or agent % are left out of the agent, external and net totals.
-        </p>
-      </section>
     </div>
 
     <DealFinancialBreakdown
@@ -388,10 +415,11 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
+import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import DealFinancialBreakdown from '@/components/owner-financial/DealFinancialBreakdown.vue'
 import { aedShort, formatDate } from '@/components/owner-financial/format.js'
 import { closeDealView, openDealView, useDealViewModal } from '@/composables/useDealViewModal.js'
@@ -418,9 +446,15 @@ const DEFAULT_FILTERS = Object.freeze({
   data_status: 'all',
 })
 
+const PER_PAGE_OPTIONS = [25, 50, 100].map((n) => ({ value: n, label: `${n} / page` }))
+const DATA_STATUS_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'complete', label: 'Complete only' },
+  { value: 'missing', label: 'Missing data only' },
+]
+
 const columns = [
   { key: 'deal_number', label: 'Deal Number', sort: 'deal_number' },
-  { key: 'lead', label: 'Lead Name' },
   { key: 'property', label: 'Property' },
   { key: 'client', label: 'Client' },
   { key: 'agent', label: 'Agent' },
@@ -434,7 +468,7 @@ const columns = [
   { key: 'net_revenue', label: 'Net Company Revenue', sort: 'net_revenue', num: true },
 ]
 
-const cloneFilters = (f) => ({ ...f, source: [...f.source] })
+const cloneFilters = (f) => ({ ...f, source: [...(f.source || [])] })
 
 const DEFAULT_AVATAR = '/storage/users/user.png'
 const avatarUrl = (url) => url || DEFAULT_AVATAR
@@ -443,11 +477,53 @@ const onAvatarError = (e) => { if (!e.target.src.endsWith(DEFAULT_AVATAR)) e.tar
 /** KPI figure without the currency (shown as a small "AED" prefix). */
 const figure = (v) => aedShort(v).replace(/^AED\s/, '')
 
+/**
+ * vue-select menus are appended to <body> so the scrolling filter panel can't clip them.
+ * vue-select's own placement uses window scroll, but this CRM scrolls inside its layout
+ * container, so menus landed at the bottom of the page. Place them with position: fixed
+ * right under the field (or above it when there's no room), and close on any scroll.
+ * The class scopes this page's menu styles (centered, theme colors).
+ */
+function placeMenu(menu, component) {
+  menu.classList.add('ofr-vs-menu')
+  const anchor = component.$refs?.toggle || component.$el
+  const r = anchor.getBoundingClientRect()
+  const gap = 4
+  const below = window.innerHeight - r.bottom - gap - 8
+  const above = r.top - gap - 8
+  const openUp = below < 220 && above > below
+
+  menu.style.position = 'fixed'
+  menu.style.left = `${r.left}px`
+  menu.style.width = `${r.width}px`
+  menu.style.maxHeight = `${Math.max(140, Math.min(300, openUp ? above : below))}px`
+  if (openUp) {
+    menu.style.top = 'auto'
+    menu.style.bottom = `${window.innerHeight - r.top + gap}px`
+  } else {
+    menu.style.bottom = 'auto'
+    menu.style.top = `${r.bottom + gap}px`
+  }
+
+  const closeOnScroll = (e) => {
+    if (menu.contains(e.target)) return // scrolling inside the menu itself
+    window.removeEventListener('scroll', closeOnScroll, true)
+    component.$refs?.search?.blur()
+  }
+  window.addEventListener('scroll', closeOnScroll, true)
+}
+
 // draft = what the user is editing in the panel; applied = what the report shows.
 const draft = reactive(cloneFilters(DEFAULT_FILTERS))
 const applied = reactive(cloneFilters(DEFAULT_FILTERS))
 
 const options = ref({ agents: [], sources: [], branches: [], deal_types: [] })
+const branchOptions = computed(() => options.value.branches.map((b) => ({ value: String(b.id), label: b.name })))
+const dealTypeOptions = computed(() => [
+  { value: 'sale', label: 'Sale' },
+  ...options.value.deal_types.map((t) => ({ value: t.value, label: t.label })),
+])
+
 const summary = ref({
   deals: 0, closed_deals: 0, incomplete_deals: 0, complete_deals: 0, gross_deals: 0,
   gross_commission: 0, agent_commission: 0, external_commission: 0, net_revenue: 0,
@@ -472,7 +548,9 @@ const completeFoot = computed(() => {
     : `From all ${s.deals} deals`
 })
 
-const same = (a, b) => (Array.isArray(a) ? JSON.stringify([...a].sort()) === JSON.stringify([...b].sort()) : String(a ?? '') === String(b ?? ''))
+const same = (a, b) => (Array.isArray(a) || Array.isArray(b)
+  ? JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort())
+  : String(a ?? '') === String(b ?? ''))
 const activeCount = computed(() => Object.keys(DEFAULT_FILTERS).filter((k) => !same(applied[k], DEFAULT_FILTERS[k])).length)
 const dirty = computed(() => Object.keys(DEFAULT_FILTERS).some((k) => !same(draft[k], applied[k])))
 
@@ -524,7 +602,10 @@ async function fetchReport() {
   } catch (e) {
     if (mine === seq) error.value = e?.response?.data?.message || 'Failed to load the report'
   } finally {
-    if (mine === seq) loading.value = false
+    if (mine === seq) {
+      loading.value = false
+      nextTick(updateScrollArrows)
+    }
   }
 }
 
@@ -547,12 +628,6 @@ function applyFilters() {
 function clearFilters() {
   Object.assign(draft, cloneFilters(DEFAULT_FILTERS))
   applyFilters()
-}
-
-function toggleSource(s) {
-  const i = draft.source.indexOf(s)
-  if (i >= 0) draft.source.splice(i, 1)
-  else draft.source.push(s)
 }
 
 function toggleMissing() {
@@ -585,6 +660,46 @@ function sortIcon(key) {
   if (sort.value !== key) return 'lucide:chevrons-up-down'
   return direction.value === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'
 }
+
+// ---- Sideways table scrolling: hover the edge zones (same behaviour as the leads list).
+const SCROLL_SPEED = 10
+const SCROLL_TICK_MS = 16
+const tableWrapRef = ref(null)
+const showLeftZone = ref(false)
+const showRightZone = ref(false)
+let scrollTimer = null
+
+function updateScrollArrows() {
+  const el = tableWrapRef.value
+  if (!el) return
+  const canScroll = el.scrollWidth - el.clientWidth > 2
+  showLeftZone.value = canScroll && el.scrollLeft > 2
+  showRightZone.value = canScroll && el.scrollWidth - el.clientWidth > el.scrollLeft + 2
+}
+
+function startScroll(dir) {
+  stopScroll()
+  scrollTimer = setInterval(() => {
+    const el = tableWrapRef.value
+    if (!el) return
+    el.scrollLeft += dir * SCROLL_SPEED
+    updateScrollArrows()
+  }, SCROLL_TICK_MS)
+}
+
+function stopScroll() {
+  if (scrollTimer) {
+    clearInterval(scrollTimer)
+    scrollTimer = null
+  }
+}
+
+let resizeObserver = null
+
+// Guard: the layout wrapper hides horizontal overflow but can still be scrolled sideways
+// (e.g. by focusing a field). Keep it at 0 so the filters are never cut off on the left.
+let layoutScroller = null
+const resetLayoutScroll = () => { if (layoutScroller && layoutScroller.scrollLeft !== 0) layoutScroller.scrollLeft = 0 }
 
 const exporting = ref(false)
 
@@ -634,10 +749,22 @@ function showLead(leadId) {
 onMounted(() => {
   fetchOptions()
   fetchReport()
+  if (window.ResizeObserver && tableWrapRef.value) {
+    resizeObserver = new ResizeObserver(() => updateScrollArrows())
+    resizeObserver.observe(tableWrapRef.value)
+  }
+  layoutScroller = tableWrapRef.value?.closest('.dashboard-main-router') || null
+  layoutScroller?.addEventListener('scroll', resetLayoutScroll, { passive: true })
+  resetLayoutScroll()
 })
 
-// The deal popup state is shared app-wide; don't leave it open for the next page.
-onBeforeUnmount(() => closeDealView())
+onBeforeUnmount(() => {
+  stopScroll()
+  resizeObserver?.disconnect()
+  layoutScroller?.removeEventListener('scroll', resetLayoutScroll)
+  // The deal popup state is shared app-wide; don't leave it open for the next page.
+  closeDealView()
+})
 </script>
 
 <style scoped>
@@ -655,34 +782,39 @@ onBeforeUnmount(() => closeDealView())
   --ofr-warn-soft: #fdf0f2;
   --ofr-warn-line: #f5c6cd;
   --ofr-danger: var(--color-danger, #dc3545);
-  background: #f6f3f8 !important;
+  background: #fff !important;
   background-image: none !important;
   min-height: 100vh !important;
-  padding: 12px !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 14px !important;
   color: var(--ofr-text) !important;
 }
 
+/* The layout gives pages their content width; pin this one to the wrapper so the wide
+   table can never push the page (and the filters) sideways. Only the table scrolls. */
+.ofr-page.ofr-page { width: 100% !important; max-width: 100% !important; min-width: 0 !important; align-self: stretch !important; box-sizing: border-box !important; overflow-x: clip !important; }
+.ofr-body > * { min-width: 0 !important; max-width: 100% !important; }
+
 /* Header */
-.ofr-header { display: flex !important; flex-wrap: wrap !important; align-items: center !important; justify-content: space-between !important; gap: 10px !important; background: #fff !important; border: 1px solid var(--ofr-border) !important; border-radius: 14px !important; padding: 14px 18px !important; }
+.ofr-header { display: flex !important; flex-wrap: wrap !important; align-items: center !important; justify-content: space-between !important; gap: 10px !important; background: #fff !important; border-bottom: 1px solid var(--ofr-border) !important; padding: 0 0 12px !important; margin: 0 !important; }
 .ofr-header-title { display: flex !important; align-items: center !important; gap: 12px !important; min-width: 0 !important; }
 .ofr-header-icon { width: 42px !important; height: 42px !important; border-radius: 12px !important; display: grid !important; place-items: center !important; background: var(--ofr-soft) !important; color: var(--ofr-p) !important; border: 1px solid var(--ofr-border) !important; flex-shrink: 0 !important; }
 .ofr-title { margin: 0 !important; font-size: 20px !important; font-weight: 700 !important; letter-spacing: .03em !important; text-transform: uppercase !important; color: var(--ofr-ink) !important; line-height: 1.2 !important; }
 .ofr-hint { margin: 2px 0 0 !important; font-size: 12.5px !important; color: var(--ofr-text-3) !important; }
 .ofr-header-meta { display: flex !important; align-items: center !important; gap: 10px !important; flex-wrap: wrap !important; }
-.ofr-scope-chip { display: inline-flex !important; align-items: center !important; gap: 6px !important; height: 30px !important; padding: 0 12px !important; border-radius: 999px !important; border: 1px solid var(--ofr-border) !important; background: var(--ofr-soft) !important; color: var(--ofr-p) !important; font-size: 12px !important; font-weight: 600 !important; }
+.ofr-scope-chip { display: inline-flex !important; align-items: center !important; height: 28px !important; padding: 0 12px !important; border-radius: 999px !important; border: 1px solid var(--ofr-border) !important; background: var(--ofr-soft) !important; color: var(--ofr-p) !important; font-size: 12px !important; font-weight: 600 !important; }
 .ofr-updated { font-size: 12px !important; color: var(--ofr-text-3) !important; }
 
 /* KPIs */
 .ofr-kpis { display: grid !important; grid-template-columns: 1fr !important; gap: 12px !important; }
-.ofr-kpi { container-type: inline-size !important; position: relative !important; display: flex !important; flex-direction: column !important; gap: 10px !important; min-width: 0 !important; height: 100% !important; padding: 16px 18px !important; background: #fff !important; border: 1px solid var(--ofr-border) !important; border-radius: 16px !important; text-align: left !important; font: inherit !important; color: inherit !important; box-shadow: 0 1px 2px rgba(var(--ofr-p-rgb), 0.04) !important; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease !important; }
+.ofr-kpi { container-type: inline-size !important; position: relative !important; display: flex !important; flex-direction: column !important; gap: 10px !important; min-width: 0 !important; height: 100% !important; padding: 16px 18px !important; background: #fff !important; border: 1px solid var(--ofr-border) !important; border-radius: 16px !important; text-align: left !important; font: inherit !important; color: inherit !important; box-shadow: 0 1px 2px rgba(var(--ofr-p-rgb), 0.04) !important; transition: border-color .15s ease, box-shadow .15s ease !important; }
 .ofr-kpi:hover { box-shadow: 0 8px 20px rgba(var(--ofr-p-rgb), 0.08) !important; }
 .ofr-kpi-top { display: flex !important; align-items: center !important; gap: 10px !important; min-width: 0 !important; }
 .ofr-kpi-icon { width: 36px !important; height: 36px !important; border-radius: 11px !important; display: grid !important; place-items: center !important; flex-shrink: 0 !important; background: var(--ofr-soft) !important; color: var(--ofr-p) !important; border: 1px solid var(--ofr-border) !important; }
 .ofr-kpi-label { min-width: 0 !important; font-size: 13px !important; font-weight: 600 !important; color: var(--ofr-text-2) !important; line-height: 1.25 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-.ofr-kpi-value { display: flex !important; align-items: baseline !important; flex-wrap: nowrap !important; gap: 5px !important; min-width: 0 !important; margin: 0 !important; font-size: clamp(17px, 10.5cqi, 26px) !important; font-weight: 800 !important; color: var(--ofr-ink) !important; font-variant-numeric: tabular-nums !important; line-height: 1.1 !important; letter-spacing: -0.02em !important; white-space: nowrap !important; }
+.ofr-kpi-value { display: flex !important; align-items: baseline !important; flex-wrap: nowrap !important; gap: 5px !important; min-width: 0 !important; margin: 0 !important; font-size: clamp(15px, 8.5cqi, 20px) !important; font-weight: 800 !important; color: var(--ofr-ink) !important; font-variant-numeric: tabular-nums !important; line-height: 1.1 !important; letter-spacing: -0.02em !important; white-space: nowrap !important; }
 .ofr-cur { font-size: 0.5em !important; font-weight: 700 !important; letter-spacing: .04em !important; color: var(--ofr-text-3) !important; }
 .ofr-unit { font-size: 0.55em !important; font-weight: 700 !important; letter-spacing: 0 !important; color: var(--ofr-text-2) !important; }
 .ofr-kpi-foot { margin-top: auto !important; display: flex !important; flex-direction: column !important; gap: 4px !important; font-size: 11.5px !important; line-height: 1.35 !important; color: var(--ofr-text-3) !important; }
@@ -692,7 +824,7 @@ onBeforeUnmount(() => closeDealView())
 .ofr-kpi--net::before { content: '' !important; position: absolute !important; left: 0 !important; top: 0 !important; bottom: 0 !important; width: 4px !important; background: var(--gradient-primary, var(--ofr-p)) !important; }
 .ofr-kpi--net .ofr-kpi-icon { background: var(--gradient-primary, var(--ofr-p)) !important; color: #fff !important; border-color: transparent !important; }
 .ofr-kpi--net .ofr-kpi-label { color: var(--ofr-ink) !important; font-weight: 700 !important; }
-.ofr-kpi--net .ofr-kpi-value { font-size: clamp(20px, 11cqi, 30px) !important; color: var(--ofr-p) !important; }
+.ofr-kpi--net .ofr-kpi-value { font-size: clamp(17px, 9cqi, 23px) !important; color: var(--ofr-p) !important; }
 .ofr-kpi--net .ofr-cur { color: var(--ofr-p) !important; opacity: .7 !important; }
 
 .ofr-kpi--missing { cursor: pointer !important; }
@@ -704,46 +836,60 @@ onBeforeUnmount(() => closeDealView())
 .ofr-kpi--missing.is-zero .ofr-kpi-value { color: var(--ofr-text-2) !important; }
 .ofr-badge-incomplete { margin-left: 6px !important; align-self: center !important; font-size: 9.5px !important; font-weight: 800 !important; letter-spacing: .06em !important; text-transform: uppercase !important; color: var(--ofr-danger) !important; background: #fdecec !important; border: 1px solid #f5c2c0 !important; border-radius: 999px !important; padding: 3px 8px !important; line-height: 1 !important; }
 
-/* Agent select */
-.ofr-agent-select { width: 100% !important; }
-.ofr-agent-select :deep(.vs__dropdown-toggle) { min-height: 36px !important; padding: 0 4px 0 6px !important; border: 1px solid var(--ofr-border) !important; border-radius: 8px !important; background: #fff !important; }
-.ofr-agent-select.vs--open :deep(.vs__dropdown-toggle) { border-color: var(--ofr-p) !important; box-shadow: 0 0 0 3px rgba(var(--ofr-p-rgb), 0.14) !important; }
-.ofr-agent-select :deep(.vs__selected) { margin: 2px 0 !important; padding: 0 !important; border: none !important; background: transparent !important; max-width: 100% !important; }
-.ofr-agent-select :deep(.vs__search), .ofr-agent-select :deep(.vs__search::placeholder) { font-size: 13px !important; color: var(--ofr-text-3) !important; margin: 0 !important; padding: 0 4px !important; }
-.ofr-agent-select :deep(.vs__open-indicator), .ofr-agent-select :deep(.vs__clear) { fill: var(--ofr-p) !important; }
-.ofr-agent-opt { display: flex !important; align-items: center !important; gap: 8px !important; min-width: 0 !important; font-size: 13px !important; }
-.ofr-agent-avatar { width: 22px !important; height: 22px !important; border-radius: 50% !important; object-fit: cover !important; flex-shrink: 0 !important; border: 1px solid var(--ofr-border) !important; }
-.ofr-agent-name { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; color: var(--ofr-text) !important; font-weight: 600 !important; }
-
-/* Body: filters + table */
+/* Body: table (left) + filters (right) */
 .ofr-body { display: grid !important; grid-template-columns: 1fr !important; gap: 14px !important; align-items: start !important; min-width: 0 !important; }
 .ofr-panel { background: #fff !important; border: 1px solid var(--ofr-border) !important; border-radius: 14px !important; min-width: 0 !important; }
 
+/* Filters */
+.ofr-filters { order: -1 !important; }
 .ofr-panel-head { width: 100% !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 10px !important; padding: 14px 16px !important; border: none !important; background: transparent !important; font: inherit !important; font-size: 14px !important; font-weight: 700 !important; letter-spacing: .03em !important; text-transform: uppercase !important; color: var(--ofr-ink) !important; cursor: pointer !important; }
-.ofr-panel-head-right { display: inline-flex !important; align-items: center !important; gap: 8px !important; color: var(--ofr-p) !important; }
 .ofr-count { min-width: 20px !important; height: 20px !important; border-radius: 999px !important; padding: 0 6px !important; display: inline-grid !important; place-items: center !important; font-size: 11px !important; font-weight: 700 !important; background: var(--ofr-p) !important; color: #fff !important; }
-.ofr-filter-form { display: none !important; flex-direction: column !important; gap: 12px !important; padding: 0 16px 16px !important; }
-.ofr-filters.is-open .ofr-filter-form { display: flex !important; }
+.ofr-filter-form { display: none !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px 10px !important; padding: 0 14px 14px !important; }
+.ofr-filters.is-open .ofr-filter-form { display: grid !important; }
+.ofr-field--full { grid-column: 1 / -1 !important; }
 
 .ofr-field { display: flex !important; flex-direction: column !important; gap: 5px !important; margin: 0 !important; min-width: 0 !important; }
 .ofr-field > span { font-size: 12px !important; font-weight: 600 !important; color: var(--ofr-text-2) !important; }
 .ofr-pair { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; min-width: 0 !important; }
-.ofr-input { height: 36px !important; width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; border: 1px solid var(--ofr-border) !important; border-radius: 8px !important; padding: 0 10px !important; font-size: 13px !important; color: var(--ofr-text) !important; background: #fff !important; transition: border-color .15s ease, box-shadow .15s ease !important; }
+.ofr-input { height: 38px !important; width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; border: 1px solid var(--ofr-border) !important; border-radius: 10px !important; padding: 0 10px !important; font-size: 13px !important; color: var(--ofr-text) !important; background: #fff !important; text-align: center !important; transition: border-color .15s ease, box-shadow .15s ease !important; }
 .ofr-input::placeholder { color: var(--ofr-text-3) !important; }
 .ofr-input:focus { outline: none !important; border-color: var(--ofr-p) !important; box-shadow: 0 0 0 3px rgba(var(--ofr-p-rgb), 0.14) !important; }
-.ofr-input--sm { height: 32px !important; width: auto !important; font-size: 12px !important; }
 
-.ofr-chips { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; padding: 8px !important; border: 1px solid var(--ofr-border) !important; border-radius: 8px !important; min-height: 36px !important; box-sizing: border-box !important; }
-.ofr-chip { display: inline-flex !important; align-items: center !important; gap: 4px !important; height: 26px !important; padding: 0 10px !important; border-radius: 6px !important; border: 1px solid var(--ofr-border) !important; background: var(--ofr-soft) !important; color: var(--ofr-text-2) !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; }
-.ofr-chip:hover { border-color: var(--ofr-muted-line) !important; }
-.ofr-chip.is-on { background: var(--ofr-p) !important; border-color: var(--ofr-p) !important; color: #fff !important; }
+/* Shared date picker, themed */
+.ofr-date :deep(.advanced-date-trigger) { min-height: 38px !important; justify-content: flex-start !important; text-align: left !important; border: 1px solid var(--ofr-border) !important; border-radius: 10px !important; background: #fff !important; }
+.ofr-date :deep(.advanced-date-trigger:hover) { border-color: var(--ofr-muted-line) !important; background: #fff !important; }
+.ofr-date :deep(.advanced-date-icon) { color: var(--ofr-p) !important; }
 
-.ofr-segment { display: grid !important; grid-template-columns: 1fr 1fr !important; padding: 3px !important; gap: 3px !important; background: var(--ofr-soft) !important; border: 1px solid var(--ofr-border) !important; border-radius: 9px !important; }
-.ofr-segment button { height: 30px !important; border: none !important; border-radius: 7px !important; background: transparent !important; font-size: 12.5px !important; font-weight: 600 !important; color: var(--ofr-text-2) !important; cursor: pointer !important; }
+/* vue-select, themed */
+.ofr-vs { width: 100% !important; }
+.ofr-vs :deep(.vs__dropdown-toggle) { min-height: 38px !important; padding: 0 6px !important; border: 1px solid var(--ofr-border) !important; border-radius: 10px !important; background: #fff !important; }
+.ofr-vs.vs--open :deep(.vs__dropdown-toggle) { border-color: var(--ofr-p) !important; box-shadow: 0 0 0 3px rgba(var(--ofr-p-rgb), 0.14) !important; }
+.ofr-vs :deep(.vs__selected-options) { justify-content: flex-start !important; flex-wrap: wrap !important; padding: 0 !important; }
+.ofr-vs :deep(.vs__selected) { margin: 3px 2px !important; padding: 0 4px !important; border: none !important; background: transparent !important; color: var(--ofr-text) !important; font-size: 13px !important; font-weight: 600 !important; max-width: 100% !important; }
+.ofr-vs :deep(.vs__search), .ofr-vs :deep(.vs__search:focus) { margin: 0 !important; padding: 0 4px !important; font-size: 13px !important; text-align: left !important; flex-grow: 1 !important; }
+.ofr-vs :deep(.vs__search::placeholder) { color: var(--ofr-text-3) !important; text-align: left !important; }
+.ofr-vs :deep(.vs__open-indicator), .ofr-vs :deep(.vs__clear), .ofr-vs :deep(.vs__deselect) { fill: var(--ofr-p) !important; }
+/* Smaller dropdown arrow and clear (×). */
+.ofr-vs :deep(.vs__open-indicator) { transform: scale(0.75) !important; }
+.ofr-vs.vs--open :deep(.vs__open-indicator) { transform: rotate(180deg) scale(0.75) !important; }
+.ofr-vs :deep(.vs__clear) { transform: scale(0.75) !important; margin-right: 4px !important; }
+.ofr-vs :deep(.vs__actions) { padding: 0 6px 0 2px !important; gap: 2px !important; }
+.ofr-vs--multi :deep(.vs__selected) { background: var(--ofr-soft) !important; border: 1px solid var(--ofr-border) !important; border-radius: 6px !important; padding: 1px 6px !important; color: var(--ofr-p) !important; font-size: 12px !important; }
+.ofr-vs--sm { width: 120px !important; }
+.ofr-vs--sm :deep(.vs__dropdown-toggle) { min-height: 32px !important; border-radius: 8px !important; }
+.ofr-vs--sm :deep(.vs__selected) { font-size: 12px !important; }
+
+.ofr-agent-opt { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; min-width: 0 !important; font-size: 13px !important; }
+.ofr-agent-avatar { width: 22px !important; height: 22px !important; border-radius: 50% !important; object-fit: cover !important; flex-shrink: 0 !important; border: 1px solid var(--ofr-border) !important; }
+.ofr-agent-name { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; color: var(--ofr-text) !important; font-weight: 600 !important; }
+
+/* Tabs */
+.ofr-segment { display: grid !important; grid-template-columns: 1fr 1fr !important; padding: 3px !important; gap: 3px !important; background: var(--ofr-soft) !important; border: 1px solid var(--ofr-border) !important; border-radius: 10px !important; }
+.ofr-segment button { display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; height: 32px !important; border: none !important; border-radius: 8px !important; background: transparent !important; font-size: 12.5px !important; font-weight: 600 !important; color: var(--ofr-text-2) !important; cursor: pointer !important; }
 .ofr-segment button.is-on { background: #fff !important; color: var(--ofr-p) !important; box-shadow: 0 1px 3px rgba(var(--ofr-p-rgb), 0.18) !important; }
 
-.ofr-filter-actions { display: flex !important; flex-direction: column !important; gap: 8px !important; margin-top: 4px !important; }
-.ofr-btn { position: relative !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; height: 38px !important; border-radius: 9px !important; padding: 0 14px !important; font-size: 13px !important; font-weight: 700 !important; cursor: pointer !important; border: 1px solid transparent !important; }
+.ofr-filter-actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; margin-top: 4px !important; }
+.ofr-btn { position: relative !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; height: 38px !important; border-radius: 10px !important; padding: 0 14px !important; font-size: 13px !important; font-weight: 700 !important; cursor: pointer !important; border: 1px solid transparent !important; text-align: center !important; }
 .ofr-btn:disabled { opacity: .55 !important; cursor: not-allowed !important; }
 .ofr-btn--primary { background: var(--gradient-primary, var(--ofr-p)) !important; color: #fff !important; box-shadow: 0 4px 12px rgba(var(--ofr-p-rgb), 0.25) !important; }
 .ofr-btn--primary:hover:not(:disabled) { filter: brightness(1.07) !important; }
@@ -751,42 +897,47 @@ onBeforeUnmount(() => closeDealView())
 .ofr-btn--ghost:hover:not(:disabled) { background: var(--ofr-soft) !important; }
 .ofr-btn--export { height: 32px !important; padding: 0 12px !important; font-size: 12.5px !important; background: var(--gradient-primary, var(--ofr-p)) !important; color: #fff !important; box-shadow: 0 3px 10px rgba(var(--ofr-p-rgb), 0.22) !important; }
 .ofr-btn--export:hover:not(:disabled) { filter: brightness(1.07) !important; }
-.ofr-spin { animation: ofr-spin .8s linear infinite !important; }
-.ofr-cell-link iconify-icon { vertical-align: -2px !important; margin-right: 2px !important; }
-.ofr-lead-archived { display: flex !important; align-items: center !important; gap: 6px !important; color: var(--ofr-text-2) !important; }
-.ofr-tag { flex-shrink: 0 !important; font-size: 10px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: .04em !important; padding: 1px 6px !important; border-radius: 4px !important; color: var(--ofr-text-2) !important; background: var(--ofr-soft) !important; border: 1px solid var(--ofr-border) !important; }
 .ofr-dirty-dot { width: 8px !important; height: 8px !important; border-radius: 50% !important; background: #fff !important; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45) !important; }
+.ofr-spin { animation: ofr-spin .8s linear infinite !important; }
 
 /* Deals panel */
 .ofr-deals { display: flex !important; flex-direction: column !important; gap: 12px !important; padding: 14px !important; }
 .ofr-deals-head { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 10px !important; flex-wrap: wrap !important; }
 .ofr-h2 { margin: 0 !important; font-size: 14px !important; font-weight: 700 !important; letter-spacing: .03em !important; text-transform: uppercase !important; color: var(--ofr-ink) !important; }
-.ofr-deals-tools { display: flex !important; align-items: center !important; gap: 10px !important; }
+.ofr-deals-tools { display: flex !important; align-items: center !important; gap: 10px !important; flex-wrap: wrap !important; }
 .ofr-total { font-size: 12px !important; font-weight: 600 !important; color: var(--ofr-text-2) !important; }
 
 .ofr-error { display: flex !important; align-items: center !important; gap: 8px !important; background: #fdecec !important; color: #b3261e !important; border: 1px solid #f5c2c0 !important; border-radius: 10px !important; padding: 10px 12px !important; font-size: 13px !important; }
 .ofr-link { border: none !important; background: transparent !important; color: #b3261e !important; text-decoration: underline !important; cursor: pointer !important; margin-left: auto !important; font-weight: 600 !important; }
 
-.ofr-table-wrap { position: relative !important; overflow-x: auto !important; border: 1px solid var(--ofr-border) !important; border-radius: 12px !important; }
+/* Table: only this area scrolls (both ways); the header row stays visible. */
+.ofr-table-shell { position: relative !important; min-width: 0 !important; }
+.ofr-table-wrap { position: relative !important; overflow: auto !important; max-height: calc(100vh - 170px) !important; border: 1px solid var(--ofr-border) !important; border-radius: 12px !important; scrollbar-width: thin !important; }
 .ofr-table-wrap.is-loading .ofr-table { opacity: .5 !important; }
 .ofr-loading { position: absolute !important; top: 56px !important; left: 50% !important; transform: translateX(-50%) !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; background: #fff !important; border: 1px solid var(--ofr-border) !important; border-radius: 999px !important; padding: 6px 14px !important; font-size: 12px !important; font-weight: 600 !important; color: var(--ofr-text-2) !important; box-shadow: 0 6px 16px rgba(var(--ofr-p-rgb), 0.12) !important; }
 .ofr-spinner { width: 14px !important; height: 14px !important; border-radius: 50% !important; border: 2px solid var(--ofr-border) !important; border-top-color: var(--ofr-p) !important; animation: ofr-spin .8s linear infinite !important; }
 @keyframes ofr-spin { to { transform: rotate(360deg) !important; } }
 
-.ofr-table { width: 100% !important; border-collapse: separate !important; border-spacing: 0 !important; min-width: 1360px !important; margin: 0 !important; }
-.ofr-table th { position: sticky !important; top: 0 !important; z-index: 1 !important; text-align: left !important; vertical-align: bottom !important; font-size: 12px !important; font-weight: 700 !important; color: var(--ofr-ink) !important; padding: 10px !important; background: var(--ofr-soft) !important; border-bottom: 1px solid var(--ofr-border) !important; line-height: 1.25 !important; }
-.ofr-table td { padding: 11px 10px !important; border-bottom: 1px solid #f1ecf4 !important; font-size: 13px !important; color: var(--ofr-text) !important; vertical-align: middle !important; background: #fff !important; }
+.ofr-table { width: 100% !important; border-collapse: separate !important; border-spacing: 0 !important; min-width: 1120px !important; margin: 0 !important; }
+.ofr-table th { position: sticky !important; top: 0 !important; z-index: 1 !important; text-align: left !important; vertical-align: bottom !important; font-size: 11.5px !important; font-weight: 700 !important; color: var(--ofr-ink) !important; padding: 9px 6px !important; background: var(--ofr-soft) !important; border-bottom: 1px solid var(--ofr-border) !important; line-height: 1.25 !important; }
+.ofr-table th:first-child, .ofr-table td:first-child { padding-left: 12px !important; }
+.ofr-table th:last-child, .ofr-table td:last-child { padding-right: 12px !important; }
+.ofr-table td { padding: 9px 6px !important; border-bottom: 1px solid #f1ecf4 !important; font-size: 12.5px !important; color: var(--ofr-text) !important; vertical-align: middle !important; background: #fff !important; }
 .ofr-table tbody tr:last-child td { border-bottom: none !important; }
-.ofr-sort { display: inline-flex !important; align-items: center !important; gap: 4px !important; border: none !important; background: transparent !important; padding: 0 !important; font: inherit !important; color: inherit !important; cursor: pointer !important; text-align: inherit !important; }
+.ofr-sort { display: inline-flex !important; align-items: center !important; gap: 3px !important; border: none !important; background: transparent !important; padding: 0 !important; font: inherit !important; color: inherit !important; cursor: pointer !important; text-align: inherit !important; }
 .ofr-sort iconify-icon { color: var(--ofr-text-3) !important; flex-shrink: 0 !important; }
 .ofr-sort.is-active, .ofr-sort.is-active iconify-icon { color: var(--ofr-p) !important; }
 .ofr-num { text-align: right !important; white-space: nowrap !important; font-variant-numeric: tabular-nums !important; }
 th.ofr-num .ofr-sort { justify-content: flex-end !important; }
 .ofr-nowrap { white-space: nowrap !important; }
-.ofr-clip { display: block !important; max-width: 160px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
-.ofr-property { display: block !important; max-width: 190px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; color: var(--ofr-p) !important; font-weight: 600 !important; }
 .ofr-sub { display: block !important; font-size: 10.5px !important; color: var(--ofr-text-3) !important; }
-.ofr-muted { font-size: 12px !important; color: var(--ofr-text-3) !important; }
+
+/* Truncated cells: hover shows the full text (title). */
+.ofr-trunc { display: block !important; max-width: 130px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+.ofr-trunc--deal { max-width: 105px !important; }
+.ofr-trunc--property { max-width: 140px !important; }
+.ofr-property { color: var(--ofr-p) !important; font-weight: 600 !important; cursor: help !important; }
+.ofr-trunc--deal { cursor: pointer !important; }
 
 .ofr-row { cursor: pointer !important; }
 .ofr-row:hover td { background: #fcfafd !important; }
@@ -795,19 +946,27 @@ th.ofr-num .ofr-sort { justify-content: flex-end !important; }
 .ofr-row:focus-visible td { background: var(--ofr-soft) !important; }
 .ofr-row.is-incomplete td:first-child { box-shadow: inset 3px 0 0 var(--ofr-warn) !important; }
 
-.ofr-cell-link { display: block !important; max-width: 160px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; border: none !important; background: transparent !important; padding: 0 !important; font: inherit !important; font-weight: 700 !important; color: var(--ofr-p) !important; text-decoration: underline !important; text-decoration-color: var(--ofr-muted-line) !important; text-underline-offset: 3px !important; cursor: pointer !important; text-align: left !important; }
+.ofr-cell-link { border: none !important; background: transparent !important; padding: 0 !important; font: inherit !important; font-weight: 700 !important; color: var(--ofr-p) !important; text-decoration: underline !important; text-decoration-color: var(--ofr-muted-line) !important; text-underline-offset: 3px !important; text-align: left !important; }
 .ofr-cell-link:hover { text-decoration-color: var(--ofr-p) !important; }
-.ofr-cell-link--plain { font-weight: 600 !important; color: var(--ofr-text) !important; }
-.ofr-cell-link--plain:hover { color: var(--ofr-p) !important; }
 
 th.ofr-col-net { background: var(--color-primary-muted, #d4c0de) !important; color: var(--ofr-ink) !important; }
 td.ofr-col-net { background: var(--ofr-soft) !important; }
 .ofr-row:hover td.ofr-col-net { background: #f1e8f4 !important; }
-td.ofr-col-net strong { color: var(--ofr-ink) !important; font-size: 13.5px !important; font-weight: 800 !important; }
+td.ofr-col-net strong { color: var(--ofr-ink) !important; font-size: 13px !important; font-weight: 800 !important; }
 .ofr-missing { color: var(--ofr-warn) !important; font-weight: 600 !important; }
 .ofr-pill { display: inline-flex !important; align-items: center !important; gap: 4px !important; padding: 3px 8px !important; border-radius: 999px !important; font-size: 11px !important; font-weight: 700 !important; color: var(--ofr-warn) !important; background: var(--ofr-warn-soft) !important; border: 1px solid var(--ofr-warn-line) !important; }
 .ofr-empty { text-align: center !important; padding: 36px 10px !important; color: var(--ofr-text-3) !important; }
 .ofr-empty iconify-icon { display: block !important; margin: 0 auto 6px !important; color: var(--ofr-muted-line) !important; }
+
+/* Edge hover zones (same look as the leads list arrows), theme colored. */
+.ofr-nav-zone { position: absolute !important; top: 0 !important; bottom: 0 !important; z-index: 3 !important; width: 44px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; }
+.ofr-nav-zone--left { left: 0 !important; }
+.ofr-nav-zone--right { right: 0 !important; }
+.ofr-nav-arrow { width: 34px !important; height: 68px !important; display: flex !important; align-items: center !important; justify-content: center !important; background: rgba(255, 255, 255, 0.85) !important; box-shadow: 0 2px 12px rgba(var(--ofr-p-rgb), 0.18) !important; pointer-events: none !important; transition: box-shadow .2s ease, background .2s ease !important; }
+.ofr-nav-zone:hover .ofr-nav-arrow { background: #fff !important; box-shadow: 0 3px 16px rgba(var(--ofr-p-rgb), 0.28) !important; }
+.ofr-nav-arrow--left { border-radius: 0 34px 34px 0 !important; padding-left: 4px !important; }
+.ofr-nav-arrow--right { border-radius: 34px 0 0 34px !important; padding-right: 4px !important; }
+.ofr-nav-arrow-icon { font-size: 24px !important; color: var(--ofr-p) !important; }
 
 .ofr-pager { display: flex !important; flex-direction: column !important; gap: 8px !important; align-items: center !important; }
 .ofr-pager-info { font-size: 12px !important; color: var(--ofr-text-2) !important; }
@@ -818,6 +977,10 @@ td.ofr-col-net strong { color: var(--ofr-ink) !important; font-size: 13.5px !imp
 .ofr-page-btn:disabled:not(.is-on) { opacity: .45 !important; cursor: not-allowed !important; }
 .ofr-footnote { margin: 0 !important; font-size: 11.5px !important; color: var(--ofr-text-3) !important; }
 
+@media (max-width: 1099px) {
+  .ofr-nav-zone { display: none !important; }
+}
+
 @media (min-width: 640px) {
   .ofr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .ofr-kpi--net { grid-column: span 2 !important; }
@@ -825,11 +988,11 @@ td.ofr-col-net strong { color: var(--ofr-ink) !important; font-size: 13.5px !imp
 }
 
 @media (min-width: 1100px) {
-  .ofr-page.ofr-page { padding: 18px !important; }
-  .ofr-body { grid-template-columns: 270px minmax(0, 1fr) !important; }
-  .ofr-filters { position: sticky !important; top: 12px !important; }
-  .ofr-panel-head { cursor: default !important; pointer-events: none !important; }
-  .ofr-filter-form { display: flex !important; }
+  .ofr-body { grid-template-columns: 360px minmax(0, 1fr) !important; }
+  /* Filters fixed on the right; only the table scrolls. */
+  .ofr-filters { order: -1 !important; position: sticky !important; top: 12px !important; max-height: calc(100vh - 24px) !important; overflow-y: auto !important; scrollbar-width: thin !important; }
+  .ofr-panel-head { cursor: default !important; pointer-events: none !important; position: sticky !important; top: 0 !important; z-index: 2 !important; background: #fff !important; }
+  .ofr-filter-form { display: grid !important; }
 }
 
 /* 1100–1399: 3 + 2 cards so amounts stay large; 1400+: one row of five. */
@@ -843,4 +1006,18 @@ td.ofr-col-net strong { color: var(--ofr-ink) !important; font-size: 13.5px !imp
   .ofr-kpis { grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)) !important; }
   .ofr-kpi--net { grid-column: auto !important; }
 }
+</style>
+
+<!-- vue-select menus live in <body>; placeMenu() tags this page's menus with .ofr-vs-menu. -->
+<style>
+.ofr-vs-menu.vs__dropdown-menu { border: 1px solid var(--color-primary-border, #e7dcec) !important; border-radius: 10px !important; box-shadow: 0 12px 28px rgba(var(--color-primary-rgb, 115, 62, 135), 0.16) !important; padding: 4px !important; z-index: 3000 !important; overflow-y: auto !important; margin: 0 !important; }
+/* Lighter layout padding around this page (the router wrapper pads every page 12px 14px by default). */
+body #app main.dashboard-main > .dashboard-main-router.dashboard-main-router:has(.ofr-page),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router.dashboard-main-router:has(.ofr-page) { padding: 6px 8px 8px !important; background: #fff !important; background-image: none !important; }
+.ofr-vs-menu .vs__dropdown-option { text-align: left !important; border-radius: 7px !important; padding: 7px 10px !important; font-size: 13px !important; color: var(--color-text-primary, #1e1b2e) !important; }
+.ofr-vs-menu .vs__dropdown-option--highlight { background: var(--color-primary-soft, #f7f2f8) !important; color: var(--color-primary, #733E87) !important; }
+.ofr-vs-menu .vs__dropdown-option--selected { font-weight: 700 !important; color: var(--color-primary, #733E87) !important; }
+.ofr-vs-menu .vs__no-options { text-align: left !important; font-size: 12.5px !important; color: var(--color-text-muted, #8b8798) !important; }
+.ofr-vs-menu .ofr-agent-opt { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; }
+.ofr-vs-menu .ofr-agent-avatar { width: 22px !important; height: 22px !important; border-radius: 50% !important; object-fit: cover !important; }
 </style>
