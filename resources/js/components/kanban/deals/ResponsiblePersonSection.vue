@@ -242,6 +242,11 @@ const openPersonProfile = (task, type, event) => {
     showProfilePopup.value = true
 }
 
+const closeProfilePopup = () => {
+    showProfilePopup.value = false
+    profileUserId.value = null
+}
+
 
 const filteredPersons = computed(() => personsList.value)
 

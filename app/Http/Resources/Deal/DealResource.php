@@ -219,6 +219,9 @@ class DealResource extends JsonResource
                             'status' => $listing->status,
                             'number_of_bedrooms' => $listing->number_of_bedrooms,
                             'size_sqft' => $listing->size_sqft,
+                            'price' => $listing->price,
+                            'selling_price' => $listing->selling_price,
+                            'main_image' => $this->resolveListingMainImageUrl($listing),
                             'property_type' => $listing->propertyType ? [
                                 'id' => $listing->propertyType->id,
                                 'name' => $listing->propertyType->name,
@@ -285,13 +288,18 @@ class DealResource extends JsonResource
             // ...
             'parent' => $this->formatLeadUser($assignedBy),
 
-            'buyer_name' => (function () {
-                $buyer = $this->parties
-                    ->where('party_type', 'buyer')
-                    ->where('party_role', 'primary')
-                    ->first();
-                return $buyer ? trim($buyer->first_name.' '.$buyer->last_name) : null;
-            })(),
+            'buyer_name' => $this->partyDisplayName('buyer'),
+            'seller_name' => $this->partyDisplayName('seller'),
+            'tenant_name' => $this->partyDisplayName('tenant'),
+            'landlord_name' => $this->partyDisplayName('landlord'),
+            // Primary client for list rows: buyer (sale) or tenant (rental).
+            'client_name' => $this->deal_type === 'rental'
+                ? ($this->partyDisplayName('tenant') ?: $this->partyDisplayName('buyer'))
+                : ($this->partyDisplayName('buyer') ?: $this->partyDisplayName('tenant')),
+            // Counterparty: seller (sale) or landlord (rental).
+            'counterparty_name' => $this->deal_type === 'rental'
+                ? $this->partyDisplayName('landlord')
+                : $this->partyDisplayName('seller'),
 
             'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
@@ -344,5 +352,57 @@ class DealResource extends JsonResource
         }
 
         return [];
+    }
+
+    protected function partyDisplayName(string $type): ?string
+    {
+        // Preserve previous buyer_name behavior: lazy-load parties when the
+        // relation was not eager-loaded (single-deal show paths).
+        $parties = $this->parties;
+        if (! $parties || $parties->isEmpty()) {
+            return null;
+        }
+
+        $party = $parties
+            ->where('party_type', $type)
+            ->where('party_role', 'primary')
+            ->first()
+            ?? $parties->where('party_type', $type)->first();
+
+        if (! $party) {
+            return null;
+        }
+
+        $name = trim(($party->first_name ?? '').' '.($party->last_name ?? ''));
+
+        return $name !== '' ? $name : null;
+    }
+
+    /**
+     * Listing card thumbnail — same hero / gallery fallback as ListingGridResource.
+     */
+    protected function resolveListingMainImageUrl($listing): ?string
+    {
+        if (! $listing) {
+            return null;
+        }
+
+        $path = null;
+        if (! empty($listing->hero_image_path)
+            && \Illuminate\Support\Facades\Storage::disk('public')->exists($listing->hero_image_path)) {
+            $path = $listing->hero_image_path;
+        } elseif ($listing->relationLoaded('firstGalleryImage') && $listing->firstGalleryImage) {
+            $path = $listing->firstGalleryImage->image_path;
+        }
+
+        if (! $path) {
+            return null;
+        }
+
+        try {
+            return route('image.watermark', ['path' => $path]);
+        } catch (\Throwable $e) {
+            return asset('storage/'.$path);
+        }
     }
 }

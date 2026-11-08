@@ -1,5 +1,46 @@
 <template>
-  <div class="dashboard-main-body ofr-page">
+  <div class="dashboard-main-body ofr-page" :class="{ 'ofr-page--mobile': isMobile }">
+    <OwnerFinancialMobileShell
+      v-if="isMobile"
+      :summary="summary"
+      :rows="rows"
+      :pagination="pagination"
+      :page="page"
+      :loading="loading"
+      :error="error"
+      :open-deal-id="openDealId"
+      :sort="sort"
+      :draft="draft"
+      :applied="applied"
+      :options="options"
+      :active-count="activeCount"
+      :last-loaded="lastLoaded"
+      :insights="insights"
+      :insights-loading="insightsLoading"
+      :insights-error="insightsError"
+      :filter-summary="mobileFilterSummary"
+      :exporting="exportingKind"
+      :export-status="exportStatus"
+      :export-status-error="exportStatusError"
+      @toggle-missing="toggleMissing"
+      @open-deal-id="openDeal"
+      @open-deal-modal="showDeal"
+      @page="goTo"
+      @sort="setSort"
+      @retry="fetchReport"
+      @apply-filters="applyMobileFilters"
+      @clear-filters="clearFilters"
+      @quick-filters="applyMobileFilters"
+      @search="applyMobileSearch"
+      @select-agent="selectMobileAgent"
+      @clear-search="clearMobileSearch"
+      @load-insights="fetchInsights"
+      @export-excel="exportExcelMobile"
+      @export-pdf="exportPdfMobile"
+      @run-report="runMobileReport"
+    />
+
+    <template v-else>
     <Breadcrumb title="Owner Financial Intelligence" :breadcrumbs="[{ name: 'Owner Financial Intelligence' }]" />
 
     <!-- Header -->
@@ -395,6 +436,9 @@
       </aside>
     </div>
 
+    </template>
+
+    <!-- Shared on mobile + desktop (desktop table / mobile cards both open it). -->
     <DealFinancialBreakdown
       :deal-id="openDealId"
       @close="openDealId = null"
@@ -421,6 +465,8 @@ import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import DealFinancialBreakdown from '@/components/owner-financial/DealFinancialBreakdown.vue'
+import OwnerFinancialMobileShell from '@/components/owner-financial/mobile/OwnerFinancialMobileShell.vue'
+import { useOfrMobile } from '@/components/owner-financial/mobile/useOfrMobile.js'
 import { aedShort, formatDate } from '@/components/owner-financial/format.js'
 import { closeDealView, openDealView, useDealViewModal } from '@/composables/useDealViewModal.js'
 import { openLeadView } from '@/composables/useLeadViewModal.js'
@@ -428,8 +474,10 @@ import api from '@/plugins/axios'
 
 const ViewDealModal = defineAsyncComponent(() => import('@/components/kanban/deals/ViewDealModal.vue'))
 const { showDealViewModal, dealViewPayload, dealViewAutoEditSection } = useDealViewModal()
+const { isMobile } = useOfrMobile()
 
 const DEFAULT_FILTERS = Object.freeze({
+  search: '',
   agent_id: '',
   client: '',
   deal_number: '',
@@ -540,6 +588,16 @@ const openDealId = ref(null)
 const filtersOpen = ref(false)
 const lastLoaded = ref('')
 
+const insights = ref(null)
+const insightsLoading = ref(false)
+const insightsError = ref('')
+let insightsSeq = 0
+let insightsDirty = true
+
+const exportingKind = ref(false)
+const exportStatus = ref('')
+const exportStatusError = ref(false)
+
 const completeFoot = computed(() => {
   const s = summary.value
   if (!s.deals) return 'No deals in this view'
@@ -553,6 +611,34 @@ const same = (a, b) => (Array.isArray(a) || Array.isArray(b)
   : String(a ?? '') === String(b ?? ''))
 const activeCount = computed(() => Object.keys(DEFAULT_FILTERS).filter((k) => !same(applied[k], DEFAULT_FILTERS[k])).length)
 const dirty = computed(() => Object.keys(DEFAULT_FILTERS).some((k) => !same(draft[k], applied[k])))
+
+const mobileFilterSummary = computed(() => {
+  const out = {}
+  if (applied.search) out.Search = applied.search
+  if (applied.agent_id) {
+    const a = options.value.agents.find((x) => String(x.id) === String(applied.agent_id))
+    out.Agent = a?.name || `#${applied.agent_id}`
+  }
+  if (applied.client) out.Client = applied.client
+  if (applied.deal_number) out['Deal #'] = applied.deal_number
+  if (applied.date_from || applied.date_to) {
+    out.Period = [applied.date_from || '…', applied.date_to || '…'].join(' → ')
+  }
+  if (applied.branch_id) {
+    const b = options.value.branches.find((x) => String(x.id) === String(applied.branch_id))
+    out.Branch = b?.name || applied.branch_id
+  }
+  if (applied.deal_type) {
+    out.Type = applied.deal_type === 'sale'
+      ? 'Sale'
+      : (options.value.deal_types.find((t) => t.value === applied.deal_type)?.label || applied.deal_type)
+  }
+  if (applied.source?.length) out.Source = applied.source.join(', ')
+  if (applied.deal_status === 'all') out.Status = 'All deals'
+  if (applied.data_status === 'missing') out.Data = 'Missing only'
+  if (applied.data_status === 'complete') out.Data = 'Complete only'
+  return out
+})
 
 const rangeStart = computed(() => (pagination.value.current_page - 1) * pagination.value.per_page + 1)
 const rangeEnd = computed(() => Math.min(pagination.value.total, pagination.value.current_page * pagination.value.per_page))
@@ -618,10 +704,15 @@ async function fetchOptions() {
   }
 }
 
+function markInsightsDirty() {
+  insightsDirty = true
+}
+
 function applyFilters() {
   Object.assign(applied, cloneFilters(draft))
   page.value = 1
   filtersOpen.value = false
+  markInsightsDirty()
   fetchReport()
 }
 
@@ -635,7 +726,89 @@ function toggleMissing() {
   draft.data_status = next
   applied.data_status = next
   page.value = 1
+  markInsightsDirty()
   fetchReport()
+}
+
+function applyMobileFilters(payload) {
+  const next = cloneFilters({ ...DEFAULT_FILTERS, ...payload })
+  Object.assign(draft, next)
+  Object.assign(applied, cloneFilters(next))
+  page.value = 1
+  markInsightsDirty()
+  fetchReport()
+}
+
+function applyMobileSearch(q) {
+  const value = String(q || '').trim()
+  const replacesAgent = value !== '' && !!applied.agent_id
+  if (same(applied.search, value) && !replacesAgent) return
+  draft.search = value
+  applied.search = value
+  // Typing a free-text query replaces a pinned agent filter.
+  if (value) {
+    draft.agent_id = ''
+    applied.agent_id = ''
+  }
+  page.value = 1
+  markInsightsDirty()
+  fetchReport()
+}
+
+function clearMobileSearch() {
+  draft.search = ''
+  applied.search = ''
+  page.value = 1
+  markInsightsDirty()
+  fetchReport()
+}
+
+function selectMobileAgent(agent) {
+  draft.search = ''
+  applied.search = ''
+  draft.agent_id = String(agent.id)
+  applied.agent_id = String(agent.id)
+  page.value = 1
+  markInsightsDirty()
+  fetchReport()
+}
+
+function runMobileReport({ sort: s, direction: d }) {
+  sort.value = s || sort.value
+  direction.value = d || direction.value
+  page.value = 1
+  fetchReport()
+}
+
+function setSort(key) {
+  if (sort.value === key) {
+    direction.value = direction.value === 'desc' ? 'asc' : 'desc'
+  } else {
+    sort.value = key
+    direction.value = 'desc'
+  }
+  page.value = 1
+  fetchReport()
+}
+
+async function fetchInsights() {
+  if (!insightsDirty && insights.value) return
+  const mine = ++insightsSeq
+  insightsLoading.value = true
+  insightsError.value = ''
+  try {
+    const { page: _p, per_page: _pp, ...query } = params()
+    const res = await api.get('/reports/owner-financial/insights', { params: query })
+    if (mine !== insightsSeq) return
+    insights.value = res.data?.data || null
+    insightsDirty = false
+  } catch (e) {
+    if (mine === insightsSeq) {
+      insightsError.value = e?.response?.data?.message || 'Failed to load insights'
+    }
+  } finally {
+    if (mine === insightsSeq) insightsLoading.value = false
+  }
 }
 
 watch(perPage, () => { page.value = 1; fetchReport() })
@@ -646,14 +819,7 @@ function goTo(p) {
 }
 
 function toggleSort(key) {
-  if (sort.value === key) {
-    direction.value = direction.value === 'desc' ? 'asc' : 'desc'
-  } else {
-    sort.value = key
-    direction.value = 'desc'
-  }
-  page.value = 1
-  fetchReport()
+  setSort(key)
 }
 
 function sortIcon(key) {
@@ -703,30 +869,75 @@ const resetLayoutScroll = () => { if (layoutScroller && layoutScroller.scrollLef
 
 const exporting = ref(false)
 
+async function downloadBlob(path, filename, mime) {
+  const { page: _p, per_page: _pp, ...query } = params()
+  const res = await api.get(path, { params: query, responseType: 'blob' })
+  const url = window.URL.createObjectURL(new Blob([res.data], { type: mime }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+async function parseBlobError(e, fallback = 'Export failed') {
+  try { return JSON.parse(await e?.response?.data?.text())?.message || fallback } catch { return fallback }
+}
+
 /** Excel of every deal for the applied filters + sort (all pages), plus a KPI summary sheet. */
 async function exportExcel() {
   exporting.value = true
   error.value = ''
   try {
-    const { page: _p, per_page: _pp, ...query } = params()
-    const res = await api.get('/reports/owner-financial/export', { params: query, responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([res.data], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `owner-financial-report-${new Date().toISOString().slice(0, 10)}.xlsx`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
+    await downloadBlob(
+      '/reports/owner-financial/export',
+      `owner-financial-report-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
   } catch (e) {
-    let message = 'Export failed'
-    // Error bodies arrive as a Blob because of responseType: 'blob'.
-    try { message = JSON.parse(await e?.response?.data?.text())?.message || message } catch { /* keep default */ }
-    error.value = message
+    error.value = await parseBlobError(e)
   } finally {
     exporting.value = false
+  }
+}
+
+async function exportExcelMobile() {
+  exportingKind.value = 'excel'
+  exportStatus.value = ''
+  exportStatusError.value = false
+  try {
+    await downloadBlob(
+      '/reports/owner-financial/export',
+      `owner-financial-report-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    exportStatus.value = 'Excel downloaded'
+  } catch (e) {
+    exportStatus.value = await parseBlobError(e)
+    exportStatusError.value = true
+  } finally {
+    exportingKind.value = false
+  }
+}
+
+async function exportPdfMobile() {
+  exportingKind.value = 'pdf'
+  exportStatus.value = ''
+  exportStatusError.value = false
+  try {
+    await downloadBlob(
+      '/reports/owner-financial/pdf',
+      `owner-financial-report-${new Date().toISOString().slice(0, 10)}.pdf`,
+      'application/pdf',
+    )
+    exportStatus.value = 'PDF downloaded'
+  } catch (e) {
+    exportStatus.value = await parseBlobError(e, 'PDF export failed')
+    exportStatusError.value = true
+  } finally {
+    exportingKind.value = false
   }
 }
 
@@ -790,6 +1001,12 @@ onBeforeUnmount(() => {
   flex-direction: column !important;
   gap: 14px !important;
   color: var(--ofr-text) !important;
+}
+
+/* Mobile shell owns spacing; avoid double page chrome. */
+.ofr-page.ofr-page.ofr-page--mobile {
+  gap: 0 !important;
+  background: #faf8fb !important;
 }
 
 /* The layout gives pages their content width; pin this one to the wrapper so the wide
@@ -1014,6 +1231,8 @@ td.ofr-col-net strong { color: var(--ofr-ink) !important; font-size: 13px !impor
 /* Lighter layout padding around this page (the router wrapper pads every page 12px 14px by default). */
 body #app main.dashboard-main > .dashboard-main-router.dashboard-main-router:has(.ofr-page),
 body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router.dashboard-main-router:has(.ofr-page) { padding: 6px 8px 8px !important; background: #fff !important; background-image: none !important; }
+body #app main.dashboard-main > .dashboard-main-router.dashboard-main-router:has(.ofr-page--mobile),
+body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router.dashboard-main-router:has(.ofr-page--mobile) { padding: 0 !important; background: #faf8fb !important; }
 .ofr-vs-menu .vs__dropdown-option { text-align: left !important; border-radius: 7px !important; padding: 7px 10px !important; font-size: 13px !important; color: var(--color-text-primary, #1e1b2e) !important; }
 .ofr-vs-menu .vs__dropdown-option--highlight { background: var(--color-primary-soft, #f7f2f8) !important; color: var(--color-primary, #733E87) !important; }
 .ofr-vs-menu .vs__dropdown-option--selected { font-weight: 700 !important; color: var(--color-primary, #733E87) !important; }

@@ -52,6 +52,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
            <div class="col-md-6" v-if="deal.deal_name">
@@ -109,6 +110,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         
         <div v-else>
@@ -173,6 +175,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           
@@ -269,6 +272,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <DealDocumentsReadonly v-else :documents="buyerDocuments" />
       </div>
@@ -302,6 +306,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           <div class="col-md-6">
@@ -396,6 +401,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <DealDocumentsReadonly v-else :documents="sharedBuyerDocuments" />
       </div>
@@ -459,6 +465,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <template v-else>
           <div class="property-fallback-card-head d-flex justify-content-end mb-2">
@@ -572,6 +579,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           <div class="col-md-6">
@@ -661,6 +669,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <DealDocumentsReadonly v-else :documents="sellerDocuments" />
       </div>
@@ -695,6 +704,7 @@
           @cancel="emit('inline-edit-cancel')"
           @search-areas="(v) => emit('search-areas', v)"
           @search-subcommunities="(v) => emit('search-subcommunities', v)"
+          @search-projects="(v) => emit('search-projects', v)"
         />
         <div v-else class="row g-3">
           <div class="col-md-6">
@@ -753,7 +763,7 @@ const props = defineProps({
   selectedStageOrder: { type: [Number, String], default: 0 },
   hideInlineEditActions: { type: Boolean, default: false },
 })
-const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'refresh-deal'])
+const emit = defineEmits(['edit-section', 'update:inline-edit-data', 'inline-edit-save', 'inline-edit-cancel', 'search-areas', 'search-subcommunities', 'search-projects', 'refresh-deal'])
 const showInlineAddProperty = ref(false)
 const inlineAddPropertyEl = ref(null)
 

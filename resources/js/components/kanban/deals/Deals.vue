@@ -1,7 +1,45 @@
 <template>
-  <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile }">
+  <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile, 'deals-tab-content--list': boardView === 'list' }">
+    <div v-if="boardView === 'kanban'" class="deals-board-head">
+      <div class="board-view-switch" role="tablist" aria-label="Deal layout">
+        <button
+          type="button"
+          class="board-view-switch__btn"
+          role="tab"
+          :aria-selected="boardView === 'kanban'"
+          :class="{ 'is-active': boardView === 'kanban' }"
+          @click="setBoardView('kanban')"
+        >
+          <iconify-icon icon="lucide:columns-3" aria-hidden="true" />
+          <span class="board-view-switch__label">Kanban</span>
+        </button>
+        <button
+          type="button"
+          class="board-view-switch__btn"
+          role="tab"
+          :aria-selected="boardView === 'list'"
+          :class="{ 'is-active': boardView === 'list' }"
+          @click="setBoardView('list')"
+        >
+          <iconify-icon icon="lucide:list" aria-hidden="true" />
+          <span class="board-view-switch__label">List</span>
+        </button>
+      </div>
+    </div>
+
+    <DealListView
+      v-if="boardView === 'list'"
+      ref="dealListViewRef"
+      :deal-type="activeTypeTab"
+      :filters="mergedListFilters"
+      :stages="columns"
+      @open-deal="onListOpenDeal"
+      @open-person="onListOpenPerson"
+      @set-board-view="setBoardView"
+    />
+
     <!-- Kanban board with navigation arrows -->
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
+    <div v-show="boardView === 'kanban'" class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
       <div
         ref="kanbanContainerRef"
         class="kanban-container"
@@ -466,6 +504,7 @@ import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useIntersectionObserver } from '@vueuse/core' 
 import Swal from 'sweetalert2'
 import ViewDealModal from './ViewDealModal.vue'
+import DealListView from './DealListView.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import CompleteStageFieldsModal from './CompleteStageFieldsModal.vue'
 import { useStageTransition } from '@/composables/useStageTransition'
@@ -485,7 +524,7 @@ const props = defineProps({
 const viewDealModalRef = ref(null)
 const autoEditSection = ref(null)
 // تعريف emit مرة واحدة فقط مع جميع الأحداث
-const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change'])
+const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change', 'deal-created'])
 const openDealModal = async (dealData) => {
     console.log('🎯 Opening deal modal with data:', dealData)
     
@@ -970,6 +1009,64 @@ function onDealDragEnd() {
 // Fetch deals from API
 const runtimeFilters = ref({})
 
+const BOARD_VIEW_KEY = 'kanban_deals_board_view'
+const boardView = ref((() => {
+  try {
+    return localStorage.getItem(BOARD_VIEW_KEY) === 'list' ? 'list' : 'kanban'
+  } catch {
+    return 'kanban'
+  }
+})())
+const dealListViewRef = ref(null)
+
+function setBoardView(view) {
+  boardView.value = view === 'list' ? 'list' : 'kanban'
+  try {
+    localStorage.setItem(BOARD_VIEW_KEY, boardView.value)
+  } catch {
+    /* ignore private-mode storage failures */
+  }
+  window.dispatchEvent(new CustomEvent('kanban-deals-board-view', { detail: boardView.value }))
+  if (boardView.value === 'kanban') {
+    nextTick(() => {
+      updateScrollArrows()
+      setupInfiniteScroll()
+    })
+  } else {
+    nextTick(() => dealListViewRef.value?.refresh?.())
+  }
+}
+
+const mergedListFilters = computed(() => ({
+  ...props.filters,
+  ...runtimeFilters.value,
+}))
+
+function onListOpenDeal(deal) {
+  const stageId = deal?.stage_id || deal?.stage?.id
+  const column = columns.value.find((col) => String(col.stage_id) === String(stageId))
+  const stageName = deal?.stage?.name || column?.title
+  viewDeal({
+    ...deal,
+    stage_id: stageId,
+    stage: stageId
+      ? { ...(deal?.stage || {}), id: stageId, name: stageName }
+      : deal?.stage,
+  }, column || {
+    title: stageName,
+    stage_id: stageId,
+  })
+}
+
+function onListOpenPerson({ deal, event }) {
+  openPersonProfile(deal, 'responsible', event)
+}
+
+function refreshDealListView() {
+  if (boardView.value !== 'list') return
+  dealListViewRef.value?.refresh?.()
+}
+
 // externalFilters: an object → use these filters; null → clear them; left out → keep the
 // current ones. (The default used to be null, so every refresh — after a drag, a save,
 // the retry button, the queued re-run — silently dropped the active search.)
@@ -1336,6 +1433,7 @@ const handleDeletedDeal = (deal) => {
       }
     }
   }
+  refreshDealListView()
 }
 
 const handleDealUpdatedFromModal = (updatedDeal) => {
@@ -1349,6 +1447,7 @@ const handleDealUpdatedFromModal = (updatedDeal) => {
         deal_type: updatedDeal.deal_type ?? selectedDeal.value.deal_type
       }
     }
+    refreshDealListView()
   }
 }
 
@@ -1644,6 +1743,13 @@ const showDealNotification = (event) => {
   })
 }
 
+const stopPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
+  }
+}
+
 const startPolling = () => {
   if (pollingInterval.value) return
   
@@ -1676,10 +1782,7 @@ const cleanup = () => {
   })
   echoListeners.value = []
 
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-    pollingInterval.value = null
-  }
+  stopPolling()
 }
 
 // Stage editing functions
@@ -2495,6 +2598,7 @@ onMounted(async () => {
   // while this first fetch is still running — that switch must not be missed, or the
   // board keeps the previous type's stages.
   window.addEventListener('kanban-deal-type-change', onExternalDealTypeChange);
+  window.dispatchEvent(new CustomEvent('kanban-deals-board-view', { detail: boardView.value }))
   try {
     await fetchDeals(true);
   } finally {
@@ -2547,6 +2651,93 @@ defineExpose({
   min-height: 500px;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   position: relative;
+}
+
+.deals-tab-content--list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.deals-tab-content--list :deep(.deal-list) {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+}
+
+.deals-board-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0 2px 10px;
+}
+
+.board-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.board-view-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.board-view-switch__btn iconify-icon {
+  font-size: 15px;
+}
+
+.board-view-switch__btn.is-active {
+  background: var(--gradient-primary);
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  box-shadow: 0 6px 16px rgba(var(--color-primary-rgb), 0.28);
+}
+
+.board-view-switch__btn.is-active iconify-icon {
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .deals-board-head {
+    justify-content: stretch;
+  }
+
+  .board-view-switch {
+    width: 100%;
+  }
+
+  .board-view-switch__btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .board-view-switch__label {
+    font-size: 12px;
+  }
 }
 
 .deals-type-tabs {

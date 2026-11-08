@@ -2122,6 +2122,10 @@ const openSearchModal = (event) => {
     nextTick(() => updateSearchDropdownPosition());
 };
 
+const onKanbanOpenSearchEvent = () => {
+    openSearchModal();
+};
+
 function onSearchModalModelUpdate(val) {
     if (!val) {
         closeSearchModal();
@@ -2779,10 +2783,12 @@ onMounted(() => {
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
+  window.removeEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.addEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.addEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
+  window.addEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   loadStoredDealType()
 
   // Disable the nav search input the instant another modal (Create Lead/Deal, Add
@@ -2866,6 +2872,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
+  window.removeEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
     searchDebounceTimer.value = null;

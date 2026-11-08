@@ -6,6 +6,7 @@ use App\Exports\OwnerFinancial\OwnerFinancialReportExport;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Services\Reports\OwnerFinancialReport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -61,6 +62,54 @@ class OwnerFinancialReportController extends Controller
             ),
             'owner-financial-report-'.now('Asia/Dubai')->format('Y-m-d').'.xlsx'
         );
+    }
+
+    /** Aggregations (deal type / agent / branch / month) for the same filters. */
+    public function insights(Request $request)
+    {
+        if (! OwnerFinancialReport::canView($request->user())) {
+            return $this->forbidden();
+        }
+
+        $request->validate($this->rules());
+
+        return ApiResponse::success($this->report->insights($request));
+    }
+
+    /**
+     * Premium PDF: KPIs + filters + up to 250 deal rows (full set remains on Excel).
+     */
+    public function pdf(Request $request)
+    {
+        if (! OwnerFinancialReport::canView($request->user())) {
+            return $this->forbidden();
+        }
+
+        $request->validate($this->rules());
+
+        $summary = $this->report->summary($request);
+        $rows = $this->report->exportRows($request);
+        $totalRows = count($rows);
+        $cap = 250;
+        $truncated = $totalRows > $cap;
+        if ($truncated) {
+            $rows = array_slice($rows, 0, $cap);
+        }
+
+        $generatedAt = now('Asia/Dubai')->format('d M Y · H:i').' GST';
+
+        return Pdf::loadView('pdf.owner-financial-report', [
+            'summary' => $summary,
+            'rows' => $rows,
+            'filters' => $this->describeFilters($request),
+            'generated_at' => $generatedAt,
+            'truncated' => $truncated,
+            'total_rows' => $totalRows,
+            'shown_rows' => count($rows),
+        ])
+            ->setPaper('a4', 'landscape')
+            ->setOption(['isFontSubsettingEnabled' => true])
+            ->download('owner-financial-report-'.now('Asia/Dubai')->format('Y-m-d').'.pdf');
     }
 
     /** Full commission breakdown of one deal. */

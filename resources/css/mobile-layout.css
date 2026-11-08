@@ -603,6 +603,12 @@
   body:has(.owner-modal) .mobile-create-sheet,
   body:has(.owner-modal) .mobile-more-sheet,
   body:has(.owner-modal) .chat-floating-btn,
+  /* Owner Financial Intelligence mobile sheets (date / sources / filters / export) */
+  body:has(.om-sheet-root) .mobile-tab-bar,
+  body:has(.om-sheet-root) .mobile-create-sheet,
+  body:has(.om-sheet-root) .mobile-more-sheet,
+  body:has(.om-sheet-root) .chat-floating-btn,
+  body:has(.om-sheet-root) .om-dock,
   body:has(.edit-property-page) .chat-floating-btn,
   body:has(#view-lead-modal.show) .mobile-tab-bar,
   body:has(#view-lead-modal.show) .mobile-more-sheet {

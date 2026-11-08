@@ -99,12 +99,33 @@ class DealController extends Controller
         // Do not pass closures through Deal::withDetailGraph() (array_unique).
         // Deal has no area/developer relations (those fields on DealResource read null /
         // property-level data). detailGraphRelations covers listing + property areas/types.
+        // firstGalleryImage powers list thumbnails when hero_image_path is empty.
         $with = array_values(array_unique(array_merge([
             'lead',
             'stage',
             'parties.documents',
             'properties',
+            'properties.listing.firstGalleryImage',
+            'listing.firstGalleryImage',
         ], Deal::detailGraphRelations())));
+
+        $orderBy = $request->get('order_by', 'created_at');
+        $allowedOrder = [
+            'created_at',
+            'updated_at',
+            'deal_total_amount',
+            'deal_name',
+            'deal_number',
+            'won_date',
+            'spa_date',
+            'booking_date',
+            'mou_date',
+            'status',
+        ];
+        if (! in_array($orderBy, $allowedOrder, true)) {
+            $orderBy = 'created_at';
+        }
+        $orderDir = strtolower((string) $request->get('order_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         $deals = Deal::with($with)
             ->with([
@@ -113,10 +134,7 @@ class DealController extends Controller
             ])
             ->visibleFor(auth()->user())
             ->filter($request)
-            ->orderBy(
-                $request->get('order_by','created_at'),
-                $request->get('order_dir','desc')
-            )
+            ->orderBy($orderBy, $orderDir)
             ->paginate($request->get('per_page',15));
 
         try {
