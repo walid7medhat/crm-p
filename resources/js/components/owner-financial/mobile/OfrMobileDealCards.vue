@@ -4,12 +4,31 @@
       <h2 class="om-h2">Deals</h2>
       <div class="om-deals-meta">
         <span class="om-total">{{ pagination.total.toLocaleString('en-US') }}</span>
-        <select class="om-sort" :value="sortKey" @change="$emit('sort', $event.target.value)">
-          <option value="deal_date">Date</option>
-          <option value="net_revenue">Net revenue</option>
-          <option value="gross_commission">Gross</option>
-          <option value="deal_amount">Deal amount</option>
-        </select>
+        <div class="om-sort" :class="{ 'is-open': sortOpen }">
+          <button
+            type="button"
+            class="om-sort-btn"
+            :aria-expanded="sortOpen"
+            aria-haspopup="listbox"
+            @click.stop="sortOpen = !sortOpen"
+          >
+            <iconify-icon icon="lucide:arrow-up-down" width="11" height="11" />
+            <span>{{ sortLabel }}</span>
+            <iconify-icon icon="lucide:chevron-down" width="12" height="12" class="om-sort-chev" />
+          </button>
+          <div v-if="sortOpen" class="om-sort-menu" role="listbox">
+            <button
+              v-for="opt in SORT_OPTIONS"
+              :key="opt.value"
+              type="button"
+              class="om-sort-opt"
+              :class="{ 'is-on': sortKey === opt.value }"
+              role="option"
+              :aria-selected="sortKey === opt.value"
+              @click.stop="pickSort(opt.value)"
+            >{{ opt.label }}</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -68,7 +87,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { aedShort, formatDate } from '@/components/owner-financial/format.js'
 
 const props = defineProps({
@@ -81,11 +100,34 @@ const props = defineProps({
   sort: { type: String, default: 'deal_date' },
 })
 
-defineEmits(['open', 'open-deal', 'page', 'sort', 'retry'])
+const emit = defineEmits(['open', 'open-deal', 'page', 'sort', 'retry'])
 
+const SORT_OPTIONS = [
+  { value: 'deal_date', label: 'Date' },
+  { value: 'net_revenue', label: 'Net revenue' },
+  { value: 'gross_commission', label: 'Gross' },
+  { value: 'deal_amount', label: 'Deal amount' },
+]
+
+const sortOpen = ref(false)
 const sortKey = computed(() => props.sort)
+const sortLabel = computed(() => SORT_OPTIONS.find((o) => o.value === sortKey.value)?.label || 'Date')
 const rangeStart = computed(() => (props.pagination.current_page - 1) * props.pagination.per_page + 1)
 const rangeEnd = computed(() => Math.min(props.pagination.total, props.pagination.current_page * props.pagination.per_page))
+
+function pickSort(value) {
+  sortOpen.value = false
+  if (value !== sortKey.value) emit('sort', value)
+}
+
+function onDocPointer(e) {
+  if (!sortOpen.value) return
+  const root = e.target?.closest?.('.om-sort')
+  if (!root) sortOpen.value = false
+}
+
+onMounted(() => document.addEventListener('pointerdown', onDocPointer, true))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointer, true))
 </script>
 
 <style scoped>
@@ -105,10 +147,72 @@ const rangeEnd = computed(() => Math.min(props.pagination.total, props.paginatio
   background: var(--ofr-soft, #f7f2f8); border: 1px solid var(--ofr-border, #e7dcec);
   border-radius: 999px; padding: 2px 8px;
 }
-.om-sort {
-  height: 30px; border: 1px solid var(--ofr-border, #e7dcec); border-radius: 8px;
-  background: #fff; font-size: var(--om-fs-body, 12px); font-weight: 600; color: var(--ofr-text-2, #6b6678);
-  padding: 0 8px;
+.om-sort { position: relative; }
+.om-sort-btn {
+  height: 26px;
+  max-width: 132px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 7px;
+  border: 1px solid var(--ofr-border, #e7dcec);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ofr-text-2, #6b6678);
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.om-sort-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 78px;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+.om-sort-btn iconify-icon { color: var(--ofr-p, #733E87); flex-shrink: 0; }
+.om-sort-chev { color: var(--ofr-text-3, #8b8798) !important; }
+.om-sort.is-open .om-sort-btn {
+  border-color: var(--ofr-p, #733E87);
+  background: var(--ofr-soft, #f7f2f8);
+  color: var(--ofr-p, #733E87);
+}
+.om-sort-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 25;
+  min-width: 140px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--ofr-border, #e7dcec);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(var(--ofr-p-rgb, 115, 62, 135), 0.14);
+}
+.om-sort-opt {
+  width: 100%;
+  display: block;
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--ofr-text, #1e1b2e);
+  cursor: pointer;
+  line-height: 1.2 !important;
+}
+.om-sort-opt.is-on,
+.om-sort-opt:active {
+  background: var(--ofr-soft, #f7f2f8);
+  color: var(--ofr-p, #733E87);
 }
 .om-cards { position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
 .om-cards.is-loading { opacity: .55; pointer-events: none; }
