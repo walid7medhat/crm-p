@@ -1910,15 +1910,24 @@ async function scrollMoreSettingsIntoView() {
       const groupEl = moreSettingsGroupRef.value;
       if (!scrollEl || !groupEl) return;
 
+      // Only reveal the first Settings option — not the whole submenu.
+      const firstOption = groupEl.querySelector(
+        '.mobile-more-nested .mobile-more-row, .mobile-more-nested__heading'
+      );
+      const target = firstOption || groupEl.querySelector('.mobile-more-nested');
+      if (!target) return;
+
       const scrollRect = scrollEl.getBoundingClientRect();
-      const groupRect = groupEl.getBoundingClientRect();
-      const overflow = groupRect.bottom - scrollRect.bottom;
+      const targetRect = target.getBoundingClientRect();
+      const overflow = targetRect.bottom - scrollRect.bottom + 12;
       if (overflow <= 0) return;
 
+      // Cap so the sheet only nudges a little.
+      const delta = Math.min(overflow, 72);
       const reduceMotion = typeof window !== 'undefined'
         && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       scrollEl.scrollBy({
-        top: overflow + 16,
+        top: delta,
         behavior: reduceMotion ? 'auto' : 'smooth',
       });
     });
