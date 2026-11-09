@@ -30,7 +30,7 @@ function themeColors() {
 export function stageMood(stage) {
   if (stage?.is_done) return 'done'
   const name = String(stage?.name || '').toLowerCase()
-  if (name.includes('revision')) return 'revision'
+  if (name.includes('revision') || name.includes('review')) return 'revision'
   if (name.includes('cancel')) return 'cancelled'
   if (name.includes('pause')) return 'paused'
   if (name.includes('work') || name.includes('progress') || name.includes('post prod')) return 'working'
