@@ -19,20 +19,20 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>{{ $subtitle ?? 'Notification' }} — Oia Properties</title>
 </head>
-<body style="margin:0; padding:0; background:#f4f2f8;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#f4f2f8" style="background:#f4f2f8; margin:0; padding:0;">
+<body style="margin:0; padding:0; background:#f7f2f8;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" bgcolor="#f7f2f8" style="background:#f7f2f8; margin:0; padding:0;">
     <tr>
       <td align="center" style="padding:32px 16px;">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="width:600px; max-width:600px;">
           <tr>
-            <td bgcolor="#0B0736" style="background:#0B0736; border-radius:16px 16px 0 0; padding:0;">
+            <td bgcolor="#733E87" style="background-color:#733E87; background-image:linear-gradient(135deg, #8f5aa3 0%, #733E87 55%, #5c3270 100%); border-radius:16px 16px 0 0; padding:0;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td height="4" bgcolor="#e8a317" style="background:#e8a317; font-size:0; line-height:0;">&nbsp;</td>
+                  <td height="4" bgcolor="#d4af37" style="background:#d4af37; font-size:0; line-height:0;">&nbsp;</td>
                 </tr>
                 <tr>
                   <td style="padding:26px 32px 22px 32px;">
-                    <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#f6d48a;">
+                    <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#f3dc8f;">
                       Oia Properties
                     </p>
                     @if(!empty($subtitle))
@@ -47,7 +47,7 @@
           </tr>
 
           <tr>
-            <td bgcolor="#ffffff" style="background:#ffffff; border:1px solid #efe6f5; border-top:none; border-radius:0 0 16px 16px; padding:0;">
+            <td bgcolor="#ffffff" style="background:#ffffff; border:1px solid #e7dcec; border-top:none; border-radius:0 0 16px 16px; padding:0;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="padding:28px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
@@ -56,7 +56,7 @@
                       Hello{{ $safeName ? ' ' . e($safeName) : '' }},
                     </p>
                     @if(!empty($headline))
-                      <h1 style="margin:0 0 14px 0; color:#0B0736; font-size:20px; line-height:1.35; font-weight:700;">
+                      <h1 style="margin:0 0 14px 0; color:#3f2148; font-size:20px; line-height:1.35; font-weight:700;">
                         {{ $headline }}
                       </h1>
                     @endif
@@ -85,7 +85,7 @@
                     <td align="center" style="padding:18px 32px 8px 32px;">
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                          <td bgcolor="#e9d5ff" style="background-color:#00be83 !important; border-radius:999px;">
+                          <td bgcolor="#733E87" style="background-color:#733E87 !important; border-radius:999px;">
                             <a href="{{ $ctaUrl }}" target="_blank" rel="noopener noreferrer"
                                style="display:inline-block; padding:13px 28px; font-family:Arial, Helvetica, sans-serif; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none;">
                               {{ $ctaText }}
@@ -105,7 +105,7 @@
                         If the button doesn’t work, copy and paste this link:
                       </p>
                       <p style="margin:6px 0 0 0; font-size:12px; line-height:1.6;">
-                        <a href="{{ $fb }}" target="_blank" rel="noopener noreferrer" style="color:#00be83; text-decoration:underline; word-break:break-all;">
+                        <a href="{{ $fb }}" target="_blank" rel="noopener noreferrer" style="color:#733E87; text-decoration:underline; word-break:break-all;">
                           {{ $fb }}
                         </a>
                       </p>
