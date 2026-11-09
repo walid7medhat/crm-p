@@ -6041,7 +6041,8 @@ async function fetchTeams() {
 
                 name: team.name,
 
-                office_id: team.office_id || team.admin_parent_id || null,
+                // Branch (office) id — matches the Branches filter values. admin_parent_id is the city.
+                office_id: team.branch_id || team.office_id || null,
 
                 admin_parent_id: team.admin_parent_id || null,
 
@@ -6113,7 +6114,8 @@ async function fetchTeamsWithFilter() {
 
                 name: team.name,
 
-                office_id: team.office_id || team.admin_parent_id || null,
+                // Branch (office) id — matches the Branches filter values. admin_parent_id is the city.
+                office_id: team.branch_id || team.office_id || null,
 
                 city: team.city || null,
 
