@@ -69,6 +69,16 @@
             <template v-if="selectedIds.length"> · {{ selectedIds.length }} selected</template>
           </span>
           <div class="ae-bar__actions">
+          <button
+            type="button"
+            class="ae-btn"
+            :disabled="!visibleUsers.length"
+            :title="selectedIds.length ? 'Export the selected users' : 'Export the users in the list'"
+            @click="exportCsv"
+          >
+            <iconify-icon icon="lucide:download" width="14" height="14" />
+            Export{{ selectedIds.length ? ` (${selectedIds.length})` : '' }}
+          </button>
           <button type="button" class="ae-btn" :disabled="!visibleUsers.length" @click="toggleAllVisible(!allVisibleSelected)">
             <iconify-icon :icon="allVisibleSelected ? 'lucide:square' : 'lucide:check-square'" width="14" height="14" />
             {{ allVisibleSelected ? 'Unselect all' : 'Select all' }}
@@ -211,6 +221,42 @@ function toggleAllVisible(on) {
   const next = { ...selected.value }
   visibleUsers.value.forEach((u) => { next[u.id] = on })
   selected.value = next
+}
+
+// CSV of the selected users (or every user in the list), named "<branch>-users-<date>.csv".
+function exportCsv() {
+  const rows = selectedIds.value.length
+    ? users.value.filter((u) => selected.value[u.id])
+    : visibleUsers.value
+  if (!rows.length) return
+
+  const cell = (v) => {
+    const s = String(v ?? '')
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const header = ['Name', 'Email', 'Role', 'Account', 'Email status', 'Last sent']
+  const lines = rows.map((u) => [
+    u.name,
+    u.email,
+    u.role || '',
+    u.account_status || '',
+    u.last_email ? (u.last_email.status === 'sent' ? 'Sent' : 'Failed') : 'Not sent',
+    u.last_email?.sent_at || '',
+  ].map(cell).join(','))
+
+  // BOM so Excel opens Arabic / accented names correctly.
+  const blob = new Blob(['﻿' + [header.join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' })
+  const branch = branches.value.find((b) => b.id === branchId.value)?.name || 'branch'
+  const safe = branch.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'branch'
+  const date = new Date().toISOString().slice(0, 10)
+
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `${safe}-users-${date}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
 }
 
 function toggleOne(id) {
