@@ -387,7 +387,7 @@
                                                   :reduce="developer => developer.id"
                                                   label="name"
                                                   placeholder="Search developer..."
-                                                  :filterable="false"
+                                                  :filterable="true"
                                                   :loading="developersLoading">
                                             <template #option="{ name, avatar }">
                                                 <div class="d-flex align-items-center">
@@ -435,6 +435,9 @@
                                                   label="name"
                                                   placeholder="Type to search features..."
                                                   multiple
+                                                  :close-on-select="false"
+                                                  :clear-search-on-select="false"
+                                                  :deselect-from-dropdown="true"
                                                   :filterable="true"
                                                   @search="handleFeatureSearch"
                                                   :loading="featuresLoading"
