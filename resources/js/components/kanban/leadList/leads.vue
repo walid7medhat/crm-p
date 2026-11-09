@@ -342,9 +342,10 @@
                                                             v-if="leadDealCount(task)"
                                                             type="button"
                                                             class="lead-deal-tag"
-                                                            :title="leadDealTitle(task)"
                                                             :aria-label="leadDealTitle(task)"
                                                             @click.stop="openLeadDeals(task, $event)"
+                                                            @pointerenter="leadDealsHoverOpen(task, $event)"
+                                                            @pointerleave="dealsPopoverHoverLeave"
                                                             @dblclick.stop
                                                             @pointerdown.stop
                                                         >
@@ -657,9 +658,10 @@
                                             v-if="leadDealCount(row.task)"
                                             type="button"
                                             class="lead-deal-tag lead-deal-tag--sm"
-                                            :title="leadDealTitle(row.task)"
                                             :aria-label="leadDealTitle(row.task)"
                                             @click.stop="openLeadDeals(row.task, $event)"
+                                            @pointerenter="leadDealsHoverOpen(row.task, $event)"
+                                            @pointerleave="dealsPopoverHoverLeave"
                                         >
                                             <span class="lead-deal-tag__face">
                                                 <iconify-icon icon="lucide:handshake" class="lead-deal-tag__icon" aria-hidden="true" />
@@ -1062,11 +1064,14 @@
         </transition>
     </Teleport>
     <!-- Duplicate Leads Dropdown -->
-    <LeadDealsPopup
-        v-if="cardDealsPopup.show"
-        v-model="cardDealsPopup.show"
-        :deals="cardDealsPopup.deals"
-        :trigger-element="cardDealsPopup.trigger"
+    <LeadDealsPopover
+        v-if="showDealsPopover"
+        v-model="showDealsPopover"
+        :lead-id="dealsPopoverLeadId"
+        :deals="dealsPopoverDeals"
+        :trigger-element="dealsPopoverTrigger"
+        @hover-enter="cancelDealsPopoverClose"
+        @hover-leave="dealsPopoverHoverLeave"
         @open-deal="openCardDeal"
     />
     <DuplicateLeadsModal
@@ -1362,7 +1367,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, inject, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject, defineAsyncComponent } from 'vue'
 import draggable from 'vuedraggable'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -1373,8 +1378,8 @@ import LeadSourceMark from './LeadSourceMark.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 const DuplicateLeadsModal = defineAsyncComponent(() => import('./DuplicateLeadsModal.vue'))
-// Same "Deals (n)" popup as the lead modal header — opened from the card's deal count.
-const LeadDealsPopup = defineAsyncComponent(() => import('../viewLead/LeadDealsPopup.vue'))
+// Deals popover (hover / click on the card's deal count) — same pattern as MergedLeadsModal.
+const LeadDealsPopover = defineAsyncComponent(() => import('./LeadDealsPopover.vue'))
 const convertLeadModalLoader = () => import('./ConvertLeadModal.vue')
 const ConvertLeadModal = defineAsyncComponent(convertLeadModalLoader)
 const ProfilePopup = defineAsyncComponent(() => import('../shared/ProfilePopup.vue'))
@@ -4972,9 +4977,11 @@ function findLeadInColumns(leadId) {
 }
 
 // Converted lead cards: count of deals made from the lead
-// (KanbanLeadCardResource `deals`, newest first). 0 hides the tag.
+// (KanbanLeadCardResource `deals`, newest first). Shown only when the lead has more
+// than one deal — 0 hides the tag.
 function leadDealCount(task) {
-    return Array.isArray(task?.deals) ? task.deals.length : 0
+    const count = Array.isArray(task?.deals) ? task.deals.length : 0
+    return count > 1 ? count : 0
 }
 
 function leadDealTitle(task) {
@@ -4983,34 +4990,36 @@ function leadDealTitle(task) {
     return `${deals.length} ${deals.length === 1 ? 'deal' : 'deals'}: ${list} — click to show`
 }
 
-// Card deal count → the same "Deals (n)" popup as the lead modal header. Opens at once
-// with the card's deals (number + type), then fills in name / stage / responsible from
-// the same endpoint the lead modal uses (/leads/{id}/can-convert).
-const cardDealsPopup = reactive({ show: false, deals: [], trigger: null })
-let cardDealsRequest = 0
+// Card deal count → LeadDealsPopover, on hover (desktop mouse) or click — same
+// hover/close timing as the merged-leads flag (useMergedLeadsPopover).
+const {
+    show: showDealsPopover,
+    leadId: dealsPopoverLeadId,
+    trigger: dealsPopoverTrigger,
+    open: openDealsPopover,
+    cancelClose: cancelDealsPopoverClose,
+    hoverOpen: dealsPopoverHoverOpen,
+    hoverLeave: dealsPopoverHoverLeave,
+} = useMergedLeadsPopover()
+const dealsPopoverDeals = ref([])
 
-async function openLeadDeals(task, event) {
-    const deals = Array.isArray(task?.deals) ? task.deals : []
-    if (!deals.length || !task?.id) return
-    const requestId = ++cardDealsRequest
-    cardDealsPopup.trigger = event?.currentTarget || null
-    cardDealsPopup.deals = deals
-    cardDealsPopup.show = true
-    try {
-        const res = await api.get(`/leads/${task.id}/can-convert`)
-        if (requestId !== cardDealsRequest || !cardDealsPopup.show) return
-        const full = res.data?.data?.deals
-        if (Array.isArray(full) && full.length) cardDealsPopup.deals = full
-    } catch (_) {
-        // Keep the card's own list (deal number + type) when details can't be loaded.
-    }
+function openLeadDeals(task, event) {
+    if (!leadDealCount(task)) return
+    dealsPopoverDeals.value = task.deals
+    openDealsPopover(task.id, event?.currentTarget)
 }
 
-// Open a deal from the popup on the Deals board (same as the lead modal's "Deals" list).
+function leadDealsHoverOpen(task, event) {
+    if (!leadDealCount(task)) return
+    dealsPopoverDeals.value = task.deals
+    dealsPopoverHoverOpen(task.id, event)
+}
+
+// Open a deal from the popover on the Deals board (same as the lead modal's "Deals" list).
 function openCardDeal(deal) {
     const dealId = Number(deal?.id)
     if (!Number.isFinite(dealId) || dealId <= 0) return
-    cardDealsPopup.show = false
+    showDealsPopover.value = false
     router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
 }
 
