@@ -77,6 +77,37 @@
             </span>
           </div>
           <div class="kanban-mob-toolbar__actions">
+            <div
+              v-if="isDealRoute"
+              class="deals-layout-switch deals-layout-switch--mobile"
+              role="tablist"
+              aria-label="Deal layout"
+            >
+              <button
+                type="button"
+                class="deals-layout-switch__btn"
+                role="tab"
+                :aria-selected="dealsBoardView === 'kanban'"
+                :class="{ 'is-active': dealsBoardView === 'kanban' }"
+                title="Kanban"
+                aria-label="Kanban"
+                @click="setDealsBoardView('kanban')"
+              >
+                <iconify-icon icon="lucide:columns-3" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                class="deals-layout-switch__btn"
+                role="tab"
+                :aria-selected="dealsBoardView === 'list'"
+                :class="{ 'is-active': dealsBoardView === 'list' }"
+                title="List"
+                aria-label="List"
+                @click="setDealsBoardView('list')"
+              >
+                <iconify-icon icon="lucide:list" aria-hidden="true" />
+              </button>
+            </div>
             <NotificationBell
               ref="notificationBellMob"
               class="kanban-mob-notification"
@@ -435,6 +466,37 @@
             </template>
             </template>
           </nav>
+          <div
+            v-if="isDealRoute"
+            class="deals-layout-switch"
+            role="tablist"
+            aria-label="Deal layout"
+          >
+            <button
+              type="button"
+              class="deals-layout-switch__btn"
+              role="tab"
+              :aria-selected="dealsBoardView === 'kanban'"
+              :class="{ 'is-active': dealsBoardView === 'kanban' }"
+              title="Kanban"
+              @click="setDealsBoardView('kanban')"
+            >
+              <iconify-icon icon="lucide:columns-3" aria-hidden="true" />
+              <span class="deals-layout-switch__label">Kanban</span>
+            </button>
+            <button
+              type="button"
+              class="deals-layout-switch__btn"
+              role="tab"
+              :aria-selected="dealsBoardView === 'list'"
+              :class="{ 'is-active': dealsBoardView === 'list' }"
+              title="List"
+              @click="setDealsBoardView('list')"
+            >
+              <iconify-icon icon="lucide:list" aria-hidden="true" />
+              <span class="deals-layout-switch__label">List</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1131,6 +1193,7 @@ const showCreateListingButton = computed(() => {
 // ========== KANBAN STATE ==========
 const activeKanbanTab = ref('leads')
 const activeDealType = ref('primary')
+const dealsBoardView = ref('kanban')
 const showKanbanSearchModal = ref(false)
 const kanbanLastQuery = ref(null)
 const kanbanDealType = ref('primary')
@@ -1382,6 +1445,16 @@ const setActiveDealType = (typeId) => {
   activeDealType.value = typeId
   localStorage.setItem(DEAL_TYPE_KEY, typeId)
   window.dispatchEvent(new CustomEvent('kanban-deal-type-change', { detail: typeId }))
+}
+
+function setDealsBoardView(view) {
+  const next = view === 'list' ? 'list' : 'kanban'
+  dealsBoardView.value = next
+  window.dispatchEvent(new CustomEvent('kanban-deals-set-board-view', { detail: next }))
+}
+
+function onDealsBoardViewFromPage(event) {
+  dealsBoardView.value = event?.detail === 'list' ? 'list' : 'kanban'
 }
 
 function loadStoredDealType() {
@@ -2123,6 +2196,10 @@ const openSearchModal = (event) => {
     nextTick(() => updateSearchDropdownPosition());
 };
 
+const onKanbanOpenSearchEvent = () => {
+    openSearchModal();
+};
+
 function onSearchModalModelUpdate(val) {
     if (!val) {
         closeSearchModal();
@@ -2778,12 +2855,16 @@ onMounted(() => {
 
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.removeEventListener('kanban-deals-board-view', onDealsBoardViewFromPage)
   window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
+  window.removeEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.addEventListener('kanban-deals-board-view', onDealsBoardViewFromPage)
   window.addEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.addEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
+  window.addEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   loadStoredDealType()
 
   // Disable the nav search input the instant another modal (Create Lead/Deal, Add
@@ -2865,8 +2946,10 @@ onUnmounted(() => {
   window.removeEventListener('kanban-deal-search-update', onKanbanSearchUpdate)
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
+  window.removeEventListener('kanban-deals-board-view', onDealsBoardViewFromPage)
   window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
   window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
+  window.removeEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   if (searchDebounceTimer.value) {
     clearTimeout(searchDebounceTimer.value);
     searchDebounceTimer.value = null;
@@ -3384,6 +3467,75 @@ const showBackButton = computed(() => {
 
 .module-tabs-nav--sub {
   margin-left: 4px;
+}
+
+.deals-layout-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  flex: 0 0 auto;
+}
+
+.deals-layout-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.deals-layout-switch__btn iconify-icon {
+  font-size: 14px;
+}
+
+.deals-layout-switch__btn.is-active {
+  background: var(--gradient-primary);
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.24);
+}
+
+.deals-layout-switch__btn.is-active iconify-icon {
+  color: #fff;
+}
+
+@media (max-width: 1100px) {
+  .deals-layout-switch__label {
+    display: none;
+  }
+
+  .deals-layout-switch__btn {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+.deals-layout-switch--mobile {
+  margin-left: 0;
+  padding: 2px;
+}
+
+.deals-layout-switch--mobile .deals-layout-switch__btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
 }
 
 .navbar-global-search-wrap {

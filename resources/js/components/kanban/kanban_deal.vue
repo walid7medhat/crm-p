@@ -51,7 +51,14 @@
     <AddStageModal v-if="showAddStageModal" v-model="showAddStageModal"   :stage-type="currentStageType"
         :deal-type="currentDealType"
         @stage-created="handleStageCreated" />
-    <div class="kanban-main-wrapper kanban-content-area" :class="{ 'deal-figma-ui': isDealsView, 'kanban-shell--mobile': kanbanIsMobile }">
+    <div
+      class="kanban-main-wrapper kanban-content-area"
+      :class="{
+        'deal-figma-ui': isDealsView,
+        'kanban-shell--mobile': kanbanIsMobile,
+        'kanban-content-area--deals-list': isDealsView && isDealsListView,
+      }"
+    >
         <Deals
             v-if="isDealsView"
             ref="dealsRef"
@@ -187,6 +194,17 @@ const isDealsView = computed(() => {
     if (route.path === '/kanban_deal') return true
     return route.path === '/kanban' && activeTab.value === 'deals'
 })
+// Keep shell layout in sync with Deals: kanban is the default for now.
+const dealsBoardView = ref('kanban')
+try {
+    localStorage.setItem('kanban_deals_board_view', 'kanban')
+} catch {
+    /* ignore */
+}
+const isDealsListView = computed(() => isDealsView.value && dealsBoardView.value === 'list')
+const onDealsBoardViewChange = (e) => {
+    dealsBoardView.value = e?.detail === 'list' ? 'list' : 'kanban'
+}
 const isLeadsView = computed(() => route.path === '/kanban' && activeTab.value === 'leads')
 const isLeadPoolView = computed(() => route.path === '/kanban' && activeTab.value === 'lead-pool')
 
@@ -524,6 +542,7 @@ const setupKanbanListeners = () => {
     window.addEventListener('kanban-lead-search', onKanbanLeadSearchEvent)
     window.addEventListener('kanban-lead-search-update', onKanbanLeadSearchEvent)
     window.addEventListener('kanban-deal-search', onKanbanDealSearchEvent)
+    window.addEventListener('kanban-deals-board-view', onDealsBoardViewChange)
 }
 
 
@@ -648,6 +667,7 @@ onUnmounted(() => {
     window.removeEventListener('kanban-lead-search', onKanbanLeadSearchEvent)
     window.removeEventListener('kanban-lead-search-update', onKanbanLeadSearchEvent)
     window.removeEventListener('kanban-deal-search', onKanbanDealSearchEvent)
+    window.removeEventListener('kanban-deals-board-view', onDealsBoardViewChange)
       window.removeEventListener('kanban-open-settings', onKanbanOpenSettings)
       window.removeEventListener('kanban-open-converted-deal', onKanbanOpenConvertedDeal)
         delete window.__kanbanDealsRef;
@@ -1214,6 +1234,24 @@ const $showNotification = (message, type = 'info') => {
     padding: 0;
     overflow: visible;
     background: transparent;
+}
+
+.kanban-content-area--deals-list {
+    flex: 1 1 0;
+    min-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 4.5rem);
+    height: 100%;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0 !important;
+}
+
+.kanban-content-area--deals-list :deep(.deals-tab-content--list) {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    padding-bottom: 0;
 }
 .btn-create-new-icon {
     color: #ffffff;

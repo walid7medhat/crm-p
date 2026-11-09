@@ -416,6 +416,149 @@ class OwnerFinancialReport
         ];
     }
 
+    /**
+     * Aggregations over the same filtered financial rows used by summary/export.
+     * Powers mobile insights charts — not a separate reporting engine.
+     */
+    public function insights(Request $request): array
+    {
+        $agg = 'COUNT(*) AS deals,
+            COALESCE(SUM(fr.deal_amount), 0) AS deal_amount,
+            COALESCE(SUM(fr.gross_commission), 0) AS gross_commission,
+            COALESCE(SUM(fr.net_revenue), 0) AS net_revenue';
+
+        $mapRow = function ($r, string $key, ?string $label = null, float $shareOf = 0.0): array {
+            $gross = round((float) $r->gross_commission, 2);
+
+            return [
+                'key' => $key,
+                'label' => $label ?? $key,
+                'deals' => (int) $r->deals,
+                'deal_amount' => round((float) ($r->deal_amount ?? 0), 2),
+                'gross_commission' => $gross,
+                'net_revenue' => round((float) $r->net_revenue, 2),
+                'share_pct' => $shareOf > 0 ? round(($gross / $shareOf) * 100, 1) : 0.0,
+            ];
+        };
+
+        $byDealType = DB::query()
+            ->fromSub($this->filteredRows($request), 'fr')
+            ->join('deals', 'deals.id', '=', 'fr.id')
+            ->selectRaw("deals.deal_type AS deal_type, {$agg}")
+            ->groupBy('deals.deal_type')
+            ->orderByDesc('net_revenue')
+            ->get()
+            ->map(fn ($r) => $mapRow(
+                $r,
+                (string) ($r->deal_type ?: 'unknown'),
+                self::DEAL_TYPES[$r->deal_type] ?? Str::headline((string) ($r->deal_type ?: 'Unknown'))
+            ))
+            ->values()
+            ->all();
+
+        $byAgent = DB::query()
+            ->fromSub($this->filteredRows($request), 'fr')
+            ->join('deals', 'deals.id', '=', 'fr.id')
+            ->leftJoin('users', 'users.id', '=', 'deals.responsible_person_id')
+            ->selectRaw("deals.responsible_person_id AS agent_id,
+                COALESCE(NULLIF(users.display_name, ''), users.name, 'Unassigned') AS agent_name,
+                {$agg}")
+            ->groupBy('deals.responsible_person_id', 'users.display_name', 'users.name')
+            ->orderByDesc('net_revenue')
+            ->limit(12)
+            ->get()
+            ->map(fn ($r) => $mapRow(
+                $r,
+                $r->agent_id !== null ? (string) $r->agent_id : 'unassigned',
+                (string) $r->agent_name
+            ))
+            ->values()
+            ->all();
+
+        $branchByUser = $this->branchByUser();
+        $branchTotals = [];
+        DB::query()
+            ->fromSub($this->filteredRows($request), 'fr')
+            ->join('deals', 'deals.id', '=', 'fr.id')
+            ->selectRaw('deals.responsible_person_id AS agent_id, COUNT(*) AS deals,
+                COALESCE(SUM(fr.gross_commission), 0) AS gross_commission,
+                COALESCE(SUM(fr.net_revenue), 0) AS net_revenue')
+            ->groupBy('deals.responsible_person_id')
+            ->get()
+            ->each(function ($r) use (&$branchTotals, $branchByUser) {
+                $name = $r->agent_id ? ($branchByUser[(int) $r->agent_id] ?? 'Unassigned') : 'Unassigned';
+                if (! isset($branchTotals[$name])) {
+                    $branchTotals[$name] = ['deals' => 0, 'gross_commission' => 0.0, 'net_revenue' => 0.0];
+                }
+                $branchTotals[$name]['deals'] += (int) $r->deals;
+                $branchTotals[$name]['gross_commission'] += (float) $r->gross_commission;
+                $branchTotals[$name]['net_revenue'] += (float) $r->net_revenue;
+            });
+
+        $byBranch = collect($branchTotals)
+            ->map(fn ($v, $name) => [
+                'key' => $name,
+                'label' => $name,
+                'deals' => $v['deals'],
+                'gross_commission' => round($v['gross_commission'], 2),
+                'net_revenue' => round($v['net_revenue'], 2),
+            ])
+            ->sortByDesc('net_revenue')
+            ->take(12)
+            ->values()
+            ->all();
+
+        $byMonth = DB::query()
+            ->fromSub($this->filteredRows($request), 'fr')
+            ->selectRaw("DATE_FORMAT(fr.deal_date, '%Y-%m') AS month_key, {$agg}")
+            ->whereNotNull('fr.deal_date')
+            ->groupBy('month_key')
+            ->orderBy('month_key')
+            ->get()
+            ->map(function ($r) use ($mapRow) {
+                $key = (string) $r->month_key;
+                $label = $key;
+                try {
+                    $label = \Carbon\Carbon::createFromFormat('Y-m', $key)->format('M Y');
+                } catch (\Throwable) {
+                    // keep raw key
+                }
+
+                return $mapRow($r, $key, $label);
+            })
+            ->values()
+            ->all();
+
+        // Source performance for the same filters (uses actual deals.source values only).
+        $sourceRows = DB::query()
+            ->fromSub($this->filteredRows($request), 'fr')
+            ->join('deals', 'deals.id', '=', 'fr.id')
+            ->selectRaw("COALESCE(NULLIF(TRIM(deals.source), ''), 'Unspecified') AS source_name, {$agg}")
+            ->groupBy('source_name')
+            ->orderByDesc('gross_commission')
+            ->get();
+
+        $sourceGrossTotal = (float) $sourceRows->sum(fn ($r) => (float) $r->gross_commission);
+        $bySource = $sourceRows
+            ->map(fn ($r) => $mapRow(
+                $r,
+                (string) $r->source_name,
+                (string) $r->source_name,
+                $sourceGrossTotal
+            ))
+            ->values()
+            ->all();
+
+        return [
+            'by_deal_type' => $byDealType,
+            'by_agent' => $byAgent,
+            'by_branch' => $byBranch,
+            'by_month' => $byMonth,
+            'by_source' => $bySource,
+            'currency' => 'AED',
+        ];
+    }
+
     /** @return array{0:string,1:string} sort key, direction */
     private function sorting(Request $request): array
     {

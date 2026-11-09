@@ -45,8 +45,18 @@ class DealIndexPerformanceTest extends TestCase
         $pageCount = count($json['data']);
         $this->assertGreaterThan(0, $pageCount);
 
-        foreach (['id', 'deal_name', 'stage', 'responsible_person', 'assigned_at', 'properties', 'parties', 'lead'] as $key) {
+        foreach (['id', 'deal_name', 'stage', 'responsible_person', 'assigned_at', 'properties', 'parties', 'lead', 'deal_commission', 'client_name', 'commission_distribution'] as $key) {
             $this->assertArrayHasKey($key, $json['data'][0], "DealResource list item must expose {$key}");
+        }
+
+        // List mode must not ship property document blobs (detail show still does).
+        $firstProps = $json['data'][0]['properties'] ?? [];
+        if ($firstProps !== []) {
+            $this->assertArrayNotHasKey(
+                'eoi_documents',
+                $firstProps[0],
+                'GET /deals list must omit property document payloads'
+            );
         }
 
         // One batched window query (+ hydrate), not one histories() query per deal.

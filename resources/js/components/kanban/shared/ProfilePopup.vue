@@ -219,7 +219,7 @@ const props = defineProps({
   },
   userId: {
     type: [Number, String],
-    required: true
+    default: null
   },
   showEdit: {
     type: Boolean,

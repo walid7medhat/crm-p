@@ -597,7 +597,9 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::prefix('reports/owner-financial')->group(function () {
         Route::get('/options', [OwnerFinancialReportController::class, 'options']);
         Route::get('/', [OwnerFinancialReportController::class, 'index']);
+        Route::get('/insights', [OwnerFinancialReportController::class, 'insights']);
         Route::get('/export', [OwnerFinancialReportController::class, 'export']);
+        Route::get('/pdf', [OwnerFinancialReportController::class, 'pdf']);
         Route::get('/deals/{deal}', [OwnerFinancialReportController::class, 'show'])->whereNumber('deal');
     });
 

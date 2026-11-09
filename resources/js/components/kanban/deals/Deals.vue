@@ -1,7 +1,18 @@
 <template>
-  <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile }">
+  <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile, 'deals-tab-content--list': boardView === 'list' }">
+    <DealListView
+      v-if="boardView === 'list'"
+      ref="dealListViewRef"
+      :deal-type="activeTypeTab"
+      :filters="mergedListFilters"
+      :stages="columns"
+      @open-deal="onListOpenDeal"
+      @open-person="onListOpenPerson"
+      @set-board-view="setBoardView"
+    />
+
     <!-- Kanban board with navigation arrows -->
-    <div class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
+    <div v-show="boardView === 'kanban'" class="kanban-outer" :class="{ 'kanban-outer--mobile': kanbanIsMobile }">
       <div
         ref="kanbanContainerRef"
         class="kanban-container"
@@ -466,6 +477,7 @@ import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useIntersectionObserver } from '@vueuse/core' 
 import Swal from 'sweetalert2'
 import ViewDealModal from './ViewDealModal.vue'
+import DealListView from './DealListView.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 import CompleteStageFieldsModal from './CompleteStageFieldsModal.vue'
 import { useStageTransition } from '@/composables/useStageTransition'
@@ -485,7 +497,7 @@ const props = defineProps({
 const viewDealModalRef = ref(null)
 const autoEditSection = ref(null)
 // تعريف emit مرة واحدة فقط مع جميع الأحداث
-const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change'])
+const emit = defineEmits(['update:deals', 'deal-moved', 'deal-type-change', 'deal-created'])
 const openDealModal = async (dealData) => {
     console.log('🎯 Opening deal modal with data:', dealData)
     
@@ -970,6 +982,71 @@ function onDealDragEnd() {
 // Fetch deals from API
 const runtimeFilters = ref({})
 
+const BOARD_VIEW_KEY = 'kanban_deals_board_view'
+// Default Deals to kanban for now (do not restore a prior list preference).
+const boardView = ref('kanban')
+try {
+  localStorage.setItem(BOARD_VIEW_KEY, 'kanban')
+} catch {
+  /* ignore private-mode storage failures */
+}
+const dealListViewRef = ref(null)
+
+function setBoardView(view) {
+  boardView.value = view === 'list' ? 'list' : 'kanban'
+  try {
+    // Persist kanban only for now so a hard refresh always returns to the board.
+    localStorage.setItem(BOARD_VIEW_KEY, 'kanban')
+  } catch {
+    /* ignore private-mode storage failures */
+  }
+  window.dispatchEvent(new CustomEvent('kanban-deals-board-view', { detail: boardView.value }))
+  if (boardView.value === 'kanban') {
+    nextTick(() => {
+      updateScrollArrows()
+      setupInfiniteScroll()
+    })
+  } else {
+    nextTick(() => dealListViewRef.value?.refresh?.())
+  }
+}
+
+function onExternalBoardViewChange(event) {
+  const next = event?.detail === 'list' ? 'list' : 'kanban'
+  if (next === boardView.value) return
+  setBoardView(next)
+}
+
+const mergedListFilters = computed(() => ({
+  ...props.filters,
+  ...runtimeFilters.value,
+}))
+
+function onListOpenDeal(deal) {
+  const stageId = deal?.stage_id || deal?.stage?.id
+  const column = columns.value.find((col) => String(col.stage_id) === String(stageId))
+  const stageName = deal?.stage?.name || column?.title
+  viewDeal({
+    ...deal,
+    stage_id: stageId,
+    stage: stageId
+      ? { ...(deal?.stage || {}), id: stageId, name: stageName }
+      : deal?.stage,
+  }, column || {
+    title: stageName,
+    stage_id: stageId,
+  })
+}
+
+function onListOpenPerson({ deal, event }) {
+  openPersonProfile(deal, 'responsible', event)
+}
+
+function refreshDealListView() {
+  if (boardView.value !== 'list') return
+  dealListViewRef.value?.refresh?.()
+}
+
 // externalFilters: an object → use these filters; null → clear them; left out → keep the
 // current ones. (The default used to be null, so every refresh — after a drag, a save,
 // the retry button, the queued re-run — silently dropped the active search.)
@@ -1336,6 +1413,7 @@ const handleDeletedDeal = (deal) => {
       }
     }
   }
+  refreshDealListView()
 }
 
 const handleDealUpdatedFromModal = (updatedDeal) => {
@@ -1349,6 +1427,7 @@ const handleDealUpdatedFromModal = (updatedDeal) => {
         deal_type: updatedDeal.deal_type ?? selectedDeal.value.deal_type
       }
     }
+    refreshDealListView()
   }
 }
 
@@ -1644,6 +1723,13 @@ const showDealNotification = (event) => {
   })
 }
 
+const stopPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
+  }
+}
+
 const startPolling = () => {
   if (pollingInterval.value) return
   
@@ -1676,10 +1762,7 @@ const cleanup = () => {
   })
   echoListeners.value = []
 
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-    pollingInterval.value = null
-  }
+  stopPolling()
 }
 
 // Stage editing functions
@@ -2495,6 +2578,8 @@ onMounted(async () => {
   // while this first fetch is still running — that switch must not be missed, or the
   // board keeps the previous type's stages.
   window.addEventListener('kanban-deal-type-change', onExternalDealTypeChange);
+  window.addEventListener('kanban-deals-set-board-view', onExternalBoardViewChange);
+  window.dispatchEvent(new CustomEvent('kanban-deals-board-view', { detail: boardView.value }))
   try {
     await fetchDeals(true);
   } finally {
@@ -2523,6 +2608,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateScrollArrows);
   window.removeEventListener('echo-ready', initializeDealUpdates);
   window.removeEventListener('kanban-deal-type-change', onExternalDealTypeChange);
+  window.removeEventListener('kanban-deals-set-board-view', onExternalBoardViewChange);
   cleanup();
   disconnectInfiniteObservers();
 });
@@ -2547,6 +2633,26 @@ defineExpose({
   min-height: 500px;
   font-family: var(--deal-font, 'Inter', ui-sans-serif, sans-serif);
   position: relative;
+}
+
+.deals-tab-content--list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  /* Keep a viewport floor so list mode never paints as a blank shell if a
+     parent in the flex chain lacks an explicit height. */
+  min-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 5rem);
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.deals-tab-content--list :deep(.deal-list) {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
 }
 
 .deals-type-tabs {

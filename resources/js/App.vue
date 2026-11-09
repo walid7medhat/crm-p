@@ -456,6 +456,16 @@ body.app-has-video-bg #app main.dashboard-main > .dashboard-main-router:has(.org
   padding-bottom: 0 !important;
 }
 
+/* Deals list view needs a bounded flex height so DealListView can scroll
+   internally. Without this, height:100% + overflow:hidden collapses to blank. */
+#app main.dashboard-main > .dashboard-main-router:has(.kanban-content-area--deals-list) {
+  overflow: hidden !important;
+  min-height: 0 !important;
+  height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)) !important;
+  max-height: calc(100dvh - var(--app-topbar-height, 2.75rem) - var(--app-header-below-gap, 0.5rem)) !important;
+  padding-bottom: 0 !important;
+}
+
 #app main.dashboard-main > .dashboard-main-router:has(.property-form-page),
 #app main.dashboard-main > .dashboard-main-router:has(.property-show-page),
 #app main.dashboard-main > .dashboard-main-router:has(.property-show-inner),

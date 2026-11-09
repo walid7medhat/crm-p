@@ -1432,8 +1432,17 @@ function close() {
 </script>
 
 <style>
-/* Mirrors ViewLeadModal non-scoped modal shell — fluid width for all viewports */
+/* bootstrap-vue-3: backdrop is a sibling AFTER .modal-dialog inside #view-deal-modal.
+   Keep the dialog above that nested backdrop or the deal looks permanently dimmed/hidden. */
+.modal#view-deal-modal {
+  z-index: 12200 !important;
+}
+.modal#view-deal-modal .modal-backdrop {
+  z-index: 1 !important;
+}
 .modal#view-deal-modal .modal-dialog {
+  position: relative;
+  z-index: 2 !important;
   max-width: min(1180px, 96vw) !important;
   width: min(1180px, 96vw) !important;
   max-height: 88vh !important;
@@ -1453,12 +1462,14 @@ function close() {
   max-height: 88vh !important;
 }
 
-.view-lead-modal {
+/* Only the modal body uses this class — do not pin a low stacking context here */
+#view-deal-modal .view-lead-modal {
   padding: 0 !important;
   height: 88vh;
   max-height: 88vh;
   display: flex;
   flex-direction: column;
+  z-index: auto !important;
 }
 
 @media (max-width: 768px) {
@@ -1487,10 +1498,6 @@ function close() {
 
 <style scoped>
 /* Mirror ViewLeadModal shell — shared class names: view-lead-modal, view-lead-modal-content */
-.view-lead-modal {
-  z-index: 1000 !important;
-}
-
 .view-lead-modal-content {
   background: #fff;
   border-radius: 18px;

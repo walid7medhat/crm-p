@@ -62,6 +62,14 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  targetStageOrder: {
+    type: [Number, String],
+    default: null
+  },
+  requiredFields: {
+    type: Array,
+    default: () => []
+  },
   originalStageName: {
     type: String,
     default: 'Previous Stage'

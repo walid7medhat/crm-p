@@ -571,7 +571,7 @@
       @click.self="closeMoreSheet"
     >
       <div class="mobile-more-sheet__panel" role="dialog" aria-modal="true" aria-label="More">
-        <div class="mobile-more-sheet__scroll">
+        <div ref="moreSheetScrollRef" class="mobile-more-sheet__scroll">
           <div class="mobile-more-card">
             <button type="button" class="mobile-more-row" :class="{ 'is-active': isHomeTabActive }" @click="onMoreHome">
               <span class="mobile-more-row__icon"><img :src="dashboardIcon" alt="" /></span>
@@ -721,7 +721,7 @@
             <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
           </button>
 
-          <template v-if="settingsSidebarSections.length">
+          <div v-if="settingsSidebarSections.length" ref="moreSettingsGroupRef" class="mobile-more-group">
             <button type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('settings') }" :aria-expanded="moreOpenGroup === 'settings' ? 'true' : 'false'" @click="toggleMoreGroup('settings')">
               <span class="mobile-more-row__icon"><img :src="roleIcon" alt="" /></span>
               <span class="mobile-more-row__label">Settings</span>
@@ -742,7 +742,7 @@
                 </button>
               </template>
             </div>
-          </template>
+          </div>
           </div>
         </div>
         <div class="mobile-more-sheet__footer">
@@ -1821,6 +1821,8 @@ const compactHomePath = computed(() => (isShowOnlyListing.value ? '/alllisting' 
 const showCreateSheet = ref(false);
 const showMoreSheet = ref(false);
 const moreOpenGroup = ref(null);
+const moreSheetScrollRef = ref(null);
+const moreSettingsGroupRef = ref(null);
 let pendingCreateLead = false;
 
 const isHomeTabActive = computed(() => {
@@ -1891,7 +1893,45 @@ function logoutFromMore() {
 }
 
 function toggleMoreGroup(key) {
-  moreOpenGroup.value = moreOpenGroup.value === key ? null : key;
+  const opening = moreOpenGroup.value !== key;
+  moreOpenGroup.value = opening ? key : null;
+  // Settings sits at the bottom of the sheet; scroll a little so nested options
+  // aren't hidden behind Log out / Close.
+  if (opening && key === 'settings') {
+    scrollMoreSettingsIntoView();
+  }
+}
+
+async function scrollMoreSettingsIntoView() {
+  await nextTick();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const scrollEl = moreSheetScrollRef.value;
+      const groupEl = moreSettingsGroupRef.value;
+      if (!scrollEl || !groupEl) return;
+
+      // Only reveal the first Settings option — not the whole submenu.
+      const firstOption = groupEl.querySelector(
+        '.mobile-more-nested .mobile-more-row, .mobile-more-nested__heading'
+      );
+      const target = firstOption || groupEl.querySelector('.mobile-more-nested');
+      if (!target) return;
+
+      const scrollRect = scrollEl.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const overflow = targetRect.bottom - scrollRect.bottom + 12;
+      if (overflow <= 0) return;
+
+      // Cap so the sheet only nudges a little.
+      const delta = Math.min(overflow, 72);
+      const reduceMotion = typeof window !== 'undefined'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      scrollEl.scrollBy({
+        top: delta,
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+    });
+  });
 }
 
 function toggleCreateSheet() {

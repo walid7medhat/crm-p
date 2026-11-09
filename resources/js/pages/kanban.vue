@@ -29,6 +29,16 @@ export default {
     color: rgba(255, 255, 255, 0.95);
     background: transparent;
     margin: 4px 4px 6px 4px;
+    /* Same flex fill as kanban_deal — required for deals list mode height. */
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.dashboard-main-body :deep(.kanban-main-wrapper) {
+    flex: 1 1 0;
+    min-height: 0;
 }
 
 @media (max-width: 768px) {
