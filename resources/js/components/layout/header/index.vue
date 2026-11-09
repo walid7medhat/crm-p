@@ -1400,6 +1400,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/settings/deal-costs', label: 'Deal Costs', iconSrc: dealsIcon.value });
     system.push({ path: '/settings/user-duplicates-report', label: 'Non-OIA & Duplicate Users', iconSrc: agentsIcon.value });
     system.push({ path: '/settings/stage-duplicates-report', label: 'Stage Lead Duplicates', iconSrc: leadsIcon.value });
+    system.push({ path: '/settings/account-emails', label: 'Account Emails', icon: 'lucide:mail' });
     system.push({ path: '/settings/location-tracking', label: 'Location Tracking', icon: 'lucide:map-pin' });
   }
 

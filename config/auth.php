@@ -102,6 +102,15 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Links sent in the "your account" email (users:send-account-email) —
+        // valid for 7 days so people have time to open the email.
+        'account_setup' => [
+            'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 10080,
+            'throttle' => 0,
+        ],
     ],
 
     /*

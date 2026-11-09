@@ -14,6 +14,7 @@ const baseRoutes = [
     { path: '/settings/deal-costs', component: () => import('./pages/settings/DealCostSettings.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/settings/evaluations', component: () => import('./pages/settings/EvaluationSettings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/user-duplicates-report', component: () => import('./pages/settings/user-duplicates-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/settings/account-emails', component: () => import('./pages/settings/account-emails.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/stage-duplicates-report', component: () => import('./pages/settings/stage-duplicates-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/location-tracking', component: () => import('./pages/settings/location-tracking.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },

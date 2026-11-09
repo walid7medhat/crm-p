@@ -92,15 +92,21 @@ public function resetPassword(Request $request): JsonResponse
         'password' => 'required|min:6|confirmed',
     ]);
 
-    $status = Password::reset(
-        $request->only('email', 'password', 'password_confirmation', 'token'),
-        function ($user, $password) {
-            $user->forceFill([
-                'password' => Hash::make($password),
-                'remember_token' => Str::random(60),
-            ])->save();
-        }
-    );
+    $credentials = $request->only('email', 'password', 'password_confirmation', 'token');
+    $setPassword = function ($user, $password) {
+        $user->forceFill([
+            'password' => Hash::make($password),
+            'remember_token' => Str::random(60),
+        ])->save();
+    };
+
+    $status = Password::reset($credentials, $setPassword);
+
+    // Links from the "your account" email live 7 days (account_setup broker, same token table);
+    // the default broker rejects them after 60 minutes, so retry with the longer one.
+    if ($status === Password::INVALID_TOKEN) {
+        $status = Password::broker('account_setup')->reset($credentials, $setPassword);
+    }
 
     return $status === Password::PASSWORD_RESET
         ? ApiResponse::success(null, 'Password reset successfully')
