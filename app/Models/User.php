@@ -382,6 +382,15 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $branch ? $branch->getAllSubordinatesIds() : [$this->id];
     }
 
+    /** User id that may use the "Duplicates" / "Blacklisted" lead filters besides super_admin. */
+    public const DUPLICATE_FILTER_EXTRA_USER_ID = 30;
+
+    /** Navbar "Duplicates" / "Blacklisted" toggles (has_duplicate / has_blacklist): super_admin + user #30. */
+    public function canUseDuplicateFilters(): bool
+    {
+        return $this->hasRole('super_admin') || (int) $this->id === self::DUPLICATE_FILTER_EXTRA_USER_ID;
+    }
+
     /** Sees every lead in their whole branch: branch_admin, or the show-branch-leads permission. */
     public function seesBranchLeads(): bool
     {

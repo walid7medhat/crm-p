@@ -5585,8 +5585,9 @@ async function applySearch(options = {}) {
 
         lead_type: form.value.leadType || undefined,
 
-        has_duplicate: user.value?.roles?.includes('super_admin') && form.value.hasDuplicate ? '1' : undefined,
-        has_blacklist: user.value?.roles?.includes('super_admin') && form.value.hasBlacklist ? '1' : undefined,
+        // Duplicates / Blacklisted toggles: super admin + user #30 (User::canUseDuplicateFilters).
+        has_duplicate: (user.value?.roles?.includes('super_admin') || Number(user.value?.id) === 30) && form.value.hasDuplicate ? '1' : undefined,
+        has_blacklist: (user.value?.roles?.includes('super_admin') || Number(user.value?.id) === 30) && form.value.hasBlacklist ? '1' : undefined,
 
         property_status: form.value.propertyStatus || undefined,
 

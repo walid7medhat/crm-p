@@ -318,7 +318,7 @@ class StageController extends Controller
         $skipSearchRanking = $isTextSearch && (bool) config('lead_scoring.kanban_search.skip_ranking', false);
         // Super-admin "Duplicates" toggle — same soft board path as text search (skip exact COUNT).
         $isDuplicateFilter = ($request->boolean('has_duplicate') || $request->boolean('has_blacklist'))
-            && $user->hasRole('super_admin');
+            && $user->canUseDuplicateFilters();
         $skipHeavyBoardAggregates = $isTextSearch || $skipSearchRanking || $isDuplicateFilter;
 
         // ================= analytics counts (chip totals, pre-heat-filter) =================
@@ -1456,14 +1456,14 @@ public function getOffices()
         \App\Support\LeadSourceFilter::apply($query, $request->source);
     }
 
-    /** "Duplicates only" search filter — super admin only (see Lead::scopeHasDuplicates). */
+    /** "Duplicates only" search filter — super admin + user #30 (see Lead::scopeHasDuplicates). */
     private function applyHasDuplicateFilter($query, Request $request): void
     {
-        if ($request->boolean('has_duplicate') && auth()->user()?->hasRole('super_admin')) {
+        if ($request->boolean('has_duplicate') && auth()->user()?->canUseDuplicateFilters()) {
             $query->hasDuplicates();
         }
         // "Blacklisted" toggle — leads carrying the Blacklisted label (see Lead::scopeHasBlacklistDuplicate).
-        if ($request->boolean('has_blacklist') && auth()->user()?->hasRole('super_admin')) {
+        if ($request->boolean('has_blacklist') && auth()->user()?->canUseDuplicateFilters()) {
             $query->hasBlacklistDuplicate();
         }
     }

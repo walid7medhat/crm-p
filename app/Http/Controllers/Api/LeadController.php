@@ -166,10 +166,10 @@ class LeadController extends Controller
                     });
                 }
                 $this->applyLeadSourceFilter($leadsQuery, $request);
-                if ($request->boolean('has_duplicate') && auth()->user()?->hasRole('super_admin')) {
+                if ($request->boolean('has_duplicate') && auth()->user()?->canUseDuplicateFilters()) {
                     $leadsQuery->hasDuplicates();
                 }
-                if ($request->boolean('has_blacklist') && auth()->user()?->hasRole('super_admin')) {
+                if ($request->boolean('has_blacklist') && auth()->user()?->canUseDuplicateFilters()) {
                     $leadsQuery->hasBlacklistDuplicate();
                 }
                 if ($request->filled('source_information')) {

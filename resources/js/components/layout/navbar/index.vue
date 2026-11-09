@@ -1877,11 +1877,12 @@ const removeFilter = (f) => {
 };
 
 /**
- * Super admin, lead boards only (the API ignores has_duplicate for anyone else).
+ * Super admin + user #30 (User::canUseDuplicateFilters), lead boards only (the API ignores
+ * has_duplicate for anyone else).
  * State lives in lastQuery.has_duplicate; the button itself is the indicator (no search chip).
  */
 const showDuplicatesToggle = computed(() =>
-    isSuperAdmin.value && canUseLeadSearchModal.value && activeKanbanTab.value !== 'deals'
+    (isSuperAdmin.value || Number(user.value?.id) === 30) && canUseLeadSearchModal.value && activeKanbanTab.value !== 'deals'
 );
 const duplicatesOnly = computed(() => !!lastQuery.value?.has_duplicate);
 // Same toggle for the "Blacklisted" label (has_blacklist, super admin only on the API too).
