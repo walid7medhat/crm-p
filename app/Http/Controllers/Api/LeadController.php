@@ -456,6 +456,8 @@ class LeadController extends Controller
                         KanbanLeadCardResource::setEngagementUsersByLeadId(
                             array_fill_keys($items->pluck('id')->map(fn ($id) => (int) $id)->all(), null)
                         );
+                        // Pool cards have no Converted "Deal #" label — skip the per-card deals lookup.
+                        KanbanLeadCardResource::setDealsByLeadId([]);
 
                         $payload = KanbanLeadCardResource::collection($items)->resolve();
 

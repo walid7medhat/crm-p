@@ -175,7 +175,7 @@
                                     <li v-if="this.$hasPermission('users-edit') && user.id != 1">
                                         <a class="dropdown-item" href="javascript:void(0)" @click="editUser(user.id)">Edit</a>
                                     </li>
-                                    <li v-if="hasSuperAdminRole() && user.id !== currentUserId() && user.status === 'active'">
+                                    <li v-if="canSwitchTo(user)">
                                         <a class="dropdown-item" href="javascript:void(0)" @click="switchToUser(user)">Switch account</a>
                                     </li>
                                     <li v-if="this.$hasPermission('users-delete') && user.id != 1">
@@ -369,8 +369,8 @@
                                                 </a>
                                             </li>
 
-                                            <!-- Switch Account (super_admin only) -->
-                                            <li v-if="hasSuperAdminRole() && user.id !== currentUserId() && user.status === 'active'">
+                                            <!-- Switch Account (super_admin; user #30 → sales only) -->
+                                            <li v-if="canSwitchTo(user)">
                                                 <a class="dropdown-item" href="javascript:void(0)" @click="switchToUser(user)">
                                                     <iconify-icon icon="lucide:repeat" class="me-2"></iconify-icon>
                                                     Switch to This Account
@@ -669,19 +669,27 @@ export default {
             }
         },
 
-        // Super admin only — log in as this user (see UsersTable "Switch to This
-        // Account" action). Stashes the current super admin session first so
-        // "Return to Super Admin" (shown app-wide while impersonating) can restore
-        // it without a second login.
+        // "Switch account" (mirrors User::canSwitchInto): super admin → any active user;
+        // user #30 → sales users only. role_name is the formatted first role ("Sales").
+        canSwitchTo(user) {
+            if (!user || user.id === this.currentUserId() || user.status !== 'active') return false;
+            if (this.hasSuperAdminRole()) return true;
+            return Number(this.currentUserId()) === 30
+                && String(user.role_name || '').toLowerCase() === 'sales';
+        },
+
+        // Log in as this user (see "Switch to This Account" action). Stashes the
+        // current session first so "Return to my account" (shown app-wide while
+        // switched) can restore it without a second login.
         async switchToUser(user) {
-            if (!this.hasSuperAdminRole()) {
-                this.showNotification('Only super admins can switch accounts', 'warning');
+            if (!this.canSwitchTo(user)) {
+                this.showNotification('You are not allowed to switch to this account', 'warning');
                 return;
             }
 
             const confirmed = await this.showConfirm(
                 'Switch account?',
-                `You will be logged in as "${user.name}". You can return to your super admin account anytime from the banner at the top of the page.`,
+                `You will be logged in as "${user.name}". You can return to your own account anytime from the button at the top of the page.`,
                 'info'
             );
             if (!confirmed) return;

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import api, { setAuthToken } from '@/plugins/axios'
 import { API_ENDPOINTS } from '@/config/api'
 import { stopLocationTracking } from '@/composables/useLocationTracking'
@@ -16,6 +16,9 @@ function readStoredUser(raw) {
 
 /** Reactive so the "Return to Super Admin" banner updates without a full reload. */
 const impersonatorUser = ref(readStoredUser(localStorage.getItem(IMPERSONATOR_USER_KEY)))
+
+/** True while signed in through "Switch account" — chat UI is hidden in these sessions. */
+export const isSwitchedSession = computed(() => !!impersonatorUser.value)
 
 function storeSessionUser(userData) {
   localStorage.setItem(

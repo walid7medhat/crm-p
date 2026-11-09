@@ -650,8 +650,8 @@ Route::middleware(['jwt.auth'])->group(function () {
    Route::get('/sidebar/counts', [DashboardController::class, 'getSidebarCounts']);
 
 
-    // Chat
-    Route::prefix('chat')->group(function () {
+    // Chat (blocked while user #30 is switched into a sales account — BlockChatForSalesSwitcher)
+    Route::prefix('chat')->middleware('chat.no-switcher')->group(function () {
         Route::get('/users-search', [ChatController::class, 'usersSearch']);
         Route::post('/start', [ChatController::class, 'start']);
         Route::get('/unread-count', [ChatController::class, 'unreadCount']);

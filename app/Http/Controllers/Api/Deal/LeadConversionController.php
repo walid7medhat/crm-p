@@ -76,7 +76,7 @@ class LeadConversionController extends Controller
             ], 404);
         }
 
-       if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
+       if (!$user->hasAnyRole(['super_admin']) && !in_array((int) $user->id, [30, 33], true)) {
             $canAccess = false;
             
             if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
@@ -292,7 +292,7 @@ class LeadConversionController extends Controller
         $lead = Lead::find($request->lead_id);
         
         if ($lead) {
-            if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
+            if (!$user->hasAnyRole(['super_admin']) && !in_array((int) $user->id, [30, 33], true)) {
                 $canAccess = false;
                 
                 if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
@@ -1158,7 +1158,8 @@ private function createDealProperties(Deal $deal, $request)
     {
         $user = auth()->user();
         
-        if (!$user->hasAnyRole(['super_admin']) && $user->id != 30) {
+        // Super admin and users #30 / #33 see "Deals" and "Create deal" on any converted lead.
+        if (!$user->hasAnyRole(['super_admin']) && !in_array((int) $user->id, [30, 33], true)) {
             $canAccess = false;
             
             if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {

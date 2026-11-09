@@ -66,7 +66,96 @@ class KanbanLeadCardResource extends JsonResource
             'leads.priority',
             'leads.intent',
             'leads.next_action',
+            'leads.converted_to_deal_id',
         ];
+    }
+
+    /**
+     * lead id => deals made from it ([id, deal_number, deal_type], newest first), for the
+     * "Deal #…" label on Converted cards. Null = not primed (falls back to one query per
+     * converted lead).
+     *
+     * @var array<int, list<array{id: int, deal_number: string|null, deal_type: string|null}>>|null
+     */
+    protected static ?array $dealsByLeadId = null;
+
+    /**
+     * Deals for a whole page of cards in ONE query. Same rule as the lead modal's
+     * "Deals" list (LeadConversionController::canConvert): deals.lead_id, plus the older
+     * leads.converted_to_deal_id link.
+     *
+     * @param  iterable<int, mixed>  $leads
+     * @return array<int, list<array{id: int, deal_number: string|null, deal_type: string|null}>>
+     */
+    public static function dealsForLeads(iterable $leads): array
+    {
+        $leadIds = [];
+        $legacyDealToLead = [];
+        foreach ($leads as $lead) {
+            $leadId = (int) (is_object($lead) ? ($lead->id ?? 0) : 0);
+            if ($leadId <= 0) {
+                continue;
+            }
+            $leadIds[] = $leadId;
+            if (! empty($lead->converted_to_deal_id)) {
+                $legacyDealToLead[(int) $lead->converted_to_deal_id] = $leadId;
+            }
+        }
+
+        $map = array_fill_keys($leadIds, []);
+        if ($leadIds === []) {
+            return $map;
+        }
+
+        $deals = \App\Models\Deal::query()
+            ->where(function ($q) use ($leadIds, $legacyDealToLead) {
+                $q->whereIn('lead_id', $leadIds);
+                if ($legacyDealToLead !== []) {
+                    $q->orWhereIn('id', array_keys($legacyDealToLead));
+                }
+            })
+            ->orderByDesc('id')
+            ->get(['id', 'lead_id', 'deal_number', 'deal_type']);
+
+        foreach ($deals as $deal) {
+            $leadId = isset($map[(int) $deal->lead_id])
+                ? (int) $deal->lead_id
+                : ($legacyDealToLead[(int) $deal->id] ?? null);
+            if ($leadId === null) {
+                continue;
+            }
+            $map[$leadId][] = [
+                'id' => (int) $deal->id,
+                'deal_number' => $deal->deal_number,
+                'deal_type' => $deal->deal_type,
+            ];
+        }
+
+        return $map;
+    }
+
+    /** @param  array<int, list<array{id: int, deal_number: string|null, deal_type: string|null}>>  $map */
+    public static function setDealsByLeadId(array $map): void
+    {
+        static::$dealsByLeadId = $map;
+    }
+
+    /** @return list<array{id: int, deal_number: string|null, deal_type: string|null}> */
+    protected function cardDeals(): array
+    {
+        $leadId = (int) $this->id;
+
+        if (is_array(static::$dealsByLeadId)) {
+            return static::$dealsByLeadId[$leadId] ?? [];
+        }
+
+        // Not primed: only converted leads (the first deal always sets converted_to_deal_id)
+        // can have deals, so skip the query for everyone else.
+        if (empty($this->converted_to_deal_id)) {
+            return [];
+        }
+
+        return static::dealsForLeads([$this->resource])[$leadId] ?? [];
     }
 
     /** @var array<string, int> */
@@ -141,6 +230,7 @@ class KanbanLeadCardResource extends JsonResource
         static::$serviceDuplicateByLeadId = [];
         static::$duplicateIdsByLeadId = [];
         static::$duplicateNoByLeadId = null;
+        static::$dealsByLeadId = null;
         static::$collectionPrimed = false;
     }
 
@@ -315,6 +405,10 @@ class KanbanLeadCardResource extends JsonResource
             'intent' => $this->intent,
             'next_action' => $this->next_action,
             'merged_count' => $this->whenCounted('merged', fn () => (int) $this->merged_count, 0),
+            // Converted cards show a "Deal #…" label (newest first). converted_to_deal_id is
+            // deliberately NOT sent: leads.vue viewLead() opens the deal instead of the lead
+            // when a card carries it.
+            'deals' => $this->cardDeals(),
         ];
     }
 

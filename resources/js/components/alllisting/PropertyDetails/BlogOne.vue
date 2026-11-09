@@ -1964,6 +1964,7 @@
 
 <script>
 import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextTick } from 'vue';
+import { isSwitchedSession } from '@/composables/useImpersonation.js';
 import { nationalityNames } from '@/utils/nationalities';
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
@@ -2840,6 +2841,8 @@ const canAssignAgent = computed(() => {
 });
 
 const canUsePropertyChat = computed(() => {
+  // Hide "Chat with agent" while signed in through "Switch account".
+  if (isSwitchedSession.value) return false
   const userRoles = Array.isArray(getCurrentUser()?.roles) ? getCurrentUser().roles : [];
   return true
   return userRoles.includes('super_admin') ;
@@ -4470,6 +4473,7 @@ const revertFromConverted = async () => {
 };
 
     const openChatWithAgent = () => {
+      if (!canUsePropertyChat.value) return;
       if (!getCurrentUser()) {
         Swal.fire({ title: 'Please log in', text: 'You need to be logged in to start a chat.', icon: 'info' });
         return;

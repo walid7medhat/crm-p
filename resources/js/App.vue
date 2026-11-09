@@ -8,7 +8,7 @@
       @click="returnToSuperAdmin"
     >
       <iconify-icon icon="lucide:user-round-cog" width="16" height="16" />
-      <span>Return to Super Admin</span>
+      <span>{{ impersonatorUser.roles?.includes('super_admin') ? 'Return to Super Admin' : 'Return to my account' }}</span>
     </button>
     <NavProgressBar :show="isNavigating" />
     <LoginWelcomeSplash v-if="showLayout" />
@@ -166,7 +166,9 @@ export default {
         const raw = localStorage.getItem('user')
         if (!raw) return false
         const u = JSON.parse(raw)
-        console.log("is_listing_team"+ u?.is_listing_team);
+        // No chat while signed in through "Switch account" (for user #30 the API
+        // blocks it too — BlockChatForSalesSwitcher).
+        if (impersonatorUser.value) return false
         const roles = Array.isArray(u?.roles) ? u.roles : []
           return true
         // return roles.includes('super_admin') || roles.includes('admin') || u?.is_listing_team

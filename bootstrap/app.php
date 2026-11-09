@@ -28,7 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
         'jwt.auth' => JwtAuthMiddleware::class,
                 'block.bots' => BlockBots::class,
         'log.usage' => \App\Http\Middleware\LogEndpointUsage::class,
-        'trusted.referer' => \App\Http\Middleware\RequireTrustedReferer::class
+        'trusted.referer' => \App\Http\Middleware\RequireTrustedReferer::class,
+        'chat.no-switcher' => \App\Http\Middleware\BlockChatForSalesSwitcher::class,
 
     ]);
        // Exclude broadcasting/auth from CSRF since we use JWT auth

@@ -337,6 +337,22 @@
                                                 <div class="task-header d-flex align-items-center gap-2 mb-12 min-w-0">
                                                     <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate" :title="task.lead_name">{{ task.lead_name }}</p>
                                                     <div class="task-header-badges d-inline-flex align-items-center gap-1 flex-shrink-0">
+                                                        <!-- Converted: how many deals were made from this lead -->
+                                                        <button
+                                                            v-if="leadDealCount(task)"
+                                                            type="button"
+                                                            class="lead-deal-tag"
+                                                            :title="leadDealTitle(task)"
+                                                            :aria-label="leadDealTitle(task)"
+                                                            @click.stop="openLeadDeals(task, $event)"
+                                                            @dblclick.stop
+                                                            @pointerdown.stop
+                                                        >
+                                                            <span class="lead-deal-tag__face">
+                                                                <iconify-icon icon="lucide:handshake" class="lead-deal-tag__icon" aria-hidden="true" />
+                                                                <span class="lead-deal-tag__num">{{ leadDealCount(task) }}</span>
+                                                            </span>
+                                                        </button>
                                                         <span
                                                             v-if="task.has_service_duplicate"
                                                             class="lead-blacklist-badge"
@@ -637,6 +653,19 @@
                                 <div class="lead-list-name">
                                     <div class="lead-list-name__row">
                                         <span class="lead-list-name__title" :title="row.task.lead_name">{{ row.task.lead_name || 'Untitled' }}</span>
+                                        <button
+                                            v-if="leadDealCount(row.task)"
+                                            type="button"
+                                            class="lead-deal-tag lead-deal-tag--sm"
+                                            :title="leadDealTitle(row.task)"
+                                            :aria-label="leadDealTitle(row.task)"
+                                            @click.stop="openLeadDeals(row.task, $event)"
+                                        >
+                                            <span class="lead-deal-tag__face">
+                                                <iconify-icon icon="lucide:handshake" class="lead-deal-tag__icon" aria-hidden="true" />
+                                                <span class="lead-deal-tag__num">{{ leadDealCount(row.task) }}</span>
+                                            </span>
+                                        </button>
                                         <span v-if="row.task.has_service_duplicate" class="lead-list-chip lead-list-chip--alert">Blacklisted</span>
                                         <button
                                             v-if="canSeeDuplicates && row.task.duplicate_no > 0"
@@ -1033,8 +1062,15 @@
         </transition>
     </Teleport>
     <!-- Duplicate Leads Dropdown -->
-    <DuplicateLeadsModal 
-        v-model="showDuplicateModal" 
+    <LeadDealsPopup
+        v-if="cardDealsPopup.show"
+        v-model="cardDealsPopup.show"
+        :deals="cardDealsPopup.deals"
+        :trigger-element="cardDealsPopup.trigger"
+        @open-deal="openCardDeal"
+    />
+    <DuplicateLeadsModal
+        v-model="showDuplicateModal"
         :leadId="selectedLeadForDuplicates"
         :triggerElement="currentTriggerElement"
         @view-lead="handleViewDuplicateLead"
@@ -1326,7 +1362,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject, defineAsyncComponent } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, inject, defineAsyncComponent } from 'vue'
 import draggable from 'vuedraggable'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -1337,6 +1373,8 @@ import LeadSourceMark from './LeadSourceMark.vue'
 import LeadAnalyticsShortcuts from './LeadAnalyticsShortcuts.vue'
 import StageChangeReasonModal from './StageChangeReasonModal.vue'
 const DuplicateLeadsModal = defineAsyncComponent(() => import('./DuplicateLeadsModal.vue'))
+// Same "Deals (n)" popup as the lead modal header — opened from the card's deal count.
+const LeadDealsPopup = defineAsyncComponent(() => import('../viewLead/LeadDealsPopup.vue'))
 const convertLeadModalLoader = () => import('./ConvertLeadModal.vue')
 const ConvertLeadModal = defineAsyncComponent(convertLeadModalLoader)
 const ProfilePopup = defineAsyncComponent(() => import('../shared/ProfilePopup.vue'))
@@ -4933,6 +4971,49 @@ function findLeadInColumns(leadId) {
     return null
 }
 
+// Converted lead cards: count of deals made from the lead
+// (KanbanLeadCardResource `deals`, newest first). 0 hides the tag.
+function leadDealCount(task) {
+    return Array.isArray(task?.deals) ? task.deals.length : 0
+}
+
+function leadDealTitle(task) {
+    const deals = Array.isArray(task?.deals) ? task.deals : []
+    const list = deals.map((d) => d.deal_number || `#${d.id}`).join(', ')
+    return `${deals.length} ${deals.length === 1 ? 'deal' : 'deals'}: ${list} — click to show`
+}
+
+// Card deal count → the same "Deals (n)" popup as the lead modal header. Opens at once
+// with the card's deals (number + type), then fills in name / stage / responsible from
+// the same endpoint the lead modal uses (/leads/{id}/can-convert).
+const cardDealsPopup = reactive({ show: false, deals: [], trigger: null })
+let cardDealsRequest = 0
+
+async function openLeadDeals(task, event) {
+    const deals = Array.isArray(task?.deals) ? task.deals : []
+    if (!deals.length || !task?.id) return
+    const requestId = ++cardDealsRequest
+    cardDealsPopup.trigger = event?.currentTarget || null
+    cardDealsPopup.deals = deals
+    cardDealsPopup.show = true
+    try {
+        const res = await api.get(`/leads/${task.id}/can-convert`)
+        if (requestId !== cardDealsRequest || !cardDealsPopup.show) return
+        const full = res.data?.data?.deals
+        if (Array.isArray(full) && full.length) cardDealsPopup.deals = full
+    } catch (_) {
+        // Keep the card's own list (deal number + type) when details can't be loaded.
+    }
+}
+
+// Open a deal from the popup on the Deals board (same as the lead modal's "Deals" list).
+function openCardDeal(deal) {
+    const dealId = Number(deal?.id)
+    if (!Number.isFinite(dealId) || dealId <= 0) return
+    cardDealsPopup.show = false
+    router.push({ path: '/kanban_deal', query: { deal: String(dealId) } }).catch(() => {})
+}
+
 const viewLead = (task) => {
     const dealId = task?.converted_to_deal_id
     if (dealId) {
@@ -7961,6 +8042,123 @@ const fetchRevertNotifications = async () => {
     flex-shrink: 0;
     gap: 6px;
     white-space: nowrap;
+}
+
+/*
+ * Converted card: 3D "deals count" key — an emerald keycap with a glossy face sitting on a
+ * darker base (the 3px bottom edge). Hover lifts it, press pushes it down onto the base.
+ */
+.lead-deal-tag {
+    --deal-edge: 3px;
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    padding: 0 0 var(--deal-edge);
+    border: 0;
+    border-radius: 9px;
+    background: linear-gradient(180deg, #047857 0%, #064e3b 100%);
+    box-shadow:
+        0 4px 8px -2px rgba(6, 78, 59, 0.45),
+        0 1px 0 rgba(255, 255, 255, 0.4) inset;
+    cursor: pointer;
+    transform: translateY(-2px);
+    transition: transform 0.16s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.16s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.lead-deal-tag__face {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 8px 0 6px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: linear-gradient(160deg, #6ee7b7 0%, #10b981 45%, #059669 100%);
+    color: #fff;
+    font-family: Montserrat, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    text-shadow: 0 1px 1px rgba(6, 78, 59, 0.55);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -1px 0 rgba(6, 78, 59, 0.25);
+    transition: transform 0.16s cubic-bezier(.34, 1.56, .64, 1);
+}
+/* Glossy highlight across the top half of the face */
+.lead-deal-tag__face::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 50% 0;
+    border-radius: 8px 8px 50% 50% / 8px 8px 6px 6px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.05));
+    pointer-events: none;
+}
+/* Light sweep on hover */
+.lead-deal-tag__face::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -60%;
+    width: 40%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: skewX(-20deg);
+    pointer-events: none;
+    opacity: 0;
+}
+.lead-deal-tag__icon {
+    position: relative;
+    font-size: 12px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 0 rgba(6, 78, 59, 0.5));
+}
+.lead-deal-tag__num {
+    position: relative;
+    min-width: 8px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.lead-deal-tag:hover {
+    transform: translateY(-3px) rotateX(8deg);
+    box-shadow:
+        0 7px 14px -3px rgba(6, 78, 59, 0.5),
+        0 1px 0 rgba(255, 255, 255, 0.4) inset;
+}
+.lead-deal-tag:hover .lead-deal-tag__face::after {
+    opacity: 1;
+    animation: lead-deal-sweep 0.7s ease forwards;
+}
+.lead-deal-tag:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(6, 78, 59, 0.4);
+}
+.lead-deal-tag:active .lead-deal-tag__face {
+    transform: translateY(calc(var(--deal-edge) - 1px));
+}
+.lead-deal-tag:focus-visible {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+}
+@keyframes lead-deal-sweep {
+    from { left: -60%; }
+    to { left: 130%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .lead-deal-tag,
+    .lead-deal-tag__face { transition: none; }
+    .lead-deal-tag:hover { transform: translateY(-2px); }
+    .lead-deal-tag:hover .lead-deal-tag__face::after { animation: none; opacity: 0; }
+}
+.lead-deal-tag--sm {
+    --deal-edge: 2px;
+    transform: none;
+}
+.lead-deal-tag--sm .lead-deal-tag__face {
+    height: 18px;
+    font-size: 10px;
 }
 
 .lead-blacklist-badge {

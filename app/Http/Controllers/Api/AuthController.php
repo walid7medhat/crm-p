@@ -225,7 +225,8 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
         ]);
     }
     /**
-     * "Switch account" — super_admin only. Mints a JWT for the target user, same
+     * "Switch account" — super_admin (any user) and user #30 (sales users only, see
+     * User::canSwitchInto). Mints a JWT for the target user, same
      * shape as login(), so the frontend can drop it straight into localStorage.
      * The frontend is responsible for stashing the super admin's own token first
      * so "Return to Super Admin" can restore it without a second login.
@@ -235,8 +236,8 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
         try {
             $currentUser = auth()->user();
 
-            if (!$currentUser || !$currentUser->hasRole('super_admin')) {
-                return ApiResponse::error('Only super admins can switch accounts', 403);
+            if (!$currentUser || !$currentUser->canSwitchInto($user)) {
+                return ApiResponse::error('You are not allowed to switch to this account', 403);
             }
 
             if ((int) $currentUser->id === (int) $user->id) {
@@ -252,7 +253,7 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
             $token = auth()->claims(['impersonated_by' => (int) $currentUser->id])->login($user);
             $user->load('roles', 'permissions');
 
-            \Log::info('Super admin switched account', [
+            \Log::info('User switched account', [
                 'super_admin_id' => $currentUser->id,
                 'super_admin_name' => $currentUser->name,
                 'target_user_id' => $user->id,

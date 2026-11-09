@@ -391,6 +391,25 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $this->hasRole('super_admin') || (int) $this->id === self::DUPLICATE_FILTER_EXTRA_USER_ID;
     }
 
+    /** User id that may "Switch account" into sales users (besides super_admin, who may switch into anyone). */
+    public const SALES_SWITCHER_USER_ID = 30;
+
+    /**
+     * "Switch account" (AuthController::impersonate): super_admin → any user;
+     * user #30 → sales users only (not into super_admin accounts). While #30 is switched
+     * in, chat is blocked (see BlockChatForSalesSwitcher).
+     */
+    public function canSwitchInto(self $target): bool
+    {
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+
+        return (int) $this->id === self::SALES_SWITCHER_USER_ID
+            && $target->hasRole('sales')
+            && ! $target->hasRole('super_admin');
+    }
+
     /** Sees every lead in their whole branch: branch_admin, or the show-branch-leads permission. */
     public function seesBranchLeads(): bool
     {

@@ -55,10 +55,22 @@ function fuzzyMark(key) {
     return { icon: 'lucide:megaphone', bg: '#64748b' }
 }
 
+/** Same OIA badge as the oiaproperties.com source. */
+const OIA_MARK = EXACT['oiaproperties.com']
+
+/**
+ * Any OIA source or link (oiaproperties.com/projects/…, "Listing Oia Website", …) shows
+ * the same OIA badge as oiaproperties.com instead of the generic website globe.
+ * WhatsApp sources keep the WhatsApp logo.
+ */
+function isOiaSource(key) {
+    return key.includes('oia') && !key.includes('whatsapp') && !key.includes('wati')
+}
+
 export function leadSourceMark(source) {
     const title = String(source || '').trim()
     if (!title) return null
     const key = title.toLowerCase()
-    const mark = EXACT[key] || fuzzyMark(key)
+    const mark = isOiaSource(key) ? OIA_MARK : (EXACT[key] || fuzzyMark(key))
     return { title, ...mark }
 }

@@ -570,6 +570,9 @@ class StageController extends Controller
         KanbanLeadCardResource::setEngagementUsersByLeadId(
             KanbanLeadCardResource::engagementUsersForLeads($allLeadsForMeta)
         );
+        KanbanLeadCardResource::setDealsByLeadId(
+            KanbanLeadCardResource::dealsForLeads($allLeadsForMeta)
+        );
 
         foreach ($stagesWithLeads as &$stageRow) {
             $stageRow['leads'] = KanbanLeadCardResource::collection($stageRow['leads'])->resolve();
@@ -1107,6 +1110,9 @@ class StageController extends Controller
             );
             KanbanLeadCardResource::setEngagementUsersByLeadId(
                 KanbanLeadCardResource::engagementUsersForLeads($leadsCollection)
+            );
+            KanbanLeadCardResource::setDealsByLeadId(
+                KanbanLeadCardResource::dealsForLeads($leadsCollection)
             );
 
             $leadsPayload = KanbanLeadCardResource::collection($leadsCollection)->resolve();
