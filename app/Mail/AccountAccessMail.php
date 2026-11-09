@@ -40,7 +40,6 @@ class AccountAccessMail extends Mailable
                     '3. Click Forgot Password.',
                     '4. Set your new password.',
                     '5. Sign in and start using the new CRM.',
-                    'Login URL:',
                 ],
                 'ctaText' => 'Go to Login',
                 'ctaUrl' => $this->loginUrl,
