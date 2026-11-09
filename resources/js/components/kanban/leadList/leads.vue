@@ -4782,10 +4782,11 @@ const startPolling = () => {
     }
     
     pollingInterval.value = setInterval(() => {
-        // Only poll if not currently fetching
-        // Use immediate=false to allow debouncing (though polling shouldn't need it)
+        // Only poll if not currently fetching. Background refresh: silent, so an active
+        // search doesn't flash the "searching" overlay every 15s (looked like the search
+        // loading again by itself).
         if (!isFetching.value) {
-            fetchLeads(false)
+            fetchLeads(true, undefined, { silent: true })
         }
     }, 15000)
 }

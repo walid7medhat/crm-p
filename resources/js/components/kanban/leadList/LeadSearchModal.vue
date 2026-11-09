@@ -468,6 +468,8 @@
 
                                 @search="onResponsiblePersonSearch"
 
+                                :clear-search-on-select="false"
+
                                 :filterable="false"
 
                                 :loading="loadingResponsiblePersons"
@@ -1439,6 +1441,8 @@
                                 @open="loadResponsiblePersons"
 
                                 @search="onResponsiblePersonSearch"
+
+                                :clear-search-on-select="false"
 
                                 :filterable="false"
 
@@ -5775,8 +5779,29 @@ async function applySearch(options = {}) {
 
     }
 
+    // Same search as the one already on the board (e.g. the live text search already ran it
+    // while typing, then the user pressed Search) — don't make the board load it again.
+    if (props.currentQuery && stableSearchKey(query) === stableSearchKey(props.currentQuery)) return
+
     emit('search', { query, activePill: pillData, activeFilters, keepOpen: !!options.keepOpen })
 
+}
+
+/** Order-independent key for a search query; empty values ignored. */
+function stableSearchKey(q) {
+    const norm = (v) => {
+        if (Array.isArray(v)) return v.map(norm).map(String).sort()
+        if (v && typeof v === 'object') {
+            return Object.keys(v).sort().reduce((acc, k) => {
+                const nv = norm(v[k])
+                if (nv === undefined || nv === null || nv === '' || (Array.isArray(nv) && !nv.length)) return acc
+                acc[k] = nv
+                return acc
+            }, {})
+        }
+        return v === undefined || v === null ? v : String(v)
+    }
+    return JSON.stringify(norm(q || {}))
 }
 
 
@@ -5913,6 +5938,11 @@ let responsibleSearchTimer = null
 
 let responsibleFetchSeq = 0
 
+// Term the current list was loaded for. vue-select also fires `search` when the box is
+// cleared or re-emitted after a pick in multi mode — same term means the list is already
+// right, so don't reload (that reload was the spinner after every pick).
+let lastResponsibleSearchTerm = null
+
 
 
 async function fetchResponsiblePersonsWithFilter(search = '') {
@@ -5924,6 +5954,8 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
         const params = { limit: 30 }
 
         const term = String(search || '').trim()
+
+        lastResponsibleSearchTerm = term
 
         const selectedIds = normalizeResponsibleIds(form.value.responsible)
 
@@ -5985,6 +6017,8 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
 
         if (seq !== responsibleFetchSeq) return
 
+        lastResponsibleSearchTerm = null // failed — let the next search retry
+
         console.error('Error fetching responsible persons with filter:', error)
 
         allResponsiblePersons.value = []
@@ -5996,6 +6030,20 @@ async function fetchResponsiblePersonsWithFilter(search = '') {
 
 
 function onResponsiblePersonSearch(search, loading) {
+
+    const term = String(search || '').trim()
+
+    if (term === lastResponsibleSearchTerm && allResponsiblePersons.value.length) {
+
+        if (responsibleSearchTimer) clearTimeout(responsibleSearchTimer)
+
+        loading?.(false)
+
+        loadingResponsiblePersons.value = false
+
+        return
+
+    }
 
     if (responsibleSearchTimer) clearTimeout(responsibleSearchTimer)
 
@@ -6746,7 +6794,7 @@ watch(
                 return
             }
             applySearch({ keepOpen: true })
-        }, 180)
+        }, 400) // wait for a real pause in typing, not every keystroke gap
     }
 )
 
