@@ -218,6 +218,7 @@ function toggleOne(id) {
 }
 
 function errorText(e, fallback) {
+  if (e?.response?.status === 429) return 'Too many sends in a minute — wait a moment and try again.'
   return e?.response?.data?.message || e?.message || fallback
 }
 

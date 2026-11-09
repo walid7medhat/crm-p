@@ -777,7 +777,7 @@ Route::middleware(['jwt.auth'])->group(function () {
         // Settings → Account Emails: "your account + set/reset password" email per branch.
         Route::get('/admin/account-emails/branches', [\App\Http\Controllers\Api\AccountAccessEmailController::class, 'branches']);
         Route::get('/admin/account-emails/branches/{branch}/users', [\App\Http\Controllers\Api\AccountAccessEmailController::class, 'users'])->whereNumber('branch');
-        Route::post('/admin/account-emails/send', [\App\Http\Controllers\Api\AccountAccessEmailController::class, 'send'])->middleware('throttle:20,1');
+        Route::post('/admin/account-emails/send', [\App\Http\Controllers\Api\AccountAccessEmailController::class, 'send'])->middleware('throttle:account-emails');
         Route::get('/admin/location/online', [\App\Http\Controllers\Api\Admin\LocationTrackingController::class, 'online']);
         Route::get('/admin/location/users/{user}', [\App\Http\Controllers\Api\Admin\LocationTrackingController::class, 'history']);
     });

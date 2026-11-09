@@ -43,6 +43,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Settings → Account Emails "send" endpoint. Own key: plain `throttle:N,1` shares one
+        // per-user counter with other throttled routes (e.g. location pings every few seconds).
+        \Illuminate\Support\Facades\RateLimiter::for('account-emails', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)
+                ->by('account-emails:' . ($request->user()?->id ?? $request->ip()));
+        });
+
     //       Event::listen(MessageSending::class, function ($event) {
     //     \Log::info('📤 Sending Email', [
     //         'to' => $event->message->getTo(),
