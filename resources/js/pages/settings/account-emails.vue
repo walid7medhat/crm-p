@@ -5,7 +5,7 @@
         <div>
           <div class="ae-title">Account emails</div>
           <p class="ae-hint">
-            Sends each user their login email and a “Set / Reset Password” link (valid {{ expiresInDays }} days).
+            Sends each user the “new ALT CRM is ready” email: the login URL and the steps to set a password with Forgot Password.
             Super Admin only.
           </p>
         </div>
@@ -33,7 +33,7 @@
           {{ busy === 'me' ? 'Sending…' : 'Send test' }}
         </button>
         <p class="ae-test__note">
-          The test shows your own account ({{ myEmail || 'you' }}) and its reset link works for your account — only send it to an address you own.
+          Sends the same email to this address so you can check how it looks.
         </p>
       </div>
 
@@ -349,7 +349,7 @@ async function send(ids) {
 }
 
 async function sendOne(user) {
-  if (!window.confirm(`Send the account email to ${user.name} <${user.email}>?\nThis replaces any older reset link they have.`)) return
+  if (!window.confirm(`Send the account email to ${user.name} <${user.email}>?`)) return
   busy.value = user.id
   try {
     await send([user.id])

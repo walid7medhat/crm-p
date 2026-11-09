@@ -74,8 +74,8 @@ class AccountAccessMailer
     }
 
     /**
-     * Create a fresh 7-day reset token for the user and email them. Replaces any older reset link.
-     * $deliverTo sends the same email (for this user's account) to another address — used for tests.
+     * Email the user the "new ALT CRM is ready" message (login URL + Forgot Password steps).
+     * $deliverTo sends the same email to another address — used for tests.
      */
     public function send(User $user, ?string $deliverTo = null): void
     {
@@ -83,14 +83,11 @@ class AccountAccessMailer
         $to = $deliverTo ?: $user->email;
 
         try {
-            $token = Password::broker(self::BROKER)->createToken($user);
-
+            // The email walks users through "Forgot Password" themselves — no reset token is created here.
             Mail::to($to)->send(new AccountAccessMail(
                 $user->email,
                 User::resolveDisplayName($user) ?? $user->name,
                 $base . '/sign-in',
-                $base . '/reset-password?token=' . urlencode($token) . '&email=' . urlencode($user->email),
-                $this->expiresInDays(),
             ));
         } catch (\Throwable $e) {
             $this->log($user, $to, $deliverTo !== null, 'failed', $e->getMessage());
