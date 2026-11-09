@@ -194,13 +194,13 @@ const isDealsView = computed(() => {
     if (route.path === '/kanban_deal') return true
     return route.path === '/kanban' && activeTab.value === 'deals'
 })
-const dealsBoardView = ref((() => {
-    try {
-        return localStorage.getItem('kanban_deals_board_view') === 'list' ? 'list' : 'kanban'
-    } catch {
-        return 'kanban'
-    }
-})())
+// Keep shell layout in sync with Deals: kanban is the default for now.
+const dealsBoardView = ref('kanban')
+try {
+    localStorage.setItem('kanban_deals_board_view', 'kanban')
+} catch {
+    /* ignore */
+}
 const isDealsListView = computed(() => isDealsView.value && dealsBoardView.value === 'list')
 const onDealsBoardViewChange = (e) => {
     dealsBoardView.value = e?.detail === 'list' ? 'list' : 'kanban'
@@ -1238,7 +1238,7 @@ const $showNotification = (message, type = 'info') => {
 
 .kanban-content-area--deals-list {
     flex: 1 1 0;
-    min-height: 0;
+    min-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 4.5rem);
     height: 100%;
     overflow: hidden !important;
     display: flex;

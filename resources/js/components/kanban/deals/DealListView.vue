@@ -1,28 +1,6 @@
 <template>
   <div class="deal-list" :class="{ 'deal-list--mobile': isMobile }">
     <div class="deal-list__toolbar">
-      <div class="board-view-switch deal-list__view-switch" role="tablist" aria-label="Deal layout">
-        <button
-          type="button"
-          class="board-view-switch__btn"
-          role="tab"
-          aria-selected="false"
-          @click="emit('set-board-view', 'kanban')"
-        >
-          <iconify-icon icon="lucide:columns-3" aria-hidden="true" />
-          <span class="board-view-switch__label">Kanban</span>
-        </button>
-        <button
-          type="button"
-          class="board-view-switch__btn is-active"
-          role="tab"
-          aria-selected="true"
-        >
-          <iconify-icon icon="lucide:list" aria-hidden="true" />
-          <span class="board-view-switch__label">List</span>
-        </button>
-      </div>
-
       <div
         v-if="stageTabs.length"
         class="deal-list__stage-tabs"

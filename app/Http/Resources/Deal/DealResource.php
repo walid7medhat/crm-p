@@ -20,6 +20,27 @@ class DealResource extends JsonResource
     protected static bool $collectionPrimed = false;
 
     /**
+     * GET /deals list mode: keep DealListView / card fields, omit property document
+     * blobs and party documents (those load on GET /deals/{id}).
+     */
+    protected static bool $listMode = false;
+
+    public static function enableListMode(): void
+    {
+        static::$listMode = true;
+    }
+
+    public static function disableListMode(): void
+    {
+        static::$listMode = false;
+    }
+
+    public static function isListMode(): bool
+    {
+        return static::$listMode;
+    }
+
+    /**
      * Batch-load latest "assigned" histories for a deal collection.
      * Mirrors Deal::histories() semantics (deal_id OR lead_id) without per-deal queries.
      *
@@ -185,8 +206,12 @@ class DealResource extends JsonResource
 
             'listing' => $this->listing ? [
                 'id' => $this->listing->id,
-                'name' => $this->listing->area?->area_title,
-                'agent' => $this->listing->agent->name,
+                // List mode skips deal-level area title walks (property.area_name covers UI).
+                'name' => (! static::$listMode || $this->listing->relationLoaded('area'))
+                    ? $this->listing->area?->area_title
+                    : null,
+                'agent' => $this->listing->agent?->name
+                    ?? $this->listing->agent?->display_name,
             ] : null,
 
             'area' => [
@@ -198,7 +223,7 @@ class DealResource extends JsonResource
             'properties' => $this->whenLoaded('properties', function () use ($request) {
                 return $this->properties->map(function ($property) use ($request) {
                     $listing = $property->listing; // belongsTo, eager-loaded when relation is requested
-                    return [
+                    $row = [
                         'id' => $property->id,
                         'sort_order' => $property->sort_order,
                         'unit_no' => $property->unit_no,
@@ -235,44 +260,34 @@ class DealResource extends JsonResource
                         'purchase_price' => $property->purchase_price,
                         'rental_price' => $property->rental_price,
                         'commission' => $property->commission,
-
-                        // ✅ Debug: نجيب البيانات الخام الأول
-                        'payment_proof_raw' => $property->payment_proof,
-                        'spa_document_raw' => $property->spa_document,
-
-                        'payment_proof' => (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request),
-                        'spa_document' => (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request),
-
                         'display_name' => $property->display_name,
                         'budget_range' => $property->budget_range,
-                             // ✅ EOI Documents
-                        'eoi_documents_raw' => $property->eoi_documents,
-                        'eoi_documents' => (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request),
-
-                        // ✅ Booking Documents
-                        'booking_documents_raw' => $property->booking_documents,
-                        'booking_documents' => (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request),
-
-                        // ✅ MOU Documents (secondary order 3+)
-                        'mou_documents_raw' => $property->mou_documents,
-                        'mou_documents' => (new PropertyDocumentResource($property->mou_documents, 'mou'))->resolve($request),
-
-                        // ✅ NOC Documents (secondary order 4+)
-                        'noc_documents_raw' => $property->noc_documents,
-                        'noc_documents' => (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request),
-
-                        // ✅ Title Deed Documents (property-level, secondary MOU+ / rental MOU-equivalent+)
-                        'title_deed_documents_raw' => $property->title_deed_documents,
-                        'title_deed_documents' => (new PropertyDocumentResource($property->title_deed_documents, 'title_deed'))->resolve($request),
-
-                        // ✅ Contract Documents (rental, from contract stage onward)
-                        'contract_document_raw' => $property->contract_document,
-                        'contract_document' => (new PropertyDocumentResource($property->contract_document, 'contract'))->resolve($request),
-
-                        // ✅ Ejari Documents (rental, from ejari stage onward)
-                        'ejari_document_raw' => $property->ejari_document,
-                        'ejari_document' => (new PropertyDocumentResource($property->ejari_document, 'ejari'))->resolve($request),
                     ];
+
+                    // Detail/show keeps document payloads. List mode omits them — DealListView
+                    // only needs thumbs, prices, and labels; ViewDealModal refetches show.
+                    if (! static::$listMode) {
+                        $row['payment_proof_raw'] = $property->payment_proof;
+                        $row['spa_document_raw'] = $property->spa_document;
+                        $row['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
+                        $row['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
+                        $row['eoi_documents_raw'] = $property->eoi_documents;
+                        $row['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request);
+                        $row['booking_documents_raw'] = $property->booking_documents;
+                        $row['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request);
+                        $row['mou_documents_raw'] = $property->mou_documents;
+                        $row['mou_documents'] = (new PropertyDocumentResource($property->mou_documents, 'mou'))->resolve($request);
+                        $row['noc_documents_raw'] = $property->noc_documents;
+                        $row['noc_documents'] = (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request);
+                        $row['title_deed_documents_raw'] = $property->title_deed_documents;
+                        $row['title_deed_documents'] = (new PropertyDocumentResource($property->title_deed_documents, 'title_deed'))->resolve($request);
+                        $row['contract_document_raw'] = $property->contract_document;
+                        $row['contract_document'] = (new PropertyDocumentResource($property->contract_document, 'contract'))->resolve($request);
+                        $row['ejari_document_raw'] = $property->ejari_document;
+                        $row['ejari_document'] = (new PropertyDocumentResource($property->ejari_document, 'ejari'))->resolve($request);
+                    }
+
+                    return $row;
                 });
             }),
 

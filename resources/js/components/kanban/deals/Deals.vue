@@ -1,32 +1,5 @@
 <template>
   <div class="deals-tab-content deal-figma-ui" :class="{ 'deals-tab-content--mobile': kanbanIsMobile, 'deals-tab-content--list': boardView === 'list' }">
-    <div v-if="boardView === 'kanban'" class="deals-board-head">
-      <div class="board-view-switch" role="tablist" aria-label="Deal layout">
-        <button
-          type="button"
-          class="board-view-switch__btn"
-          role="tab"
-          :aria-selected="boardView === 'kanban'"
-          :class="{ 'is-active': boardView === 'kanban' }"
-          @click="setBoardView('kanban')"
-        >
-          <iconify-icon icon="lucide:columns-3" aria-hidden="true" />
-          <span class="board-view-switch__label">Kanban</span>
-        </button>
-        <button
-          type="button"
-          class="board-view-switch__btn"
-          role="tab"
-          :aria-selected="boardView === 'list'"
-          :class="{ 'is-active': boardView === 'list' }"
-          @click="setBoardView('list')"
-        >
-          <iconify-icon icon="lucide:list" aria-hidden="true" />
-          <span class="board-view-switch__label">List</span>
-        </button>
-      </div>
-    </div>
-
     <DealListView
       v-if="boardView === 'list'"
       ref="dealListViewRef"
@@ -1010,19 +983,20 @@ function onDealDragEnd() {
 const runtimeFilters = ref({})
 
 const BOARD_VIEW_KEY = 'kanban_deals_board_view'
-const boardView = ref((() => {
-  try {
-    return localStorage.getItem(BOARD_VIEW_KEY) === 'list' ? 'list' : 'kanban'
-  } catch {
-    return 'kanban'
-  }
-})())
+// Default Deals to kanban for now (do not restore a prior list preference).
+const boardView = ref('kanban')
+try {
+  localStorage.setItem(BOARD_VIEW_KEY, 'kanban')
+} catch {
+  /* ignore private-mode storage failures */
+}
 const dealListViewRef = ref(null)
 
 function setBoardView(view) {
   boardView.value = view === 'list' ? 'list' : 'kanban'
   try {
-    localStorage.setItem(BOARD_VIEW_KEY, boardView.value)
+    // Persist kanban only for now so a hard refresh always returns to the board.
+    localStorage.setItem(BOARD_VIEW_KEY, 'kanban')
   } catch {
     /* ignore private-mode storage failures */
   }
@@ -1035,6 +1009,12 @@ function setBoardView(view) {
   } else {
     nextTick(() => dealListViewRef.value?.refresh?.())
   }
+}
+
+function onExternalBoardViewChange(event) {
+  const next = event?.detail === 'list' ? 'list' : 'kanban'
+  if (next === boardView.value) return
+  setBoardView(next)
 }
 
 const mergedListFilters = computed(() => ({
@@ -2598,6 +2578,7 @@ onMounted(async () => {
   // while this first fetch is still running — that switch must not be missed, or the
   // board keeps the previous type's stages.
   window.addEventListener('kanban-deal-type-change', onExternalDealTypeChange);
+  window.addEventListener('kanban-deals-set-board-view', onExternalBoardViewChange);
   window.dispatchEvent(new CustomEvent('kanban-deals-board-view', { detail: boardView.value }))
   try {
     await fetchDeals(true);
@@ -2627,6 +2608,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateScrollArrows);
   window.removeEventListener('echo-ready', initializeDealUpdates);
   window.removeEventListener('kanban-deal-type-change', onExternalDealTypeChange);
+  window.removeEventListener('kanban-deals-set-board-view', onExternalBoardViewChange);
   cleanup();
   disconnectInfiniteObservers();
 });
@@ -2657,7 +2639,9 @@ defineExpose({
   display: flex;
   flex-direction: column;
   flex: 1 1 0;
-  min-height: 0;
+  /* Keep a viewport floor so list mode never paints as a blank shell if a
+     parent in the flex chain lacks an explicit height. */
+  min-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 5rem);
   height: 100%;
   max-height: 100%;
   overflow: hidden;
@@ -2669,75 +2653,6 @@ defineExpose({
   min-height: 0;
   height: 100%;
   max-height: none;
-}
-
-.deals-board-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin: 0 2px 10px;
-}
-
-.board-view-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-}
-
-.board-view-switch__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-}
-
-.board-view-switch__btn iconify-icon {
-  font-size: 15px;
-}
-
-.board-view-switch__btn.is-active {
-  background: var(--gradient-primary);
-  color: #fff;
-  -webkit-text-fill-color: #fff;
-  box-shadow: 0 6px 16px rgba(var(--color-primary-rgb), 0.28);
-}
-
-.board-view-switch__btn.is-active iconify-icon {
-  color: #fff;
-}
-
-@media (max-width: 720px) {
-  .deals-board-head {
-    justify-content: stretch;
-  }
-
-  .board-view-switch {
-    width: 100%;
-  }
-
-  .board-view-switch__btn {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .board-view-switch__label {
-    font-size: 12px;
-  }
 }
 
 .deals-type-tabs {

@@ -96,18 +96,24 @@ class DealController extends Controller
             'parent.roles:id,name',
         ];
 
-        // Do not pass closures through Deal::withDetailGraph() (array_unique).
-        // Deal has no area/developer relations (those fields on DealResource read null /
-        // property-level data). detailGraphRelations covers listing + property areas/types.
-        // firstGalleryImage powers list thumbnails when hero_image_path is empty.
-        $with = array_values(array_unique(array_merge([
-            'lead',
-            'stage',
-            'parties.documents',
-            'properties',
+        // List/index only — do NOT merge Deal::detailGraphRelations() here.
+        // Six-level area trees, listing.agent graphs, and party documents belong on
+        // GET /deals/{id} (show). DealListView needs thumbs, area labels, party names,
+        // commission fields, and stage/agent chips — not SPA/EOI document blobs.
+        $areaParents = 'parent.parent.parent.parent.parent';
+        $with = [
+            'lead:id,lead_name,email,work_phone,converted_at',
+            'stage:id,name,color,order,deal_type,stage_type',
+            'parties',
+            'properties.propertyType:id,name',
+            'properties.area.'.$areaParents,
+            'properties.listing:id,reference_number,unit_number,status,number_of_bedrooms,size_sqft,price,selling_price,hero_image_path,property_type_id',
             'properties.listing.firstGalleryImage',
+            'properties.listing.propertyType:id,name',
+            'listing:id,reference_number,hero_image_path,area_id,agent_id',
             'listing.firstGalleryImage',
-        ], Deal::detailGraphRelations())));
+            'listing.agent:id,name,display_name',
+        ];
 
         $orderBy = $request->get('order_by', 'created_at');
         $allowedOrder = [
@@ -140,6 +146,7 @@ class DealController extends Controller
         try {
             DealResource::primeForCollection($deals->getCollection());
             DealKanbanCardResource::warmCardUsers($deals->getCollection());
+            DealResource::enableListMode();
 
             return response()->json([
                 'success' => true,
@@ -151,6 +158,7 @@ class DealController extends Controller
                 ]
             ]);
         } finally {
+            DealResource::disableListMode();
             DealResource::clearCollectionPrime();
         }
     }
