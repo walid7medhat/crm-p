@@ -35,12 +35,17 @@ class AccountAccessEmailController extends Controller
             return ApiResponse::error('Unknown branch', 404);
         }
 
-        $users = $this->mailer->branchUsers(User::findOrFail($branch))->map(fn (User $u) => [
+        $branchUsers = $this->mailer->branchUsers(User::findOrFail($branch));
+        $last = $this->mailer->lastSent($branchUsers->pluck('id')->all());
+
+        $users = $branchUsers->map(fn (User $u) => [
             'id' => $u->id,
             'name' => User::resolveDisplayName($u) ?? $u->name,
             'email' => $u->email,
             'role' => $u->roles->pluck('name')->first(),
             'avatar' => $u->avatar ? asset('storage/' . $u->avatar) : null,
+            'account_status' => $u->status,
+            'last_email' => $last[$u->id] ?? null, // {status: sent|failed, sent_at, error}
         ]);
 
         return ApiResponse::success($users->values());
@@ -94,7 +99,7 @@ class AccountAccessEmailController extends Controller
         }
 
         return ApiResponse::success(
-            ['sent' => $sent, 'failed' => $failed],
+            ['sent' => $sent, 'failed' => $failed, 'at' => now()->toDateTimeString()],
             count($sent) . ' sent' . ($failed ? ', ' . count($failed) . ' failed' : '')
         );
     }

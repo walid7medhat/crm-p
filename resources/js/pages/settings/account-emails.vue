@@ -105,7 +105,8 @@
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
-                <th>Status</th>
+                <th>Account</th>
+                <th>Email status</th>
                 <th></th>
               </tr>
             </thead>
@@ -139,10 +140,21 @@
                 <td class="ae-clip" :title="u.email">{{ u.email }}</td>
                 <td><span v-if="u.role" class="ae-role">{{ u.role }}</span></td>
                 <td>
+                  <span class="ae-tag" :class="u.account_status === 'active' ? 'ae-tag--ok' : 'ae-tag--muted'">
+                    {{ u.account_status || '—' }}
+                  </span>
+                </td>
+                <td>
                   <span v-if="status[u.id] === 'sending'" class="ae-tag ae-tag--wait">Sending…</span>
-                  <span v-else-if="status[u.id] === 'sent'" class="ae-tag ae-tag--ok">Sent</span>
-                  <span v-else-if="status[u.id] === 'failed'" class="ae-tag ae-tag--err" :title="errors[u.id] || ''">Failed</span>
-                  <span v-else class="ae-dim">—</span>
+                  <template v-else-if="u.last_email">
+                    <span
+                      class="ae-tag"
+                      :class="u.last_email.status === 'sent' ? 'ae-tag--ok' : 'ae-tag--err'"
+                      :title="u.last_email.error || ''"
+                    >{{ u.last_email.status === 'sent' ? 'Sent' : 'Failed' }}</span>
+                    <span class="ae-when">{{ fmtWhen(u.last_email.sent_at) }}</span>
+                  </template>
+                  <span v-else class="ae-tag ae-tag--muted">Not sent</span>
                 </td>
                 <td class="ae-row-actions">
                   <button type="button" class="ae-btn ae-btn--sm" :disabled="!!busy" @click.stop="sendOne(u)">
@@ -152,7 +164,7 @@
                 </td>
               </tr>
               <tr v-if="!visibleUsers.length">
-                <td colspan="6" class="ae-empty">No users match “{{ search }}”.</td>
+                <td colspan="7" class="ae-empty">No users match “{{ search }}”.</td>
               </tr>
             </tbody>
           </table>
@@ -250,14 +262,25 @@ async function loadUsers() {
   }
 }
 
+function fmtWhen(value) {
+  if (!value) return ''
+  const d = new Date(String(value).replace(' ', 'T'))
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+// Write the result onto the user rows so "Email status" updates right away (and matches a reload).
 function markResult(ids, data) {
   const sent = new Set(data?.sent || [])
   const failed = {}
   ;(data?.failed || []).forEach((f) => { failed[f.id] = f.error })
+  const at = data?.at || new Date().toISOString()
   ids.forEach((id) => {
-    if (sent.has(id)) status.value[id] = 'sent'
-    else if (id in failed) { status.value[id] = 'failed'; errors.value[id] = failed[id] }
-    else status.value[id] = 'failed' // skipped by the server (no longer active / not in branch)
+    delete status.value[id]
+    const user = users.value.find((u) => u.id === id)
+    if (!user) return
+    if (sent.has(id)) user.last_email = { status: 'sent', sent_at: at, error: null }
+    else user.last_email = { status: 'failed', sent_at: at, error: failed[id] || 'Skipped: not an active user of this branch' }
   })
 }
 
@@ -273,7 +296,7 @@ async function send(ids) {
       text: `${(data.sent || []).length} sent${failedCount ? `, ${failedCount} failed` : ''}.`,
     }
   } catch (e) {
-    ids.forEach((id) => { status.value[id] = 'failed'; errors.value[id] = errorText(e, 'Failed') })
+    markResult(ids, { sent: [], failed: ids.map((id) => ({ id, error: errorText(e, 'Failed') })) })
     notice.value = { error: true, text: errorText(e, 'Sending failed') }
   }
 }
@@ -298,7 +321,7 @@ async function sendSelected() {
     for (let i = 0; i < ids.length; i += 20) {
       await send(ids.slice(i, i + 20))
     }
-    const sentCount = ids.filter((id) => status.value[id] === 'sent').length
+    const sentCount = ids.filter((id) => users.value.find((u) => u.id === id)?.last_email?.status === 'sent').length
     const failedCount = ids.length - sentCount
     notice.value = { error: failedCount > 0, text: `${sentCount} sent${failedCount ? `, ${failedCount} failed` : ''}.` }
   } finally {
@@ -502,4 +525,6 @@ onMounted(loadBranches)
 .ae-tag--ok { background: #e6f7ee; color: #0f9d58; }
 .ae-tag--err { background: #fdecec; color: #b3261e; cursor: help; }
 .ae-tag--wait { background: #fff6e5; color: #a15c00; }
+.ae-tag--muted { background: #f1f3f7; color: #8b93a7; text-transform: capitalize; }
+.ae-when { margin-left: 6px; font-size: 10px; color: #8b93a7; }
 </style>
