@@ -1833,8 +1833,9 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
         // Validation rules using existing columns
         $request->validate([
             'stage_id' => 'required|exists:stages,id',
-            'reason' => 'nullable|string|max:255',
-            
+            // Saved as a lead comment (TEXT column), so a long reason is fine.
+            'reason' => 'nullable|string|max:5000',
+
             // Stage 3: Follow Up
             'salutation' => 'nullable|string|max:50',
             

@@ -49,6 +49,7 @@
                                 rows="3"
                                 class="form-control reason-textarea"
                                 :class="{ 'is-invalid': fieldErrors.interaction_note }"
+                                maxlength="5000"
                                 placeholder="Write purpose..."
                                 required
                             ></textarea>
@@ -105,6 +106,7 @@
                             rows="3"
                             class="form-control reason-textarea"
                             :class="{ 'is-invalid': fieldErrors.reason }"
+                            maxlength="5000"
                             placeholder="Text Here"
                             required
                         ></textarea>
