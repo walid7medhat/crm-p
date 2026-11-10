@@ -7,11 +7,12 @@ use App\Models\MarketingTaskLink;
 use App\Services\Marketing\MarketingHistoryRecorder;
 use App\Services\Marketing\MarketingLinkClassifier;
 use App\Services\Marketing\MarketingPresenter;
+use App\Services\Marketing\MarketingTaskMirror;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-/** Links can be added at any stage (WIP folders, drafts, finals). */
+/** Links can be added at any stage (WIP folders, drafts, finals). Shared across mirrored cards. */
 class TaskLinkController extends MarketingBaseController
 {
     public function store(Request $request, MarketingTask $task): JsonResponse
@@ -22,8 +23,9 @@ class TaskLinkController extends MarketingBaseController
         ]);
 
         $label = trim($validated['label'] ?? '') ?: MarketingLinkClassifier::defaultLabel($validated['url']);
+        $root = MarketingTaskMirror::root($task);
 
-        $link = $task->links()->create([
+        $link = $root->links()->create([
             'url' => $validated['url'],
             'label' => $label,
             'kind' => MarketingLinkClassifier::kind($validated['url'], $label),
@@ -39,7 +41,7 @@ class TaskLinkController extends MarketingBaseController
 
     public function destroy(MarketingTask $task, MarketingTaskLink $link): JsonResponse
     {
-        abort_unless($link->task_id === $task->id, 404);
+        abort_unless(MarketingTaskMirror::belongsToFamily($task, (int) $link->task_id), 404);
 
         MarketingHistoryRecorder::record($task, 'link_removed', [[
             'field' => 'link', 'label' => 'Link', 'old' => $link->label, 'new' => null,

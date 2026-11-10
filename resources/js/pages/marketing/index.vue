@@ -55,7 +55,7 @@
           </div>
           <MkSelect v-model="filters.assignee" :options="personOptions" icon="lucide:users" aria-label="Filter by person" searchable highlight />
           <MkSelect v-if="activeTab === 'production'" v-model="filters.type" :options="typeOptions" icon="lucide:shapes" aria-label="Filter by type" highlight />
-          <MkSelect v-if="activeTab === 'design'" v-model="filters.deliverable" :options="deliverableOptions" icon="lucide:layout-template" aria-label="Filter by deliverable" highlight />
+          <MkSelect v-model="filters.deliverable" :options="deliverableOptions" icon="lucide:layout-template" aria-label="Filter by deliverable" highlight />
           <MkSelect v-model="filters.due" :options="dueOptions" icon="lucide:calendar-clock" aria-label="Filter by due date" highlight align="right" />
           <MkSelect v-model="filters.sort" :options="sortOptions" icon="lucide:arrow-up-down" aria-label="Sort cards" highlight />
           <button v-if="canManage" type="button" class="mk-btn mk-btn--ghost" title="Manage stages" @click="stageManagerOpen = true">
@@ -322,7 +322,7 @@ async function loadBoard() {
         search: search.value.trim() || undefined,
         assignee: filters.assignee || undefined,
         type: category === 'production' ? filters.type || undefined : undefined,
-        deliverable: category === 'design' ? filters.deliverable || undefined : undefined,
+        deliverable: filters.deliverable || undefined,
         due: filters.due || undefined,
         sort: filters.sort || undefined,
         date_from: filters.dateFrom || undefined,
@@ -516,7 +516,7 @@ function onMarketingLive(e) {
     }
     liveTimer = setTimeout(reload, 400)
   }
-  if (activeTab.value === 'calendar' && ['scheduled', 'posted', 'unposted', 'deleted'].includes(e.action)) {
+  if (activeTab.value === 'calendar' && ['scheduled', 'unscheduled', 'posted', 'unposted', 'deleted'].includes(e.action)) {
     calendarReloadKey.value++
   }
   // The card someone else changed is open in the drawer: keep it current.

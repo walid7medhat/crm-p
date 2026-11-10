@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Marketing;
 use App\Models\MarketingStage;
 use App\Models\MarketingTask;
 use App\Services\Marketing\MarketingPresenter;
+use App\Services\Marketing\MarketingTaskMirror;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -87,7 +88,9 @@ class BoardController extends MarketingBaseController
             $query->whereBetween('due_date', [now()->toDateString(), now()->addDays(7)->toDateString()]);
         }
 
-        $tasksByStage = $query->get()->groupBy('stage_id');
+        $tasks = $query->get();
+        MarketingTaskMirror::hydrateShared($tasks);
+        $tasksByStage = $tasks->groupBy('stage_id');
 
         return response()->json([
             'stages' => $stages->map(fn (MarketingStage $stage) => [

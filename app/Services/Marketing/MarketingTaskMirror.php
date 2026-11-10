@@ -4,12 +4,18 @@ namespace App\Services\Marketing;
 
 use App\Models\MarketingStage;
 use App\Models\MarketingTask;
+use App\Models\MarketingTaskComment;
+use App\Models\MarketingTaskLink;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 /**
  * A content card stays on Content. Choosing a designer also places it on Design,
  * and choosing Video also places it on Production. Shared brief fields stay in step.
+ *
+ * Comments and links are shared across the whole family (source + mirrors) so Content
+ * and Design see the same thread even though each board has its own card row.
  */
 class MarketingTaskMirror
 {
@@ -72,7 +78,107 @@ class MarketingTaskMirror
         }
     }
 
-    private static function sourceOf(MarketingTask $task): ?MarketingTask
+    /** Content/source card that owns shared brief data, comments, and links. */
+    public static function root(MarketingTask $task): MarketingTask
+    {
+        return self::sourceOf($task) ?? $task;
+    }
+
+    public static function rootId(MarketingTask $task): int
+    {
+        return (int) self::root($task)->id;
+    }
+
+    /** All task ids in the mirrored family (source + design/production copies). */
+    public static function familyIds(MarketingTask $task): array
+    {
+        $rootId = self::rootId($task);
+
+        return MarketingTask::query()
+            ->where(fn ($q) => $q->where('id', $rootId)->orWhere('source_task_id', $rootId))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public static function belongsToFamily(MarketingTask $task, int $relatedTaskId): bool
+    {
+        return in_array($relatedTaskId, self::familyIds($task), true);
+    }
+
+    /**
+     * Attach family-wide comment counts and links onto board/list cards so mirrors
+     * show the same shared activity as the content source.
+     *
+     * @param  Collection<int, MarketingTask>|iterable<MarketingTask>  $tasks
+     */
+    public static function hydrateShared(iterable $tasks): void
+    {
+        $tasks = collect($tasks)->filter()->values();
+        if ($tasks->isEmpty()) {
+            return;
+        }
+
+        $rootIds = $tasks
+            ->map(fn (MarketingTask $t) => (int) ($t->source_task_id ?: $t->id))
+            ->unique()
+            ->values()
+            ->all();
+
+        $members = MarketingTask::query()
+            ->where(fn ($q) => $q->whereIn('id', $rootIds)->orWhereIn('source_task_id', $rootIds))
+            ->get(['id', 'source_task_id']);
+
+        $rootToMembers = [];
+        foreach ($rootIds as $rootId) {
+            $rootToMembers[$rootId] = [(int) $rootId];
+        }
+        foreach ($members as $member) {
+            $rootId = (int) ($member->source_task_id ?: $member->id);
+            $rootToMembers[$rootId][] = (int) $member->id;
+        }
+        foreach ($rootToMembers as $rootId => $ids) {
+            $rootToMembers[$rootId] = array_values(array_unique($ids));
+        }
+
+        $allIds = collect($rootToMembers)->flatten()->unique()->values()->all();
+
+        $commentCounts = MarketingTaskComment::query()
+            ->whereIn('task_id', $allIds)
+            ->selectRaw('task_id, count(*) as aggregate')
+            ->groupBy('task_id')
+            ->pluck('aggregate', 'task_id');
+
+        $linksByTask = MarketingTaskLink::query()
+            ->whereIn('task_id', $allIds)
+            ->latest('id')
+            ->get()
+            ->groupBy('task_id');
+
+        foreach ($tasks as $task) {
+            $rootId = (int) ($task->source_task_id ?: $task->id);
+            $memberIds = $rootToMembers[$rootId] ?? [(int) $task->id];
+
+            $count = 0;
+            $links = collect();
+            foreach ($memberIds as $memberId) {
+                $count += (int) ($commentCounts[$memberId] ?? 0);
+                if ($linksByTask->has($memberId)) {
+                    $links = $links->concat($linksByTask->get($memberId));
+                }
+            }
+
+            $task->setAttribute('comments_count', $count);
+            $task->setRelation(
+                'links',
+                $links->unique('id')->sortByDesc('id')->values()
+            );
+        }
+    }
+
+    public static function sourceOf(MarketingTask $task): ?MarketingTask
     {
         if ($task->category === 'content' && !$task->source_task_id) {
             return $task;

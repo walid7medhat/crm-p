@@ -95,17 +95,26 @@ class DailyMotivationService
             return $this->emptyPayload('enabled', $today, false);
         }
 
-        if (! $this->released()) {
-            return $this->emptyPayload('enabled', $today);
-        }
-
         $settings = $this->ensureSettings();
         if (! $settings->is_enabled || $settings->anchor_date === null) {
             return $this->emptyPayload($settings->is_enabled ? 'enabled' : 'disabled', $today);
         }
 
-        $assignment = $this->ensureAssignment($user, $today, $settings);
-        $personal = $this->personalIndex($settings, $today, $assignment ? $this->stateFor($user) : null);
+        // Eligible sales (Dubai + Abu Dhabi) can open today's card any time.
+        // Auto-open and push still wait for the 9:00 AM Dubai release.
+        try {
+            $assignment = $this->ensureAssignment($user, $today, $settings);
+        } catch (RuntimeException) {
+            $this->syncMissingActiveOffsets();
+
+            try {
+                $assignment = $this->ensureAssignment($user, $today, $settings);
+            } catch (RuntimeException) {
+                return $this->emptyPayload('enabled', $today, true);
+            }
+        }
+
+        $personal = $this->personalIndex($settings, $today, $this->stateFor($user));
         $canonical = (int) $assignment->message_number;
         $displayNumber = MotivationRotation::resolveDisplay($canonical, $this->enabledNumbers(), $this->cycleLength());
         $message = $displayNumber
@@ -277,22 +286,20 @@ class DailyMotivationService
             return false;
         }
 
-        if (! $user->hasRole('sales')) {
+        if (! $user->hasRole('sales', 'api')) {
             return false;
         }
 
-        if ($user->roles->contains(fn ($role) => in_array($role->name, self::STAFF_ROLES, true))) {
-            return false;
-        }
+        // Any active sales agent in Dubai or Abu Dhabi — staff dual-roles stay excluded.
+        $user->loadMissing('roles');
 
-        return $user->last_login_at !== null;
+        return ! $user->roles->contains(fn ($role) => in_array($role->name, self::STAFF_ROLES, true));
     }
 
     private function activeSalesQuery()
     {
         return User::query()
             ->where('status', 'active')
-            ->whereNotNull('last_login_at')
             ->whereHas('roles', function ($query) {
                 $query->where('name', 'sales')->where('guard_name', 'api');
             })
@@ -323,7 +330,7 @@ class DailyMotivationService
         $enabledMessages = MotivationMessage::query()->where('is_enabled', true)->count();
         $salesPeople = $this->activeSalesQuery()
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'parent_id']);
         $activeUsers = $salesPeople->count();
 
         $states = MotivationUserState::query()
@@ -380,10 +387,15 @@ class DailyMotivationService
                 'ready' => $totalMessages >= $this->cycleLength() && $enabledMessages > 0,
             ],
             'active_users' => $activeUsers,
-            'sales' => $salesPeople->map(fn (User $person) => [
-                'id' => $person->id,
-                'name' => $person->name,
-            ])->values()->all(),
+            'sales' => $salesPeople->map(function (User $person) {
+                $branch = $person->getBranchNode();
+
+                return [
+                    'id' => $person->id,
+                    'name' => $person->name,
+                    'branch' => $branch?->name,
+                ];
+            })->values()->all(),
             'slots' => [
                 'reserved' => $reservedSlots,
                 'available' => max(0, $this->cycleLength() - $reservedSlots),
@@ -609,7 +621,9 @@ class DailyMotivationService
                 ->map(fn ($slot) => (int) $slot)
                 ->all();
 
-            $plan = MotivationRotation::assignSlots($missing, $taken, $this->cycleLength());
+            // Shuffle so Dubai and Abu Dhabi agents get randomly mixed slots, not id-order clusters.
+            shuffle($missing);
+            $plan = MotivationRotation::assignSlots($missing, $taken, $this->cycleLength(), true);
             $now = now();
 
             foreach ($plan as $userId => $choice) {

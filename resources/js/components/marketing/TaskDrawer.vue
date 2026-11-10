@@ -51,6 +51,15 @@
                 <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm" @click="$emit('schedule', task)">
                   <iconify-icon icon="lucide:calendar-plus" /> Schedule post
                 </button>
+                <button
+                  v-if="pendingPosts.length"
+                  type="button"
+                  class="mk-btn mk-btn--ghost mk-btn--sm"
+                  :disabled="busy"
+                  @click="unscheduleAll"
+                >
+                  <iconify-icon icon="lucide:calendar-x" /> Unschedule
+                </button>
               </div>
             </header>
 
@@ -106,7 +115,7 @@
                   </div>
                 </div>
 
-                <div v-if="task.category === 'design'" class="mk-details__block">
+                <div class="mk-details__block">
                   <span class="mk-label">Deliverables</span>
                   <div class="mk-chips">
                     <span v-for="d in task.deliverables" :key="d" class="mk-pill" :style="{ '--pill': DELIVERABLES[d]?.color }">{{ DELIVERABLES[d]?.label || d }}</span>
@@ -143,6 +152,16 @@
                       <span>{{ PLATFORMS[p.platform]?.label }}</span>
                       <small>{{ formatDate(p.scheduled_date, { weekday: 'short', day: '2-digit', month: 'short' }) }}</small>
                       <iconify-icon :icon="p.is_posted ? 'lucide:check-circle-2' : 'lucide:clock'" class="mk-posts__state" />
+                      <button
+                        v-if="!p.is_posted"
+                        type="button"
+                        class="mk-posts__unschedule"
+                        :disabled="busy"
+                        title="Unschedule"
+                        @click="unschedulePost(p)"
+                      >
+                        <iconify-icon icon="lucide:calendar-x" /> Unschedule
+                      </button>
                     </li>
                   </ul>
                 </div>
@@ -324,6 +343,7 @@ const reassignTo = ref(null)
 const cat = computed(() => MARKETING_CATEGORIES[task.value?.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => CONTENT_TYPES[task.value?.type])
 const accent = computed(() => (task.value?.category === 'production' && type.value ? type.value.color : cat.value.color))
+const pendingPosts = computed(() => (task.value?.posts || []).filter((p) => !p.is_posted))
 const tabs = computed(() => [
   { id: 'details', label: 'Details', icon: 'lucide:info' },
   { id: 'links', label: 'Links', icon: 'lucide:link', count: task.value?.links?.length },
@@ -373,6 +393,57 @@ async function load() {
 async function refresh() {
   await load()
   if (task.value) emit('updated', task.value)
+}
+
+async function unschedulePost(post) {
+  if (!post?.id || busy.value) return
+  const label = `${PLATFORMS[post.platform]?.label || post.platform} · ${formatDate(post.scheduled_date, { day: '2-digit', month: 'short' })}`
+  const res = await Swal.fire({
+    icon: 'warning',
+    title: 'Unschedule this post?',
+    text: label,
+    showCancelButton: true,
+    confirmButtonText: 'Unschedule',
+    confirmButtonColor: '#64748b',
+  })
+  if (!res.isConfirmed) return
+  busy.value = true
+  try {
+    await api.delete(`/marketing/calendar/${post.id}`)
+    await refresh()
+    toast('Post unscheduled', 'updated')
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'Could not unschedule', text: apiError(err) })
+  } finally {
+    busy.value = false
+  }
+}
+
+async function unscheduleAll() {
+  const posts = pendingPosts.value
+  if (!posts.length || busy.value) return
+  const res = await Swal.fire({
+    icon: 'warning',
+    title: posts.length === 1 ? 'Unschedule this post?' : `Unschedule ${posts.length} posts?`,
+    text: 'They will be removed from the content calendar.',
+    showCancelButton: true,
+    confirmButtonText: 'Unschedule',
+    confirmButtonColor: '#64748b',
+  })
+  if (!res.isConfirmed) return
+  busy.value = true
+  try {
+    for (const post of posts) {
+      await api.delete(`/marketing/calendar/${post.id}`)
+    }
+    await refresh()
+    toast(posts.length === 1 ? 'Post unscheduled' : `${posts.length} posts unscheduled`, 'updated')
+  } catch (err) {
+    await refresh()
+    Swal.fire({ icon: 'error', title: 'Could not unschedule', text: apiError(err) })
+  } finally {
+    busy.value = false
+  }
 }
 
 watch(() => [props.modelValue, props.taskId], ([open, id], [wasOpen, oldId] = []) => {
@@ -772,8 +843,26 @@ defineExpose({ refresh, openTab: (t) => { tab.value = t } })
 .mk-posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .mk-posts li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--neutral-50); font-size: 13px !important; font-weight: 600 !important; }
 .mk-posts small { margin-left: auto; color: var(--text-secondary-light); }
-.mk-posts__state { color: var(--text-secondary-light); }
+.mk-posts__state { color: var(--text-secondary-light); flex-shrink: 0; }
 .mk-posts li.done .mk-posts__state { color: #16a34a; }
+.mk-posts__unschedule {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-secondary-light);
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mk-posts__unschedule:hover:not(:disabled) { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+.mk-posts__unschedule:disabled { opacity: 0.55; cursor: not-allowed; }
+.mk-posts__unschedule iconify-icon { font-size: 14px; }
 
 /* Links */
 .mk-addlink { display: grid; grid-template-columns: 1.6fr 1fr auto; gap: 8px; margin-bottom: 16px; }

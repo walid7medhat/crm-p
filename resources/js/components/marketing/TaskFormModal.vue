@@ -116,7 +116,7 @@
           </div>
           <span class="mk-hint">A designer also puts this card on Design, in the first stage. Video also puts it on Production. The card stays on Content.</span>
         </div>
-        <div v-if="category === 'design'" class="mk-field">
+        <div class="mk-field">
           <span class="mk-label">Deliverables</span>
           <div class="mk-chips">
             <button
@@ -369,11 +369,12 @@ function payload() {
     department: form.department,
 
   }
+  base.deliverables = form.deliverables
   if (props.category === 'production') {
     Object.assign(base, { type: form.type, shooting_by: form.shooting_by, editing_by: form.editing_by, channels: form.channels })
   } else {
     base.assigned_to = form.assigned_to
-    if (props.category === 'design') Object.assign(base, { deliverables: form.deliverables, tov: form.tov || null })
+    if (props.category === 'design') Object.assign(base, { tov: form.tov || null })
     if (props.category === 'content') Object.assign(base, { designed_by: form.designed_by, also_video: !!form.also_video })
   }
   if (!isEdit.value) {

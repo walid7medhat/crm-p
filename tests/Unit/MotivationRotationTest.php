@@ -54,6 +54,22 @@ class MotivationRotationTest extends TestCase
         $this->assertSame(0, $overflow[121]['slot']);
     }
 
+    public function test_random_slots_use_free_slots_and_share_only_when_full(): void
+    {
+        $plan = MotivationRotation::assignSlots([10, 20], [0, 1, 2], 5, true);
+
+        $this->assertCount(2, $plan);
+        $slots = array_column($plan, 'slot');
+        sort($slots);
+        $this->assertSame([3, 4], $slots);
+        foreach ($plan as $row) {
+            $this->assertFalse($row['shared']);
+        }
+
+        $full = MotivationRotation::assignSlots([99], range(0, 4), 5, true);
+        $this->assertTrue($full[99]['shared']);
+    }
+
     public function test_disabling_a_message_substitutes_without_changing_the_canonical_number(): void
     {
         $this->assertSame(4, MotivationRotation::resolveDisplay(3, [1, 2, 4]));

@@ -8,6 +8,7 @@ use App\Services\Marketing\MarketingHistoryRecorder;
 use App\Services\Marketing\MarketingLinkClassifier;
 use App\Services\Marketing\MarketingPresenter;
 use App\Services\Marketing\MarketingTaskMirror;
+use App\Models\MarketingTaskComment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,9 +20,9 @@ class TaskController extends MarketingBaseController
 {
     /** Fields each category is allowed to keep; everything else is cleared on save. */
     private const CATEGORY_FIELDS = [
-        'production' => ['department', 'type', 'shooting_by', 'editing_by', 'channels', 'reference', 'notes', 'due_date'],
+        'production' => ['department', 'type', 'shooting_by', 'editing_by', 'channels', 'deliverables', 'reference', 'notes', 'due_date'],
         'design' => ['department', 'assigned_to', 'deliverables', 'tov', 'reference', 'notes', 'due_date'],
-        'content' => ['department', 'assigned_to', 'designed_by', 'also_video', 'reference', 'notes', 'due_date'],
+        'content' => ['department', 'assigned_to', 'designed_by', 'also_video', 'deliverables', 'reference', 'notes', 'due_date'],
     ];
 
     private const OPTIONAL_FIELDS = ['department', 'type', 'assigned_to', 'designed_by', 'also_video', 'shooting_by', 'editing_by', 'deliverables', 'channels', 'tov', 'reference', 'notes', 'due_date'];
@@ -29,14 +30,22 @@ class TaskController extends MarketingBaseController
     public function show(MarketingTask $task): JsonResponse
     {
         $canSeeHistory = $this->isAdmin();
+        $familyIds = MarketingTaskMirror::familyIds($task);
 
         $task->load(MarketingPresenter::TASK_RELATIONS)
             ->loadCount(MarketingPresenter::taskCounts())
             ->load([
-                'comments' => fn ($q) => $q->with('user:id,name,display_name,avatar')->latest('id'),
                 'posts' => fn ($q) => $q->with(['link', 'poster:id,name'])->orderBy('scheduled_date'),
                 'stage',
             ]);
+
+        MarketingTaskMirror::hydrateShared([$task]);
+
+        $comments = MarketingTaskComment::query()
+            ->whereIn('task_id', $familyIds)
+            ->with('user:id,name,display_name,avatar')
+            ->latest('id')
+            ->get();
 
         if ($canSeeHistory) {
             $task->load(['histories' => fn ($q) => $q->with('user:id,name,avatar')->latest('id')]);
@@ -44,7 +53,7 @@ class TaskController extends MarketingBaseController
        $unreadMentions = Auth::user()->unreadNotifications()
             ->where('type', MarketingMention::class)
             ->get()
-            ->filter(fn ($n) => (int) ($n->data['marketing_task_id'] ?? 0) === $task->id);
+            ->filter(fn ($n) => in_array((int) ($n->data['marketing_task_id'] ?? 0), $familyIds, true));
 
         $hadMention = $unreadMentions->isNotEmpty();
         $unreadMentions->each->markAsRead();
@@ -52,7 +61,7 @@ class TaskController extends MarketingBaseController
             'task' => MarketingPresenter::task($task) + [
                  'mentioned_me' => $hadMention,
                 'stage' => $task->stage ? ['id' => $task->stage->id, 'name' => $task->stage->name, 'color' => $task->stage->color, 'is_done' => $task->stage->is_done] : null,
-                'comments' => $task->comments->map(fn ($c) => MarketingPresenter::comment($c))->values(),
+                'comments' => $comments->map(fn ($c) => MarketingPresenter::comment($c))->values(),
                 'histories' => $canSeeHistory
                     ? $task->histories->map(fn ($h) => MarketingPresenter::history($h))->values()
                     : [],
@@ -378,8 +387,9 @@ class TaskController extends MarketingBaseController
 
     private function fresh(MarketingTask $task): array
     {
-        return MarketingPresenter::task(
-            $task->fresh()->load(MarketingPresenter::TASK_RELATIONS)->loadCount(MarketingPresenter::taskCounts())
-        );
+        $fresh = $task->fresh()->load(MarketingPresenter::TASK_RELATIONS)->loadCount(MarketingPresenter::taskCounts());
+        MarketingTaskMirror::hydrateShared([$fresh]);
+
+        return MarketingPresenter::task($fresh);
     }
 }

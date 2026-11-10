@@ -83,20 +83,25 @@ const tagColor = computed(() => (type.value ? type.value.color : category.value.
 /** Readable type on the card face: Video / Photo / Reel, or Story / Post / Cover, or Design / Video. */
 const typeChips = computed(() => {
   const task = props.task
+  const deliverableChips = (task.deliverables || []).map((key) => {
+    const item = DELIVERABLES[key]
+    return { key, label: item?.label || key, color: item?.color || '#7c3aed' }
+  })
   if (task.category === 'production') {
-    return type.value ? [{ key: task.type, label: type.value.label, color: type.value.color, icon: type.value.icon }] : []
+    const chips = type.value
+      ? [{ key: task.type, label: type.value.label, color: type.value.color, icon: type.value.icon }]
+      : []
+    return [...chips, ...deliverableChips]
   }
   if (task.category === 'design') {
-    const picked = (task.deliverables || []).map((key) => {
-      const item = DELIVERABLES[key]
-      return { key, label: item?.label || key, color: item?.color || '#7c3aed' }
-    })
-    return picked.length ? picked : [{ key: 'design', label: 'Design', color: '#7c3aed', icon: 'lucide:palette' }]
+    return deliverableChips.length
+      ? deliverableChips
+      : [{ key: 'design', label: 'Design', color: '#7c3aed', icon: 'lucide:palette' }]
   }
   const chips = []
   if (task.designer) chips.push({ key: 'design', label: 'Design', color: '#7c3aed', icon: 'lucide:palette' })
   if (task.also_video) chips.push({ key: 'video', label: 'Video', color: '#C2416B', icon: 'lucide:video' })
-  return chips
+  return [...chips, ...deliverableChips]
 })
 const overdue = computed(() => !props.stageDone && props.task.due_date && props.task.due_date < isoDate(new Date()))
 const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(props.task.posted_count || 0))

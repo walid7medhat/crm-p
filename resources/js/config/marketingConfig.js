@@ -32,6 +32,7 @@ export const DELIVERABLES = {
   linkedin: { label: 'LinkedIn', color: '#2C6FB7', grad: 'linear-gradient(135deg, #4A90D9 0%, #1F5EA3 100%)' },
   cover: { label: 'Cover', color: '#3F8C6B', grad: 'linear-gradient(135deg, #5CAE89 0%, #33785B 100%)' },
   sales_story: { label: 'Sales Story', color: '#2A8C99', grad: 'linear-gradient(135deg, #47AEBB 0%, #237683 100%)' },
+  landing_page: { label: 'Landing Page', color: '#5B6BCF', grad: 'linear-gradient(135deg, #7B8AE8 0%, #4A58B8 100%)' },
   other: { label: 'Other', color: '#64748B', grad: 'linear-gradient(135deg, #94A3B8 0%, #475569 100%)' },
 };
 
@@ -88,6 +89,7 @@ export const HISTORY_ACTIONS = {
   commented: { label: 'commented', icon: 'lucide:message-circle', color: '#d97706' },
   comment_updated: { label: 'edited a comment', icon: 'lucide:message-square-pen', color: '#d97706' },
   scheduled: { label: 'scheduled a post', icon: 'lucide:calendar-plus', color: '#9333ea' },
+  unscheduled: { label: 'unscheduled a post', icon: 'lucide:calendar-x', color: '#64748b' },
   posted: { label: 'marked as posted', icon: 'lucide:send', color: '#16a34a' },
   unposted: { label: 'unmarked posted', icon: 'lucide:undo-2', color: '#64748b' },
   deleted: { label: 'deleted the card', icon: 'lucide:trash-2', color: '#dc2626' },

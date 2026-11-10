@@ -175,8 +175,18 @@ class CalendarController extends MarketingBaseController
             return response()->json(['message' => 'Only the person who scheduled this post or an admin can remove it.'], 403);
         }
 
+        $post->loadMissing('task');
+        if ($post->task) {
+            MarketingHistoryRecorder::record($post->task, 'unscheduled', [[
+                'field' => 'calendar',
+                'label' => 'Unscheduled',
+                'old' => $post->scheduled_date?->format('d M Y') . ' · ' . MarketingHistoryRecorder::humanize($post->platform),
+                'new' => null,
+            ]]);
+        }
+
         $post->delete();
 
-        return response()->json(['message' => 'Post removed.']);
+        return response()->json(['message' => 'Post unscheduled.']);
     }
 }

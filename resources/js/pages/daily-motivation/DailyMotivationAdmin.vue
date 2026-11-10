@@ -31,10 +31,13 @@
     <p v-if="notice" class="edge-notice" :class="{ 'is-error': noticeError }" role="status">{{ notice }}</p>
 
     <section class="edge-list">
-      <p class="edge-list-title">Active agents · {{ sales.length }}</p>
-      <p v-if="!sales.length" class="edge-empty">No activated sales agents.</p>
+      <p class="edge-list-title">Active sales · {{ sales.length }} (Dubai &amp; Abu Dhabi)</p>
+      <p v-if="!sales.length" class="edge-empty">No active sales agents.</p>
       <ul v-else class="edge-sales">
-        <li v-for="person in sales" :key="person.id">{{ person.name }}</li>
+        <li v-for="person in sales" :key="person.id">
+          {{ person.name }}
+          <span v-if="person.branch" class="edge-sales__branch">{{ person.branch }}</span>
+        </li>
       </ul>
     </section>
 
@@ -119,7 +122,7 @@ const pageMessages = computed(() => {
 })
 const sales = computed(() => overview.value?.sales || [])
 const statusLine = computed(() => {
-  if (overview.value?.is_enabled) return 'Sending one English message to active sales every day at 9:00 AM.'
+  if (overview.value?.is_enabled) return 'Sending one English message to every active sales agent (Dubai & Abu Dhabi) every day at 9:00 AM.'
   return 'Stopped. Nothing is sent until you press Start.'
 })
 
@@ -154,7 +157,7 @@ function askStart() {
   dialog.value = {
     kind: 'start',
     title: 'Start the daily 9:00 AM send?',
-    body: 'Each active sales person gets one English message every day at 9:00 AM Dubai time. If it is already past 9:00, today’s message goes out now.',
+    body: 'Every active sales agent in Dubai and Abu Dhabi gets one English message every day at 9:00 AM Dubai time. Messages are mixed randomly across the team. If it is already past 9:00, today’s message goes out now.',
     confirm: 'Start',
   }
 }
@@ -362,6 +365,13 @@ onMounted(async () => {
   background: #fff;
   color: #0b0736;
   font-size: 13px !important;
+}
+
+.edge-sales__branch {
+  margin-left: 6px;
+  color: #6b7280;
+  font-size: 11px !important;
+  text-transform: capitalize;
 }
 
 .edge-message {
