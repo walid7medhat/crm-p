@@ -38,7 +38,15 @@ class MarketingNotifier
         try {
             $actor = Auth::user();
 
-            event(MarketingBoardUpdated::fromTask($task, $action, $actor));
+            // Fan out to mirrored cards so Content and Design boards both refresh.
+            // Deletes stay on the deleted card only — never mark siblings as deleted.
+            if ($action === 'deleted') {
+                event(MarketingBoardUpdated::fromTask($task, $action, $actor));
+            } else {
+                foreach (self::familyCards($task) as $card) {
+                    event(MarketingBoardUpdated::fromTask($card, $action, $actor));
+                }
+            }
 
             // Newly assigned people get a personal "you were assigned" (on create or edit).
             if (in_array($action, ['created', 'updated'], true)) {
@@ -73,15 +81,33 @@ class MarketingNotifier
         }
     }
 
-    /** Assignee, shooter, editor and creator of the card — minus whoever acted. */
+    /** Assignee, shooter, editor and creator across the mirrored family — minus whoever acted. */
     private static function cardPeople(MarketingTask $task, ?User $actor)
     {
-        $ids = collect([$task->assigned_to, $task->designed_by, $task->shooting_by, $task->editing_by, $task->created_by])
+        $ids = self::familyCards($task)
+            ->flatMap(fn (MarketingTask $card) => [
+                $card->assigned_to,
+                $card->designed_by,
+                $card->shooting_by,
+                $card->editing_by,
+                $card->created_by,
+            ])
             ->filter()
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->reject(fn ($id) => $id === (int) $actor?->id);
 
         return $ids->isEmpty() ? collect() : User::whereIn('id', $ids)->where('status', 'active')->get();
+    }
+
+    /** @return \Illuminate\Support\Collection<int, MarketingTask> */
+    private static function familyCards(MarketingTask $task)
+    {
+        $ids = MarketingTaskMirror::familyIds($task);
+        if (count($ids) <= 1) {
+            return collect([$task]);
+        }
+
+        return MarketingTask::whereIn('id', $ids)->get();
     }
 }

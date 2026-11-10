@@ -7,6 +7,7 @@ use App\Models\MarketingTaskComment;
 use App\Models\User;
 use App\Services\Marketing\MarketingHistoryRecorder;
 use App\Services\Marketing\MarketingPresenter;
+use App\Services\Marketing\MarketingTaskMirror;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -27,18 +28,21 @@ class TaskCommentController extends MarketingBaseController
         }
 
         $mentioned = $this->resolveMentions($body, $validated['mentions'] ?? []);
+        $root = MarketingTaskMirror::root($task);
 
-        $comment = $task->comments()->create([
+        $comment = $root->comments()->create([
             'user_id'  => Auth::id(),
             'body'     => $body,
             'mentions' => $this->mentionPayload($mentioned),
         ]);
 
+        // History stays on the opened card so each board sees the activity.
         MarketingHistoryRecorder::record($task, 'commented', [[
             'field' => 'comment', 'label' => 'Comment', 'old' => null, 'new' => Str::limit($body, 120),
         ]]);
 
         if ($mentioned->isNotEmpty()) {
+            // Notify against the opened card so the deep-link opens the right board.
             Notification::send($mentioned, new MarketingMention($task, $comment, Auth::user()));
         }
 
@@ -47,7 +51,7 @@ class TaskCommentController extends MarketingBaseController
 
     public function update(Request $request, MarketingTask $task, MarketingTaskComment $comment): JsonResponse
     {
-        if ((int) $comment->task_id !== (int) $task->id) {
+        if (! MarketingTaskMirror::belongsToFamily($task, (int) $comment->task_id)) {
             abort(404);
         }
 

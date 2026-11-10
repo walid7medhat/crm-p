@@ -138,7 +138,10 @@ class MarketingPresenter
             'posted_at' => $post->posted_at?->toIso8601String(),
         ];
     }
-    /** Task ids with an unread mention for the current user (cached for the request). */
+    /**
+     * Task ids with an unread mention for the current user (cached for the request).
+     * Expanded to the whole mirrored family so Content and Design both light up.
+     */
     public static function mentionedTaskIds(): array
     {
         $req = request();
@@ -148,11 +151,32 @@ class MarketingPresenter
 
         $ids = [];
         if ($user = $req->user()) {
-            $ids = $user->unreadNotifications()
+            $raw = $user->unreadNotifications()
                 ->where('type', MarketingMention::class)
                 ->get()
                 ->map(fn ($n) => (int) ($n->data['marketing_task_id'] ?? 0))
-                ->filter()->unique()->values()->all();
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if ($raw) {
+                $roots = MarketingTask::query()
+                    ->whereIn('id', $raw)
+                    ->get(['id', 'source_task_id'])
+                    ->map(fn (MarketingTask $t) => (int) ($t->source_task_id ?: $t->id))
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $ids = MarketingTask::query()
+                    ->where(fn ($q) => $q->whereIn('id', $roots)->orWhereIn('source_task_id', $roots))
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
         }
         $req->attributes->set('mk_mentioned', $ids);
 
