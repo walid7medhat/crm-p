@@ -95,17 +95,26 @@ class DailyMotivationService
             return $this->emptyPayload('enabled', $today, false);
         }
 
-        if (! $this->released()) {
-            return $this->emptyPayload('enabled', $today);
-        }
-
         $settings = $this->ensureSettings();
         if (! $settings->is_enabled || $settings->anchor_date === null) {
             return $this->emptyPayload($settings->is_enabled ? 'enabled' : 'disabled', $today);
         }
 
-        $assignment = $this->ensureAssignment($user, $today, $settings);
-        $personal = $this->personalIndex($settings, $today, $assignment ? $this->stateFor($user) : null);
+        // Eligible sales (Dubai + Abu Dhabi) can open today's card any time.
+        // Auto-open and push still wait for the 9:00 AM Dubai release.
+        try {
+            $assignment = $this->ensureAssignment($user, $today, $settings);
+        } catch (RuntimeException) {
+            $this->syncMissingActiveOffsets();
+
+            try {
+                $assignment = $this->ensureAssignment($user, $today, $settings);
+            } catch (RuntimeException) {
+                return $this->emptyPayload('enabled', $today, true);
+            }
+        }
+
+        $personal = $this->personalIndex($settings, $today, $this->stateFor($user));
         $canonical = (int) $assignment->message_number;
         $displayNumber = MotivationRotation::resolveDisplay($canonical, $this->enabledNumbers(), $this->cycleLength());
         $message = $displayNumber
@@ -277,11 +286,13 @@ class DailyMotivationService
             return false;
         }
 
-        if (! $user->hasRole('sales')) {
+        if (! $user->hasRole('sales', 'api')) {
             return false;
         }
 
         // Any active sales agent in Dubai or Abu Dhabi — staff dual-roles stay excluded.
+        $user->loadMissing('roles');
+
         return ! $user->roles->contains(fn ($role) => in_array($role->name, self::STAFF_ROLES, true));
     }
 

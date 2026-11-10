@@ -283,7 +283,9 @@ class DailyMotivationTest extends TestCase
         $waiting = Carbon::parse('2026-10-02 08:30:00', 'Asia/Dubai');
         Carbon::setTestNow($waiting);
         $this->assertSame('waiting', $this->service->deliverToday()['status']);
-        $this->assertNull($this->service->presentFor($agent)['message']);
+        $beforeNine = $this->service->presentFor($agent);
+        $this->assertNotNull($beforeNine['message']);
+        $this->assertTrue($beforeNine['auto_open']);
 
         $this->travelToDubai('2026-10-02');
         $first = $this->service->deliverToday();
