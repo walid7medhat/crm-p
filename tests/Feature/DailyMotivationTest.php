@@ -67,7 +67,7 @@ class DailyMotivationTest extends TestCase
         $this->assertSame(0, MotivationAssignment::query()->where('user_id', $sales->id)->count());
     }
 
-    public function test_overview_lists_only_activated_sales_agents(): void
+    public function test_overview_lists_all_active_sales_agents(): void
     {
         $admin = $this->makeUser('super_admin');
         $agent = $this->makeUser('sales');
@@ -84,7 +84,7 @@ class DailyMotivationTest extends TestCase
 
         $ids = collect($names)->pluck('id')->all();
         $this->assertContains($agent->id, $ids);
-        $this->assertNotContains($neverLoggedIn->id, $ids);
+        $this->assertContains($neverLoggedIn->id, $ids);
         $this->assertNotContains($inactive->id, $ids);
         $this->assertNotContains($staffWithSales->id, $ids);
         $this->assertNotContains($admin->id, $ids);

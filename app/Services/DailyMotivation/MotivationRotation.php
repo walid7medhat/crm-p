@@ -57,16 +57,43 @@ class MotivationRotation
      * @param  array<int, int>  $takenSlots
      * @return array<int, array{slot: int, shared: bool}>
      */
-    public static function assignSlots(array $userIdsInIdOrder, array $takenSlots, int $cycle = self::CYCLE): array
+    public static function assignSlots(array $userIdsInIdOrder, array $takenSlots, int $cycle = self::CYCLE, bool $random = false): array
     {
         $taken = [];
         foreach ($takenSlots as $slot) {
             $taken[(int) $slot] = true;
         }
 
+        $free = [];
+        for ($slot = 0; $slot < max(1, $cycle); $slot++) {
+            if (! isset($taken[$slot])) {
+                $free[] = $slot;
+            }
+        }
+        if ($random && $free !== []) {
+            shuffle($free);
+        }
+
         $plan = [];
         foreach ($userIdsInIdOrder as $userId) {
             $userId = (int) $userId;
+
+            if ($random) {
+                if ($free !== []) {
+                    $slot = array_shift($free);
+                    $plan[$userId] = ['slot' => $slot, 'shared' => false];
+                    $taken[$slot] = true;
+                    continue;
+                }
+
+                $fallback = ($userId - 1) % max(1, $cycle);
+                if ($fallback < 0) {
+                    $fallback += max(1, $cycle);
+                }
+                $plan[$userId] = ['slot' => $fallback, 'shared' => true];
+                continue;
+            }
+
             $preferred = ($userId - 1) % $cycle;
             if ($preferred < 0) {
                 $preferred += $cycle;
