@@ -446,6 +446,8 @@
                                     placeholder="Not Selected"
                                     class="custom-v-select searchable-select"
                                     :class="{ 'is-invalid': fieldErrors.area_id }"
+                                    :loading="areaSearchLoading"
+                                    @search="onAreaSearch"
                                 >
                                 <template #open-indicator="{ attributes }">
                                     <span v-bind="attributes">
@@ -1137,7 +1139,8 @@ const updateReminderDropdownPosition = () => {
         top: `${Math.round(r.bottom + 8)}px`,
         left: `${Math.round(r.left)}px`,
         minWidth: `${Math.max(Math.round(r.width), 260)}px`,
-        zIndex: '12050',
+        // Must sit above this modal's overlay (14000), otherwise the panel opens hidden behind it.
+        zIndex: '15000',
     }
 }
 
@@ -1252,6 +1255,44 @@ const areaOptions = computed(() => (areas.value || []).map((area) => {
         text,
     }
 }))
+
+// The initial list only has areas that already have listings (fast path), so new areas
+// were missing. When the user types, search ALL areas on the server and merge them in.
+const areaSearchLoading = ref(false)
+let areaSearchTimer = null
+let areaSearchSeq = 0
+const onAreaSearch = (term) => {
+    clearTimeout(areaSearchTimer)
+    const q = String(term || '').trim()
+    if (q.length < 2) {
+        areaSearchLoading.value = false
+        return
+    }
+    areaSearchLoading.value = true
+    areaSearchTimer = setTimeout(async () => {
+        const seq = ++areaSearchSeq
+        try {
+            const res = await api.get('/listings/areas', { params: { search: q } })
+            if (seq !== areaSearchSeq) return
+            const payload = res.data?.data ?? res.data
+            const list = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])
+            const known = new Set((areas.value || []).map((a) => Number(a.id)))
+            const extra = list
+                .filter((a) => a && !known.has(Number(a.id)))
+                .map((a) => {
+                    // area_parents_title here starts with the area's own name — keep only the parents.
+                    const parts = String(a.area_parents_title || '').split(',').map((s) => s.trim()).filter(Boolean)
+                    if (parts[0] === a.name) parts.shift()
+                    return { ...a, area_parents_title: parts.join(', ') }
+                })
+            if (extra.length) areas.value = [...(areas.value || []), ...extra]
+        } catch (error) {
+            console.error('Error searching areas:', error)
+        } finally {
+            if (seq === areaSearchSeq) areaSearchLoading.value = false
+        }
+    }, 300)
+}
 
 const propertyTypeOptions = computed(() => (propertyTypes.value || []).map((type) => ({
     value: type.id,
