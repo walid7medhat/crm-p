@@ -207,8 +207,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Direct Permission Assignment (super admin only) -->
-                                <div class="col-12" v-if="isSuperAdmin && isEditMode">
+                                <!-- Direct Permission Assignment (super admin only; hidden for admin role) -->
+                                <div class="col-12" v-if="isSuperAdmin && isEditMode && !isEditingAdminRole">
                                     <hr class="my-2">
                                     <div class="mb-3">
                                         <label class="form-label">
@@ -367,6 +367,12 @@ export default {
             } catch {
                 return false;
             }
+        });
+
+        // Admin role already inherits all role permissions — no extra-assignment UI.
+        const isEditingAdminRole = computed(() => {
+            const role = roles.value.find(r => r.id === userForm.value.role_id);
+            return String(role?.name || '').toLowerCase() === 'admin';
         });
 
         // Matches UserController::revokePermission — super_admin only (user 33 can only add).
@@ -968,6 +974,7 @@ watch(roles, (newRoles) => {
             validateEmailOnBlur,
             validateEmailDomain,
             isSuperAdmin,
+            isEditingAdminRole,
             allPermissions,
             userEffectivePermissions,
             permissionsToAssign,
