@@ -20,9 +20,9 @@ class TaskController extends MarketingBaseController
 {
     /** Fields each category is allowed to keep; everything else is cleared on save. */
     private const CATEGORY_FIELDS = [
-        'production' => ['department', 'type', 'shooting_by', 'editing_by', 'channels', 'reference', 'notes', 'due_date'],
+        'production' => ['department', 'type', 'shooting_by', 'editing_by', 'channels', 'deliverables', 'reference', 'notes', 'due_date'],
         'design' => ['department', 'assigned_to', 'deliverables', 'tov', 'reference', 'notes', 'due_date'],
-        'content' => ['department', 'assigned_to', 'designed_by', 'also_video', 'reference', 'notes', 'due_date'],
+        'content' => ['department', 'assigned_to', 'designed_by', 'also_video', 'deliverables', 'reference', 'notes', 'due_date'],
     ];
 
     private const OPTIONAL_FIELDS = ['department', 'type', 'assigned_to', 'designed_by', 'also_video', 'shooting_by', 'editing_by', 'deliverables', 'channels', 'tov', 'reference', 'notes', 'due_date'];

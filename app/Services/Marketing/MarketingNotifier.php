@@ -24,6 +24,8 @@ class MarketingNotifier
         'link_added' => 'link_added',
         'commented' => 'commented',
         'approved' => 'approved',
+        'scheduled' => 'scheduled',
+        'unscheduled' => 'unscheduled',
         'deleted' => 'deleted',
     ];
 

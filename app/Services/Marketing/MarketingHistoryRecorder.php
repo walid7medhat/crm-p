@@ -41,6 +41,7 @@ class MarketingHistoryRecorder
         'instagram_story' => 'Instagram Story',
         'unit_video' => 'Unit Video',
         'sales_story' => 'Sales Story',
+        'landing_page' => 'Landing Page',
     ];
 
     /** "sales_story" => "Sales Story", "youtube" => "YouTube". */
