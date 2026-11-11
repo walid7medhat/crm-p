@@ -30,7 +30,7 @@ class AreaController extends Controller
         $forListingSearch = $request->has('has_listings');
         // v2: listing search returns place name + full parent location path
         $cacheKey = self::areasVersionedKey(
-            ($forListingSearch ? 'areas_listing_v2_' : 'areas_list_v3_').md5(serialize($request->all()))
+            ($forListingSearch ? 'areas_listing_v2_' : 'areas_list_v4_').md5(serialize($request->all()))
         );
 
         $resolver = function () use ($request, $forListingSearch) {
@@ -215,11 +215,15 @@ class AreaController extends Controller
             $id = (int) $area->id;
             $chain = [];
             $ancestorNames = [];
+            $cityName = null;
             $current = $id;
             $guard = 0;
 
             while ($current && $guard < 8) {
                 $currentName = $name[$current] ?? null;
+                if ($cityName === null && ($type[$current] ?? null) === 'city') {
+                    $cityName = $currentName;
+                }
                 if ($currentName) {
                     $ancestorNames[] = $currentName;
                     if (($type[$current] ?? null) !== 'country') {
@@ -265,6 +269,9 @@ class AreaController extends Controller
                 'admin_fee_type' => $isAdgm ? 'adgm' : 'dari',
                 'is_adgm' => $isAdgm,
                 'all_names' => array_values(array_unique(array_filter($ancestorNames))),
+                // Emirate the area sits in — drives Dubai vs Abu Dhabi deal costs / NOC.
+                'city_name' => $cityName,
+                'is_dubai' => strcasecmp(trim((string) $cityName), 'dubai') === 0,
             ];
         })->values()->all();
     }

@@ -152,17 +152,14 @@
                     </div>
                     <small class="text-muted d-block mt-1" style="font-size: 9px;">
                       <span v-if="developerNocValue > 0" class="text-primary">
-                        <i class="fas fa-info-circle"></i> 
-                        Auto-populated from developer ({{ currentNocType }}): 
+                        <i class="fas fa-info-circle"></i>
+                        From developer ({{ isDubaiListing ? 'Dubai' : 'Abu Dhabi' }}, {{ currentNocType }}):
                         <strong>{{ formatAed(developerNocValue) }}</strong>
                       </span>
-                      <span v-else-if="selectedProject && developerNocValue === 0" class="text-muted">
-                        <i class="fas fa-info-circle"></i> No NOC fees for this developer
+                      <span v-else class="text-muted">
+                        <i class="fas fa-info-circle"></i> Saved on the listing
                       </span>
-                      <span v-else class="text-warning">
-                        <i class="fas fa-exclamation-triangle"></i> 
-                        NOC value modified manually
-                      </span>
+                      <span v-if="isDubaiListing"> + 5% VAT</span>
                     </small>
                   </div>
                 </div>
@@ -416,21 +413,12 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- عرض Agency Fee كبند تلقائي إذا كان سعر البيع > 0 -->
-                  <tr v-if="Number(sellingPriceNum) > 0" class="table-light">
-                    <td>
-                      <span class="fw-semibold">Agency Fee</span>
-                      <span class="badge bg-primary ms-1" style="font-size: 8px;">2%</span>
+                  <!-- Default lines (Agency, Transfer/DLD, Admin/Trustee) come from utils/dealCostRules -->
+                  <tr v-if="isDubaiListing" class="table-light">
+                    <td colspan="8" class="small text-muted py-1">
+                      <i class="fas fa-map-marker-alt me-1"></i> Dubai costs: Agency 2% + VAT · DLD 4% · Trustee fee ({{ currentNocType === 'Off-Plan' ? 'Oqood' : 'Title Deed' }})
                     </td>
-                    <td class="d-none d-lg-table-cell">SP</td>
-                    <td>Percentage</td>
-                    <td>2%</td>
-                    <td class="text-end">{{ formatAed((Number(sellingPriceNum) * 2) / 100) }}</td>
-                    <td class="text-end">—</td>
-                    <td class="text-end fw-semibold">{{ formatAed((Number(sellingPriceNum) * 2) / 100) }}</td>
-                    <td></td>
                   </tr>
-                  
                   <!-- التكاليف الأخرى -->
                   <tr v-for="line in assignmentExpenseLines" :key="line.id">
                     <td>
@@ -486,18 +474,18 @@
             </div>
 
             <!-- ملخص التكاليف مع Agency Fee -->
-            <div v-if="assignmentExpenseLines.length > 0 || Number(sellingPriceNum) > 0" class="lpb-expenses-summary row g-2 mt-2 pt-2 border-top">
+            <div v-if="assignmentExpenseLines.length > 0" class="lpb-expenses-summary row g-2 mt-2 pt-2 border-top">
               <div class="col-4">
                 <span class="lpb-summary-label">Subtotal</span>
-                <div class="lpb-summary-value">{{ formatAed(expensesSubtotalWithAgency) }}</div>
+                <div class="lpb-summary-value">{{ formatAed(assignmentExpensesSubtotal) }}</div>
               </div>
               <div class="col-4">
                 <span class="lpb-summary-label">VAT (5%)</span>
-                <div class="lpb-summary-value">{{ formatAed(expensesVatWithAgency) }}</div>
+                <div class="lpb-summary-value">{{ formatAed(assignmentExpensesTotalVat) }}</div>
               </div>
               <div class="col-4">
                 <span class="lpb-summary-label">Grand total</span>
-                <div class="lpb-summary-value text-primary">{{ formatAed(expensesGrandTotalWithAgency) }}</div>
+                <div class="lpb-summary-value text-primary">{{ formatAed(assignmentExpensesGrandTotal) }}</div>
               </div>
             </div>
           </section>
@@ -553,7 +541,9 @@
       :assignment-expenses-subtotal="assignmentExpensesSubtotal"
       :assignment-expenses-total-vat="assignmentExpensesTotalVat"
       :assignment-expenses-grand-total="assignmentExpensesGrandTotal"
-
+      :noc-fixed-amount="nocFixedAmount"
+      :noc-type="currentNocType"
+      :is-dubai="isDubaiListing"
     />
   </Teleport>
 </template>
@@ -575,6 +565,7 @@ import {
   assignmentExpenseBaseOptions,
   parseAssignmentExpenseLines,
 } from '@/composables/useListingAssignmentExpenses';
+import { isDubaiArea, developerNocFee, isOffPlanStatus } from '@/utils/dealCostRules';
 import '../../../css/listing-payment-breakdown-modal.css';
 
 const priceFieldIsEmpty = (v) => !parsePriceInputDigits(v);
@@ -606,6 +597,10 @@ const listingTitle = ref('');
 const showPaymentPreview = ref(false);
 const selectedProject = ref(null);
 const dealCostSettings = ref({});
+// Listing area (object or "X, Y, Dubai" label) + backend is_dubai flag → Dubai vs Abu Dhabi costs.
+const listingArea = ref(null);
+// NOC saved on the listing (backend falls back to the developer's fee when none was saved).
+const savedNocAmount = ref(0);
 
 const form = ref({
   price: '',
@@ -641,27 +636,18 @@ const nocFixedAmount = computed(() => {
   return Number(form.value.noc_fixed_amount || 0);
 });
 
-const developerNocValue = computed(() => {
-    console.log('🔍 developerNocValue computed called');
-  console.log('📌 selectedProject.value:', selectedProject.value);
-  console.log('📌 selectedProject.value?.developer:', selectedProject.value?.developer);
-  if (!selectedProject.value || !selectedProject.value.developer) return 0;
-  
-  const status = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  console.log("selectedProject.value.developer"+selectedProject.value.developer);
-  if (isUC) {
-    return Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-  } else {
-    return Number(selectedProject.value.developer.noc_fees_ready || 0);
-  }
-});
+const isDubaiListing = computed(() => isDubaiArea(listingArea.value));
 
-const currentNocType = computed(() => {
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  return isUC ? 'Off-Plan' : 'Ready';
-});
+// Developer NOC fee for this emirate + status (Dubai has its own columns).
+const developerNocValue = computed(() => developerNocFee(selectedProject.value?.developer, {
+  isDubai: isDubaiListing.value,
+  isOffPlan: isOffPlanStatus(form.value.completionStatus),
+}));
+
+const currentNocType = computed(() => (isOffPlanStatus(form.value.completionStatus) ? 'Off-Plan' : 'Ready'));
+
+// Developer fee when it has one, else what the listing already has.
+const resolveNocAmount = () => developerNocValue.value || savedNocAmount.value || 0;
 
 const nocPercentageOptions = [
   { label: '0%', value: 0 },
@@ -739,32 +725,9 @@ const {
   sellingPriceNum,
   premiumAmountForm,
   formatAed,
-  nocFixedAmount: nocFixedAmount,
-  dealCostSettings: dealCostSettings,
-});
-
-// ============ حساب التكاليف مع Agency Fee ============
-const agencyFeePercent = computed(() => 2);
-
-const agencyFeeAmount = computed(() => {
-  const sp = Number(sellingPriceNum.value || 0);
-  return (sp * agencyFeePercent.value) / 100;
-});
-
-const expensesSubtotalWithAgency = computed(() => {
-  const agency = agencyFeeAmount.value;
-  const subtotal = Number(assignmentExpensesSubtotal.value || 0);
-  return subtotal + agency;
-});
-
-const expensesVatWithAgency = computed(() => {
-  const agencyVat = agencyFeeAmount.value * 0.05;
-  const vat = Number(assignmentExpensesTotalVat.value || 0);
-  return vat + agencyVat;
-});
-
-const expensesGrandTotalWithAgency = computed(() => {
-  return expensesSubtotalWithAgency.value + expensesVatWithAgency.value;
+  dealCostSettings,
+  area: listingArea,
+  completionStatus: computed(() => form.value.completionStatus),
 });
 
 // ============ Functions ============
@@ -842,6 +805,14 @@ const hydrateFromProperty = (propertyData) => {
     };
   }
 
+  // Grid rows send area as a label string, the detail API as an object; both send is_dubai.
+  const rawArea = propertyData.area;
+  const areaObject = rawArea && typeof rawArea === 'object' ? rawArea : { area_title: rawArea || '' };
+  listingArea.value = typeof propertyData.is_dubai === 'boolean'
+    ? { ...areaObject, is_dubai: propertyData.is_dubai }
+    : (rawArea || propertyData.project?.area || null);
+  savedNocAmount.value = Number(propertyData.noc_fixed_amount || 0);
+
   let paymentPlanValue = propertyData.payment_plans ?? propertyData.payment_plan;
   if (typeof paymentPlanValue === 'string' && paymentPlanValue.startsWith('[')) {
     try {
@@ -855,17 +826,10 @@ const hydrateFromProperty = (propertyData) => {
     paymentPlanValue = paymentPlanValue[0];
   }
 
-  const status = String(propertyData.completion_status ?? '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  
-  let nocValue = 0;
-  if (selectedProject.value?.developer) {
-    if (isUC) {
-      nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-    } else {
-      nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
-    }
-  }
+  const nocValue = developerNocFee(selectedProject.value?.developer, {
+    isDubai: isDubaiArea(listingArea.value),
+    isOffPlan: isOffPlanStatus(propertyData.completion_status),
+  }) || savedNocAmount.value;
 
   form.value = {
     price: String(propertyData.price ?? propertyData.selling_price ?? ''),
@@ -931,54 +895,10 @@ const loadListing = async () => {
   }
 };
 
-watch(
-  () => form.value.completionStatus,
-  (newStatus) => {
-    if (!selectedProject.value?.developer) return;
-    
-    const status = String(newStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
-    const isUC = status === 'under construction' || status === 'off plan';
-    
-    let nocValue = 0;
-    if (isUC) {
-      nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-    } else {
-      nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
-    }
-    
-    form.value.noc_fixed_amount = nocValue;
-  }
-);
-// ✅ مراقبة تغيير المشروع وتحديث NOC
-watch(
-  () => selectedProject.value,
-  (newProject) => {
-    if (!newProject?.developer) {
-      form.value.noc_fixed_amount = 0;
-      return;
-    }
-    
-    const status = String(form.value.completionStatus ?? '').trim().toLowerCase().replace(/_/g, ' ');
-    const isUC = status === 'under construction' || status === 'off plan';
-    
-    let nocValue = 0;
-    if (isUC) {
-      nocValue = Number(newProject.developer.noc_fees_off_plan || 0);
-    } else {
-      nocValue = Number(newProject.developer.noc_fees_ready || 0);
-    }
-    
-    console.log('🔄 NOC updated from project:', {
-      project: newProject.name,
-      isUC,
-      nocValue,
-      developer: newProject.developer
-    });
-    
-    form.value.noc_fixed_amount = nocValue;
-  },
-  { deep: true, immediate: true }
-);
+// Status / project / emirate changed → NOC follows the developer's fee (else keeps the saved one).
+watch(developerNocValue, () => {
+  form.value.noc_fixed_amount = resolveNocAmount();
+});
 watch(
   () => [props.modelValue, props.listingId],
   ([open, id]) => {

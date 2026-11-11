@@ -11,11 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('marketing_bookins', function (Blueprint $table) {
-            //
-            Schema::table('marketing_bookings', function (Blueprint $t) {
-                    $t->json('units')->nullable()->after('bedrooms');
-                });
+        if (Schema::hasColumn('marketing_bookings', 'units')) {
+            return;
+        }
+
+        Schema::table('marketing_bookings', function (Blueprint $table) {
+            // `bedrooms` doesn't exist on every database, so only position after it when it does.
+            $column = $table->json('units')->nullable();
+            if (Schema::hasColumn('marketing_bookings', 'bedrooms')) {
+                $column->after('bedrooms');
+            }
         });
     }
 
@@ -24,8 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('marketing_bookins', function (Blueprint $table) {
-            //
-        });
+        if (Schema::hasColumn('marketing_bookings', 'units')) {
+            Schema::table('marketing_bookings', function (Blueprint $table) {
+                $table->dropColumn('units');
+            });
+        }
     }
 };

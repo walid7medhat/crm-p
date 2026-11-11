@@ -283,6 +283,17 @@ class DeveloperController extends Controller
             \Log::warning('Developers cache clear error: ' . $e->getMessage());
             self::bumpCacheEpoch();
         }
+
+        // The cached project lists embed each developer's NOC fees (the listing forms read
+        // them from there), so a developer change must refresh them too.
+        Cache::put('projects_epoch', (string) (microtime(true) * 1000), 86400 * 30);
+        try {
+            if (method_exists(Cache::getStore(), 'tags')) {
+                Cache::tags(['projects'])->flush();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Projects cache clear error: ' . $e->getMessage());
+        }
     }
 
     private static function cacheEpoch(): string

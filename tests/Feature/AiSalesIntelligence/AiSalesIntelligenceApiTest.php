@@ -3,13 +3,14 @@
 namespace Tests\Feature\AiSalesIntelligence;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class AiSalesIntelligenceApiTest extends TestCase
 {
-    use RefreshDatabase;
+    // Never RefreshDatabase: tests run on the real local DB and it drops every table.
+    use DatabaseTransactions;
 
     protected function createSuperAdmin(): User
     {

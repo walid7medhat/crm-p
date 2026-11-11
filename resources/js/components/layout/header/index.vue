@@ -1097,7 +1097,8 @@ const requestsItems = computed(() => {
       items.push({ path: '/hotDeal-requests', label: 'Hot Deal Requests', colorClass: 'text-white w-auto', count: c?.hot_deals?.all || 0 });
     }
     
-    if (user.value?.is_listing_team &&  (user.value.roles?.includes('super_admin') || user.value.roles?.includes('team_lead') ||  user.value.roles?.includes('manager'))) {
+    // branch_admin approves Dubai listings (the API only returns the ones they may approve).
+    if (user.value?.roles?.includes('branch_admin') || (user.value?.is_listing_team &&  (user.value.roles?.includes('super_admin') || user.value.roles?.includes('team_lead') ||  user.value.roles?.includes('manager')))) {
       items.push({ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: c?.needapprove?.all || 0 });
     }
     

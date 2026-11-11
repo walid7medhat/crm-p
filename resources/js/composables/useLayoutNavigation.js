@@ -539,7 +539,8 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       }
       
       // ✅ إضافة Need Approval Listings للأدمن (نفس البرمشن)
-      if ( user.roles?.includes('super_admin') || (user?.is_listing_team &&
+      // branch_admin: approves Dubai listings (the API only returns the ones they may approve).
+      if ( user.roles?.includes('super_admin') || user.roles?.includes('branch_admin') || (user?.is_listing_team &&
           (
            user.roles?.includes('manager') ||
            user.roles?.includes('team_lead')))) {
@@ -607,10 +608,10 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         });
       }
       
-      if (user?.is_listing_team &&
+      if (user.roles?.includes('branch_admin') || (user?.is_listing_team &&
           (user.roles?.includes('super_admin') ||
            user.roles?.includes('manager') ||
-           user.roles?.includes('team_lead'))) {
+           user.roles?.includes('team_lead')))) {
         tabs.push({
           id: 'need-approve-requests',
           label: 'Need Approval Listings',

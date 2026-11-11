@@ -99,8 +99,8 @@
               <td>NOC Fees</td>
               <td class="pd-text-muted">—</td>
               <td>{{ formatAed(nocFixedAmount) }}</td>
-              <td>—</td>
-              <td class="pd-fw-semibold">{{ formatAed(nocFixedAmount) }}</td>
+              <td>{{ nocVat > 0 ? formatAed(nocVat) : '—' }}</td>
+              <td class="pd-fw-semibold">{{ formatAed(nocFixedAmount + nocVat) }}</td>
             </tr>
             <tr v-for="row in expenseRows" :key="row.id">
               <td>{{ row.label }}</td>
@@ -130,6 +130,7 @@
 <script setup>
 import { computed } from 'vue';
 import { paymentPlanSelectionLabel } from '@/composables/listingPaymentPlanPresets';
+import { nocVatAmount } from '@/utils/dealCostRules';
 
 const props = defineProps({
   listing: { type: Object, default: () => ({}) },
@@ -151,7 +152,9 @@ const toNumber = (v) => {
 const sellingPrice = computed(() => props.listing?.price ?? props.listing?.selling_price);
 const originalPrice = computed(() => props.listing?.original_price) || sellingPrice.value;
 const premiumAmount = computed(() => sellingPrice.value - originalPrice.value);
-const nocFixedAmount = computed(() => props.listing?.noc_fixed_amount || 0);
+const nocFixedAmount = computed(() => Number(props.listing?.noc_fixed_amount || 0));
+// Dubai NOC fees are quoted + 5% VAT (listing.is_dubai comes from the API).
+const nocVat = computed(() => nocVatAmount(nocFixedAmount.value, !!props.listing?.is_dubai));
 const nocType = computed(() => props.listing?.noc_type || 'Off-Plan');
 
 // ✅ NOC Percentage من Props

@@ -150,8 +150,7 @@ class ListingGridResource extends JsonResource
                 'id' => $developer->id,
                 'name' => $developer->name,
                 'avatar' => $developer->avatar_path ? asset('storage/' . $developer->avatar_path) : null,
-                'noc_fees_ready' => $developer->noc_fees_ready,
-                'noc_fees_off_plan' => $developer->noc_fees_off_plan,
+                ...$developer->nocFeesPayload(),
             ] : null,
             // Intentionally omitted for grid performance:
             // features, gallery_images, floor_plan_images, area ADGM helpers
@@ -235,6 +234,9 @@ class ListingGridResource extends JsonResource
             'assignment_expense_lines' => $this->assignment_expense_lines,
             'has_payment_breakdown' => $this->hasPaymentBreakdown(),
             'noc_percentage' => $this->noc_percentage,
+            // Saved value, or the developer's NOC fee for this emirate/status (no extra queries).
+            'noc_fixed_amount' => $this->resolvedNocFixedAmount(),
+            'is_dubai' => $this->isInDubai(),
             'handover_date' => $this->handover_date?->format('Y-m-d'),
             'payment_plan' => $this->payment_plan,
             'can_edit_payment_breakdown' => $this->resolveCanEditPaymentBreakdown($request),

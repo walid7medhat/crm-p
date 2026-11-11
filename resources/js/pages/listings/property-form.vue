@@ -331,6 +331,40 @@
             </p>
           </div> -->
 
+          <!-- Developer NOC fee: shown for Ready and Off-Plan (outside the off-plan-only breakdown). -->
+          <div class="row gy-3 mt-1" v-if="showNocField && !isRentListing">
+            <div class="col-md-4">
+              <label class="form-label">
+                NOC Fees
+                <span class="text-muted fw-normal small">(AED)</span>
+                <span class="badge bg-info text-dark ms-2">{{ currentNocType }}</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="fas fa-shield-alt text-muted"></i>
+                </span>
+                <input
+                  v-model.number="form.noc_fixed_amount"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  class="form-control bg-light"
+                  :disabled="true"
+                  placeholder="Enter NOC amount"
+                />
+              </div>
+              <small class="text-muted d-block mt-1">
+                <span v-if="showBreakdownFeatures">NOC fees must be covered by total installments.</span>
+                <span class="text-primary d-block">
+                  <i class="fas fa-info-circle"></i>
+                  From developer ({{ isDubaiListing ? 'Dubai' : 'Abu Dhabi' }}, {{ currentNocType }}):
+                  <strong>{{ formatAed(developerNocValue) }}</strong>
+                  <span v-if="isDubaiListing"> + 5% VAT</span>
+                </span>
+              </small>
+            </div>
+          </div>
+
           <div class="row gy-3 mt-1" v-if="showBreakdownFeatures">
             <div class="col-12">
               <div class="payment-calc-summary border rounded-3 p-3 bg-light">
@@ -410,47 +444,7 @@
                 <strong>0</strong> = no NOC payment check.
               </small>
             </div>
-          <div class="col-md-4" v-if="showNocField">
-            <label class="form-label">
-              NOC Fees 
-              <span class="text-muted fw-normal small">(AED)</span>
-              <span class="badge bg-info text-dark ms-2">{{ currentNocType }}</span>
-            </label>
-            
-            <div class="input-group">
-              <span class="input-group-text bg-light">
-                <i class="fas fa-shield-alt text-muted"></i>
-              </span>
-              <input
-                v-model.number="form.noc_fixed_amount"
-                type="number"
-                min="0"
-                step="1000"
-                class="form-control bg-light"
-                :disabled="true"
-                placeholder="Enter NOC amount"
-              />
-            
-            </div>
-            
-            <small class="text-muted d-block mt-1">
-              NOC fees must be covered by total installments.
-              <span v-if="isNocAutoPopulated && developerNocValue > 0" class="text-primary d-block">
-                <i class="fas fa-info-circle"></i> 
-                Auto-populated from developer ({{ currentNocType }}): 
-                <strong>{{ formatAed(developerNocValue) }}</strong>
-              </span>
-              <span v-else-if="developerNocValue === 0" class="text-muted d-block">
-                <i class="fas fa-info-circle"></i> No NOC fees for this developer ({{ currentNocType }})
-              </span>
-              <span v-else class="text-warning d-block">
-                <i class="fas fa-exclamation-triangle"></i> 
-                NOC value modified manually
-              </span>
-            </small>
-          </div>
 
-       
             <!-- NOC Summary Card - يظهر فقط عند تفعيل NOC -->
             <div v-if="showNocField  && nocFixedAmount > 0" class="col-md-12">
               <div class="noc-summary-card border rounded-3 p-3 mb-3 bg-white">
@@ -867,6 +861,7 @@
         :noc-requirement-met="nocRequirementMet"
         :noc-progress-label="nocProgressPaidLabel"
         :noc-fixed-amount="nocFixedAmount"
+        :is-dubai="isDubaiListing"
         :noc-type="currentNocType"
         :noc-percentage="form.noc_percentage"
         :breakdown-rows="paymentBreakdownRows"
@@ -2018,6 +2013,7 @@ import { requiresPlotSize } from "@/composables/listingPlotSize";
 import { hidesBedsBaths } from "@/composables/listingPropertyType";
 import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
 import { isBuildingType } from "@/composables/listingBuilding";
+import { isDubaiArea, developerNocFee, isOffPlanStatus, withDefaultDealCostLines } from "@/utils/dealCostRules";
 
 import Swal from "sweetalert2";
 const { proxy } = getCurrentInstance();
@@ -2284,173 +2280,15 @@ const fetchDealCosts = async () => {
 };
 
 
-// ✅ إضافة التكاليف الثابتة تلقائياً (في صفحة الإنشاء)
+// Default cost lines (agency, transfer/DLD, admin/trustee) for the listing's emirate,
+// status and selling price — shared rules in utils/dealCostRules.
 const addDefaultDealCosts = () => {
-
-  const fees = {
-    dariAdminFee: dealCostSettings.value['dari_admin_fee'] || dealCostSettings.value['1'] || 0,
-    adgmAdminFee: dealCostSettings.value['adgm_admin_fee'] || dealCostSettings.value['2'] || 0,
-    agencyFee: dealCostSettings.value['agency_fee'] || dealCostSettings.value['3'] || 2,
-    transferFee: dealCostSettings.value['transfer_fee'] || dealCostSettings.value['4'] || 2,
-  };
-  
-  // ✅ 1. Agency Fee (2% من سعر البيع)
-  const agencyFeeValue = Number(fees.agencyFee) || 2;
-  const transferFeeValue = isAlReefArea(form.value.area)
-  ? AL_REEF_TRANSFER_FEE_PERCENT
-  : (Number(fees.transferFee) || 2);
-  console.log(`✅ Agency Fee: ${agencyFeeValue}% of Selling Price`);
-  
-  const existingAgency = assignmentExpenseLines.value.find(
-    line => (line.label === 'Agency Fees' || line.label === 'Agency Fee') && line.isDefault
-  );
-   const existingTransfer = assignmentExpenseLines.value.find(
-    line => (line.label === 'Transfer Fees' || line.label === 'Transfer Fee') && line.isDefault
-  );
-  
-  if (!existingAgency) {
-    assignmentExpenseLines.value.push({
-      id: Date.now() + 3,
-      label: 'Agency Fees',
-      calcType: 'percentage',
-      base: 'sp',
-      value: agencyFeeValue,
-      vatEnabled: true,
-      isDefault: true,
-      isReadonly: true
-    });
-    console.log('✅ Agency Fee added');
-  } else {
-    existingAgency.value = agencyFeeValue;
-    console.log('✅ Agency Fee updated');
-  }
-  if (!existingTransfer) {
-    assignmentExpenseLines.value.push({
-      id: Date.now() + 3,
-      label: 'Transfer Fees',
-      calcType: 'percentage',
-      base: 'sp',
-      value: transferFeeValue,
-      vatEnabled: false,
-      isDefault: true,
-      isReadonly: true
-    });
-    console.log('✅ Transfer Fee added');
-  } else {
-    existingTransfer.value = transferFeeValue;
-    console.log('✅ Transfer Fee updated');
-  }
-  
-  // ✅ 2. تحديد نوع Admin Fee بناءً على المنطقة
-  const areaData = form.value.area;
-  const feeType = getAdminFeeTypeFromArea(areaData);
-  console.log(`📍 Admin fee type: ${feeType}`);
-  
-  // ✅ إزالة التكاليف الإدارية القديمة
-  const adminFeeIndices = [];
-  assignmentExpenseLines.value.forEach((line, index) => {
-    if (((line.label === 'Dari Admin Fee' || line.label === 'Dari Admin Fees') || (line.label === 'ADGM Admin Fee' ||line.label === 'ADGM Admin Fees')) && line.isDefault) {
-      adminFeeIndices.push(index);
-    }
+  assignmentExpenseLines.value = withDefaultDealCostLines(assignmentExpenseLines.value, {
+    settings: dealCostSettings.value || {},
+    area: form.value.area,
+    completionStatus: form.value.completionStatus,
+    sellingPrice: sellingPriceNum.value,
   });
-  adminFeeIndices.reverse().forEach(index => {
-    assignmentExpenseLines.value.splice(index, 1);
-    console.log(`🗑️ Removed old admin fee at index ${index}`);
-  });
-
-  // ✅ 3. إضافة التكلفة الإدارية المناسبة
-  if (feeType === 'adgm') {
-    // ADGM Admin Fee
-    if (Number(fees.adgmAdminFee) > 0) {
-      assignmentExpenseLines.value.push({
-        id: Date.now() + 2,
-        label: 'ADGM Admin Fees',
-        calcType: 'fixed',
-        base: null,
-        value: Number(fees.adgmAdminFee),
-        vatEnabled: false,
-        isDefault: true,
-        isReadonly: true,
-        isAdminFee: true,
-      });
-      console.log(`✅ ADGM Admin Fee added: ${fees.adgmAdminFee} AED`);
-    }
-  } else {
-    // Dari Admin Fee
-    if (Number(fees.dariAdminFee) > 0) {
-      assignmentExpenseLines.value.push({
-        id: Date.now() + 1,
-        label: 'Dari Admin Fees',
-        calcType: 'fixed',
-        base: null,
-        value: Number(fees.dariAdminFee),
-        vatEnabled: false,
-        isDefault: true,
-        isReadonly: true,
-        isAdminFee: true,
-      });
-      console.log(`✅ Dari Admin Fee added: ${fees.dariAdminFee} AED`);
-    }
-  }
-  
-  console.log('📊 Current assignmentExpenseLines:', assignmentExpenseLines.value);
-};
-const AL_REEF_TRANSFER_FEE_PERCENT = 1;
-
-// True if the area itself, or any of its parents, is "Al Reef".
-// Area names are often the full parent chain (area_parents_title), so a child
-// like "Al Reef Villas" or "Al Reef Downtown" also matches.
-const isAlReefArea = (areaData) => {
-  if (!areaData) return false;
-  const re = /\bal[\s-]*reef\b/i;
-
-  const names = [
-    areaData.name,
-    areaData.area_title,
-    areaData.area_parents_title,
-    ...(Array.isArray(areaData.all_names) ? areaData.all_names : []),
-    ...(Array.isArray(areaData.hierarchy) ? areaData.hierarchy.map((h) => h?.name) : []),
-  ];
-
-  return names.some((n) => n && re.test(String(n)));
-};
-// ✅ دالة لتحديد نوع التكلفة بناءً على المنطقة
-const getAdminFeeTypeFromArea = (areaData) => {
-  if (!areaData) return 'dari';
-  
-  // استخدام is_adgm من الـ API إذا كانت موجودة
-  if (areaData.is_adgm !== undefined) {
-    return areaData.is_adgm ? 'adgm' : 'dari';
-  }
-  
-  // استخدام all_names
-  if (areaData.all_names && Array.isArray(areaData.all_names)) {
-    const adgmTerms = ['al maryah island', 'al reem island'];
-    const isAdgm = areaData.all_names.some(name =>
-      adgmTerms.some(term => 
-        String(name).toLowerCase().includes(term.toLowerCase().trim())
-      )
-    );
-    return isAdgm ? 'adgm' : 'dari';
-  }
-  
-  // استخدام hierarchy
-  if (areaData.hierarchy && Array.isArray(areaData.hierarchy)) {
-    const adgmTerms = ['al maryah island', 'al reem island'];
-    const isAdgm = areaData.hierarchy.some(h =>
-      adgmTerms.some(term => 
-        String(h.name || '').toLowerCase().includes(term.toLowerCase().trim())
-      )
-    );
-    return isAdgm ? 'adgm' : 'dari';
-  }
-  
-  // No all_names/hierarchy to walk ancestors with — checking the area's own name
-  // alone would miss a sub-community *within* Reem/Maryah Island (whose own name
-  // doesn't contain "reem island"/"maryah island") while still risking a false
-  // match on an unrelated area (e.g. "Alreeman"). Default to ADM, the stated rule
-  // for anything that isn't confirmed Reem/Maryah Island.
-  return 'dari';
 };
 const selectedPaymentPlanOption = computed(() => resolvePaymentPlanOption(form.value.payment_plans));
 
@@ -3340,18 +3178,6 @@ const listingFeatureOptions = LISTING_FEATURE_OPTIONS;
 
 const isLoadingUnitNumber = ref(false);
 const unitNumberError = ref("");
-watch(
-  () => form.value.area,
-  (newArea, oldArea) => {
-    if (!newArea && !oldArea) return;
-    
-    console.log('🔄 Area changed in create form from:', oldArea?.name, 'to:', newArea?.name);
-    console.log('📍 New area data:', newArea);
-    
-    addDefaultDealCosts();
-  },
-  { deep: true }
-);
 watch(() => [form.value.unit_number, selectedProject.value, form.value.saleOrRent, form.value.area], 
   ([newUnitNumber, newProject, newStatus, newArea], [oldUnitNumber, oldProject, oldStatus, oldArea]) => {
   if ((newProject !== oldProject || newStatus !== oldStatus || newArea !== oldArea) && newUnitNumber) {
@@ -3429,6 +3255,9 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
       form.value.projectAreas = filteredAreas.map(area => ({
         id: area.id,
         name: area.area_parents_title || area.name || area.title,
+        // keep the ancestor names so Dubai / ADGM / Al Reef cost rules can see the city
+        all_names: area.all_names,
+        is_adgm: area.is_adgm,
         project_id: newProject.id
       }));
       form.value.area = null;
@@ -4726,110 +4555,34 @@ const resetForm = () => {
   selectedProject.value = null;
   console.log('🔄 Form has been reset');
 };
+// Dubai vs Abu Dhabi: the listing's area, else the project's area.
+const isDubaiListing = computed(() => isDubaiArea(form.value.area || selectedProject.value?.area));
+
+const currentNocType = computed(() => (isOffPlanStatus(form.value.completionStatus) ? 'Off-Plan' : 'Ready'));
+
+// Developer NOC fee for this emirate + status (Dubai has its own columns).
+const developerNocValue = computed(() => developerNocFee(selectedProject.value?.developer, {
+  isDubai: isDubaiListing.value,
+  isOffPlan: isOffPlanStatus(form.value.completionStatus),
+}));
+
 const updateNocBasedOnStatus = () => {
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  const isReady = status === 'completed';
-  
-  console.log('🔄 updateNocBasedOnStatus called with status:', status);
-  console.log('📊 Selected project:', selectedProject.value);
-  
-  if (!selectedProject.value || !selectedProject.value.developer) {
-    console.log('⚠️ No project or developer selected');
-    form.value.noc_fixed_amount = 0;
-    return;
-  }
-  
-  let nocValue = 0;
-  
-  if (isUC) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-    console.log(`✅ Using Off-Plan NOC: ${formatAed(nocValue)}`);
-  } else if (isReady) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
-    console.log(`✅ Using Ready NOC: ${formatAed(nocValue)}`);
-  } else {
-    console.log('⚠️ Unknown status, setting NOC to 0');
-  }
-  
-  form.value.noc_fixed_amount = !isNaN(nocValue) && nocValue >= 0 ? nocValue : 0;
-  console.log('✅ NOC fixed amount set to:', form.value.noc_fixed_amount);
+  form.value.noc_fixed_amount = developerNocValue.value;
 };
-const isNocEnabled = computed(() => {
-  if (!selectedProject.value) return false;
-  
-  if (!selectedProject.value.developer) return false;
-  
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  const isReady = status === 'completed';
-  
-  if (!isUC && !isReady) return false;
-  
-  let nocValue = 0;
-  if (isUC) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-  } else if (isReady) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
-  }
-  if (!isUC && !isReady) return false;
-  
-   return nocValue > 0;
-});
 
-const isNocAutoPopulated = computed(() => {
-  if (!isNocEnabled.value) return false;
-  
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  
-  let developerNoc = 0;
-  if (isUC) {
-    developerNoc = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-  } else {
-    developerNoc = Number(selectedProject.value.developer.noc_fees_ready || 0);
-  }
-  
-  const currentNoc = Number(form.value.noc_fixed_amount);
-  // return developerNoc > 0;
-  return false
-});
+// Shown for any status (was only "Under Construction" / exactly "Completed") when the developer has a fee.
+const isNocEnabled = computed(() => developerNocValue.value > 0);
+const showNocField = isNocEnabled;
 
-const showNocField = computed(() => {
-  if (!isNocEnabled.value) return false;
-  
-  const nocValue = developerNocValue.value;
-  if (nocValue <= 0) return false;
-  
-  console.log('🔍 showNocField: true', {
-    isUnderConstruction: isUnderConstruction.value,
-    selectedProject: !!selectedProject.value,
-    developer: !!selectedProject.value?.developer,
-    nocValue: nocValue
-  });
-  
-  return true;
-});
+// Emirate, status or price changed → rebuild default costs (DLD/trustee vs transfer/admin) and the NOC.
+watch(
+  () => [form.value.area, form.value.completionStatus, sellingPriceNum.value],
+  () => {
+    addDefaultDealCosts();
+    updateNocBasedOnStatus();
+  },
+);
 
-const currentNocType = computed(() => {
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  return isUC ? 'Off-Plan' : 'Ready';
-});
-
-const developerNocValue = computed(() => {
-  if (!selectedProject.value || !selectedProject.value.developer) return 0;
-  
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  
-  if (isUC) {
-    return Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-  } else {
-    return Number(selectedProject.value.developer.noc_fees_ready || 0);
-  }
-   return 0;
-});
 const loadPaymentPlansFromString = (paymentPlanString) => {
   if (!paymentPlanString) return [];
   try {

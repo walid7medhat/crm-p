@@ -37,8 +37,8 @@ use App\Traits\HotDealNotifiable;
 use App\Models\HotDealRequest;
 use App\Services\ListingMapCoordinateResolver;
 use App\Services\VoiceSearchService;
+use App\Services\Listing\ListingApprovalPolicy;
 use Illuminate\Support\Facades\Log;
-use App\Notifications\ListingNeedsApproval;
 use App\Notifications\ListingApproved;
 use App\Notifications\ListingRejected;
 use Intervention\Image\ImageManager;
@@ -453,7 +453,7 @@ SQL;
                 'agent:id,name,display_name,email',
                 'rejectedBy:id,name,display_name',
                 'project:id,title,about,area_id,developer_id',
-                'project.developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan',
+                'project.developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan,dubai_noc_fees_ready,dubai_noc_fees_off_plan',
                 'firstGalleryImage:id,imageable_id,imageable_type,image_path,order',
                 'accessRequests' => function ($q) use ($userId) {
                     $q->where('requested_by', $userId)
@@ -1318,26 +1318,8 @@ public function getMatchingListings(Request $request)
                 }
             }
             if( $listingStatus == 'published'){
-                  $managers = User::whereHas('roles', function($query) {
-                            $query->where('name', 'manager');
-                        })
-                        ->where('listing_team', 1)
-                        ->where('status', 'active')
-                        ->get();
-
-                    foreach ($managers as $manager) {
-                        $manager->notify(new ListingNeedsApproval($listing));
-                    }
-                    // ✅ Notify Team Lead بتاع الـ Agent
-                        $agent = $listing->agent;
-
-                        if ($agent && $agent->parent) { // parent = team_lead
-                            $teamLead = $agent->parent;
-
-                            if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
-                                $teamLead->notify(new ListingNeedsApproval($listing));
-                            }
-                        }
+                // Dubai listings → Dubai branch admins; others → listing-team managers + agent's team lead.
+                app(ListingApprovalPolicy::class)->notifyApprovers($listing);
                 dispatch(new CheckSearchAlerts());
             }
                 DB::commit();
@@ -1896,7 +1878,10 @@ public function update(ListingRequest $request, $listingId): JsonResponse
 
         // Editing an approved listing sends it back for approval — unless the editor
         // is an approver themselves (they could just approve it again anyway).
-        $needsReapproval = $listing->approved && ! $this->canApproveListings($user);
+        // Judge against the area the listing will have after this save (moving it into
+        // Dubai hands approval to the Dubai branch admin).
+        $approvalProbe = (clone $listing)->forceFill(['area_id' => $data['area_id'] ?? $listing->area_id]);
+        $needsReapproval = $listing->approved && ! $this->canApproveListings($user, $approvalProbe);
         if ($needsReapproval) {
             $data['approved'] = false;
             $data['approved_by'] = null;
@@ -2112,11 +2097,9 @@ private function canEditListing($user, Listing $listing): bool
 /**
  * Same rule approve()/reject() use to decide who may approve listings.
  */
-private function canApproveListings($user): bool
+private function canApproveListings($user, Listing $listing): bool
 {
-    return $user->hasRole('super_admin') || $user->hasRole('admin')
-        || $user->hasRole('manager') || $user->listing_team
-        || ($user->hasRole('team_lead') && $user->is_listing_team);
+    return app(ListingApprovalPolicy::class)->canApprove($user, $listing);
 }
 
 /**
@@ -2125,31 +2108,13 @@ private function canApproveListings($user): bool
 private function sendResubmissionNotification($listing, $user)
 {
     try {
-        // Get all managers in listing team
-        $managers = User::whereHas('roles', function($query) {
-            $query->where('name', 'manager');
-        })
-        ->where('listing_team', 1)
-        ->where('status', 'active')
-        ->get();
+        // Dubai listings → Dubai branch admins; others → listing-team managers + agent's team lead.
+        $notifiedIds = app(ListingApprovalPolicy::class)->notifyApprovers($listing);
 
-        foreach ($managers as $manager) {
-            $manager->notify(new ListingNeedsApproval($listing, $user));
-        }
-        // ✅ Notify Team Lead بتاع الـ Agent
-            $agent = $listing->agent;
-
-            if ($agent && $agent->parent) { // parent = team_lead
-                $teamLead = $agent->parent;
-
-                if ($teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
-                    $teamLead->notify(new ListingNeedsApproval($listing));
-                }
-            }
         \Log::info('Resubmission notification sent', [
             'listing_id' => $listing->id,
             'resubmitted_by' => $user->id,
-            'notified_managers' => $managers->pluck('id')->toArray()
+            'notified_managers' => $notifiedIds,
         ]);
         
     } catch (\Exception $e) {
@@ -3621,12 +3586,13 @@ public function approve(Listing $listing): JsonResponse
 {
     try {
         $user = auth()->user();
-        
-        if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
-            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
-            return ApiResponse::error('Unauthorized access.', 403);
+
+        if (! $this->canApproveListings($user, $listing)) {
+            return ApiResponse::error($listing->isInDubai()
+                ? 'Dubai listings are approved by the Dubai branch admin.'
+                : 'Unauthorized access.', 403);
         }
-        
+
         if ($listing->approved) {
             return ApiResponse::error('This listing has already been approved.', 422);
         }
@@ -3677,12 +3643,13 @@ public function reject(Listing $listing, Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
-        
-         if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
-            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
-            return ApiResponse::error('Unauthorized access.', 403);
+
+        if (! $this->canApproveListings($user, $listing)) {
+            return ApiResponse::error($listing->isInDubai()
+                ? 'Dubai listings are approved by the Dubai branch admin.'
+                : 'Unauthorized access.', 403);
         }
-        
+
         $request->validate([
             'reason' => 'required|string|min:3|max:1000',
         ]);
@@ -3728,12 +3695,12 @@ public function getPendingApprovals(Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
-        
-         if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
-            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+        $approvalPolicy = app(ListingApprovalPolicy::class);
+
+        if (! $approvalPolicy->canApproveAny($user)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
-        
+
         $query = Listing::with([
             'propertyType:id,name',
             'area:id,name,parent_id',
@@ -3746,20 +3713,9 @@ public function getPendingApprovals(Request $request): JsonResponse
         ->where('is_archived', false)
         ->orderBy('created_at', 'desc');
 
-        // Team lead with is_listing_team is restricted to their own hierarchy
-        // (self + direct reports + reports-of-reports) — not org-wide like manager.
-        if ($user->hasRole('team_lead') && $user->is_listing_team) {
-
-            $allIds = User::where(function($q) use ($user) {
-                $q->where('id', $user->id)
-                  ->orWhere('parent_id', $user->id)
-                  ->orWhereHas('parent', function($parentQuery) use ($user) {
-                      $parentQuery->where('parent_id', $user->id);
-                  });
-            })->pluck('id')->toArray();
-
-            $query->whereIn('agent_id', $allIds);
-        }
+        // Only what this user may approve: Dubai listings for the Dubai branch admin,
+        // the rest for the listing team (team leads: their own hierarchy only).
+        $approvalPolicy->restrictToApprovable($query, $user);
 
         // filters
         if ($request->has('search') && $request->search) {
@@ -3819,12 +3775,11 @@ public function batchApprove(Request $request): JsonResponse
 {
     try {
         $user = auth()->user();
-        
-         if (!$user->hasRole('super_admin') && !$user->hasRole('admin')
-            && (!$user->hasRole('manager')  && !$user->listing_team)  && !($user->hasRole('team_lead') && $user->is_listing_team)) {
+
+        if (! app(ListingApprovalPolicy::class)->canApproveAny($user)) {
             return ApiResponse::error('Unauthorized access.', 403);
         }
-        
+
         $request->validate([
             'listing_ids' => 'required|array',
             'listing_ids.*' => 'exists:listings,id',
@@ -3842,6 +3797,13 @@ public function batchApprove(Request $request): JsonResponse
         
         foreach ($listings as $listing) {
             try {
+                if (! $this->canApproveListings($user, $listing)) {
+                    $errors[] = "Listing ID {$listing->id}: ".($listing->isInDubai()
+                        ? 'Dubai listings are approved by the Dubai branch admin'
+                        : 'not allowed');
+                    continue;
+                }
+
                 if ($action === 'approve' && !$listing->approved) {
                     $listing->update([
                         'approved' => true,

@@ -275,7 +275,10 @@ $allowedAgentIds = [];
             'assignment_expense_lines' => $this->assignment_expense_lines,
             'has_payment_breakdown' => $this->hasPaymentBreakdown(),
             'noc_percentage' => $this->noc_percentage,
-            'noc_fixed_amount'=>$this->noc_fixed_amount,
+            // Saved value, or the developer's NOC fee for this emirate/status when none was saved.
+            'noc_fixed_amount' => ($this->project_id ? $this->resource->loadMissing('project.developer') : $this->resource)->resolvedNocFixedAmount(),
+            'is_dubai' => $this->isInDubai(),
+            'can_approve' => $user ? app(\App\Services\Listing\ListingApprovalPolicy::class)->canApprove($user, $this->resource) : false,
             'handover_date' => $this->handover_date?->format('Y-m-d'),
             'project' => $this->whenLoaded('project', function () {
                  $projectGalleryImages = $this->project->images->sortBy('sort_order')->values();
@@ -311,6 +314,8 @@ $allowedAgentIds = [];
                         'admin_fee_type' => $this->project->area->getAdminFeeType(),
                             'is_adgm' => $this->project->area->isAdgmArea(),
                             'all_names' => $this->project->area->getAllAreaNames(),
+                        'city_name' => \App\Models\Area::cityNameForId((int) $this->project->area->id),
+                        'is_dubai' => \App\Models\Area::isDubaiAreaId((int) $this->project->area->id),
                     ] : null,
                     'project_id' => $this->project->id,
                      'features' => $this->project->features->map(function ($feature) {
@@ -328,8 +333,7 @@ $allowedAgentIds = [];
                         'id' => $this->project->developer->id,
                         'name' => $this->project->developer->name,
                         'avatar' => $this->project->developer->avatar_path ? asset('storage/' . $this->project?->developer->avatar_path) : null,
-                        'noc_fees_ready' => $this->project->developer?->noc_fees_ready,
-                        'noc_fees_off_plan' => $this->project->developer?->noc_fees_off_plan,
+                        ...$this->project->developer->nocFeesPayload(),
                     ] : null,
                         // 'image' => $this->project->mainImage ? asset('storage/' . $this->project->mainImage->image_path) : null,
                     'image' => $projectMainImage ? asset('storage/' . $projectMainImage->image_path) : null,
@@ -444,6 +448,8 @@ $allowedAgentIds = [];
                     'children' => $this->area->child,
                     'hierarchy' => $this->area->full_hierarchy,
                     'title'=>$this->area->title,
+                    'city_name' => \App\Models\Area::cityNameForId((int) $this->area->id),
+                    'is_dubai' => \App\Models\Area::isDubaiAreaId((int) $this->area->id),
                 ];
             }),
             'old_area'=>$this->old_area?->area_title,

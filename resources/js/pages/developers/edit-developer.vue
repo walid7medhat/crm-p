@@ -73,14 +73,14 @@
                                  <!-- الحقول الجديدة - NOC Fees -->
                             <div class="col-12">
                                 <hr class="my-3">
-                                <h6 class="text-muted mb-3">NOC Fees Information</h6>
+                                <h6 class="text-muted mb-3">NOC Fees — Abu Dhabi</h6>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">NOC Fees for Ready Units</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">$</span>
+                                        <span class="input-group-text">AED</span>
                                         <input type="number" 
                                                class="form-control" 
                                                v-model="form.noc_fees_ready"
@@ -100,7 +100,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">NOC Fees for Off-Plan</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">$</span>
+                                        <span class="input-group-text">AED</span>
                                         <input type="number" 
                                                class="form-control" 
                                                v-model="form.noc_fees_off_plan"
@@ -113,6 +113,50 @@
                                         {{ errors.noc_fees_off_plan[0] }}
                                     </div>
                                     <div class="form-text">NOC fees for off-plan units (optional)</div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">NOC Fees — Dubai <small class="fw-normal">(before 5% VAT)</small></h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Dubai NOC — Ready / Secondary</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">AED</span>
+                                        <input type="number"
+                                               class="form-control"
+                                               v-model="form.dubai_noc_fees_ready"
+                                               :class="{'is-invalid': errors.dubai_noc_fees_ready}"
+                                               placeholder="e.g. 500"
+                                               step="0.01"
+                                               min="0">
+                                    </div>
+                                    <div class="invalid-feedback d-block" v-if="errors.dubai_noc_fees_ready">
+                                        {{ errors.dubai_noc_fees_ready[0] }}
+                                    </div>
+                                    <div class="form-text">Used for ready units in Dubai (leave empty if not available)</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Dubai NOC — Off-Plan / Primary</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">AED</span>
+                                        <input type="number"
+                                               class="form-control"
+                                               v-model="form.dubai_noc_fees_off_plan"
+                                               :class="{'is-invalid': errors.dubai_noc_fees_off_plan}"
+                                               placeholder="e.g. 5000"
+                                               step="0.01"
+                                               min="0">
+                                    </div>
+                                    <div class="invalid-feedback d-block" v-if="errors.dubai_noc_fees_off_plan">
+                                        {{ errors.dubai_noc_fees_off_plan[0] }}
+                                    </div>
+                                    <div class="form-text">Used for off-plan units in Dubai</div>
                                 </div>
                             </div>
                                 <!-- Read-only Information -->
@@ -214,8 +258,10 @@ export default {
             form: {
                 name: '',
                 avatar: '',
-                  noc_fees_ready: null,
-                noc_fees_off_plan: null
+                noc_fees_ready: null,
+                noc_fees_off_plan: null,
+                dubai_noc_fees_ready: null,
+                dubai_noc_fees_off_plan: null
             },
             errors: {} ,
             userPlaceholder
@@ -243,9 +289,11 @@ export default {
                     const data = await response.json();
                     this.developer = data.data;
                     this.form = { ...this.developer ,             
-                       noc_fees_ready: this.developer.noc_fees_ready || null,
-                        noc_fees_off_plan: this.developer.noc_fees_off_plan || null
-};
+                        noc_fees_ready: this.developer.noc_fees_ready || null,
+                        noc_fees_off_plan: this.developer.noc_fees_off_plan || null,
+                        dubai_noc_fees_ready: this.developer.dubai_noc_fees_ready || null,
+                        dubai_noc_fees_off_plan: this.developer.dubai_noc_fees_off_plan || null
+                    };
                     this.errors = {};
                 } else {
                     throw new Error('Failed to fetch developer');
@@ -290,11 +338,10 @@ export default {
                     requestData = new FormData();
                     requestData.append('name', this.form.name);
                     requestData.append('avatar', this.avatarFile);
-                    if (this.form.noc_fees_ready !== null && this.form.noc_fees_ready !== '') {
-                        requestData.append('noc_fees_ready', this.form.noc_fees_ready);
-                    }
-                    if (this.form.noc_fees_off_plan !== null && this.form.noc_fees_off_plan !== '') {
-                        requestData.append('noc_fees_off_plan', this.form.noc_fees_off_plan);
+                    for (const key of ['noc_fees_ready', 'noc_fees_off_plan', 'dubai_noc_fees_ready', 'dubai_noc_fees_off_plan']) {
+                        if (this.form[key] !== null && this.form[key] !== '') {
+                            requestData.append(key, this.form[key]);
+                        }
                     }
 
                     requestData.append('_method', 'PUT');
@@ -305,7 +352,9 @@ export default {
                     requestData = JSON.stringify({
                         name: this.form.name,
                         noc_fees_ready: this.form.noc_fees_ready,
-                        noc_fees_off_plan: this.form.noc_fees_off_plan
+                        noc_fees_off_plan: this.form.noc_fees_off_plan,
+                        dubai_noc_fees_ready: this.form.dubai_noc_fees_ready === '' ? null : this.form.dubai_noc_fees_ready,
+                        dubai_noc_fees_off_plan: this.form.dubai_noc_fees_off_plan === '' ? null : this.form.dubai_noc_fees_off_plan
                     });
                     
                     headers['Content-Type'] = 'application/json';

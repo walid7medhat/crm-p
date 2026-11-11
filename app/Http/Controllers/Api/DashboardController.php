@@ -1263,9 +1263,9 @@ public function getPropertyTypesWithListings(Request $request)
                     ->where('status', 'published')
                     ->where('is_archived', false);
 
-                if ($user->hasRole('team_lead')) {
-                    $query->whereIn('agent_id', $user_hierarchy);
-                }
+                // Same scope as the pending-approvals page: Dubai listings for the Dubai
+                // branch admin, the rest for the listing team (team leads: own hierarchy).
+                app(\App\Services\Listing\ListingApprovalPolicy::class)->restrictToApprovable($query, $user);
 
                 $needApprove = $query->count();
 

@@ -19,6 +19,8 @@ class DeveloperResource extends JsonResource
             // إضافة الحقول الجديدة
             'noc_fees_ready' => $this->noc_fees_ready,
             'noc_fees_off_plan' => $this->noc_fees_off_plan,
+            'dubai_noc_fees_ready' => $this->dubai_noc_fees_ready,
+            'dubai_noc_fees_off_plan' => $this->dubai_noc_fees_off_plan,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];

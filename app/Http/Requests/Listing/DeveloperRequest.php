@@ -38,6 +38,8 @@ class DeveloperRequest extends FormRequest
             // إضافة الحقول الجديدة
             'noc_fees_ready' => 'nullable|numeric|min:0|max:999999999.99',
             'noc_fees_off_plan' => 'nullable|numeric|min:0|max:999999999.99',
+            'dubai_noc_fees_ready' => 'nullable|numeric|min:0|max:999999999.99',
+            'dubai_noc_fees_off_plan' => 'nullable|numeric|min:0|max:999999999.99',
         ];
 
         return $rules;
@@ -58,6 +60,10 @@ class DeveloperRequest extends FormRequest
             'noc_fees_ready.min' => 'NOC fees for ready cannot be negative',
             'noc_fees_off_plan.numeric' => 'NOC fees for off-plan must be a number',
             'noc_fees_off_plan.min' => 'NOC fees for off-plan cannot be negative',
+            'dubai_noc_fees_ready.numeric' => 'Dubai NOC fees for ready must be a number',
+            'dubai_noc_fees_ready.min' => 'Dubai NOC fees for ready cannot be negative',
+            'dubai_noc_fees_off_plan.numeric' => 'Dubai NOC fees for off-plan must be a number',
+            'dubai_noc_fees_off_plan.min' => 'Dubai NOC fees for off-plan cannot be negative',
         ];
     }
 }

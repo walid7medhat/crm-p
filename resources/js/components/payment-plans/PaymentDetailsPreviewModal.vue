@@ -132,8 +132,8 @@
                       </span> -->
                     </td>
                     <td>{{ formatAed(nocFixedAmount) }}</td>
-                    <td>—</td>
-                    <td class="fw-semibold">{{ formatAed(nocFixedAmount) }}</td>
+                    <td>{{ nocVat > 0 ? formatAed(nocVat) : '—' }}</td>
+                    <td class="fw-semibold">{{ formatAed(nocFixedAmount + nocVat) }}</td>
                   </tr>
                   <tr v-for="(row, idx) in expenseTableRows" :key="row.id" :class="idx % 2 === 1 ? 'pd-row-alt' : ''">
                     <td>{{ row.label }}</td>
@@ -165,6 +165,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { nocVatAmount } from '@/utils/dealCostRules';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -195,7 +196,11 @@ const props = defineProps({
   nocType: { type: String, default: 'Off-Plan' },
    nocPercentage: { type: Number, default:0 },
   isUnderConstruction: { type: Boolean, default: false },
+  /** Dubai listing: NOC is quoted + 5% VAT. */
+  isDubai: { type: Boolean, default: false },
 });
+
+const nocVat = computed(() => nocVatAmount(props.nocFixedAmount, props.isDubai));
 
 const emit = defineEmits(['update:modelValue']);
 

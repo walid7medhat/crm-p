@@ -307,6 +307,42 @@
               </p>
             </div> -->
 
+            <!-- Developer NOC fee: shown for Ready and Off-Plan (outside the off-plan-only breakdown). -->
+            <div class="row gy-3 mt-1" v-if="showNocField && !isRentListing">
+              <div class="col-md-4">
+                <label class="form-label">
+                  NOC Fees
+                  <span class="text-muted fw-normal small">(AED)</span>
+                  <span class="badge" :class="currentNocType === 'Off-Plan' ? 'bg-warning' : 'bg-success'">
+                    {{ currentNocType }}
+                  </span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="fas fa-shield-alt text-muted"></i>
+                  </span>
+                  <input
+                    v-model.number="form.noc_fixed_amount"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    class="form-control bg-light"
+                    :disabled="true"
+                    placeholder="Enter NOC amount"
+                  />
+                </div>
+                <small class="text-muted d-block mt-1">
+                  <span v-if="showBreakdownFeatures">NOC fees must be covered by total installments.</span>
+                  <span class="text-primary d-block">
+                    <i class="fas fa-info-circle"></i>
+                    From developer ({{ isDubaiListing ? 'Dubai' : 'Abu Dhabi' }}, {{ currentNocType }}):
+                    <strong>{{ formatAed(developerNocValue) }}</strong>
+                    <span v-if="isDubaiListing"> + 5% VAT</span>
+                  </span>
+                </small>
+              </div>
+            </div>
+
             <div class="row gy-3 mt-1" v-if="showBreakdownFeatures">
               <div class="col-12">
                 <div class="payment-calc-summary border rounded-3 p-3 bg-light">
@@ -386,48 +422,6 @@
                 <strong>0</strong> = no NOC payment check.
               </small>
             </div>
-             <!-- NOC - تظهر في كلتا الحالتين -->
-              <div class="col-md-4" v-if="showNocField">
-                <label class="form-label">
-                  NOC Fees 
-                  <span class="text-muted fw-normal small">(AED)</span>
-                  <span class="badge" :class="currentNocType === 'Off-Plan' ? 'bg-warning' : 'bg-success'">
-                    {{ currentNocType }}
-                  </span>
-                </label>
-                
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="fas fa-shield-alt text-muted" ></i>
-                  </span>
-                  <input
-                    v-model.number="form.noc_fixed_amount"
-                    type="number"
-                    min="0"
-                    step="1000"
-                    class="form-control bg-light"
-                    :disabled="true"
-                    placeholder="Enter NOC amount"
-                  />
-                
-                </div>
-                
-                <small class="text-muted d-block mt-1">
-                  NOC fees must be covered by total installments.
-                  <span v-if="isNocAutoPopulated && developerNocValue > 0" class="text-primary d-block">
-                    <i class="fas fa-info-circle"></i> 
-                    Auto-populated from developer ({{ currentNocType }}): 
-                    <strong>{{ formatAed(developerNocValue) }}</strong>
-                  </span>
-                  <span v-else-if="developerNocValue === 0" class="text-muted d-block">
-                    <i class="fas fa-info-circle"></i> No NOC fees for this developer ({{ currentNocType }})
-                  </span>
-                  <span v-else class="text-warning d-block">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    NOC value modified manually
-                  </span>
-                </small>
-              </div>
 
               <!-- NOC Summary Card - تظهر في كلتا الحالتين عند وجود NOC -->
               <div v-if="showNocField && nocFixedAmount > 0" class="col-md-12">
@@ -838,6 +832,7 @@
         :noc-requirement-met="nocRequirementMet"
         :noc-progress-label="nocProgressPaidLabel"
         :noc-fixed-amount="nocFixedAmount"
+        :is-dubai="isDubaiListing"
         :noc-type="currentNocType"
         :noc-percentage="form.noc_percentage"
         :breakdown-rows="paymentBreakdownRows"
@@ -1710,6 +1705,7 @@ import {
   assignmentExpenseBaseOptions,
 } from "@/composables/useListingAssignmentExpenses";
 import { isBuildingType } from "@/composables/listingBuilding";
+import { isDubaiArea, developerNocFee, isOffPlanStatus } from "@/utils/dealCostRules";
 const isBuilding = computed(() => isBuildingType(form.value.property_type));
 const route = useRoute();
 const router = useRouter();
@@ -2105,9 +2101,9 @@ const {
   sellingPriceNum,
   premiumAmountForm,
   formatAed,
-   nocFixedAmount,
    dealCostSettings,
-     area: areaComputed,
+   area: areaComputed,
+   completionStatus: computed(() => form.value.completionStatus),
 });
 // const nocFixedAmount = computed(() => {
 //   return Number(form.value.noc_fixed_amount || 0);
@@ -2119,40 +2115,17 @@ const currentNocType = computed(() => {
   return isUC ? 'Off-Plan' : 'Ready';
 });
 
-const developerNocValue = computed(() => {
-  if (!selectedProject.value || !selectedProject.value.developer) return 0;
-  
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  
-  if (isUC) {
-    return Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-  } else {
-    return Number(selectedProject.value.developer.noc_fees_ready || 0);
-  }
-});
+// Dubai vs Abu Dhabi: the listing's area, else the project's area.
+const isDubaiListing = computed(() => isDubaiArea(form.value.area || selectedProject.value?.area));
 
-const isNocEnabled = computed(() => {
-  if (!selectedProject.value) return false;
-  if (!selectedProject.value.developer) return false;
-  
-  const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
-  const isReady = status === 'completed';
-  
-  if (!isUC && !isReady) return false;
-  
-  // ✅ تعريف nocValue أولاً
-  let nocValue = 0;
-  if (isUC) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-  } else if (isReady) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
-  }
-  
-  // ✅ إرجاع true فقط إذا كانت القيمة أكبر من 0
-  return nocValue > 0;
-});
+// Developer NOC fee for this emirate + status (Dubai has its own columns).
+const developerNocValue = computed(() => developerNocFee(selectedProject.value?.developer, {
+  isDubai: isDubaiListing.value,
+  isOffPlan: isOffPlanStatus(form.value.completionStatus),
+}));
+
+// Shown for any status (was only "Under Construction" / exactly "Completed") when the developer has a fee.
+const isNocEnabled = computed(() => developerNocValue.value > 0);
 
 const isNocAutoPopulated = computed(() => {
   if (!isNocEnabled.value) return false;
@@ -2208,27 +2181,17 @@ const paymentBreakdownTableTotals = computed(() => {
 });
 const updateNocBasedOnStatus = () => {
   const status = String(form.value.completionStatus || '').trim().toLowerCase().replace(/_/g, ' ');
-  const isUC = status === 'under construction' || status === 'off plan';
   const isReady = status === 'completed';
-  
-  console.log('🔄 updateNocBasedOnStatus called with status:', status);
-  console.log('📊 Selected project:', selectedProject.value);
-  
+
   if (!selectedProject.value || !selectedProject.value.developer) {
     console.log('⚠️ No project or developer selected');
     form.value.noc_fixed_amount = 0;
     return;
   }
   
-  let nocValue = 0;
-  
-  if (isUC) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_off_plan || 0);
-    console.log(`✅ Using Off-Plan NOC: ${formatAed(nocValue)}`);
-  } else if (isReady) {
-    nocValue = Number(selectedProject.value.developer.noc_fees_ready || 0);
-    console.log(`✅ Using Ready NOC: ${formatAed(nocValue)}`);
-    
+  const nocValue = developerNocValue.value;
+
+  if (isReady) {
     // عند Completed، تنظيف بيانات الدفع
     form.value.payment_plans = null;
     form.value.payment_plan = null;
@@ -2236,12 +2199,9 @@ const updateNocBasedOnStatus = () => {
     // assignmentExpenseLines.value = [];
     form.value.handover_date = '';
     // form.value.original_price = '';
-  } else {
-    console.log('⚠️ Unknown status, setting NOC to 0');
   }
-  
+
   form.value.noc_fixed_amount = !isNaN(nocValue) && nocValue >= 0 ? nocValue : 0;
-  console.log('✅ NOC fixed amount set to:', form.value.noc_fixed_amount);
 };
 const startOfDay = (value) => {
   const d = value instanceof Date ? new Date(value.getTime()) : new Date(value);
@@ -2620,6 +2580,8 @@ const fetchPropertyData = async (id) => {
         form.value.projectAreas = projectAreasData.map(area => ({
           id: area.id,
           name: area.area_parents_title || area.name || area.title,
+          all_names: area.all_names,
+          is_adgm: area.is_adgm,
           project_id: selectedProject.value.id
         }));
         
@@ -2864,6 +2826,8 @@ watch(() => selectedProject.value, async (newProject, oldProject) => {
       form.value.projectAreas = projectAreasData.map(area => ({
         id: area.id,
         name: area.area_parents_title || area.name || area.title,
+        all_names: area.all_names,
+        is_adgm: area.is_adgm,
         project_id: newProject.id
       }));
       

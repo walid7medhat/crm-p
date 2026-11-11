@@ -1966,6 +1966,7 @@
 import { ref, onMounted, onUnmounted, getCurrentInstance, computed, watch, nextTick } from 'vue';
 import { isSwitchedSession } from '@/composables/useImpersonation.js';
 import { nationalityNames } from '@/utils/nationalities';
+import { nocVatAmount } from '@/utils/dealCostRules';
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { hidesBedsBaths } from '@/composables/listingPropertyType';
@@ -2245,7 +2246,10 @@ const showRejectDetailsModal = ref(false);
 const rejectReasonDetails = ref('');
 const rejectingListing = ref(false);
 
+// The API decides per listing (Dubai listings → Dubai branch admin; others → listing team).
 const canApproveListings = computed(() => {
+  if (typeof property.value?.can_approve === 'boolean') return property.value.can_approve;
+
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
 
@@ -8816,23 +8820,27 @@ const createPaymentDetailsSlide = () => {
 
   if (hasNoc) {
     const nocAmount = nocFixedAmount;
+    // Dubai NOC fees are quoted + 5% VAT.
+    const nocVat = nocVatAmount(nocAmount, !!p.is_dubai);
+    const nocVatCell = nocVat > 0 ? fmtAed(nocVat) : '—';
     const isFullyPaid = scheduledAed >= nocRequired - 0.01;
     const statusColor = isFullyPaid ? '#22c55e' : '#f59e0b';
-    const nocValueBadge = `<span >${fmtAed(nocAmount)}</span>`;
+    const nocValueBadge = `<span >${fmtAed(nocAmount + nocVat)}</span>`;
 
     expenseRows.push(`
       <tr>
         <td align="center" valign="middle" style="${tdCell}font-weight:500;background:#ffffff !important;">${cellInner('NOC Fees')}</td>
         <td align="center" valign="middle" style="${tdCell}color:#64748b;background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
         <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(fmtAed(nocAmount))}</td>
-        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner('—')}</td>
+        <td align="center" valign="middle" style="${tdCell}background:#ffffff !important;">${cellInner(nocVatCell)}</td>
         <td align="center" valign="middle" style="${tdCell}font-weight:600;background:#ffffff !important;">${cellInner(nocValueBadge)}</td>
       </tr>
     `);
 
     expSubtotal += nocAmount;
-    expGrand += nocAmount;
-    expenseModels.push({ cells: ['NOC Fees', fmtAed(nocAmount), fmtAed(nocAmount), '—', fmtAed(nocAmount)] });
+    expVatTotal += nocVat;
+    expGrand += nocAmount + nocVat;
+    expenseModels.push({ cells: ['NOC Fees', fmtAed(nocAmount), fmtAed(nocAmount), nocVatCell, fmtAed(nocAmount + nocVat)] });
   }
 
   // ✅ إضافة باقي التكاليف

@@ -32,8 +32,7 @@ $duplicatedProject = Project::whereRaw(
                 'id' => $this->developer->id,
                 'name' => $this->developer->name,
                 'avatar' => $this->developer->avatar_path ? asset('storage/' . $this->developer->avatar_path) : null,
-                'noc_fees_ready' => $this->developer?->noc_fees_ready,
-                 'noc_fees_off_plan' => $this->developer?->noc_fees_off_plan,
+                ...$this->developer->nocFeesPayload(),
             ] : null,
             
             // Area data - 
@@ -45,7 +44,8 @@ $duplicatedProject = Project::whereRaw(
                  'admin_fee_type' => $this->area->getAdminFeeType(),
                     'is_adgm' => $this->area->isAdgmArea(),
                     'all_names' => $this->area->getAllAreaNames(),
-              
+                'city_name' => \App\Models\Area::cityNameForId((int) $this->area->id),
+                'is_dubai' => \App\Models\Area::isDubaiAreaId((int) $this->area->id),
             ] : null,
             
             'from_price' => $this->from_price,

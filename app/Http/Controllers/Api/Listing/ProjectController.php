@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Helpers\ImageHelper;
 use App\Http\Requests\Listing\ProjectRequest;
 use App\Http\Resources\Listing\ProjectResource;
+use App\Models\Area;
 use App\Models\Project;
 use App\Models\ProjectImage;
 use App\Models\Developer;
@@ -80,7 +81,7 @@ class ProjectController extends Controller
     // The full resource (galleries, features, listing counts, duplicate checks)
     // exhausts the memory limit and the form reports that projects failed to load.
     $query = Project::query()->with([
-        'developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan',
+        'developer:id,name,avatar_path,noc_fees_ready,noc_fees_off_plan,dubai_noc_fees_ready,dubai_noc_fees_off_plan',
         'area:id,name,parent_id,type',
     ]);
 
@@ -142,14 +143,15 @@ class ProjectController extends Controller
                 'avatar' => $project->developer->avatar_path
                     ? asset('storage/'.$project->developer->avatar_path)
                     : null,
-                'noc_fees_ready' => $project->developer->noc_fees_ready,
-                'noc_fees_off_plan' => $project->developer->noc_fees_off_plan,
+                ...$project->developer->nocFeesPayload(),
             ] : null,
             'area' => $project->area ? [
                 'id' => $project->area->id,
                 'name' => $project->area->name,
                 'title' => $areaLabel,
                 'area_parents_title' => $areaLabel,
+                'city_name' => Area::cityNameForId((int) $project->area->id),
+                'is_dubai' => Area::isDubaiAreaId((int) $project->area->id),
             ] : null,
         ];
     })->values();

@@ -5,14 +5,15 @@ namespace Tests\Feature;
 use App\Http\Controllers\LeadMergeController;
 use App\Models\Lead;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class LeadMergeTest extends TestCase
 {
-    use RefreshDatabase;
+    // Never RefreshDatabase: tests run on the real local DB and it drops every table.
+    use DatabaseTransactions;
 
     private User $admin;
     private User $sales;

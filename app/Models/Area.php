@@ -336,6 +336,56 @@ class Area extends Model
         return null;
     }
 
+    /**
+     * Name of the city (type = 'city', e.g. "Dubai", "Abu Dhabi") this area sits in, or
+     * null. One (id, parent_id, type, name) load per request, then in-memory walks —
+     * safe to call for every row of a listing grid.
+     */
+    public static function cityNameForId(?int $areaId): ?string
+    {
+        if (! $areaId) {
+            return null;
+        }
+
+        $store = static::hierarchyStore();
+        if (! isset($store['nodes'])) {
+            $nodes = [];
+            foreach (static::query()->get(['id', 'parent_id', 'type', 'name']) as $row) {
+                $nodes[(int) $row->id] = [(int) $row->parent_id, $row->type, $row->name];
+            }
+            $store['nodes'] = $nodes;
+        }
+
+        $nodes = $store['nodes'];
+        $current = $areaId;
+        for ($depth = 0; $current && isset($nodes[$current]) && $depth < 12; $depth++) {
+            [$parentId, $type, $name] = $nodes[$current];
+            if ($type === 'city') {
+                return $name;
+            }
+            $current = $parentId;
+        }
+
+        return null;
+    }
+
+    public static function isDubaiAreaId(?int $areaId): bool
+    {
+        return strcasecmp(trim((string) static::cityNameForId($areaId)), 'dubai') === 0;
+    }
+
+    /** Every area id inside Dubai (the city row and all its descendants). */
+    public static function dubaiAreaIds(): array
+    {
+        $ids = [];
+        $cityIds = static::query()->where('type', 'city')->whereRaw('LOWER(TRIM(name)) = ?', ['dubai'])->pluck('id');
+        foreach ($cityIds as $cityId) {
+            $ids = array_merge($ids, static::descendantIdsIncludingSelf((int) $cityId));
+        }
+
+        return array_values(array_unique($ids));
+    }
+
     public function properties_complete()
     {
         return $this->hasMany(Listing::class, 'area_id');

@@ -464,4 +464,77 @@ class Listing extends Model
 {
     return $this->hasMany(InternalUpdate::class, 'listing_id')->latest();
 }
+
+    /** The listing's area is inside the Dubai city (Dubai costs + Dubai approval). */
+    public function isInDubai(): bool
+    {
+        return Area::isDubaiAreaId($this->area_id ? (int) $this->area_id : null);
+    }
+
+    /** Off-plan = "Under Construction" / "Off Plan"; anything else is ready. */
+    public function isOffPlan(): bool
+    {
+        $status = str_replace('_', ' ', strtolower(trim((string) $this->completion_status)));
+
+        return in_array($status, ['under construction', 'off plan'], true);
+    }
+
+    /**
+     * NOC fee to show for this listing (listing page, grid, payment popup, offer PDF):
+     * the saved noc_fixed_amount, or — when a listing with a payment breakdown never got
+     * one (saved before the developer had NOC fees) — the developer's current fee for
+     * this emirate and completion status. Listings without a breakdown keep what was saved.
+     */
+    public function resolvedNocFixedAmount(): float
+    {
+        $saved = (float) ($this->noc_fixed_amount ?? 0);
+        if ($saved > 0 || ! $this->hasPaymentBreakdown()) {
+            return $saved;
+        }
+
+        $developer = $this->nocDeveloper();
+
+        return $developer ? $developer->nocFeeFor($this->isInDubai(), $this->isOffPlan()) : 0.0;
+    }
+
+    /** The project's developer, else the listing's own developer. Uses loaded relations when present. */
+    private function nocDeveloper(): ?Developer
+    {
+        if ($this->relationLoaded('project') && $this->project && $this->project->relationLoaded('developer') && $this->project->developer) {
+            return $this->project->developer;
+        }
+        if ($this->relationLoaded('developer') && $this->developer) {
+            return $this->developer;
+        }
+
+        $developerId = $this->project_id ? self::projectDeveloperId((int) $this->project_id) : null;
+        $developerId = $developerId ?: ($this->developer_id ? (int) $this->developer_id : null);
+
+        return $developerId ? self::nocDeveloperById($developerId) : null;
+    }
+
+    /** Per-request memo: a grid of hundreds of listings costs one query per project / developer. */
+    private static array $nocProjectDeveloperIds = [];
+    private static array $nocDevelopers = [];
+
+    private static function projectDeveloperId(int $projectId): ?int
+    {
+        if (! array_key_exists($projectId, self::$nocProjectDeveloperIds)) {
+            $id = Project::query()->whereKey($projectId)->value('developer_id');
+            self::$nocProjectDeveloperIds[$projectId] = $id ? (int) $id : null;
+        }
+
+        return self::$nocProjectDeveloperIds[$projectId];
+    }
+
+    private static function nocDeveloperById(int $developerId): ?Developer
+    {
+        if (! array_key_exists($developerId, self::$nocDevelopers)) {
+            self::$nocDevelopers[$developerId] = Developer::query()->find($developerId, [
+                'id', 'noc_fees_ready', 'noc_fees_off_plan', 'dubai_noc_fees_ready', 'dubai_noc_fees_off_plan',
+            ]);
+        }
+
+        return self::$nocDevelopers[$developerId];
+    }
 }

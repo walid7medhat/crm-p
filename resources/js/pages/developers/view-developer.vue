@@ -81,16 +81,30 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-muted small">NOC Fees for Ready Units</label>
+                                <label class="form-label fw-semibold text-muted small">Abu Dhabi NOC — Ready Units</label>
                                 <div class="fs-6">
                                     {{ developer.noc_fees_ready ? formatCurrency(developer.noc_fees_ready) : 'Not Set' }}
                                 </div>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-muted small">NOC Fees for Off-Plan</label>
+                                <label class="form-label fw-semibold text-muted small">Abu Dhabi NOC — Off-Plan</label>
                                 <div class="fs-6">
                                     {{ developer.noc_fees_off_plan ? formatCurrency(developer.noc_fees_off_plan) : 'Not Set' }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-muted small">Dubai NOC — Ready (+5% VAT)</label>
+                                <div class="fs-6">
+                                    {{ developer.dubai_noc_fees_ready ? formatCurrency(developer.dubai_noc_fees_ready) : 'Not Set' }}
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-muted small">Dubai NOC — Off-Plan (+5% VAT)</label>
+                                <div class="fs-6">
+                                    {{ developer.dubai_noc_fees_off_plan ? formatCurrency(developer.dubai_noc_fees_off_plan) : 'Not Set' }}
                                 </div>
                             </div>
                         </div>
