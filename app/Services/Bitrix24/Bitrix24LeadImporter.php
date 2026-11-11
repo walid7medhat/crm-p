@@ -1012,6 +1012,16 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
      * changes — using B24's MOVED_TIME for the history `created_at` so the
      * timeline reflects when the move happened in Bitrix24, not when we synced.
      */
+    /**
+     * Refresh an existing lead's stage + data from Bitrix24 WITHOUT re-importing
+     * comments/activities/timeline. Used by leads:check-dubai-new --update.
+     * $b24Lead must be the full crm.lead.get result (it is also stored in bitrix24_data).
+     */
+    public function syncLeadData(Lead $existing, array $b24Lead): void
+    {
+        $this->syncStageForExistingLead($existing, $b24Lead);
+    }
+
     private function syncStageForExistingLead(Lead $existing, array $b24Lead): void
     {
         $statusId       = $b24Lead['STATUS_ID'] ?? null;
