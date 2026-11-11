@@ -2994,7 +2994,7 @@ const desktopSpecTiles = computed(() => {
   push('Developer', p.project?.developer_name || p.developer?.name);
   push('Reference Number', p.reference_number);
   if (p.is_hot_deal === 'Yes') push('Hot Deal', 'Yes');
-  if (p.rented_status && p.rented_until) push('Rented', `until ${p.rented_until}`);
+  // if (p.rented_status && p.rented_until) push('Rented', `until ${p.rented_until}`);
   return tiles;
 });
 
