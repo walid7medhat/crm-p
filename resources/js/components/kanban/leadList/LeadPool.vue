@@ -373,6 +373,7 @@
 import { ref, onMounted, onUnmounted, computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/plugins/axios'
+import { maskQuestionAnswer } from '@/utils/maskPhones'
 import Swal from 'sweetalert2'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
@@ -1058,7 +1059,12 @@ const formatMaskedEmail = (email) => {
 const formatMaskedQuestion = (questionData) => {
     if (!questionData) return '—'
     if (typeof questionData === 'string') {
-        let questionText = questionData.replace(/_/g, ' ')
+        // "Question : answer" — a phone in the answer stays hidden, like the card's Phone.
+        const sep = questionData.indexOf(' : ')
+        const masked = sep === -1
+            ? maskQuestionAnswer('', questionData)
+            : questionData.slice(0, sep + 3) + maskQuestionAnswer(questionData.slice(0, sep), questionData.slice(sep + 3))
+        let questionText = masked.replace(/_/g, ' ')
         questionText = questionText.replace(/\b\w/g, l => l.toUpperCase())
         if (questionText.length > 30) {
             questionText = questionText.substring(0, 30) + '...'

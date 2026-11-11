@@ -2040,6 +2040,7 @@ const paymentPlanOptions = [
   { label: '44/56', initial_percent: 44, handover_percent: 56 },
   { label: '43/57', initial_percent: 43, handover_percent: 57 },
   { label: '47/53', initial_percent: 47, handover_percent: 53 },
+  { label: '48/52', initial_percent: 48, handover_percent: 52 },
   { label: '36/64', initial_percent: 36, handover_percent: 64 },
   { label: '37/63', initial_percent: 37, handover_percent: 63 },
   { label: '60/40', initial_percent: 60, handover_percent: 40 },

@@ -314,7 +314,7 @@
                             </div>
                             <div class="info-group" v-for="(value, key) in clientRequiredMetaFields" :key="`client-${key}`">
                                 <label class="form-label-custom">{{ formatQuestion(key) }}</label>
-                                <div class="info-value">{{ value }}</div>
+                                <div class="info-value">{{ canView ? value : maskQuestionAnswer(key, value) }}</div>
                             </div>
                         </div>
                     </div>
@@ -871,6 +871,7 @@ import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
 import { formatLeadBudgetRange, formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
 import { formatBitrixRichText, extractPortalLinks, portalLinkKey } from '@/utils/bitrixRichText'
+import { maskPhonesInText, maskQuestionAnswer } from '@/utils/maskPhones'
 import MatchingPropertiesSection from './MatchingPropertiesSection.vue'
 const props = defineProps({
     lead: Object,
@@ -940,23 +941,31 @@ const portalLinkKeys = computed(() =>
   new Set(portalLinks.value.map((link) => portalLinkKey(link.url)).filter(Boolean))
 )
 
+// Phone numbers in More Information follow the same rule as Primary / Secondary Phone:
+// shown only when canView, otherwise first 3 characters + stars.
 const formattedMoreInformation = computed(() =>
-  formatBitrixRichText(props.lead?.more_information, { omitUrls: portalLinkKeys.value })
+  formatBitrixRichText(
+    canView.value ? props.lead?.more_information : maskPhonesInText(props.lead?.more_information),
+    { omitUrls: portalLinkKeys.value }
+  )
 )
 
 // Any question answer that contains a URL (not just the known link/Page_URL/
 // inbox_url keys) renders as a clickable link — same rich-text handling as Comments.
-const formatAnswerValue = (value) => formatBitrixRichText(value, { omitUrls: portalLinkKeys.value })
+const formatAnswerValue = (question, value) => formatBitrixRichText(
+  canView.value ? value : maskQuestionAnswer(question, value),
+  { omitUrls: portalLinkKeys.value }
+)
 
 // Question rows with something left to show (an answer that was only a portal link is dropped).
 const questionRows = computed(() => {
   const rows = []
   Object.entries(facebookQuestions.value).forEach(([question, answer]) => {
-    const html = formatAnswerValue(answer)
+    const html = formatAnswerValue(question, answer)
     if (html) rows.push({ key: question, question, html })
   })
   Object.entries(metaQuestions.value).forEach(([question, answer]) => {
-    const html = formatAnswerValue(answer)
+    const html = formatAnswerValue(question, answer)
     if (html) rows.push({ key: `meta-${question}`, question, html })
   })
   return rows

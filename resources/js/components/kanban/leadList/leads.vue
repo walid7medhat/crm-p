@@ -1419,6 +1419,7 @@ import {
 } from '@/motion/leadStageMotion'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
+import { maskQuestionAnswer } from '@/utils/maskPhones'
 import { shouldSuppressLeadUpdateNotification, normalizeLeadRealtimeEvent, buildCrmLeadNotificationEvent } from '@/utils/leadRealtimeNotifications.js'
 import Swal from 'sweetalert2'
 
@@ -3907,7 +3908,12 @@ const formatMaskedQuestion = (questionData) => {
 
     
     if (typeof questionData === 'string') {
-        let questionText = questionData.replace(/_/g, ' ')
+        // "Question : answer" — a phone in the answer stays hidden, like the card's Phone.
+        const sep = questionData.indexOf(' : ')
+        const masked = sep === -1
+            ? maskQuestionAnswer('', questionData)
+            : questionData.slice(0, sep + 3) + maskQuestionAnswer(questionData.slice(0, sep), questionData.slice(sep + 3))
+        let questionText = masked.replace(/_/g, ' ')
         questionText = questionText.replace(/\b\w/g, l => l.toUpperCase())
         
         if (questionText.length > 20) {
