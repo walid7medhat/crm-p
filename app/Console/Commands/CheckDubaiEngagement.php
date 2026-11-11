@@ -2,14 +2,17 @@
 
 namespace App\Console\Commands;
 
+use App\Models\LeadActivity;
+use App\Models\LeadComment;
 use App\Models\User;
 use App\Services\Bitrix24\Bitrix24Client;
+use App\Services\Bitrix24\Bitrix24LeadImporter;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * READ-ONLY check: Bitrix24 comments + activities on Dubai leads since a date,
+ * Check (read-only unless --import) of Bitrix24 comments + activities on Dubai leads since a date,
  * compared with what the CRM already has (lead_comments / lead_activities.bitrix24_id).
  *
  *   php artisan leads:check-dubai-engagement --since=2026-10-27
@@ -28,7 +31,9 @@ class CheckDubaiEngagement extends Command
         {--show=50 : How many leads to list in the table}
         {--comments-only : Only list the leads that have Bitrix24 comments in the period (skip activities)}
         {--activities-only : Only list the leads that have Bitrix24 activities in the period (skip comments)}
-        {--missing : With --comments-only / --activities-only: list only leads with items NOT in the CRM}';
+        {--missing : With --comments-only / --activities-only: list only leads with items NOT in the CRM}
+        {--import : Insert ONLY the missing comments/activities into the CRM leads (nothing else on the lead changes)}
+        {--force : With --import: do not ask for confirmation}';
 
     protected $description = 'Check Bitrix24 comments/activities on Dubai leads since a date vs the CRM (read-only)';
 
@@ -60,6 +65,8 @@ class CheckDubaiEngagement extends Command
         // 2) All Bitrix activities on leads in the date range (one paged list), keep branch ones.
         $b24Activities = [];   // b24 lead id => [activity ids]
         $lastActivity = [];    // b24 lead id => latest activity created time
+        $activityRows = [];    // activity id => [b24 lead id, raw Bitrix row] (for --import)
+        $commentRows = [];     // comment id  => [b24 lead id, raw Bitrix row] (for --import)
         $start = $commentsOnly ? null : 0;
         if (! $commentsOnly) {
             $this->line('Fetching Bitrix24 activities…');
@@ -67,7 +74,8 @@ class CheckDubaiEngagement extends Command
         while ($start !== null) {
             $r = $client->call('crm.activity.list', [
                 'filter' => ['OWNER_TYPE_ID' => 1, '>=CREATED' => $sinceB24, '<=CREATED' => $untilB24],
-                'select' => ['ID', 'OWNER_ID', 'CREATED'],
+                'select' => ['ID', 'OWNER_ID', 'CREATED', 'SUBJECT', 'RESPONSIBLE_ID', 'AUTHOR_ID',
+                    'DEADLINE', 'START_TIME', 'END_TIME', 'COMPLETED'],
                 'order' => ['ID' => 'ASC'],
                 'start' => $start,
             ]);
@@ -75,6 +83,7 @@ class CheckDubaiEngagement extends Command
                 $owner = (int) ($a['OWNER_ID'] ?? 0);
                 if (isset($byB24[$owner])) {
                     $b24Activities[$owner][] = (int) $a['ID'];
+                    $activityRows[(int) $a['ID']] = [$owner, $a];
                     $created = Carbon::parse($a['CREATED'] ?? 'now');
                     if (! isset($lastActivity[$owner]) || $created->gt($lastActivity[$owner])) {
                         $lastActivity[$owner] = $created;
@@ -86,6 +95,12 @@ class CheckDubaiEngagement extends Command
 
         if ($activitiesOnly) {
             $haveAct = $this->existingIds('lead_activities', array_merge([], ...array_values($b24Activities)));
+            if ($this->option('import')) {
+                if (! $this->importMissing($client, [], $activityRows, [], $haveAct, $byB24)) {
+                    return self::SUCCESS;
+                }
+                $haveAct = $this->existingIds('lead_activities', array_merge([], ...array_values($b24Activities)));
+            }
             return $this->reportLeads('activities', $b24Activities, $lastActivity, $haveAct, $byB24, $branchName);
         }
 
@@ -119,7 +134,7 @@ class CheckDubaiEngagement extends Command
             foreach ($chunk as $id) {
                 $cmd['c'.$id] = 'crm.timeline.comment.list?'.http_build_query([
                     'filter' => ['ENTITY_TYPE' => 'lead', 'ENTITY_ID' => $id],
-                    'select' => ['ID', 'CREATED', 'COMMENT'],
+                    'select' => ['ID', 'CREATED', 'COMMENT', 'AUTHOR_ID'],
                 ]);
             }
             $res = $client->call('batch', ['halt' => 0, 'cmd' => $cmd]);
@@ -138,6 +153,7 @@ class CheckDubaiEngagement extends Command
                     $created = Carbon::parse($c['CREATED'] ?? 'now');
                     if ($created->betweenIncluded($since, $until)) {
                         $b24Comments[$id][] = (int) $c['ID'];
+                        $commentRows[(int) $c['ID']] = [$id, $c];
                         if (! isset($lastComment[$id]) || $created->gt($lastComment[$id])) {
                             $lastComment[$id] = $created;
                         }
@@ -154,6 +170,15 @@ class CheckDubaiEngagement extends Command
         $allComIds = array_merge([], ...array_values($b24Comments));
         $haveAct = $this->existingIds('lead_activities', $allActIds);
         $haveCom = $this->existingIds('lead_comments', $allComIds);
+
+        if ($this->option('import')) {
+            if (! $this->importMissing($client, $commentRows, $activityRows, $haveCom, $haveAct, $byB24)) {
+                return self::SUCCESS;
+            }
+            // Re-read so the report below shows what is still missing (should be 0).
+            $haveAct = $this->existingIds('lead_activities', $allActIds);
+            $haveCom = $this->existingIds('lead_comments', $allComIds);
+        }
 
         if ($commentsOnly) {
             return $this->reportLeads('comments', $b24Comments, $lastComment, $haveCom, $byB24, $branchName);
@@ -208,6 +233,76 @@ class CheckDubaiEngagement extends Command
         $this->line('  php artisan bitrix:import-leads-by-id --file='.$path);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * --import: insert only the Bitrix comments/activities that are not in the CRM yet.
+     * Same mapping as Bitrix24LeadImporter (author, text cleaning, dates), but nothing else
+     * on the lead (stage, responsible, contact fields…) is touched. Returns false if cancelled.
+     */
+    private function importMissing(Bitrix24Client $client, array $commentRows, array $activityRows, array $haveCom, array $haveAct, $byB24): bool
+    {
+        $haveCom = array_flip($haveCom);
+        $haveAct = array_flip($haveAct);
+        $newComments = array_diff_key($commentRows, $haveCom);
+        $newActivities = array_diff_key($activityRows, $haveAct);
+
+        if (! $newComments && ! $newActivities) {
+            $this->info('Nothing to import — no missing comments/activities.');
+            return true;
+        }
+
+        $this->warn('Will add '.count($newComments).' comment(s) and '.count($newActivities)
+            .' activit(ies) to '.count(array_unique(array_merge(array_column($newComments, 0), array_column($newActivities, 0))))
+            .' lead(s). Nothing else on the leads changes.');
+        if (! $this->option('force') && ! $this->confirm('Continue?', true)) {
+            $this->line('Cancelled — nothing imported.');
+            return false;
+        }
+
+        $importer = new Bitrix24LeadImporter($client, 1);
+        $parse = fn ($v) => ($v === null || $v === '') ? null : Carbon::parse($v)->setTimezone(config('app.timezone'));
+        $addedC = 0;
+        $addedA = 0;
+
+        foreach ($newComments as $b24CommentId => [$b24LeadId, $c]) {
+            $body = $importer->cleanRichText($c['COMMENT'] ?? '') ?? '';
+            if ($body === '') {
+                continue;
+            }
+            $createdAt = $parse($c['CREATED'] ?? null) ?? now();
+            LeadComment::withoutEvents(fn () => LeadComment::create([
+                'lead_id' => $byB24[$b24LeadId]->id,
+                'user_id' => $importer->mapBitrixUser($c['AUTHOR_ID'] ?? null) ?? 1,
+                'comment' => $body,
+                'bitrix24_id' => $b24CommentId,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
+            ]));
+            $addedC++;
+        }
+
+        foreach ($newActivities as $b24ActivityId => [$b24LeadId, $a]) {
+            $deadline = $parse($a['DEADLINE'] ?? null) ?? $parse($a['START_TIME'] ?? null)
+                ?? $parse($a['END_TIME'] ?? null) ?? $parse($a['CREATED'] ?? null) ?? now();
+            LeadActivity::withoutEvents(fn () => LeadActivity::create([
+                'lead_id' => $byB24[$b24LeadId]->id,
+                'user_id' => $importer->mapBitrixUser($a['RESPONSIBLE_ID'] ?? $a['AUTHOR_ID'] ?? null) ?? 1,
+                'title' => trim((string) ($a['SUBJECT'] ?? '')) ?: 'Bitrix24 activity',
+                'reminder_date' => $deadline,
+                'reminders' => null,
+                'is_completed' => ($a['COMPLETED'] ?? 'N') === 'Y',
+                'bitrix24_id' => $b24ActivityId,
+                'created_at' => $parse($a['CREATED'] ?? null) ?? now(),
+                'updated_at' => now(),
+            ]));
+            $addedA++;
+        }
+
+        $this->info("✓ Imported {$addedC} comment(s) and {$addedA} activit(ies).");
+        $this->newLine();
+
+        return true;
     }
 
     /**

@@ -1237,7 +1237,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         return $parts ? implode(', ', $parts) : null;
     }
 
-        private function cleanRichText($value): ?string
+        // public: also used by leads:check-dubai-engagement --import
+        public function cleanRichText($value): ?string
         {
             if (empty($value)) {
                 return null;
