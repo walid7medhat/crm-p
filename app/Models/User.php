@@ -430,6 +430,30 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     }
 
     /**
+     * May hand a lead to anyone in the whole branch: whoever sees the branch's leads, or
+     * the `assign-branch-leads` permission (assign branch-wide, but see only own leads).
+     */
+    public function canAssignInWholeBranch(): bool
+    {
+        return $this->seesBranchLeads() || $this->checkPermissionTo('assign-branch-leads');
+    }
+
+    /**
+     * User ids this user may set as a lead's responsible person (below admin):
+     * whole branch when canAssignInWholeBranch(), otherwise their lead scope — plus self.
+     * Visibility (leadScopeUserIds) is NOT widened by this.
+     */
+    public function leadAssignableUserIds(): array
+    {
+        $ids = $this->canAssignInWholeBranch()
+            ? $this->getBranchUserIds()
+            : $this->leadScopeUserIds();
+        $ids[] = (int) $this->id;
+
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
+
+    /**
      * branch_admin also sees New Lead (first lead stage) leads whose responsible person is
      * #1 (super admin = not handed out yet), on top of their branch's leads. Returns that
      * stage id, or null when the extra doesn't apply to this user.

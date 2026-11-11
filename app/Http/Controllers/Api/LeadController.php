@@ -905,14 +905,16 @@ class LeadController extends Controller
                 if (!empty($leadData['responsible_person_id']) && $leadData['responsible_person_id'] !== $lead->responsible_person_id) {
                     $newResponsiblePerson = User::find($leadData['responsible_person_id']);
 
-                    if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin'])) {
+                    if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin'])
+                        && !$user->checkPermissionTo('assign-branch-leads')) {
                         return ApiResponse::error('You are not authorized to change responsible person', 403);
                     }
 
                     // Same rule as assignResponsiblePerson(): below admin, the new person must be
-                    // inside the caller's scope (branch for branch_admin / show-branch-leads).
+                    // inside the caller's scope (branch for branch_admin / show-branch-leads /
+                    // assign-branch-leads).
                     if (!$user->hasRole(['super_admin', 'admin'])) {
-                        $allowedIds = $user->leadScopeUserIds();
+                        $allowedIds = $user->leadAssignableUserIds();
                         if ($user->hasRole('branch_admin')) {
                             $allowedIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
                             $allowedIds[] = (int) $user->id; // assign to themselves
@@ -1191,7 +1193,8 @@ class LeadController extends Controller
     try {
         $user = auth()->user();
 
-        if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin'])) {
+        if (!$user->hasRole(['super_admin','admin', 'manager', 'team_lead', 'branch_admin'])
+            && !$user->checkPermissionTo('assign-branch-leads')) {
             return ApiResponse::error('You are not authorized to assign responsible person', 403);
         }
 
@@ -1209,8 +1212,9 @@ class LeadController extends Controller
         // }
 
         if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
-            // branch_admin / show-branch-leads: may assign to anyone in their whole branch.
-            $subordinatesIds = $user->leadScopeUserIds();
+            // branch_admin / show-branch-leads / assign-branch-leads: may assign to anyone
+            // in their whole branch (assign-branch-leads still only SEES its own leads).
+            $subordinatesIds = $user->leadAssignableUserIds();
             if ($user->hasRole('branch_admin')) {
                 $subordinatesIds[] = self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID;
                 $subordinatesIds[] = (int) $user->id; // assign to themselves
@@ -1467,15 +1471,18 @@ class LeadController extends Controller
                     ->orWhere('users.id', $user->id);
                 });
             }
-        elseif ($user->hasBranchLeadsPermission() || $user->hasRole('branch_admin') || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
-            // branch_admin / show-branch-leads → agents across the whole branch (all
-            // offices). Branch admins also get user #33, and user #33 gets the same
-            // branch-wide visibility here in return.
+        elseif ($user->canAssignInWholeBranch() || $user->id == self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID) {
+            // branch_admin / show-branch-leads / assign-branch-leads → agents across the
+            // whole branch (all offices). Branch admins also get user #33, and user #33
+            // gets the same branch-wide visibility here in return.
             $scopeIds = $user->getBranchUserIds();
             // Managers are assignable too (e.g. a listing-team manager in the branch).
             $roles = ['team_lead', 'sales', 'manager','branch_admin'];
             // Branch admins also get user #33 — and themselves (assign a lead to me).
-            $extraIds = $user->hasRole('branch_admin') ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID, (int) $user->id] : [];
+            // assign-branch-leads users can always pick themselves back.
+            $extraIds = $user->hasRole('branch_admin')
+                ? [self::BRANCH_ADMIN_EXTRA_ASSIGNEE_ID, (int) $user->id]
+                : [(int) $user->id];
             // Branch admins also get every user with the admin role, in ANY branch, so a
             // lead can be handed to another branch (allowed in update / assignResponsiblePerson).
             $includeAllAdmins = $user->hasRole('branch_admin');
