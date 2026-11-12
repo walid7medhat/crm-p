@@ -11,6 +11,9 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 use App\Console\Commands\RefreshMetaAppToken;
 use App\Http\Middleware\BlockBots;
+use App\Http\Middleware\BlockRiskyPublicOnLuxvant;
+use App\Http\Middleware\EnsureBrandAccess;
+use App\Http\Middleware\ResolveBrandFromHost;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,6 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
         'log.usage' => \App\Http\Middleware\LogEndpointUsage::class,
         'trusted.referer' => \App\Http\Middleware\RequireTrustedReferer::class,
         'chat.no-switcher' => \App\Http\Middleware\BlockChatForSalesSwitcher::class,
+        'brand.resolve' => ResolveBrandFromHost::class,
+        'brand.access' => EnsureBrandAccess::class,
+        'brand.block_luxvant_public' => BlockRiskyPublicOnLuxvant::class,
 
     ]);
        // Exclude broadcasting/auth from CSRF since we use JWT auth
@@ -39,6 +45,10 @@ return Application::configure(basePath: dirname(__DIR__))
        ]);
 
        $middleware->trustProxies(at: '*');
+
+        // Host → brand context for every web + API request (before controllers).
+        $middleware->append(ResolveBrandFromHost::class);
+
         $middleware->api(append: [
             \App\Http\Middleware\RequireTrustedReferer::class,
         ]);

@@ -3,49 +3,28 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
-use App\Helpers\ApiResponse;
+use Illuminate\Http\Request;
+use Tymon\JWTAuth\Http\Middleware\Authenticate as TymonAuthenticate;
 
+/**
+ * Live jwt.auth entrypoint.
+ *
+ * Step 1 — Tymon Authenticate: identical to the package middleware that was
+ *           already winning the alias race (preserves current OIA auth behavior).
+ * Step 2 — EnsureBrandAccess: no-op when brand access.mode is "open" (OIA);
+ *           enforces Luxvant allowlist + JWT brand_key checks only for Luxvant.
+ */
 class JwtAuthMiddleware
 {
-    public function handle($request, Closure $next)
+    public function handle(Request $request, Closure $next)
     {
-        try {
-            auth()->shouldUse('api');
-            $user = JWTAuth::parseToken()->authenticate();
-            if (!$user) {
-                return ApiResponse::error('Unauthorized', 401);
+        auth()->shouldUse('api');
+
+        return app(TymonAuthenticate::class)->handle(
+            $request,
+            function (Request $request) use ($next) {
+                return app(EnsureBrandAccess::class)->handle($request, $next);
             }
-            // Inactive accounts must not use protected APIs (even with a previously issued JWT).
-            if (($user->status ?? null) !== 'active') {
-                return ApiResponse::error('Account inactive', 403);
-            }
-            Auth::setUser($user);
-            $impersonated = JWTAuth::getPayload()->get('impersonated_by') !== null;
-        } catch (TokenExpiredException $e) {
-            return ApiResponse::error('Token expired', 401);
-        } catch (TokenInvalidException $e) {
-            return ApiResponse::error('Token invalid', 401);
-        } catch (JWTException $e) {
-            return ApiResponse::error('Token absent', 401);
-        }
-
-        $request->attributes->set('user', $user);
-        $request->attributes->set('impersonated', $impersonated);
-
-        // Keep "online" fresh while the user is actively using the CRM (at most every 5 min).
-        // Skipped for super admin "switch account" tokens so the user doesn't appear online.
-        $cacheKey = 'user-presence-touch:' . $user->id;
-        if (! $impersonated && ! Cache::has($cacheKey)) {
-            Cache::put($cacheKey, true, now()->addMinutes(5));
-            $user->forceFill(['last_login_at' => now()])->save();
-        }
-
-        return $next($request);
+        );
     }
 }
