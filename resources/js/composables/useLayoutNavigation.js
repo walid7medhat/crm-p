@@ -133,6 +133,7 @@ const SETTINGS_PREFIXES = [
   '/sales-intelligence',
   '/investment-analysis',
   '/settings',
+  '/tracking',
   '/admin/chat',
   '/suggestion',
   '/import-pitrix',

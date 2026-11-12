@@ -62,6 +62,7 @@
       @lead-updated="notifyLeadViewUpdated"
     />
     <MatchAlertToast v-if="showLayout && !isAppLoading" />
+    <LiveWatchOnlineAlert v-if="showLayout && !isAppLoading" />
     <OfferPdfHost v-if="offerPdfJobs.length" />
     <PropertyCompareDock v-if="showLayout && !isAppLoading" />
     <PropertyDetailsModal v-if="showLayout" />
@@ -74,6 +75,7 @@
 import { computed, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { startLocationTracking, stopLocationTracking } from '@/composables/useLocationTracking'
+import { startLiveWatchClient, stopLiveWatchClient } from '@/composables/useLiveWatchClient'
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
 import Footer from './components/layout/footer/index.vue'
@@ -95,6 +97,7 @@ const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-
 const UserAnimationPlayer = defineAsyncComponent(() => import('./components/animation/UserAnimationPlayer.vue'))
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
 const MatchAlertToast = defineAsyncComponent(() => import('./components/matches/MatchAlertToast.vue'))
+const LiveWatchOnlineAlert = defineAsyncComponent(() => import('./components/live-watch/LiveWatchOnlineAlert.vue'))
 const MatchQuickPanel = defineAsyncComponent(() => import('./components/matches/MatchQuickPanel.vue'))
 // Loaded only while a Send offer is building its PDF (pulls in BlogOne's offer generator).
 const OfferPdfHost = defineAsyncComponent(() => import('./components/matches/OfferPdfHost.vue'))
@@ -127,6 +130,7 @@ export default {
     ProjectDetailsModal,
     SmartSearchDialog,
     MatchAlertToast,
+    LiveWatchOnlineAlert,
     MatchQuickPanel,
     OfferPdfHost,
     Header,
@@ -246,10 +250,12 @@ export default {
       if (!visible) {
         resetSidebarLayout()
         stopLocationTracking()
+        stopLiveWatchClient()
         return
       }
       // Foreground-only: polls while CRM is open/visible; pauses when the tab is hidden.
       startLocationTracking()
+      startLiveWatchClient(router)
     }, { immediate: true })
 
     watch(

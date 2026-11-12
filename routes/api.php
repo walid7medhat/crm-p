@@ -4,6 +4,8 @@ use App\Helpers\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\LiveWatchClientController;
+use App\Http\Controllers\Api\Admin\LiveWatchController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
@@ -176,6 +178,15 @@ Route::prefix('auth')->group(function () {
         Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:location-tracking');
         Route::get('location-settings', [AuthController::class, 'locationSettings']);
         Route::post('logout', [AuthController::class,'logout']);
+
+        // Live Watch client heartbeat / navigation (auth required; server no-ops unless monitored).
+        Route::get('live-watch/client-config', [LiveWatchClientController::class, 'clientConfig']);
+        Route::post('live-watch/heartbeat', [LiveWatchClientController::class, 'heartbeat'])
+            ->middleware('throttle:live-watch-heartbeat');
+        Route::post('live-watch/leave', [LiveWatchClientController::class, 'leave'])
+            ->middleware('throttle:live-watch-heartbeat');
+        Route::post('live-watch/navigation', [LiveWatchClientController::class, 'navigation'])
+            ->middleware('throttle:live-watch-navigation');
         Route::get('notifications',[AuthController::class,'notifications']);
         Route::post('notifications/read-all', [AuthController::class, 'markAllNotificationsAsRead']);
         Route::any('notifications/{id}/read', [AuthController::class, 'markNotificationAsRead']);
@@ -789,6 +800,13 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::post('/admin/account-emails/send', [\App\Http\Controllers\Api\AccountAccessEmailController::class, 'send'])->middleware('throttle:account-emails');
         Route::get('/admin/location/online', [\App\Http\Controllers\Api\Admin\LocationTrackingController::class, 'online']);
         Route::get('/admin/location/users/{user}', [\App\Http\Controllers\Api\Admin\LocationTrackingController::class, 'history']);
+
+        // Super Admin Live Watch (config, presence, timeline).
+        Route::get('/admin/live-watch/settings', [LiveWatchController::class, 'settings']);
+        Route::put('/admin/live-watch/settings', [LiveWatchController::class, 'updateSettings']);
+        Route::get('/admin/live-watch/presence', [LiveWatchController::class, 'presence']);
+        Route::get('/admin/live-watch/users', [LiveWatchController::class, 'users']);
+        Route::get('/admin/live-watch/timeline', [LiveWatchController::class, 'timeline']);
     });
 
      // User routes

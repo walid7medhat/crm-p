@@ -1,9 +1,9 @@
 import { ref } from 'vue'
 import api from '@/plugins/axios'
 
-const showDealViewModal = ref(false)
-const dealViewPayload = ref(null)
-const dealViewAutoEditSection = ref(null)
+export const showDealViewModal = ref(false)
+export const dealViewPayload = ref(null)
+export const dealViewAutoEditSection = ref(null)
 
 // ================= Shareable deal links (?deal=ID), like leads' ?lead=ID =================
 // Any open deal popup writes ?deal=ID to the URL; closing it removes it. Opening a URL

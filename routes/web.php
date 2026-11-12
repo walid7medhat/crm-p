@@ -64,6 +64,11 @@ Broadcast::channel('crm-campaigns', function ($user) {
     return $user !== null;
 });
 
+// Super Admin Live Watch — presence + timeline (strict role gate).
+Broadcast::channel('live-watch', function ($user) {
+    return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
+});
+
 Route::get('privacy-policy', function () {
     return view('privacy-policy');
 });

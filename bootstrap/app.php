@@ -88,6 +88,10 @@ return Application::configure(basePath: dirname(__DIR__))
     // ->hourly()
     // ->withoutOverlapping()
     // ->appendOutputTo(storage_path('logs/comments_sync.log')); 
+        $schedule->command('live-watch:cleanup')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
         $schedule->command('activities:send-reminders')->everyMinute();
         // Marketing: due tomorrow / today / overdue cards + today's unposted calendar posts.
         // Morning run plus an afternoon nudge for posts; each reminder is sent once per day.

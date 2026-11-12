@@ -13,6 +13,8 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
 use App\Services\Auth\LocationTrackingService;
+use App\Services\LiveWatch\LiveWatchEventRecorder;
+use App\Services\LiveWatch\LiveWatchPresenceService;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\BirthdaySelfNotification;
 use App\Notifications\NewSalesAgentNotification;
@@ -186,6 +188,20 @@ public function resetPassword(Request $request): JsonResponse
         $user->refresh();
         $user->load('roles', 'permissions');
 
+        try {
+            app(LiveWatchEventRecorder::class)->record([
+                'user_id' => $user->id,
+                'event_kind' => 'navigation',
+                'event_type' => 'auth.login',
+                'module' => 'auth',
+                'action' => 'login',
+                'client_event_id' => 'login-'.$user->id.'-'.now()->timestamp,
+                'metadata' => ['path' => '/login'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::debug('live watch login event skipped', ['error' => $e->getMessage()]);
+        }
+
         $payload = [
             'user' => new UserResource($user),
             'token' => $token,
@@ -318,6 +334,26 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
 
     public function logout()
     {
+        $user = auth()->user();
+        if ($user) {
+            try {
+                app(LiveWatchEventRecorder::class)->record([
+                    'user_id' => $user->id,
+                    'event_kind' => 'navigation',
+                    'event_type' => 'auth.logout',
+                    'module' => 'auth',
+                    'action' => 'logout',
+                    'client_event_id' => 'logout-'.$user->id.'-'.now()->timestamp,
+                    'metadata' => ['path' => '/logout'],
+                ]);
+                // Drop all presence sessions for this user on explicit logout.
+                \App\Models\LiveWatchSession::query()->where('user_id', $user->id)->delete();
+                app(LiveWatchPresenceService::class)->reconcilePresence();
+            } catch (\Throwable $e) {
+                Log::debug('live watch logout event skipped', ['error' => $e->getMessage()]);
+            }
+        }
+
         auth()->logout();
         return ApiResponse::success(null, 'Logged out successfully');
     }

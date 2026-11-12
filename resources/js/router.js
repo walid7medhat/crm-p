@@ -18,6 +18,7 @@ const baseRoutes = [
     { path: '/settings/account-emails', component: () => import('./pages/settings/account-emails.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/stage-duplicates-report', component: () => import('./pages/settings/stage-duplicates-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/location-tracking', component: () => import('./pages/settings/location-tracking.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/tracking', component: () => import('./pages/tracking/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },
     { path: '/import-pitrix', component: () => import('./components/kanban/leadList/ImportPitrix.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/sync-bitrix-leads', component: () => import('./components/kanban/leadList/SyncBitrixLeads.vue'), meta: { requiresAuth: true, requiresAdmin: true } },

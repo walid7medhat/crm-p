@@ -12,12 +12,15 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadComment;
+use App\Models\LeadHistory;
 use App\Models\Listing;
 use App\Observers\ActivityObserver;
 use App\Observers\LeadMatchObserver;
 use App\Observers\ListingMatchObserver;
 use App\Observers\DealAssignmentLearningObserver;
 use App\Observers\LeadFirstContactObserver;
+use App\Observers\LiveWatchActivityObserver;
+use App\Observers\LiveWatchLeadHistoryObserver;
 use App\Observers\SalesIntelligenceDealObserver;
 use App\Observers\SalesIntelligenceLeadActivityObserver;
 use App\Observers\AiSalesIntelligence\AiSalesIntelligenceDealObserver;
@@ -26,6 +29,7 @@ use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadCommentObserver;
 use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadObserver;
 use App\Observers\LeadCommentObserver;
 use App\Observers\LeadObserver;
+use Spatie\Activitylog\Models\Activity;
 use App\Support\Brand\BrandContext;
 use App\Support\Brand\BrandResolver;
 use App\Support\InfrastructureBootstrap;
@@ -76,6 +80,16 @@ class AppServiceProvider extends ServiceProvider
                 ->by('location-tracking:' . ($request->user()?->id ?? $request->ip()));
         });
 
+        // Live Watch: heartbeat ~30s; allow reconnect bursts without sharing other throttle buckets.
+        \Illuminate\Support\Facades\RateLimiter::for('live-watch-heartbeat', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(30)
+                ->by('live-watch-hb:' . ($request->user()?->id ?? $request->ip()));
+        });
+        \Illuminate\Support\Facades\RateLimiter::for('live-watch-navigation', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)
+                ->by('live-watch-nav:' . ($request->user()?->id ?? $request->ip()));
+        });
+
     //       Event::listen(MessageSending::class, function ($event) {
     //     \Log::info('📤 Sending Email', [
     //         'to' => $event->message->getTo(),
@@ -116,6 +130,8 @@ class AppServiceProvider extends ServiceProvider
         Lead::observe(LeadMatchObserver::class);
         Listing::observe(ListingMatchObserver::class);
 
-
+        // Super Admin Live Watch: mirror existing history/activity into the timeline.
+        LeadHistory::observe(LiveWatchLeadHistoryObserver::class);
+        Activity::observe(LiveWatchActivityObserver::class);
     }
 }
