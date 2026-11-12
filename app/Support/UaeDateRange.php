@@ -49,4 +49,21 @@ class UaeDateRange
 
         return $query;
     }
+
+    /**
+     * Lead search "Modified On": updated_at within the UAE days, and only leads that
+     * were actually edited after creation. A new lead's updated_at equals its
+     * created_at (or lands a moment later — store() saves it again right after
+     * create), so anything updated within a minute of creation is not "modified".
+     */
+    public static function applyModified($query, $from = null, $to = null, $exact = null)
+    {
+        if (! filled($from) && ! filled($to) && ! filled($exact)) {
+            return $query;
+        }
+
+        self::apply($query, 'updated_at', $from, $to, $exact);
+
+        return $query->whereRaw('updated_at > DATE_ADD(created_at, INTERVAL 60 SECOND)');
+    }
 }
