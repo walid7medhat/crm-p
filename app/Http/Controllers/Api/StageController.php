@@ -717,7 +717,7 @@ class StageController extends Controller
             }
             // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
             UaeDateRange::apply($q, 'created_at', $request->created_from, $request->created_to, $request->created_at);
-            // Lead search "Modified On" — last update of the lead (updated_at).
+            // Lead search "Modified On" — a real change in the lead's history on those days.
             UaeDateRange::applyModified($q, $request->modified_from, $request->modified_to, $request->modified_at);
             $this->applyLeadSourceFilter($q, $request);
             $this->applyHasDuplicateFilter($q, $request);
@@ -942,7 +942,7 @@ class StageController extends Controller
             }
             // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
             UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
-            // Lead search "Modified On" — last update of the lead (updated_at).
+            // Lead search "Modified On" — a real change in the lead's history on those days.
             UaeDateRange::applyModified($leadsQuery, $request->modified_from, $request->modified_to, $request->modified_at);
             $this->applyLeadSourceFilter($leadsQuery, $request);
             $this->applyHasDuplicateFilter($leadsQuery, $request);

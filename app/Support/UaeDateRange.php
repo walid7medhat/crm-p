@@ -50,11 +50,18 @@ class UaeDateRange
         return $query;
     }
 
+    /** History actions that are not a modification of the lead. */
+    public const NON_MODIFYING_HISTORY_ACTIONS = ['view', 'created'];
+
     /**
-     * Lead search "Modified On": updated_at within the UAE days, and only leads that
-     * were actually edited after creation. A new lead's updated_at equals its
-     * created_at (or lands a moment later — store() saves it again right after
-     * create), so anything updated within a minute of creation is not "modified".
+     * Lead search "Modified On": the lead has a real change in its history
+     * (lead_histories) on those UAE days — an update, stage change, assignment,
+     * comment, activity… — not just a view or its creation entry.
+     *
+     * leads.updated_at can't be used: leads:score re-saves every lead every 10
+     * minutes (last_scored_at), so updated_at is always "now".
+     *
+     * $query must be an Eloquent Lead query (uses the `histories` relation).
      */
     public static function applyModified($query, $from = null, $to = null, $exact = null)
     {
@@ -62,8 +69,12 @@ class UaeDateRange
             return $query;
         }
 
-        self::apply($query, 'updated_at', $from, $to, $exact);
-
-        return $query->whereRaw('updated_at > DATE_ADD(created_at, INTERVAL 60 SECOND)');
+        return $query->whereHas('histories', function ($history) use ($from, $to, $exact) {
+            self::apply($history, 'lead_histories.created_at', $from, $to, $exact);
+            $history->where(function ($q) {
+                $q->whereNull('changes->action')
+                    ->orWhereNotIn('changes->action', self::NON_MODIFYING_HISTORY_ACTIONS);
+            });
+        });
     }
 }
