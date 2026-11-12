@@ -1,6 +1,5 @@
 import { ref, computed } from 'vue'
 import api, { setAuthToken } from '@/plugins/axios'
-import { API_ENDPOINTS } from '@/config/api'
 import { stopLocationTracking } from '@/composables/useLocationTracking'
 
 const IMPERSONATOR_TOKEN_KEY = 'impersonator_token'
@@ -42,7 +41,9 @@ function storeSessionUser(userData) {
 export function useImpersonation() {
   /** Super admin only — mint a token for `user` and switch into their session. */
   async function switchToUser(user) {
-    const response = await api.post(API_ENDPOINTS.USER_IMPERSONATE(user.id))
+    // Path is relative to axios baseURL (/api). Do not use API_ENDPOINTS here —
+    // those already include /api and would become /api/api/... with this client.
+    const response = await api.post(`/users/${user.id}/impersonate`)
     const { token, user: targetUser } = response.data?.data || {}
     if (!token || !targetUser) {
       throw new Error('Switch account did not return a token')
