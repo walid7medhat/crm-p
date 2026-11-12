@@ -32,6 +32,7 @@ class ImportBitrixUserLeads extends Command
         {--import : Create missing leads and update the ones already in the CRM}
         {--only-missing : With --import: only create missing leads, do not update existing ones}
         {--dry-run : Show, lead by lead, what --import would create / change — writes nothing}
+        {--stages : List every lead with its Bitrix24 stage and CRM stage — writes nothing}
         {--force : Do not ask for confirmation}';
 
     protected $description = 'Check / import the Bitrix24 leads of one user (responsible in Bitrix24)';
@@ -131,6 +132,11 @@ class ImportBitrixUserLeads extends Command
 
         $existing = $this->option('only-missing') ? [] : array_merge($otherOwner, $mine);
 
+        if ($this->option('stages')) {
+            $this->stagesReport($importer, $user, $b24Leads, $local, $title);
+            return self::SUCCESS;
+        }
+
         if ($this->option('dry-run')) {
             $this->dryRun($importer, $user, $b24Leads, $local, $missing, $existing, $deleted, $title, $show);
             return self::SUCCESS;
@@ -184,6 +190,69 @@ class ImportBitrixUserLeads extends Command
         $this->info("Created: {$created}   Updated: {$fixed}   Errors: {$errors}");
 
         return $errors ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * Every lead: Bitrix24 status, the CRM stage it maps to, and the CRM stage it has now.
+     * Plus a summary per Bitrix status → mapped CRM stage, to spot wrong mappings
+     * (e.g. a Bitrix "pool" status landing in Assigned).
+     */
+    private function stagesReport(Bitrix24LeadImporter $importer, User $user, array $b24Leads, $local, callable $title): void
+    {
+        $stageNames = \App\Models\Stage::pluck('name', 'id');
+        $rows = [];
+        $summary = [];
+        $counts = ['same' => 0, 'diff' => 0, 'missing' => 0, 'deleted' => 0];
+
+        foreach ($b24Leads as $id => $b) {
+            $code = (string) ($b['STATUS_ID'] ?? '');
+            $b24Name = $importer->statusName($code) ?? $code;
+            $mapped = $importer->resolveStageId($code);
+            $mappedName = $stageNames[$mapped] ?? ($mapped ?: '—');
+            $lead = $local[$id] ?? null;
+
+            if (! $lead) {
+                $crmNow = '— not in CRM';
+                $state = 'MISSING';
+                $counts['missing']++;
+            } elseif ($lead->deleted_at) {
+                $crmNow = ($stageNames[$lead->stage_id] ?? $lead->stage_id).' (deleted)';
+                $state = 'DELETED';
+                $counts['deleted']++;
+            } else {
+                $crmNow = $stageNames[$lead->stage_id] ?? (string) $lead->stage_id;
+                $same = (int) $lead->stage_id === (int) $mapped;
+                $state = $same ? 'OK' : 'DIFFERENT';
+                $counts[$same ? 'same' : 'diff']++;
+            }
+
+            $key = "{$b24Name} ({$code}) → {$mappedName}";
+            $summary[$key] = ($summary[$key] ?? 0) + 1;
+
+            $rows[] = [$id, $lead->id ?? '—', mb_substr($title($b), 0, 30), "{$b24Name} ({$code})", $mappedName, $crmNow, $state];
+        }
+
+        $this->newLine();
+        $this->line('<info>Bitrix status → CRM stage it maps to (all leads of this user):</info>');
+        arsort($summary);
+        $this->table(['Bitrix status → CRM stage', 'Leads'], collect($summary)->map(fn ($n, $k) => [$k, $n])->values()->all());
+
+        $this->table(['', 'Leads'], [
+            ['CRM stage = Bitrix stage', $counts['same']],
+            ['CRM stage different', $counts['diff']],
+            ['Not in CRM', $counts['missing']],
+            ['Deleted in CRM', $counts['deleted']],
+        ]);
+
+        // Different first, then missing, then the rest.
+        $order = ['DIFFERENT' => 0, 'MISSING' => 1, 'DELETED' => 2, 'OK' => 3];
+        usort($rows, fn ($a, $b) => $order[$a[6]] <=> $order[$b[6]]);
+
+        $this->table(['Bitrix ID', 'CRM lead', 'Title', 'Bitrix stage', 'Maps to CRM', 'CRM stage now', 'State'], $rows);
+
+        $file = storage_path('app/bitrix-user-'.$user->id.'-stages.txt');
+        file_put_contents($file, implode("\n", array_map(fn ($r) => implode("\t", $r), $rows))."\n");
+        $this->line("Saved to {$file}");
     }
 
     /**
