@@ -42,6 +42,7 @@
           </div>
           <span :key="stage.tasks.length" class="mk-col__count">{{ stage.tasks.length }}</span>
           <button
+            v-if="!stage.is_archive"
             type="button"
             class="mk-col__add"
             :title="`New card in ${stage.name}`"
@@ -51,8 +52,9 @@
           </button>
           <iconify-icon icon="lucide:chevron-down" class="mk-col__chev" />
         </div>
-        <div v-if="stage.is_done || overdueIn(stage)" class="mk-col__sub">
-          <span v-if="stage.is_done" class="mk-col__flag"><iconify-icon icon="lucide:flag" /> Finish line</span>
+        <div v-if="stage.is_archive || stage.is_done || overdueIn(stage)" class="mk-col__sub">
+          <span v-if="stage.is_archive" class="mk-col__flag"><iconify-icon icon="lucide:lock" /> Admins only</span>
+          <span v-else-if="stage.is_done" class="mk-col__flag"><iconify-icon icon="lucide:flag" /> Finish line</span>
           <span v-else class="mk-col__late"><iconify-icon icon="lucide:alarm-clock" /> {{ overdueIn(stage) }} overdue</span>
         </div>
       </header>
@@ -61,7 +63,7 @@
         v-show="!collapsed[stage.id]"
         :list="stage.tasks"
         item-key="id"
-        :group="`marketing-${category}`"
+        :group="{ name: `marketing-${category}`, put: !stage.is_archive }"
         class="mk-col__list"
         :animation="200"
         :delay="isTouch ? 180 : 0"
@@ -79,6 +81,7 @@
             :stage-done="stage.is_done"
             @open="$emit('open', $event)"
             @add-link="$emit('add-link', $event)"
+            @delete="$emit('delete', $event)"
           />
         </template>
       </draggable>
@@ -101,7 +104,7 @@ const props = defineProps({
     locked: { type: Boolean, default: false },
 
 })
-const emit = defineEmits(['move', 'open', 'create', 'add-link'])
+const emit = defineEmits(['move', 'open', 'create', 'add-link', 'delete'])
 
 function overdueIn(stage) {
   const today = isoDate(new Date())

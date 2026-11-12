@@ -113,7 +113,7 @@ class BookingController extends MarketingBaseController
             return response()->json(['message' => 'This booking is cancelled.'], 422);
         }
 
-        $stage = MarketingStage::where('category', 'production')->orderBy('sort_order')->orderBy('id')->first();
+        $stage = MarketingStage::firstOpen('production');
         if (! $stage) {
             return response()->json(['message' => 'The Production board has no stages yet.'], 422);
         }

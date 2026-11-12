@@ -96,6 +96,7 @@
       @open="openTask($event.id)"
       @create="openCreate"
       @add-link="openQuickLink"
+      @delete="archiveTask"
     />
     <MarketingCalendar
       v-else-if="activeTab === 'calendar'"
@@ -119,7 +120,7 @@
       :category="formTask?.category || activeTab"
       :task="formTask"
       :members="members"
-      :stages="stages"
+      :stages="formStages"
       :initial-stage-id="formStageId"
       @saved="onSaved"
     />
@@ -132,7 +133,7 @@
       :members="members"
       :can-manage="canManage"
       @updated="replaceTask"
-      @deleted="removeTask"
+      @deleted="onTaskDeleted"
       @moved="onDrawerMoved"
       @edit="openEdit"
       @schedule="openSchedule"
@@ -242,6 +243,8 @@ const drawerOpen = ref(false)
 const drawerTaskId = ref(null)
 const drawerTab = ref('details')
 const drawerStages = ref([])
+/** New cards never start in Archive. */
+const formStages = computed(() => stages.value.filter((s) => !s.is_archive))
 const linkOpen = ref(false)
 const linkTask = ref(null)
 const linkCelebrate = ref(true)
@@ -399,6 +402,33 @@ function removeTask(id) {
   }
 }
 
+/** Soft-delete lands in Archive — reload so admins see it there; others just lose the card. */
+function onTaskDeleted(id) {
+  if (canManage.value) loadBoard()
+  else removeTask(id)
+}
+
+async function archiveTask(task) {
+  if (!task?.can_delete) return
+  const res = await Swal.fire({
+    icon: 'warning',
+    title: 'Delete this card?',
+    text: 'It will be moved to Archive.',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    confirmButtonColor: '#dc2626',
+  })
+  if (!res.isConfirmed) return
+  try {
+    await api.delete(`/marketing/tasks/${task.id}`)
+    onTaskDeleted(task.id)
+    if (drawerOpen.value && drawerTaskId.value === task.id) drawerOpen.value = false
+    showCrmToast({ kind: 'deleted', headline: 'Card deleted', subtitle: task.title || '', chip: MARKETING_CATEGORIES[task.category]?.label })
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'Could not delete', text: apiError(err) })
+  }
+}
+
 function openCreate(stageId) {
   formTask.value = null
   formStageId.value = stageId
@@ -436,7 +466,7 @@ async function openTask(id, category = null, tab = 'details') {
     }
   }
   drawerStages.value = stagesCache[cat]
-    .map(({ id: sid, name, color, is_done }) => ({ id: sid, name, color, is_done }))
+    .map(({ id: sid, name, color, is_done, is_archive }) => ({ id: sid, name, color, is_done, is_archive }))
 
   const sameCard = drawerOpen.value && drawerTaskId.value === id
   drawerTab.value = tab

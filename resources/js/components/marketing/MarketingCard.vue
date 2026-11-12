@@ -18,6 +18,15 @@
       <h6 class="mk-card__title">{{ task.title }}</h6>
       <span v-if="task.source_task_id" class="mk-card__origin">Content</span>
       <span v-if="scheduled" class="mk-card__scheduled">Scheduled</span>
+      <button
+        v-if="task.can_delete"
+        type="button"
+        class="mk-card__del"
+        title="Delete / move to archive"
+        @click.stop="$emit('delete', task)"
+      >
+        <iconify-icon icon="lucide:trash-2" />
+      </button>
     </div>
 
     <img v-if="task.reference_image_url" class="mk-card__ref" :src="task.reference_image_url" alt="Reference" />
@@ -73,7 +82,7 @@ const props = defineProps({
   task: { type: Object, required: true },
   stageDone: { type: Boolean, default: false },
 })
-defineEmits(['open'])
+defineEmits(['open', 'delete'])
 
 const category = computed(() => MARKETING_CATEGORIES[props.task.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => (props.task.category === 'production' ? CONTENT_TYPES[props.task.type] : null))
@@ -177,6 +186,24 @@ const scheduled = computed(() => Number(props.task.posts_count || 0) > Number(pr
 }
 
 .mk-card__top { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.mk-card__del {
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.mk-card:hover .mk-card__del,
+.mk-card:focus-within .mk-card__del { opacity: 1; }
+.mk-card__del:hover { color: #fff; background: #dc2626; }
+@media (hover: none) { .mk-card__del { opacity: 1; } }
 .mk-card__check {
   width: 16px;
   height: 16px;

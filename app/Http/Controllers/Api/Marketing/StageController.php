@@ -39,6 +39,11 @@ class StageController extends MarketingBaseController
             'is_done' => ['sometimes', 'boolean'],
         ]);
 
+        // Archive is a system stage — keep the name/flags stable so soft-deletes keep working.
+        if ($stage->is_archive) {
+            unset($validated['name'], $validated['is_done']);
+        }
+
         $stage->update($validated);
 
         return response()->json(['stage' => $stage]);
@@ -64,7 +69,11 @@ class StageController extends MarketingBaseController
     /** A stage that still has cards needs a target stage (same board) to move them into. */
     public function destroy(Request $request, MarketingStage $stage): JsonResponse
     {
-        if (MarketingStage::where('category', $stage->category)->count() <= 1) {
+        if ($stage->is_archive) {
+            return response()->json(['message' => 'The Archive stage cannot be deleted.'], 422);
+        }
+
+        if (MarketingStage::where('category', $stage->category)->where('is_archive', false)->count() <= 1) {
             return response()->json(['message' => 'A board needs at least one stage.'], 422);
         }
 
@@ -73,7 +82,10 @@ class StageController extends MarketingBaseController
         if ($count > 0) {
             $targetId = $request->input('move_to_stage_id');
             $target = $targetId
-                ? MarketingStage::where('category', $stage->category)->where('id', '!=', $stage->id)->find($targetId)
+                ? MarketingStage::where('category', $stage->category)
+                    ->where('id', '!=', $stage->id)
+                    ->where('is_archive', false)
+                    ->find($targetId)
                 : null;
 
             if (!$target) {

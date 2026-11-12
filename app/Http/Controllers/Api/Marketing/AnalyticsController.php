@@ -33,14 +33,19 @@ class AnalyticsController extends MarketingBaseController
 
         $stages = MarketingStage::query()
             ->when($category, fn ($q) => $q->where('category', $category))
+            ->where('is_archive', false)
             ->orderBy('sort_order')->get();
         $doneStageIds = $stages->where('is_done', true)->pluck('id');
         $revisionStageIds = $stages->filter(fn ($s) => stripos($s->name, 'revision') !== false)->pluck('id');
+        $archiveStageIds = MarketingStage::query()
+            ->when($category, fn ($q) => $q->where('category', $category))
+            ->where('is_archive', true)
+            ->pluck('id');
 
         $tasks = MarketingTask::query()
             ->when($category, fn ($q) => $q->where('category', $category))
+            ->whereNotIn('stage_id', $archiveStageIds)
             ->get(['id', 'category', 'type', 'stage_id', 'assigned_to', 'shooting_by', 'editing_by', 'created_at', 'completed_at']);
-
         $doneInPeriod = $tasks->filter(fn ($t) => $t->completed_at && $t->completed_at->between($from, $to));
         $createdInPeriod = $tasks->filter(fn ($t) => $t->created_at && $t->created_at->between($from, $to));
 

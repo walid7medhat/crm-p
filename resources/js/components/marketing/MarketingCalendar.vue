@@ -2,9 +2,9 @@
   <div class="mk-cal">
     <div class="mk-cal__bar">
       <div class="mk-cal__nav">
-        <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" title="Previous 2 weeks" @click="shift(-14)"><iconify-icon icon="lucide:chevron-left" /></button>
+        <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" title="Previous 4 weeks" @click="shift(-VISIBLE_DAYS)"><iconify-icon icon="lucide:chevron-left" /></button>
         <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm" @click="goToday">Today</button>
-        <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" title="Next 2 weeks" @click="shift(14)"><iconify-icon icon="lucide:chevron-right" /></button>
+        <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" title="Next 4 weeks" @click="shift(VISIBLE_DAYS)"><iconify-icon icon="lucide:chevron-right" /></button>
         <h5 class="mk-cal__range">{{ rangeLabel }}</h5>
       </div>
       <div class="mk-cal__stats">
@@ -131,6 +131,9 @@ function mondayOf(d) {
   return x
 }
 
+/** Show 4 weeks (current 2 + 2 more) so the scroller can reveal the extra weeks. */
+const VISIBLE_DAYS = 28
+
 const start = ref(mondayOf(new Date()))
 const posts = ref([])
 const loading = ref(false)
@@ -144,12 +147,16 @@ const dropKey = ref('')
 /** Survives dragend so the drop handler still knows which post moved. */
 let activeDragId = null
 
-const days = computed(() => Array.from({ length: 14 }, (_, i) => {
+const days = computed(() => Array.from({ length: VISIBLE_DAYS }, (_, i) => {
   const d = new Date(start.value)
   d.setDate(d.getDate() + i)
   return { iso: isoDate(d), weekend: d.getDay() === 0 || d.getDay() === 6 }
 }))
-const rangeLabel = computed(() => `${formatDate(days.value[0].iso, { day: '2-digit', month: 'short' })} – ${formatDate(days.value[13].iso, { day: '2-digit', month: 'short', year: 'numeric' })}`)
+const rangeLabel = computed(() => {
+  const first = days.value[0]
+  const last = days.value[days.value.length - 1]
+  return `${formatDate(first.iso, { day: '2-digit', month: 'short' })} – ${formatDate(last.iso, { day: '2-digit', month: 'short', year: 'numeric' })}`
+})
 const visiblePlatforms = computed(() => Object.entries(PLATFORMS)
   .filter(([key]) => !props.platform || key === props.platform)
   .map(([key, p]) => ({ key, ...p })))
@@ -234,7 +241,12 @@ async function load() {
   loading.value = true
   try {
     const { data } = await api.get('/marketing/calendar', {
-      params: { from: days.value[0].iso, to: days.value[13].iso, search: props.search || undefined, platform: props.platform || undefined },
+      params: {
+        from: days.value[0].iso,
+        to: days.value[days.value.length - 1].iso,
+        search: props.search || undefined,
+        platform: props.platform || undefined,
+      },
     })
     if (mine === seq) posts.value = data.posts
   } catch (err) {

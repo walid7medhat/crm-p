@@ -60,7 +60,13 @@ class TaskController extends MarketingBaseController
         return response()->json([
             'task' => MarketingPresenter::task($task) + [
                  'mentioned_me' => $hadMention,
-                'stage' => $task->stage ? ['id' => $task->stage->id, 'name' => $task->stage->name, 'color' => $task->stage->color, 'is_done' => $task->stage->is_done] : null,
+                'stage' => $task->stage ? [
+                    'id' => $task->stage->id,
+                    'name' => $task->stage->name,
+                    'color' => $task->stage->color,
+                    'is_done' => $task->stage->is_done,
+                    'is_archive' => (bool) $task->stage->is_archive,
+                ] : null,
                 'comments' => $comments->map(fn ($c) => MarketingPresenter::comment($c))->values(),
                 'histories' => $canSeeHistory
                     ? $task->histories->map(fn ($h) => MarketingPresenter::history($h))->values()
@@ -83,8 +89,8 @@ class TaskController extends MarketingBaseController
 
         $category = $validated['category'];
         $stage = isset($validated['stage_id'])
-            ? MarketingStage::where('category', $category)->find($validated['stage_id'])
-            : MarketingStage::where('category', $category)->orderBy('sort_order')->orderBy('id')->first();
+            ? MarketingStage::where('category', $category)->where('is_archive', false)->find($validated['stage_id'])
+            : MarketingStage::firstOpen($category);
 
         if (!$stage) {
             return response()->json(['message' => 'No stage found for this board. Ask an admin to add one.'], 422);
@@ -173,6 +179,15 @@ class TaskController extends MarketingBaseController
             return response()->json(['message' => 'Cards can only move between stages of the same board.'], 422);
         }
 
+        if ($target->is_archive) {
+            return response()->json(['message' => 'Use delete to move a card to Archive.'], 422);
+        }
+
+        $fromStage = $task->stage;
+        if ($fromStage?->is_archive && ! $this->isAdmin()) {
+            return response()->json(['message' => 'Only an admin can restore a card from Archive.'], 403);
+        }
+
         $fromStageId = $task->stage_id;
 
         DB::transaction(function () use ($task, $target, $fromStageId, $validated) {
@@ -247,37 +262,63 @@ class TaskController extends MarketingBaseController
         return response()->json(['task' => $this->fresh($task)]);
     }
 
-    /** Admin only (route middleware). */
+    /**
+     * Creator only: soft-delete by moving the card (and content mirrors) to Archive.
+     * Archive is visible only to admin / super_admin.
+     */
     public function destroy(MarketingTask $task): JsonResponse
     {
-        $image = $task->reference_image;
+        if ((int) $task->created_by !== (int) Auth::id()) {
+            return response()->json(['message' => 'You can only delete cards you created.'], 403);
+        }
 
-        DB::transaction(function () use ($task) {
-            if ($task->category === 'content' && !$task->source_task_id) {
-                MarketingTask::where('source_task_id', $task->id)->get()->each(function (MarketingTask $mirror) {
-                    MarketingHistoryRecorder::record($mirror, 'deleted');
-                    $mirror->delete();
-                });
-            } elseif ($task->source_task_id) {
-                $source = MarketingTask::find($task->source_task_id);
-                if ($source) {
-                    if ($task->category === 'design') {
-                        $source->designed_by = null;
-                    }
-                    if ($task->category === 'production') {
-                        $source->also_video = false;
-                    }
-                    $source->save();
-                }
+        $archive = MarketingStage::archiveFor($task->category);
+        if (! $archive) {
+            return response()->json(['message' => 'Archive stage is missing. Ask an admin to restore it.'], 422);
+        }
+
+        if ((int) $task->stage_id === (int) $archive->id) {
+            return response()->json(['message' => 'Card is already archived.'], 422);
+        }
+
+        DB::transaction(function () use ($task, $archive) {
+            $cards = collect([$task]);
+
+            if ($task->category === 'content' && ! $task->source_task_id) {
+                $cards = $cards->merge(MarketingTask::where('source_task_id', $task->id)->get());
             }
 
-            MarketingHistoryRecorder::record($task, 'deleted');
-            $task->delete();
+            foreach ($cards as $card) {
+                $target = $card->id === $task->id
+                    ? $archive
+                    : (MarketingStage::archiveFor($card->category) ?: null);
+
+                if (! $target || (int) $card->stage_id === (int) $target->id) {
+                    continue;
+                }
+
+                $fromStageId = $card->stage_id;
+
+                MarketingTask::where('stage_id', $target->id)->increment('position');
+
+                $card->update([
+                    'stage_id' => $target->id,
+                    'position' => 0,
+                    'completed_at' => $card->completed_at ?? now(),
+                ]);
+
+                MarketingHistoryRecorder::record(
+                    $card,
+                    'deleted',
+                    MarketingHistoryRecorder::stageChange($fromStageId, $target->id)
+                );
+            }
         });
 
-        $this->forgetReferenceImage($image);
-
-        return response()->json(['message' => 'Card deleted.']);
+        return response()->json([
+            'message' => 'Card moved to archive.',
+            'task' => $this->fresh($task->fresh()),
+        ]);
     }
 
     private function rules(bool $creating, ?MarketingTask $task = null): array

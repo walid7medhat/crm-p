@@ -19,9 +19,12 @@
             class="mk-input mk-stage__name"
             :value="element.name"
             maxlength="60"
+            :readonly="element.is_archive"
+            :title="element.is_archive ? 'Archive name is locked' : ''"
             @change="update(element, { name: $event.target.value.trim() || element.name })"
           />
           <button
+            v-if="!element.is_archive"
             type="button"
             class="mk-stage__done"
             :class="{ on: element.is_done }"
@@ -30,8 +33,17 @@
           >
             <iconify-icon icon="lucide:flag" /> Done
           </button>
+          <span v-else class="mk-stage__done on" title="Soft-deleted cards land here — visible to admins only">
+            <iconify-icon icon="lucide:archive" /> Archive
+          </span>
           <span class="mk-stage__count">{{ element.tasks?.length ?? 0 }}</span>
-          <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon mk-stage__del" title="Delete stage" @click="remove(element)">
+          <button
+            v-if="!element.is_archive"
+            type="button"
+            class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon mk-stage__del"
+            title="Delete stage"
+            @click="remove(element)"
+          >
             <iconify-icon icon="lucide:trash-2" />
           </button>
         </div>
@@ -117,8 +129,13 @@ function add() {
 }
 
 async function remove(stage) {
+  if (stage.is_archive) {
+    Swal.fire({ icon: 'info', title: 'Archive cannot be deleted.' })
+    return
+  }
+
   const count = stage.tasks?.length ?? 0
-  const others = list.value.filter((s) => s.id !== stage.id)
+  const others = list.value.filter((s) => s.id !== stage.id && !s.is_archive)
   if (!others.length) {
     Swal.fire({ icon: 'info', title: 'A board needs at least one stage.' })
     return

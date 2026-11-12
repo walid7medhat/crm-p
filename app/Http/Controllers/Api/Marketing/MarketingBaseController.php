@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Auth;
  * Access rules for the Marketing workspace:
  * - permission `marketing` (or super_admin) => into the workspace (route middleware). Admins need
  *   the permission too — the admin role alone does not open Marketing.
- * - inside the workspace, roles admin / super_admin => stage management, deleting cards, daily report
+ * - inside the workspace, roles admin / super_admin => stage management, Archive stage, daily report
+ * - any marketing member may archive (soft-delete) a card they created themselves
  */
 abstract class MarketingBaseController extends Controller
 {

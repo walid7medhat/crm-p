@@ -28,13 +28,16 @@ class BoardController extends MarketingBaseController
         ]);
 
         $category = $validated['category'];
+        $canManage = $this->isAdmin();
 
         $stages = MarketingStage::where('category', $category)
+            ->when(! $canManage, fn ($q) => $q->where('is_archive', false))
             ->orderBy('sort_order')->orderBy('id')
             ->get();
 
         $query = MarketingTask::query()
             ->where('category', $category)
+            ->whereIn('stage_id', $stages->pluck('id'))
             ->with(MarketingPresenter::TASK_RELATIONS)
             ->withCount(MarketingPresenter::taskCounts())
             ->when($request->filled('date_from'), fn ($q) => $q->whereDate('created_at', '>=', $request->date_from))
@@ -99,11 +102,12 @@ class BoardController extends MarketingBaseController
                 'color' => $stage->color,
                 'icon' => $stage->icon,
                 'is_done' => $stage->is_done,
+                'is_archive' => (bool) $stage->is_archive,
                 'sort_order' => $stage->sort_order,
                 'tasks' => ($tasksByStage[$stage->id] ?? collect())
                     ->map(fn (MarketingTask $t) => MarketingPresenter::task($t))->values(),
             ])->values(),
-            'can_manage' => $this->isAdmin(),
+            'can_manage' => $canManage,
         ]);
     }
 

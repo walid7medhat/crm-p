@@ -3,12 +3,14 @@
 namespace App\Services\Marketing;
 
 use App\Models\MarketingCalendarPost;
+use App\Models\MarketingStage;
 use App\Models\MarketingTask;
 use App\Models\MarketingTaskComment;
 use App\Models\MarketingTaskHistory;
 use App\Models\MarketingTaskLink;
 use App\Models\User;
 use App\Notifications\MarketingMention;
+use Illuminate\Support\Facades\Auth;
 
 /** Single JSON shape for marketing records, shared by every endpoint. */
 class MarketingPresenter
@@ -74,6 +76,8 @@ class MarketingPresenter
             'due_date' => $task->due_date?->format('Y-m-d'),
             'completed_at' => $task->completed_at?->toIso8601String(),
             'created_by' => User::resolveDisplayName($task->creator),
+            'created_by_id' => $task->created_by ? (int) $task->created_by : null,
+            'can_delete' => self::canDelete($task),
             'created_at' => $task->created_at?->toIso8601String(),
             'updated_at' => $task->updated_at?->toIso8601String(),
             'links' => $task->relationLoaded('links') ? $task->links->map(fn ($l) => self::link($l))->values() : [],
@@ -82,6 +86,24 @@ class MarketingPresenter
             'posted_count' => (int) ($task->posted_count ?? 0),
             'mentioned_me' => in_array($task->id, self::mentionedTaskIds(), true),
         ];
+    }
+
+    /** Creator may archive their own card (unless it is already in Archive). */
+    public static function canDelete(MarketingTask $task): bool
+    {
+        $userId = Auth::id();
+        if (! $userId || (int) $task->created_by !== (int) $userId) {
+            return false;
+        }
+
+        if ($task->relationLoaded('stage') && $task->stage?->is_archive) {
+            return false;
+        }
+
+        static $archiveIds;
+        $archiveIds ??= MarketingStage::where('is_archive', true)->pluck('id')->all();
+
+        return ! in_array((int) $task->stage_id, array_map('intval', $archiveIds), true);
     }
 
     public static function link(MarketingTaskLink $link): array

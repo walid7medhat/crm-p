@@ -225,7 +225,7 @@ class MarketingTaskMirror
             return;
         }
 
-        $stage = MarketingStage::where('category', $category)->orderBy('sort_order')->orderBy('id')->first();
+        $stage = MarketingStage::firstOpen($category);
         if (!$stage) {
             $field = $category === 'design' ? 'designed_by' : 'also_video';
             $board = $category === 'design' ? 'Design' : 'Production';
@@ -257,7 +257,7 @@ class MarketingTaskMirror
     /** Drop a card at the top of the first stage on its board. */
     private static function placeOnFirstStage(MarketingTask $mirror): void
     {
-        $stage = MarketingStage::where('category', $mirror->category)->orderBy('sort_order')->orderBy('id')->first();
+        $stage = MarketingStage::firstOpen($mirror->category);
         if (!$stage) {
             throw ValidationException::withMessages([
                 'designed_by' => 'Add a stage on the Design board before sending this card there.',

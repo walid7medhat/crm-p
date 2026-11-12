@@ -33,6 +33,7 @@ export const DELIVERABLES = {
   cover: { label: 'Cover', color: '#3F8C6B', grad: 'linear-gradient(135deg, #5CAE89 0%, #33785B 100%)' },
   sales_story: { label: 'Sales Story', color: '#2A8C99', grad: 'linear-gradient(135deg, #47AEBB 0%, #237683 100%)' },
   landing_page: { label: 'Landing Page', color: '#5B6BCF', grad: 'linear-gradient(135deg, #7B8AE8 0%, #4A58B8 100%)' },
+  media_coverage: { label: 'Media Coverage', color: '#C45C26', grad: 'linear-gradient(135deg, #E07A45 0%, #A84A1C 100%)' },
   other: { label: 'Other', color: '#64748B', grad: 'linear-gradient(135deg, #94A3B8 0%, #475569 100%)' },
 };
 

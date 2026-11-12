@@ -1090,7 +1090,8 @@ Route::middleware(['jwt.auth', 'role_or_permission:super_admin|photo-booking'])-
 // ================= Marketing workspace =================
 // `marketing` permission (or super_admin) => boards, cards, links, comments, calendar, analytics.
 // Admins are NOT let in by role alone — an admin needs the `marketing` permission like anyone else.
-// Stage management, deleting cards and the daily report => admin / super_admin (inside the gate above).
+// Stage management, Archive visibility and the daily report => admin / super_admin (inside the gate above).
+// Any marketing member can archive a card they created (DELETE /tasks/{task} moves it to Archive).
 Route::middleware(['jwt.auth', 'role_or_permission:super_admin|marketing'])->prefix('marketing')->group(function () {
     Route::get('/board', [MarketingBoardController::class, 'board']);
     Route::get('/members', [MarketingBoardController::class, 'members']);
@@ -1101,6 +1102,7 @@ Route::middleware(['jwt.auth', 'role_or_permission:super_admin|marketing'])->pre
     Route::put('/tasks/{task}', [MarketingTaskController::class, 'update']);
     Route::post('/tasks/{task}/move', [MarketingTaskController::class, 'move']);
     Route::post('/tasks/{task}/approve', [MarketingTaskController::class, 'approve']);
+    Route::delete('/tasks/{task}', [MarketingTaskController::class, 'destroy']);
     Route::post('/tasks/{task}/links', [MarketingTaskLinkController::class, 'store']);
     Route::delete('/tasks/{task}/links/{link}', [MarketingTaskLinkController::class, 'destroy']);
     Route::post('/tasks/{task}/comments', [MarketingTaskCommentController::class, 'store']);
@@ -1118,7 +1120,6 @@ Route::middleware(['jwt.auth', 'role_or_permission:super_admin|marketing'])->pre
     Route::delete('/calendar/{post}', [MarketingCalendarController::class, 'destroy']);
 
     Route::middleware('role:super_admin|admin')->group(function () {
-        Route::delete('/tasks/{task}', [MarketingTaskController::class, 'destroy']);
         Route::post('/stages', [MarketingStageController::class, 'store']);
         Route::post('/stages/reorder', [MarketingStageController::class, 'reorder']);
         Route::put('/stages/{stage}', [MarketingStageController::class, 'update']);

@@ -21,7 +21,7 @@
                 <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" title="Edit" @click="$emit('edit', task)">
                   <iconify-icon icon="lucide:pencil" />
                 </button>
-                <button v-if="canManage" type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon mk-drawer__del" title="Delete card" @click="remove">
+                <button v-if="canDelete" type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon mk-drawer__del" title="Delete / move to archive" @click="remove">
                   <iconify-icon icon="lucide:trash-2" />
                 </button>
                 <button type="button" class="mk-btn mk-btn--ghost mk-btn--sm mk-btn--icon" title="Close" @click="close">
@@ -32,7 +32,7 @@
               <div class="mk-drawer__actions">
                 <MkSelect
                   :model-value="task.stage_id"
-                  :options="stages.map((s) => ({ value: s.id, label: s.name, dot: s.color }))"
+                  :options="stageOptions"
                   :disabled="busy"
                   aria-label="Stage"
                   @change="changeStage"
@@ -340,9 +340,27 @@ const newLink = reactive({ url: '', label: '' })
 const newComment = ref('')
 const reassignTo = ref(null)
 
+function currentUser() {
+  try { return JSON.parse(localStorage.getItem('user') || 'null') } catch { return null }
+}
+
 const cat = computed(() => MARKETING_CATEGORIES[task.value?.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => CONTENT_TYPES[task.value?.type])
 const accent = computed(() => (task.value?.category === 'production' && type.value ? type.value.color : cat.value.color))
+/** Creator only — API flag first, then local fallback. Delete moves the card to Archive. */
+const canDelete = computed(() => {
+  if (!task.value) return false
+  if (task.value.stage?.is_archive) return false
+  if (typeof task.value.can_delete === 'boolean') return task.value.can_delete
+  const me = currentUser()
+  if (!me?.id || task.value.created_by_id == null) return false
+  return Number(task.value.created_by_id) === Number(me.id)
+})
+const me = currentUser()
+/** Archive is not a manual move target; keep it in the list only when the card is already there. */
+const stageOptions = computed(() => props.stages
+  .filter((s) => !s.is_archive || s.id === task.value?.stage_id)
+  .map((s) => ({ value: s.id, label: s.name, dot: s.color })))
 const pendingPosts = computed(() => (task.value?.posts || []).filter((p) => !p.is_posted))
 const tabs = computed(() => [
   { id: 'details', label: 'Details', icon: 'lucide:info' },
@@ -611,7 +629,7 @@ async function remove() {
   const res = await Swal.fire({
     icon: 'warning',
     title: 'Delete this card?',
-    text: `"${task.value.title}" will be removed from the board.`,
+    text: 'It will be moved to Archive.',
     showCancelButton: true,
     confirmButtonText: 'Delete',
     confirmButtonColor: '#dc2626',
@@ -685,9 +703,6 @@ function pickMention(m) {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 }
-const me = (() => {
-  try { return JSON.parse(localStorage.getItem('user') || 'null') } catch { return null }
-})()
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /** Mentions from the API, plus any @Member name found in the text. */
