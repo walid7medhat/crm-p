@@ -501,7 +501,9 @@ export default {
                                     avatar: this.currentUser.avatar,
                                     roles: this.currentUser.roles || [],
                                     permissions: this.currentUser.permissions || [],
-                                    role_name: this.currentUser.role_name || this.currentUser.roles?.[0]?.name || 'User'
+                                    role_name: this.currentUser.role_name || this.currentUser.roles?.[0]?.name || 'User',
+                                    is_listing_team: this.currentUser.is_listing_team,
+                                    is_dubai_listing_approver: this.currentUser.is_dubai_listing_approver,
                                 };
                                 
                                 localStorage.setItem('user', JSON.stringify(userToStore));

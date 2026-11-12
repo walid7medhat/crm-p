@@ -364,6 +364,8 @@ export default {
             permissions: userData.permissions,
             role_name: userData.role_name,
             is_listing_team: userData.is_listing_team,
+            // Dubai branch admin → "Need Approval Listings" menu (approves Dubai listings).
+            is_dubai_listing_approver: userData.is_dubai_listing_approver,
             admin_parent_name: userData.admin_parent_name,
           })
         );
