@@ -440,8 +440,8 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     ];
   }
 
-   // branch_admin: All Listings + Owners only — no My Listing / Notify Me / Requests /
-   // Hot Deals / Need Approval / Viewings.
+   // branch_admin: All Listings only — no My Listing / Notify Me / Requests / Hot Deals /
+   // Viewings. The Dubai branch admin also gets Need Approval (they approve Dubai listings).
    if (section === CRM_SECTIONS.LISTINGS && !isShowOnlyListing && user?.roles?.includes('branch_admin')) {
     const { listingTabCounts = {} } = ctx;
     const tabs = [
@@ -456,6 +456,16 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
         count: listingTabCounts.listings || 0,
       },
     ];
+    if (user?.is_dubai_listing_approver) {
+      tabs.push({
+        id: 'need-approve-requests',
+        label: 'Need Approval Listings',
+        type: 'route',
+        path: '/need-approve-requests',
+        matchPaths: ['/need-approve-requests'],
+        count: listingTabCounts.needApprove || 0,
+      });
+    }
     return withPropertyCompareTab(tabs);
   }
 

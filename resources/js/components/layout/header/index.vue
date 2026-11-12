@@ -1082,9 +1082,10 @@ const requestsItems = computed(() => {
 
     ]
   } else if ( isBranchAdmin.value) {
-    return [
-     
-    ]
+    // Only the Dubai branch admin approves listings (Dubai ones).
+    return user.value?.is_dubai_listing_approver
+      ? [{ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: c?.needapprove?.all || 0 }]
+      : [];
   } else {
     const items = [
       { path: '/my-requests', label: 'Inbound Request', colorClass: 'text-white w-auto', count: c?.requests?.all || 0 ,permission: 'listings-list'},

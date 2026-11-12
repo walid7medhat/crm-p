@@ -65,6 +65,9 @@ class UserResource extends JsonResource
             'children' => UserResource::collection($this->whenLoaded('children')),
             'addedBy' => new UserResource($this->whenLoaded('addedBy')),
             'is_listing_team'=>($this->is_listing_team ) || (auth()->check() &&(auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin'))),
+            // Dubai branch_admin approves Dubai listings → menus show "Need Approval Listings".
+            'is_dubai_listing_approver' => $this->roles->contains('name', 'branch_admin')
+                && app(\App\Services\Listing\ListingApprovalPolicy::class)->isDubaiApprover($this->resource),
             'biometric_code'=>$this->biometric_code,
             'branch' => $this->employeeProfile?->companyBranch?->name
                 ?: User::resolveDisplayName($this->admin_parent),
