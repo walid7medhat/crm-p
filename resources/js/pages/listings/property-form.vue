@@ -331,40 +331,7 @@
             </p>
           </div> -->
 
-          <!-- Developer NOC fee: shown for Ready and Off-Plan (outside the off-plan-only breakdown). -->
-          <div class="row gy-3 mt-1" v-if="showNocField && !isRentListing">
-            <div class="col-md-4">
-              <label class="form-label">
-                NOC Fees
-                <span class="text-muted fw-normal small">(AED)</span>
-                <span class="badge bg-info text-dark ms-2">{{ currentNocType }}</span>
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-light">
-                  <i class="fas fa-shield-alt text-muted"></i>
-                </span>
-                <input
-                  v-model.number="form.noc_fixed_amount"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  class="form-control bg-light"
-                  :disabled="true"
-                  placeholder="Enter NOC amount"
-                />
-              </div>
-              <small class="text-muted d-block mt-1">
-                <span v-if="showBreakdownFeatures">NOC fees must be covered by total installments.</span>
-                <span class="text-primary d-block">
-                  <i class="fas fa-info-circle"></i>
-                  From developer ({{ isDubaiListing ? 'Dubai' : 'Abu Dhabi' }}, {{ currentNocType }}):
-                  <strong>{{ formatAed(developerNocValue) }}</strong>
-                  <span v-if="isDubaiListing"> + 5% VAT</span>
-                </span>
-              </small>
-            </div>
-          </div>
-
+          <!-- Developer NOC fee is shown as the "NOC Fees" row of the Assignment deal costs table below. -->
           <div class="row gy-3 mt-1" v-if="showBreakdownFeatures">
             <div class="col-12">
               <div class="payment-calc-summary border rounded-3 p-3 bg-light">
@@ -702,6 +669,16 @@
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- Developer NOC: shown and totalled like the listing page / offer PDF (not a saved cost line). -->
+                  <tr v-if="nocFixedAmount > 0" class="assignment-expenses-noc-row">
+                    <td><span class="fw-semibold small">NOC Fees</span></td>
+                    <td class="d-none d-md-table-cell"><span class="text-muted small">—</span></td>
+                    <td><span class="text-muted small">Fixed (AED)</span></td>
+                    <td><span class="small">{{ formatAed(nocFixedAmount) }}</span></td>
+                    <td class="text-end text-nowrap">{{ formatAed(nocFixedAmount) }}</td>
+                    <td class="text-end text-nowrap">{{ nocVatForm > 0 ? formatAed(nocVatForm) : '—' }}</td>
+                    <td class="text-end text-nowrap fw-semibold">{{ formatAed(nocFixedAmount + nocVatForm) }}</td>
+                  </tr>
                   <tr v-for="line in assignmentExpenseLines" :key="line.id">
                     <td>
                       <input
@@ -791,16 +768,16 @@
             >
               <div class="col-4 col-md-4">
                 <div class="assignment-expenses-summary__label">Subtotal (excl. VAT)</div>
-                <div class="assignment-expenses-summary__value">{{ formatAed(assignmentExpensesSubtotal) }}</div>
+                <div class="assignment-expenses-summary__value">{{ formatAed(assignmentExpensesSubtotal + nocFixedAmount) }}</div>
               </div>
               <div class="col-4 col-md-4">
                 <div class="assignment-expenses-summary__label">Total VAT (5%)</div>
-                <div class="assignment-expenses-summary__value">{{ formatAed(assignmentExpensesTotalVat) }}</div>
+                <div class="assignment-expenses-summary__value">{{ formatAed(assignmentExpensesTotalVat + nocVatForm) }}</div>
               </div>
               <div class="col-4 col-md-4">
                 <div class="assignment-expenses-summary__label">Grand total</div>
                 <div class="assignment-expenses-summary__value assignment-expenses-summary__value--grand">
-                  {{ formatAed(assignmentExpensesGrandTotal) }}
+                  {{ formatAed(assignmentExpensesGrandTotal + nocFixedAmount + nocVatForm) }}
                 </div>
               </div>
             </div>
@@ -2013,7 +1990,7 @@ import { requiresPlotSize } from "@/composables/listingPlotSize";
 import { hidesBedsBaths } from "@/composables/listingPropertyType";
 import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
 import { isBuildingType } from "@/composables/listingBuilding";
-import { isDubaiArea, developerNocFee, isOffPlanStatus, withDefaultDealCostLines } from "@/utils/dealCostRules";
+import { isDubaiArea, developerNocFee, isOffPlanStatus, withDefaultDealCostLines, nocVatAmount } from "@/utils/dealCostRules";
 
 import Swal from "sweetalert2";
 const { proxy } = getCurrentInstance();
@@ -2573,6 +2550,8 @@ const nocRequiredAed = computed(() => {
 const nocFixedAmount = computed(() => {
   return Number(form.value.noc_fixed_amount || 0);
 });
+// Dubai NOC is quoted + 5% VAT (costs table row + totals).
+const nocVatForm = computed(() => nocVatAmount(nocFixedAmount.value, isDubaiListing.value));
 const nocRequirementMet = computed(() => {
   const required = nocRequiredAed.value;
   if (required <= 0) return true;

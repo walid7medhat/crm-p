@@ -145,9 +145,9 @@
                  
                   <tr class="pd-total-row">
                     <td colspan="2"><strong>Total</strong></td>
-                    <td class=""><strong>{{ formatAed(assignmentExpensesSubtotal) }}</strong></td>
-                    <td class=""><strong>{{ formatAed(assignmentExpensesTotalVat) }}</strong></td>
-                    <td class=""><strong>{{ formatAed(expensesGrandTotalDisplay) }}</strong></td>
+                    <td class=""><strong>{{ formatAed(Number(assignmentExpensesSubtotal || 0) + nocRowAmount) }}</strong></td>
+                    <td class=""><strong>{{ formatAed(Number(assignmentExpensesTotalVat || 0) + nocRowVat) }}</strong></td>
+                    <td class=""><strong>{{ formatAed(expensesGrandTotalDisplay + nocRowAmount + nocRowVat) }}</strong></td>
                   </tr>
                 </tbody>
               </table>
@@ -362,10 +362,14 @@ const expenseNoteLines = computed(() => {
 });
 
 const expensesGrandTotalDisplay = computed(() => {
-  if (Number(props.assignmentExpensesGrandTotal) > 0) return props.assignmentExpensesGrandTotal;
+  if (Number(props.assignmentExpensesGrandTotal) > 0) return Number(props.assignmentExpensesGrandTotal);
   const rows = Array.isArray(props.assignmentExpenseRows) ? props.assignmentExpenseRows : [];
   return rows.reduce((sum, row) => sum + expenseLineTotal(row), 0);
 });
+// The NOC row is part of the cost totals (same as the listing page and offer PDF).
+// The *_Subtotal/TotalVat/GrandTotal props are the cost lines only.
+const nocRowAmount = computed(() => (Number(props.nocFixedAmount) > 0 ? Number(props.nocFixedAmount) : 0));
+const nocRowVat = computed(() => (nocRowAmount.value > 0 ? nocVat.value : 0));
 const nocAmount = computed(() => {
   const percentage = Number(props.nocPercentage || 0);
   const op = Number(props.originalPrice || 0);

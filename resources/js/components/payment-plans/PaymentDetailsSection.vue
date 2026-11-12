@@ -406,14 +406,15 @@ const expenseRows = computed(() =>
   }),
 );
 
+// Totals include the NOC row (same as the offer PDF).
 const expensesSubtotal = computed(() =>
-  expenseRows.value.reduce((sum, r) => sum + r.amount, 0),
+  expenseRows.value.reduce((sum, r) => sum + r.amount, 0) + nocFixedAmount.value,
 );
 const expensesTotalVat = computed(() =>
-  expenseRows.value.reduce((sum, r) => sum + r.vat, 0),
+  expenseRows.value.reduce((sum, r) => sum + r.vat, 0) + nocVat.value,
 );
 const expensesGrandTotal = computed(() =>
-  expenseRows.value.reduce((sum, r) => sum + r.total, 0),
+  expenseRows.value.reduce((sum, r) => sum + r.total, 0) + nocFixedAmount.value + nocVat.value,
 );
 
 // ✅ تحديث hasContent ليشمل NOC Percentage

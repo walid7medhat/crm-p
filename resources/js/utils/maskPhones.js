@@ -3,7 +3,7 @@
  * way Primary / Secondary Phone are hidden: keep the first 3 characters, star the rest.
  */
 
-const STAR = '★'
+const STAR = '*'
 
 // Links are left untouched (their ids / query strings are full of digits).
 const LINK_OR_PHONE =
