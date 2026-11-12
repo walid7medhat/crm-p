@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Rule-based next actions for leads a user is allowed to work.
@@ -81,21 +82,53 @@ class SalesActionCenterService
      */
     private function cachedCategorySummary(User $subject, ?string $search): array
     {
-        $cacheKey = 'sac:summary:v1:'.$subject->id.':'.md5((string) $search);
+        $cacheKey = 'sac:summary:v2:'.$subject->id.':'.md5((string) $search);
 
         return Cache::remember($cacheKey, 45, function () use ($subject, $search) {
+            $definitions = $this->categoryDefinitions();
+            $counts = $this->categoryCountsInOneRoundTrip($subject, $search, $definitions);
+
             $summary = [];
-            foreach ($this->categoryDefinitions() as $definition) {
+            foreach ($definitions as $definition) {
                 $summary[] = [
                     'key' => $definition['key'],
                     'title' => $definition['title'],
                     'description' => $definition['description'],
-                    'count' => $this->categoryQuery($subject, $definition['key'], $search)->count(),
+                    'count' => (int) ($counts[$definition['key']] ?? 0),
                 ];
             }
 
             return $summary;
         });
+    }
+
+    /**
+     * Preserve each category's exact filter SQL, but fetch all COUNTs in one
+     * UNION ALL round-trip instead of N sequential COUNT queries.
+     *
+     * @param  array<int, array{key: string, title: string, description: string}>  $definitions
+     * @return array<string, int>
+     */
+    private function categoryCountsInOneRoundTrip(User $subject, ?string $search, array $definitions): array
+    {
+        if ($definitions === []) {
+            return [];
+        }
+
+        $union = null;
+        foreach ($definitions as $definition) {
+            $inner = $this->categoryQuery($subject, $definition['key'], $search)->toBase();
+            $part = DB::query()
+                ->fromSub($inner, 'sac_cat')
+                ->selectRaw('? as category_key, COUNT(*) as aggregate_count', [$definition['key']]);
+
+            $union = $union ? $union->unionAll($part) : $part;
+        }
+
+        return $union
+            ->get()
+            ->mapWithKeys(fn ($row) => [(string) $row->category_key => (int) $row->aggregate_count])
+            ->all();
     }
 
     /**

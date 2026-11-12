@@ -7,12 +7,18 @@
  * This composable captures when the already-authenticated CRM becomes active
  * (layout shown / tab visible again) and polls while visible. It does not run
  * when the tab/PWA is hidden, suspended, or closed.
+ *
+ * Phase 2.5: single-flight, skip unchanged coords, client cool-down, 429 backoff.
  */
 import api, { resolveAuthToken } from '@/plugins/axios'
 import { captureDeviceLocation } from '@/utils/deviceLocation.mjs'
 
 const DEFAULT_INTERVAL_MS = 180_000
 const DEFAULT_ONLINE_WINDOW_MS = 15 * 60_000
+/** Client-side minimum gap between POSTs (aligned with server write_cooldown). */
+const MIN_POST_GAP_MS = 45_000
+/** Skip POST when movement is below this (metres). */
+const MIN_MOVE_METERS = 50
 
 let started = false
 let timerId = null
@@ -25,6 +31,11 @@ let settingsPromise = null
 let hiddenAt = null
 /** Last successful location POST (ms). Used to detect offline → online gaps. */
 let lastPostedAt = null
+/** Last successfully posted coordinates. */
+let lastPostedCoords = null
+/** Do not POST until this timestamp (429 / Retry-After). */
+let backoffUntil = 0
+let backoffMs = 0
 
 function isAuthenticated() {
   try {
@@ -41,6 +52,20 @@ function isImpersonating() {
   } catch {
     return false
   }
+}
+
+function haversineMeters(a, b) {
+  if (!a || !b) return Infinity
+  const toRad = (d) => (d * Math.PI) / 180
+  const R = 6371000
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLng = toRad(b.longitude - a.longitude)
+  const lat1 = toRad(a.latitude)
+  const lat2 = toRad(b.latitude)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
 async function loadSettings() {
@@ -77,9 +102,32 @@ function shouldMarkSessionStart() {
   return false
 }
 
+function shouldSkipUnchanged(coords, sessionStart) {
+  if (sessionStart) return false
+  if (!lastPostedCoords || lastPostedAt == null) return false
+  const moved = haversineMeters(lastPostedCoords, coords)
+  if (moved >= MIN_MOVE_METERS) return false
+  return Date.now() - lastPostedAt < Math.max(intervalMs, MIN_POST_GAP_MS)
+}
+
+function applyBackoffFromError(error) {
+  const status = error?.response?.status
+  if (status !== 429) return
+  const retryAfter = Number(error?.response?.headers?.['retry-after'])
+  const fromHeader = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 0
+  backoffMs = fromHeader || Math.min(Math.max(backoffMs * 2 || 15_000, 15_000), 120_000)
+  backoffUntil = Date.now() + backoffMs
+}
+
 async function postFix(coords, { sessionStart = false } = {}) {
   // Re-check: a capture started before "switch account" may resolve after it.
   if (!coords || !isAuthenticated() || isImpersonating()) return
+  if (Date.now() < backoffUntil) return
+  if (!sessionStart && lastPostedAt != null && Date.now() - lastPostedAt < MIN_POST_GAP_MS) {
+    return
+  }
+  if (shouldSkipUnchanged(coords, sessionStart)) return
+
   try {
     await api.post('/auth/location', {
       latitude: coords.latitude,
@@ -89,14 +137,30 @@ async function postFix(coords, { sessionStart = false } = {}) {
       session_start: sessionStart || undefined,
     })
     lastPostedAt = Date.now()
-  } catch {
-    /* Soft-fail: offline / denied / validation must not break the CRM. */
+    lastPostedCoords = {
+      latitude: Number(coords.latitude),
+      longitude: Number(coords.longitude),
+    }
+    backoffMs = 0
+    backoffUntil = 0
+  } catch (error) {
+    applyBackoffFromError(error)
+    /* Soft-fail: offline / denied / validation / 429 must not break the CRM. */
   }
 }
 
-async function captureAndSend({ sessionStart = false } = {}) {
+async function captureAndSend({ sessionStart = false, force = false } = {}) {
   if (inFlight || document.hidden || !isAuthenticated() || isImpersonating()) return
   if (!navigator?.geolocation || window.isSecureContext === false) return
+  if (!force && Date.now() < backoffUntil) return
+  if (
+    !force &&
+    !sessionStart &&
+    lastPostedAt != null &&
+    Date.now() - lastPostedAt < MIN_POST_GAP_MS
+  ) {
+    return
+  }
 
   const markStart = sessionStart || shouldMarkSessionStart()
   inFlight = true
@@ -157,8 +221,12 @@ export async function startLocationTracking() {
   }
 
   if (!document.hidden) {
-    // Capture now: page restore, reconnect, or first paint of an existing JWT session.
-    captureAndSend({ sessionStart: shouldMarkSessionStart() })
+    // Avoid hammering /auth/location when showLayout re-triggers start.
+    const recentlyPosted =
+      lastPostedAt != null && Date.now() - lastPostedAt < MIN_POST_GAP_MS
+    if (!recentlyPosted) {
+      captureAndSend({ sessionStart: shouldMarkSessionStart() })
+    }
     armTimer()
   }
 }
@@ -173,8 +241,8 @@ export function stopLocationTracking() {
   settingsPromise = null
   inFlight = false
   hiddenAt = null
-  // Keep lastPostedAt so a quick logout/login in the same tab still uses
-  // the server online-window rule; cleared on full page unload naturally.
+  // Keep lastPostedAt / lastPostedCoords so a quick logout/login in the same tab
+  // still respects cool-down; cleared on full page unload naturally.
 }
 
 export function pauseLocationTracking() {

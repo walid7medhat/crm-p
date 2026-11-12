@@ -9,6 +9,7 @@ use App\Models\Stage;
 use App\Models\User;
 use App\Services\SalesAction\SalesActionCenterService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -298,6 +299,43 @@ class SalesActionCenterTest extends TestCase
             ->firstWhere('lead_id', $answeredQuiet->id);
         $this->assertSame('call_again_after_silence', $row['key']);
         $this->assertStringContainsString('Answered', $row['card']['reason']);
+    }
+
+    public function test_category_summary_counts_match_recommendation_membership(): void
+    {
+        $agent = $this->makeUser('sales');
+        $assigned = $this->stageId(2);
+        $contacted = $this->stageId(3);
+        if (! $assigned || ! $contacted) {
+            $this->markTestSkipped('Required lead stages missing.');
+        }
+
+        $this->lead($agent, $assigned, [
+            'last_stage_change_at' => now()->subHours(3),
+            'first_contacted_at' => null,
+            'interaction_result' => null,
+        ]);
+        $overdueLead = $this->lead($agent, $contacted, [
+            'interaction_result' => 'no_answer',
+            'no_answer_count' => 3,
+        ]);
+        $this->activity($overdueLead, $agent, now()->subDay());
+
+        Cache::forget('sac:summary:v2:'.$agent->id.':'.md5(''));
+        $payload = $this->center($agent);
+        $summary = collect($payload['categories'])->keyBy('key');
+
+        foreach (['urgent_overdue', 'assigned_needs_first_contact', 'contacted_repeated_no_answer'] as $key) {
+            $listed = count($this->keys($agent, $key));
+            $this->assertSame(
+                $listed,
+                (int) ($summary[$key]['count'] ?? -1),
+                "Summary count for {$key} must match listed recommendations"
+            );
+        }
+
+        $this->assertGreaterThanOrEqual(1, (int) $summary['urgent_overdue']['count']);
+        $this->assertGreaterThanOrEqual(1, (int) $summary['assigned_needs_first_contact']['count']);
     }
 
     private function center(User $user, ?string $category = null): array

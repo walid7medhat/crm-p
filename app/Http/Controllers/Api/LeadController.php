@@ -2764,16 +2764,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                   ->orWhere('responsible_person_id', $user->id);
             });
             
-            // بحث باسم العميل
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('lead_name', 'like', "%{$search}%")
-                      ->orWhere('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('work_phone', 'like', "%{$search}%");
-                });
+            // Shared LeadTextSearch (phone digits, email, FULLTEXT/LIKE identity).
+            if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
+                LeadTextSearch::apply($query, (string) $request->search, [
+                    'comments' => false,
+                    'relations' => false,
+                    'admin' => true,
+                    'lean' => true,
+                ]);
             }
             
             // تصفية حسب المرحلة

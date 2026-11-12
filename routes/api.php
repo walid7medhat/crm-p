@@ -173,7 +173,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::middleware(['jwt.auth'])->group(function () {
-        Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:30,1');
+        Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:location-tracking');
         Route::get('location-settings', [AuthController::class, 'locationSettings']);
         Route::post('logout', [AuthController::class,'logout']);
         Route::get('notifications',[AuthController::class,'notifications']);

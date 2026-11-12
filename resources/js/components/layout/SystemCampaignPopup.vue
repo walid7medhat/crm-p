@@ -72,6 +72,8 @@ function unlockScroll() {
   scrollLocked = false
 }
 
+let dueInflight = null
+
 async function loadDue() {
   if (!resolveAuthToken()) return
   if (previewCampaign.value) return
@@ -80,16 +82,23 @@ async function loadDue() {
     return
   }
   if (current.value) return
-  try {
-    const response = await api.get('/system-campaigns/due')
-    const items = response?.data?.data
-    const list = (Array.isArray(items) ? items : []).filter((item) => !testedIds.has(item.id))
-    if (!list.length) return
-    current.value = list[0]
-    queue.value = list.slice(1)
-  } catch (error) {
-    console.warn('Unable to load announcements', error)
-  }
+  if (typeof document !== 'undefined' && document.hidden) return
+  if (dueInflight) return dueInflight
+  dueInflight = (async () => {
+    try {
+      const response = await api.get('/system-campaigns/due')
+      const items = response?.data?.data
+      const list = (Array.isArray(items) ? items : []).filter((item) => !testedIds.has(item.id))
+      if (!list.length) return
+      current.value = list[0]
+      queue.value = list.slice(1)
+    } catch (error) {
+      console.warn('Unable to load announcements', error)
+    } finally {
+      dueInflight = null
+    }
+  })()
+  return dueInflight
 }
 
 function acknowledge(campaign) {

@@ -6232,11 +6232,24 @@ async function applySearch(options = {}) {
 
     }
 
-    // Same search as the one already on the board (e.g. the live text search already ran it
-    // while typing, then the user pressed Search) — don't make the board load it again.
-    if (props.currentQuery && stableSearchKey(query) === stableSearchKey(props.currentQuery)) return
+    // Live typing (keepOpen): skip if identical to what's already on the board.
+    // Explicit Search click: allow intentional re-application (force refresh).
+    const keepOpen = !!options.keepOpen
+    if (
+        keepOpen
+        && props.currentQuery
+        && stableSearchKey(query) === stableSearchKey(props.currentQuery)
+    ) {
+        return
+    }
 
-    emit('search', { query, activePill: pillData, activeFilters, keepOpen: !!options.keepOpen })
+    emit('search', {
+        query,
+        activePill: pillData,
+        activeFilters,
+        keepOpen,
+        force: !keepOpen,
+    })
 
 }
 
@@ -7236,6 +7249,8 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 })
 
 // Live-apply core text fields as the user types (no Enter / Search click required).
+// Sole text debounce for the modal path (~350ms). Board fetch is immediate afterward.
+const LIVE_TEXT_SEARCH_MS = 350
 let liveTextSearchTimer = null
 watch(
     () => [
@@ -7255,7 +7270,7 @@ watch(
                 return
             }
             applySearch({ keepOpen: true })
-        }, 400) // wait for a real pause in typing, not every keystroke gap
+        }, LIVE_TEXT_SEARCH_MS)
     }
 )
 
@@ -7532,6 +7547,11 @@ onMounted(async () => {
 
 
 onBeforeUnmount(() => {
+
+    if (liveTextSearchTimer) {
+        clearTimeout(liveTextSearchTimer)
+        liveTextSearchTimer = null
+    }
 
     mobileSheetMedia?.removeEventListener('change', onMobileSheetMediaChange)
     setMobileSheetLock(false)

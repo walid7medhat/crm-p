@@ -111,10 +111,6 @@ return Application::configure(basePath: dirname(__DIR__))
                  ->cron('0 0 */60 * *') 
                  ->withoutOverlapping()
                  ->runInBackground();
-        $schedule->command('leads:score')
-            ->everyTenMinutes()
-            ->withoutOverlapping()
-            ->runInBackground();
             $schedule->command('attendance:sync')->everyFiveMinutes();
         $schedule->command('attendance:notify-absent')
             ->dailyAt('11:00')

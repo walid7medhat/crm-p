@@ -69,6 +69,13 @@ class AppServiceProvider extends ServiceProvider
                 ->by('account-emails:' . ($request->user()?->id ?? $request->ip()));
         });
 
+        // Isolated from other throttle:30,1 routes. Client cool-down is ~45–180s; 20/min
+        // still allows reconnect bursts without raising the global API throttle.
+        \Illuminate\Support\Facades\RateLimiter::for('location-tracking', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(20)
+                ->by('location-tracking:' . ($request->user()?->id ?? $request->ip()));
+        });
+
     //       Event::listen(MessageSending::class, function ($event) {
     //     \Log::info('📤 Sending Email', [
     //         'to' => $event->message->getTo(),

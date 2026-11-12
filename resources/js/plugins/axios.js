@@ -2,6 +2,7 @@ import axios from 'axios'
 import Swal from 'sweetalert2'
 import { waitForLeadBoardPriority } from '../composables/leadBoardPriority.js'
 import { getApiBaseUrl, getAppOrigin } from '../config/apiBaseUrl.js'
+import { attachRequestDiagnostics } from '../utils/requestDiagnostics.js'
 
 export { getApiBaseUrl, getAppOrigin }
 
@@ -200,6 +201,7 @@ const api = axios.create({
 })
 
 attachAuthInterceptor(api)
+attachRequestDiagnostics(api)
 
 // Keep the default axios singleton in sync for legacy `import axios from 'axios'`.
 axios.defaults.baseURL = getApiBaseUrl()
@@ -207,6 +209,7 @@ axios.defaults.headers.common['Accept'] = 'application/json'
 axios.defaults.headers.common['Content-Type'] = 'application/json'
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
 attachAuthInterceptor(axios)
+attachRequestDiagnostics(axios)
 
 export function getApiErrorMessage(error, fallback = 'Request failed') {
   return error?.response?.data?.message || error?.message || fallback

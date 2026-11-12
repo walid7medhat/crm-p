@@ -3,9 +3,30 @@ import App from './App.vue'
 import router from './router.js'
 import SearchableSelect from './components/ui/SearchableSelect.vue'
 import 'vue-select/dist/vue-select.css'
-import { Icon } from '@iconify/vue'
+import { Icon, addCollection } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken, forceInactiveLogout } from './plugins/axios.js'
+
+// Load lucide/heroicons as a separate chunk (not in main) so the CRM stops
+// calling api.iconify.design for those packs without bloating first paint.
+;(function loadLocalIconCollections() {
+  const run = () => {
+    Promise.all([
+      import('@iconify-json/lucide/icons.json'),
+      import('@iconify-json/heroicons/icons.json'),
+    ])
+      .then(([lucideMod, heroMod]) => {
+        addCollection(lucideMod.default || lucideMod)
+        addCollection(heroMod.default || heroMod)
+      })
+      .catch((e) => console.warn('Iconify local collections failed to load', e))
+  }
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(run, { timeout: 1500 })
+  } else {
+    setTimeout(run, 0)
+  }
+})()
 
 // CSS imports
 import '../css/app.css'

@@ -884,6 +884,11 @@ const hasAnySearchCriteria = computed(() => {
     return hasTextSearch || hasPills || hasQuery
 })
 
+/**
+ * Text debounce lives upstream (LeadSearchModal / navbar ~350ms).
+ * Always route immediately here so we do not stack a second 350ms timer in leads.vue.
+ * In-flight fingerprint dedupe in leads.vue coalesces duplicate watcher emits.
+ */
 // في Kanban.vue، أضف console.log للتتبع
 const onLeadSearch = (payload) => {
     console.log('📥 Kanban.onLeadSearch received:', payload)
@@ -891,7 +896,7 @@ const onLeadSearch = (payload) => {
     // Resolve the active component to forward the search to.
     // - 'leads' tab → leadsRef (kanban board)
     // - 'lead-pool' tab → leadPoolRef (paginated grid)
-    const routeToActiveLeadComponent = (query) => {
+    const routeToActiveLeadComponent = (query, { force = false } = {}) => {
         if (activeTab.value === 'lead-pool') {
             const poolComponent = Array.isArray(leadPoolRef.value) ? leadPoolRef.value[0] : leadPoolRef.value
             if (poolComponent && typeof poolComponent.setQuery === 'function') {
@@ -902,7 +907,7 @@ const onLeadSearch = (payload) => {
         if (leadsRef.value) {
             const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
             if (leadsComponent && typeof leadsComponent.fetchLeads === 'function') {
-                leadsComponent.fetchLeads(true, query || null)
+                leadsComponent.fetchLeads(true, query || null, { force: !!force })
             }
         }
     }
@@ -911,10 +916,12 @@ const onLeadSearch = (payload) => {
         activeFilter.value = null
         activeFilters.value = []
         lastQuery.value = null
-        routeToActiveLeadComponent(null)
+        routeToActiveLeadComponent(null, { force: true })
         return
     }
     const query = payload?.query !== undefined ? payload.query : payload
+    const force = !!payload?.force
+
     const pill = payload?.activePill
     if (pill) {
         activeFilter.value = { id: pill.id, label: pill.label }
@@ -923,7 +930,7 @@ const onLeadSearch = (payload) => {
     }
     activeFilters.value = Array.isArray(payload?.activeFilters) ? payload.activeFilters : []
     lastQuery.value = query && Object.keys(query).length ? { ...query } : null
-    routeToActiveLeadComponent(query)
+    routeToActiveLeadComponent(query, { force })
 }
 
 const onDealSearch = (payload) => {

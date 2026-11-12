@@ -40,6 +40,13 @@ return [
     ],
 
     /*
+    | When true, stages-with-leads enables DB::enableQueryLog() and writes
+    | detailed SQL samples to the kanban_perf channel. Keep false in production;
+    | enable temporarily only while profiling.
+    */
+    'kanban_perf_query_log' => (bool) env('KANBAN_PERF_QUERY_LOG', false),
+
+    /*
     | Heat chip totals only (not the board). 0 disables the cache.
     | Model events drop the version immediately; this TTL covers writes
     | that skip those events.

@@ -2389,11 +2389,19 @@ function leadCardIsVisible(lead) {
         && leadMatchesDuplicatesOnly(lead) && leadMatchesBlacklistOnly(lead)
 }
 
-/** Only text search and/or the navbar toggles: cards stay visible (live filter), no blocking overlay. */
+/** Text / field text and/or navbar toggles: cards stay visible (live filter), no blocking overlay. */
 function isSoftLiveFilter(params) {
     const keys = Object.keys(params || {})
     return keys.length > 0
-        && keys.every((key) => ['search', 'has_duplicate', 'has_blacklist'].includes(key))
+        && keys.every((key) => [
+            'search',
+            'lead_name',
+            'first_name',
+            'work_phone',
+            'email',
+            'has_duplicate',
+            'has_blacklist',
+        ].includes(key))
 }
 
 function leadMatchesLiveText(lead) {
@@ -2729,6 +2737,28 @@ const abortController = ref(null)
 const moreLeadsAbortController = ref(null)
 const fetchDebounceTimer = ref(null)
 let fetchGeneration = 0
+/** In-flight board request fingerprint — skip duplicate watcher emits only while pending. */
+let inFlightBoardFingerprint = null
+
+function normalizeBoardFingerprintValue(v) {
+    if (Array.isArray(v)) return v.map(normalizeBoardFingerprintValue).map(String).sort()
+    if (v && typeof v === 'object') {
+        return Object.keys(v).sort().reduce((acc, k) => {
+            const nv = normalizeBoardFingerprintValue(v[k])
+            if (nv === undefined || nv === null || nv === '' || (Array.isArray(nv) && !nv.length)) return acc
+            acc[k] = nv
+            return acc
+        }, {})
+    }
+    if (v === undefined || v === null || v === '') return undefined
+    return String(v)
+}
+
+/** Full effective board request identity: filters + heat shortcut + per_page (+ page when present). */
+function buildBoardFetchFingerprint(params = {}) {
+    return JSON.stringify(normalizeBoardFingerprintValue(params) || {})
+}
+
 let moreLeadsGeneration = 0
 
 // Stage editing state
@@ -2899,17 +2929,18 @@ const fetchLeads = async (immediate = false, queryOverride = undefined, options 
         fetchDebounceTimer.value = null
     }
     
-    // If not immediate, debounce rapid calls
+    // Debounce only for callers that pass immediate=false (legacy / non-search).
+    // Text search is debounced once upstream (modal/navbar ~350ms) and routes with immediate=true.
     if (!immediate) {
         return new Promise((resolve) => {
             fetchDebounceTimer.value = setTimeout(async () => {
-                await executeFetchLeads({ silent })
+                await executeFetchLeads({ silent, force: !!options.force })
                 resolve()
-            }, 300) // 300ms debounce
+            }, 350)
         })
     }
     
-    return executeFetchLeads({ silent })
+    return executeFetchLeads({ silent, force: !!options.force })
 }
 function closeStageModal() {
     showStageModal.value = false
@@ -3002,6 +3033,26 @@ function applyStagesWithLeadsResponse(response, params) {
 }
 
 const executeFetchLeads = async (options = {}) => {
+    const silent = !!options.silent
+    const force = !!options.force
+
+    const q = effectiveSearchParams.value
+    const params = {
+        // Smaller first page on free-text / duplicates → faster TTFB; load-more still available.
+        per_page: ((q.search && String(q.search).trim()) || q.has_duplicate || q.has_blacklist)
+            ? Math.min(Number(leadsPerPage.value) || 15, 12)
+            : leadsPerPage.value,
+        page: 1,
+        ...buildLeadSearchApiParams(q),
+    }
+    const fingerprint = buildBoardFetchFingerprint(params)
+
+    // Duplicate watcher/route emits while the same board request is already in flight.
+    // Completed requests may be re-applied (intentional Search / force refresh).
+    if (!force && isFetching.value && inFlightBoardFingerprint === fingerprint) {
+        return
+    }
+
     // Latest request wins: cancel older in-flight fetches instead of dropping
     // the newest user intent.
     if (abortController.value) {
@@ -3016,8 +3067,8 @@ const executeFetchLeads = async (options = {}) => {
 
     const generation = ++fetchGeneration
     abortController.value = new AbortController()
+    inFlightBoardFingerprint = fingerprint
     const hadColumns = columns.value.length > 0
-    const silent = !!options.silent
     const hasSearchCriteria =
         (appliedSearchParams.value && Object.keys(appliedSearchParams.value).length > 0) ||
         !!activeShortcutFilter.value
@@ -3035,16 +3086,6 @@ const executeFetchLeads = async (options = {}) => {
         }
     }
     try {
-        const q = effectiveSearchParams.value
-
-        const params = {
-            // Smaller first page on free-text / duplicates → faster TTFB; load-more still available.
-            per_page: ((q.search && String(q.search).trim()) || q.has_duplicate || q.has_blacklist)
-                ? Math.min(Number(leadsPerPage.value) || 15, 12)
-                : leadsPerPage.value,
-            ...buildLeadSearchApiParams(q),
-        }
-
         const prefetched = takeLeadBoardPrefetch(params)
         let response
         if (prefetched) {
@@ -3073,7 +3114,12 @@ const executeFetchLeads = async (options = {}) => {
         
     } catch (err) {
         if (generation !== fetchGeneration) return
-        if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+        // Axios v1 uses CanceledError / ERR_CANCELED; browsers may use AbortError.
+        const canceled =
+            err?.code === 'ERR_CANCELED' ||
+            err?.name === 'AbortError' ||
+            err?.name === 'CanceledError'
+        if (!canceled) {
             error.value = getApiErrorMessage(err, 'Failed to load data')
         }
     } finally {
@@ -3082,6 +3128,9 @@ const executeFetchLeads = async (options = {}) => {
         isSearching.value = false
         loading.value = false
         abortController.value = null
+        if (inFlightBoardFingerprint === fingerprint) {
+            inFlightBoardFingerprint = null
+        }
         markKanbanReady()
         window.dispatchEvent(new CustomEvent('kanban-lead-search-loading', { detail: { loading: false } }))
     }

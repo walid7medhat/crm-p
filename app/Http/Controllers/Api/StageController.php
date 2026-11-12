@@ -255,7 +255,9 @@ class StageController extends Controller
         $userRole = $user->roles()->first()?->name ?? 'sales';
         $perfStart = microtime(true);
 
-        DB::enableQueryLog();
+        if ($this->kanbanPerfQueryLogEnabled()) {
+            DB::enableQueryLog();
+        }
 
         // ================= stages allowed for this role =================
         $stageVisibility = DB::table('stage_visibility')
@@ -821,13 +823,12 @@ class StageController extends Controller
                 $q->where('purpose_buying', $request->purpose_buying);
             }
             if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
-                $assignedFrom = $request->assigned_from;
-                $assignedTo = $request->assigned_to;
-                $assignedDate = $request->assigned_at;
-                $q->whereHas('histories', function ($query) use ($assignedFrom, $assignedTo, $assignedDate) {
-                    $query->where('changes->action', 'assigned');
-                    UaeDateRange::apply($query, 'created_at', $assignedFrom, $assignedTo, $assignedDate);
-                });
+                $this->applyAssignedHistoryFilter(
+                    $q,
+                    $request->assigned_from,
+                    $request->assigned_to,
+                    $request->assigned_at
+                );
             }
             if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
                 LeadTextSearch::apply($q, (string) $request->search, [
@@ -1066,13 +1067,12 @@ class StageController extends Controller
                     $leadsQuery->where('purpose_buying', $request->purpose_buying);
                 }
                 if ($request->filled('assigned_from') || $request->filled('assigned_to') || $request->filled('assigned_at')) {
-                    $assignedFrom = $request->assigned_from;
-                    $assignedTo = $request->assigned_to;
-                    $assignedDate = $request->assigned_at;
-                    $leadsQuery->whereHas('histories', function($query) use ($assignedFrom, $assignedTo, $assignedDate) {
-                        $query->where('changes->action', 'assigned');
-                        UaeDateRange::apply($query, 'created_at', $assignedFrom, $assignedTo, $assignedDate);
-                    });
+                    $this->applyAssignedHistoryFilter(
+                        $leadsQuery,
+                        $request->assigned_from,
+                        $request->assigned_to,
+                        $request->assigned_at
+                    );
                 }
                 if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
                     LeadTextSearch::apply($leadsQuery->getQuery(), (string) $request->search, [
@@ -1588,24 +1588,57 @@ public function getOffices()
 
         return array_values(array_unique($ids));
     }
+    /**
+     * Assignment-date filter: lead_histories row with changes.action = assigned
+     * inside the UAE day range. Date predicates are applied before the JSON
+     * action check so MySQL can consider created_at indexes first; JSON action
+     * still cannot use a B-tree index (see Phase 2.5-B audit).
+     *
+     * Semantics unchanged vs whereHas('histories') — still assignment history,
+     * not current responsible_person_id.
+     */
+    private function applyAssignedHistoryFilter($leadsQuery, $assignedFrom, $assignedTo, $assignedDate): void
+    {
+        $leadsQuery->whereExists(function ($query) use ($assignedFrom, $assignedTo, $assignedDate) {
+            $query->selectRaw('1')
+                ->from('lead_histories')
+                ->whereColumn('lead_histories.lead_id', 'leads.id')
+                ->whereNull('lead_histories.deleted_at');
+
+            // Prefer range predicates before JSON extract (optimizer + readability).
+            UaeDateRange::apply($query, 'lead_histories.created_at', $assignedFrom, $assignedTo, $assignedDate);
+
+            $query->where('lead_histories.changes->action', 'assigned');
+        });
+    }
+
+    private function kanbanPerfQueryLogEnabled(): bool
+    {
+        return (bool) config('lead_scoring.kanban_perf_query_log', false);
+    }
+
     private function logKanbanPerf(Request $request, float $startedAt, ?string $error = null): void
-{
-    $queries = collect(DB::getQueryLog());
+    {
+        if (! $this->kanbanPerfQueryLogEnabled()) {
+            return;
+        }
 
-    \Log::channel('kanban_perf')->info('stages-with-leads', [
-        'user_id'      => auth()->id(),
-        'filters'      => $request->except(['page']),
-        'total_ms'     => round((microtime(true) - $startedAt) * 1000, 1),
-        'query_count'  => $queries->count(),
-        'query_ms_sum' => round($queries->sum('time'), 1),
-        'error'        => $error,
-        'slowest'      => $queries->sortByDesc('time')->take(8)->map(fn ($q) => [
-            'ms'  => round($q['time'], 1),
-            // Keep the log readable: long IN (...) lists are collapsed.
-            'sql' => preg_replace('/\(\s*(\?\s*,\s*)+\?\s*\)/', '(?...)', $q['query']),
-        ])->values()->all(),
-    ]);
+        $queries = collect(DB::getQueryLog());
 
-    DB::disableQueryLog();
-}
+        \Log::channel('kanban_perf')->info('stages-with-leads', [
+            'user_id'      => auth()->id(),
+            'filters'      => $request->except(['page']),
+            'total_ms'     => round((microtime(true) - $startedAt) * 1000, 1),
+            'query_count'  => $queries->count(),
+            'query_ms_sum' => round($queries->sum('time'), 1),
+            'error'        => $error,
+            'slowest'      => $queries->sortByDesc('time')->take(8)->map(fn ($q) => [
+                'ms'  => round($q['time'], 1),
+                // Keep the log readable: long IN (...) lists are collapsed.
+                'sql' => preg_replace('/\(\s*(\?\s*,\s*)+\?\s*\)/', '(?...)', $q['query']),
+            ])->values()->all(),
+        ]);
+
+        DB::disableQueryLog();
+    }
 }

@@ -687,6 +687,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import vSelect from 'vue-select'
 import 'vue-select/dist/vue-select.css'
 import api from '@/plugins/axios'
+import { fetchAreasReference, fetchPropertyTypesReference } from '@/services/referenceDataCache'
 import DateTimePicker from '../shared/DateTimePicker.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import { formatBudgetThousands, parseBudgetThousandsInput } from '@/utils/budgetInput'
@@ -1345,20 +1346,19 @@ const loadLookupData = () => {
     }
 
     lookupsLoading.value = true
-    // Load independently so a slow/failing areas call does not blank property types.
-    // Use has_listings=true — same fast path as Create Lead / Lead Info.
+    // Shared catalog cache + in-flight dedupe (Phase 2.5) — same payloads as before.
     lookupsPromise = Promise.all([
-        api.get('/listings/areas', { params: { has_listings: true } })
-            .then((areasRes) => {
-                areas.value = unwrapList(areasRes.data?.data ?? areasRes.data)
+        fetchAreasReference({ has_listings: true })
+            .then((rows) => {
+                areas.value = unwrapList(rows)
             })
             .catch((error) => {
                 console.error('Error loading areas:', error)
                 areas.value = []
             }),
-        api.get('/listings/property-types')
-            .then((typesRes) => {
-                propertyTypes.value = unwrapList(typesRes.data?.data ?? typesRes.data)
+        fetchPropertyTypesReference()
+            .then((rows) => {
+                propertyTypes.value = unwrapList(rows)
             })
             .catch((error) => {
                 console.error('Error loading property types:', error)
