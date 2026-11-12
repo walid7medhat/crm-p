@@ -341,6 +341,7 @@ const today = new Date()
           'Biometric Code',
           'biometric_code',
         ])
+        const lateCutoffRaw = this.pickField(row, ['Late Cutoff', 'late_cutoff'])
         const date = this.normalizeDate(dateRaw)
         const checkInMinutes = this.toMinutes(checkInRaw)
         const checkOutMinutes = this.toMinutes(checkOutRaw)
@@ -353,6 +354,7 @@ const today = new Date()
              biometricCode: biometricCode || '',
             employeeId: employeeId || '',
             department: department || '',
+            lateCutoffMinutes: this.toMinutes(lateCutoffRaw),
             byDate: new Map(),
           })
         }
@@ -441,7 +443,7 @@ const today = new Date()
             }
 
           // 3) Deduction only for actual attendance days
-          const deduction = this.getDeduction(minutes)
+          const deduction = this.getDeduction(minutes, employeeData.lateCutoffMinutes)
           weightedDeduction += deduction
           if (deduction === 10) d10 += 1
           else if (deduction === 25) d25 += 1
@@ -701,7 +703,8 @@ const today = new Date()
             (user.daily_breakdown || []).map((day) => ({
               'Employee Name': user.name,
               'Employee ID': user.employee_id || user.id || '',
-                  'Biometric Code': user.biometric_code || '', 
+                  'Biometric Code': user.biometric_code || '',
+              'Late Cutoff': user.late_cutoff || '',
 
               'Department':  user.department || '',
               Date: day.date,
@@ -875,7 +878,10 @@ const today = new Date()
       if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
       return hour * 60 + minute
     },
-    getDeduction(minutes) {
+    getDeduction(minutes, lateCutoffMinutes = null) {
+      // Dubai branch users get a later on-time cutoff (09:45) from the API.
+      const DUBAI_CUTOFF = 9 * 60 + 45
+      if (lateCutoffMinutes !== null && lateCutoffMinutes >= DUBAI_CUTOFF && minutes <= lateCutoffMinutes) return 0
       if (minutes <= 9 * 60 + 16) return 0
       if (minutes >= START_10 && minutes <= END_10) return 10
       if (minutes >= START_25 && minutes <= END_25) return 25

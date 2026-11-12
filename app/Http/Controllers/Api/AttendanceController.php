@@ -13,6 +13,47 @@ use App\Helpers\ApiResponse;
 
 class AttendanceController extends Controller
 {
+    /** Default late cutoff: check-in after this minute (H:i) is Late. */
+    private const LATE_CUTOFF_DEFAULT = '09:15';
+
+    /** Dubai branch users get a later cutoff (09:30–09:45 is not late). */
+    private const LATE_CUTOFF_DUBAI = '09:45';
+
+    /** @var array<int, bool> user id => is Dubai branch */
+    private array $dubaiBranchCache = [];
+
+    /**
+     * Dubai branch user: their branch node (the user right under super admin) is
+     * named "Dubai" — same rule as the Dubai listing approver — or their HR
+     * profile's company branch is a Dubai branch.
+     */
+    private function isDubaiBranchUser(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if (array_key_exists($user->id, $this->dubaiBranchCache)) {
+            return $this->dubaiBranchCache[$user->id];
+        }
+
+        $branch = $user->getBranchNode();
+        $isDubai = $branch && strcasecmp(trim((string) $branch->name), 'dubai') === 0;
+
+        if (!$isDubai) {
+            $companyBranch = (string) ($user->employeeProfile?->companyBranch?->name ?? '');
+            $isDubai = stripos($companyBranch, 'dubai') !== false;
+        }
+
+        return $this->dubaiBranchCache[$user->id] = $isDubai;
+    }
+
+    /** Last on-time check-in minute (H:i) for this user. */
+    private function lateCutoffFor(?User $user): string
+    {
+        return $this->isDubaiBranchUser($user) ? self::LATE_CUTOFF_DUBAI : self::LATE_CUTOFF_DEFAULT;
+    }
+
     /** Company-wide attendance views/reports are HR data — not for every logged-in agent. */
     private function ensureHrOrAdmin(): ?\Illuminate\Http\JsonResponse
     {
@@ -54,7 +95,7 @@ class AttendanceController extends Controller
                 continue;
             }
 
-            $status = $this->resolveStatus($row);
+            $status = $this->resolveStatus($row, $row['user'] ?? null);
             $checkIn = $this->parseDateTime($row['check_in'] ?? null);
             $checkOut = $this->parseDateTime($row['check_out'] ?? null);
 
@@ -120,7 +161,7 @@ class AttendanceController extends Controller
 
     $query = Attendance::query()
         ->with([
-            'user:id,name,email,avatar,status,biometric_code',
+            'user:id,name,email,avatar,status,biometric_code,parent_id',
             'user.employeeProfile:id,user_id,department_id,company_branch_id,employee_code',
             'user.employeeProfile.department:id,name',
             'user.employeeProfile.companyBranch:id,name',
@@ -175,10 +216,10 @@ class AttendanceController extends Controller
             'employee_id' => $attendance->employee_id,
             'biometric_code' => $attendance->user?->biometric_code,
             'employee_name' => $attendance->employee_name ?? $attendance->user?->name ?? 'Unknown',
-            'status' => $attendance->status ?: $this->resolveStatus([
-                'status' => null,
+            'status' => $this->resolveStatus([
+                'status' => $attendance->status,
                 'check_in' => $attendance->check_in,
-            ]),
+            ], $attendance->user),
             'check_in' => $attendance->check_in?->timezone('Asia/Dubai')->toDateTimeString(),
             'check_out' => $attendance->check_out?->timezone('Asia/Dubai')->toDateTimeString(),
             'date' => $attendance->date ? Carbon::parse($attendance->date)->toDateString() : null,
@@ -338,6 +379,7 @@ class AttendanceController extends Controller
                 'employee_id' => $user?->id ?? $bioCode,
                 'biometric_code' => $user?->biometric_code,
                 'user_id' => $user?->id,
+                'user' => $user,
                 'employee_name' => $user?->name ?: ($fallbackName ?: ($bioCode ?: 'Unknown')),
                 'email' => $user?->email,
                 'department' => $user?->employeeProfile?->department?->name,
@@ -363,21 +405,36 @@ class AttendanceController extends Controller
         }
     }
 
-    private function resolveStatus(array $row): string
+    private function resolveStatus(array $row, ?User $user = null): string
     {
         $status = strtolower((string) ($row['status'] ?? ''));
+        $checkInRaw = $row['check_in'] ?? null;
+
+        // Dubai branch: a check-in up to 09:45 is on time, even if the remote
+        // device (which uses the company-wide 09:15 rule) flagged it late.
+        if ($checkInRaw && $status !== 'absent' && $this->isDubaiBranchUser($user)) {
+            try {
+                $checkIn = $checkInRaw instanceof Carbon
+                    ? $checkInRaw->copy()->timezone('Asia/Dubai')
+                    : Carbon::parse($checkInRaw, 'Asia/Dubai');
+
+                return $checkIn->format('H:i') <= self::LATE_CUTOFF_DUBAI ? 'present' : 'late';
+            } catch (\Throwable $e) {
+                // fall through to the default rules
+            }
+        }
+
         if (in_array($status, ['present', 'absent', 'late'], true)) {
             return $status;
         }
 
-        $checkInRaw = $row['check_in'] ?? null;
         if (!$checkInRaw) {
             return 'absent';
         }
 
         try {
             $checkIn = Carbon::parse($checkInRaw, 'Asia/Dubai');
-            $lateBoundary = Carbon::parse($checkIn->toDateString() . ' 09:15:00');
+            $lateBoundary = Carbon::parse($checkIn->toDateString() . ' ' . self::LATE_CUTOFF_DEFAULT . ':00');
 
             return $checkIn->gt($lateBoundary) ? 'late' : 'present';
         } catch (\Throwable $e) {
@@ -416,7 +473,8 @@ class AttendanceController extends Controller
 
         // ✔️ users map
         $users = User::whereNotNull('biometric_code')
-            ->pluck('id', 'biometric_code');
+            ->get()
+            ->keyBy('biometric_code');
 
         $count = 0;
 
@@ -428,7 +486,8 @@ class AttendanceController extends Controller
 
             if (empty($item['emp_code'])) continue;
 
-            $userId = $users[$item['emp_code']] ?? null;
+            $rowUser = $users[$item['emp_code']] ?? null;
+            $userId = $rowUser?->id;
 
             if (!$userId) {
                 // $this->warn('User not found: ' . $item['emp_code']);
@@ -453,8 +512,11 @@ class AttendanceController extends Controller
                     'employee_name' => trim(
                         ($item['first_name'] ?? '') . ' ' . ($item['last_name'] ?? '')
                     ),
-                    'status' => !empty($item['status'])
-                        ? strtolower($item['status'])
+                    'status' => (!empty($item['status']) || $checkIn)
+                        ? $this->resolveStatus([
+                            'status' => $item['status'] ?? null,
+                            'check_in' => $checkIn,
+                        ], $rowUser)
                         : null,
                     'check_in' => $checkIn,
                     'check_out' => $checkOut,
@@ -834,12 +896,10 @@ private function syncUserAttendanceFromRemote(User $user, Carbon $startDate, Car
                 ? Carbon::parse($item['last_checkout'], 'Asia/Dubai')
                 : null;
 
-            $status = !empty($item['status'])
-                ? strtolower((string) $item['status'])
-                : $this->resolveStatus([
-                    'status' => null,
-                    'check_in' => $checkIn?->toDateTimeString(),
-                ]);
+            $status = $this->resolveStatus([
+                'status' => $item['status'] ?? null,
+                'check_in' => $checkIn?->toDateTimeString(),
+            ], $user);
 
             Attendance::updateOrCreate(
                 [
@@ -867,7 +927,8 @@ private function syncUserAttendanceFromRemote(User $user, Carbon $startDate, Car
  * Build attendance stats and daily breakdown for one user in a date range.
  *
  * Check-in at or before 09:15 (any second within that minute) is Present;
- * 09:16 or later is Late; no check-in on a weekday is Absent; Sunday is its
+ * 09:16 or later is Late (Dubai branch users: cutoff is 09:45, so 09:30–09:45
+ * is not late); no check-in on a weekday is Absent; Sunday is its
  * own Weekend status and isn't counted in total_working_days. No deduction
  * percentages. Days after today are left out entirely — they haven't
  * happened yet.
@@ -875,6 +936,7 @@ private function syncUserAttendanceFromRemote(User $user, Carbon $startDate, Car
 private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $endDate): array
 {
     $attendances = $this->attendancesForUserInRange($user, $startDate, $endDate);
+    $lateCutoff = $this->lateCutoffFor($user);
 
     $present = 0;
     $late = 0;
@@ -919,7 +981,7 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
             if ($checkInMinute === null) {
                 $status = 'Absent';
                 $absent++;
-            } elseif ($checkInMinute <= '09:15') {
+            } elseif ($checkInMinute <= $lateCutoff) {
                 $status = 'Present';
                 $present++;
             } else {
@@ -942,6 +1004,8 @@ private function buildUserPeriodReport(User $user, Carbon $startDate, Carbon $en
         'absent' => $absent,
         'weekend' => $weekend,
         'total_working_days' => $totalWorkingDays,
+        // Last on-time check-in minute (H:i) — 09:45 for Dubai branch, else 09:15.
+        'late_cutoff' => $lateCutoff,
         'daily_breakdown' => $dailyBreakdown,
     ];
 }

@@ -418,11 +418,11 @@
             <div v-if="attendanceLoading" class="adx-uni-skeleton adx-uni-skeleton--tall" />
             <template v-else>
               <div class="adx-uni-attendance-chips adx-click" role="link" tabindex="0" title="Open my profile" @click="go('/view-profile')" @keydown.enter="go('/view-profile')">
-                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good" title="Checked in at or before 9:15 AM">
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--good" :title="`Checked in at or before ${personalLateCutoffLabel}`">
                   <strong>{{ formatNumber(personalAttendance.present) }}</strong>
                   <span>Present</span>
                 </div>
-                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn" title="Checked in after 9:15 AM">
+                <div class="adx-uni-attendance-chip adx-uni-attendance-chip--warn" :title="`Checked in after ${personalLateCutoffLabel}`">
                   <strong>{{ formatNumber(personalAttendance.late) }}</strong>
                   <span>Late</span>
                 </div>
@@ -433,8 +433,8 @@
               </div>
               <p class="adx-uni-attendance-legend">
                 <iconify-icon icon="lucide:info" width="12" height="12" />
-                <strong>Present</strong> = in at or before 9:15&nbsp;AM ·
-                <strong>Late</strong> = in after 9:15&nbsp;AM ·
+                <strong>Present</strong> = in at or before {{ personalLateCutoffLabel }} ·
+                <strong>Late</strong> = in after {{ personalLateCutoffLabel }} ·
                 <strong>Absent</strong> = no check-in that day
               </p>
             </template>
@@ -476,7 +476,7 @@
                   <span
                     class="adx-uni-attendance-status"
                     :class="`adx-uni-attendance-status--${attendanceStatusTone(member)}`"
-                    title="P = Present (in at or before 9:15 AM) · L = Late · A = Absent"
+                    title="P = Present (in at or before 9:15 AM; Dubai branch 9:45 AM) · L = Late · A = Absent"
                   >
                     {{ member.present }}P · {{ member.late }}L · {{ member.absent }}A
                   </span>
@@ -1079,6 +1079,12 @@ const teamAttendanceRate = computed(() => Math.min(100, Math.round(Number(teamAt
 const teamRingDash = computed(() => Math.round((teamAttendanceRate.value / 100) * 327))
 
 const attendancePeriodLabel = computed(() => personalAttendance.value.label || '')
+
+// Per-user late cutoff from the API ("09:15" default, "09:45" for Dubai branch) → "9:15 AM".
+const personalLateCutoffLabel = computed(() => {
+  const [h, m] = String(personalAttendance.value.late_cutoff || '09:15').split(':').map(Number)
+  return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+})
 
 function attendanceStatusTone(member) {
   if (Number(member.absent) > 0) return 'danger'
