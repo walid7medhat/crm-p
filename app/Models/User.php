@@ -439,6 +439,16 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     }
 
     /**
+     * May set / change a lead's source to any value (full /sources list), not just the
+     * sales shortlist: super_admin / admin / branch_admin, or assign-branch-leads.
+     */
+    public function canEditLeadSource(): bool
+    {
+        return $this->hasAnyRole(['super_admin', 'admin', 'branch_admin'])
+            || $this->checkPermissionTo('assign-branch-leads');
+    }
+
+    /**
      * User ids this user may set as a lead's responsible person (below admin):
      * whole branch when canAssignInWholeBranch(), otherwise their lead scope — plus self.
      * Visibility (leadScopeUserIds) is NOT widened by this.

@@ -848,7 +848,12 @@
     
     const isSalesUser = ref(false)
     const isListingTeamUser = ref(false)
-    
+    const hasAllSourcesPermission = ref(false)
+    // Regular sales get the 3-option shortlist; listing-team sales and
+    // assign-branch-leads users get the full /sources list.
+    const usesSalesSourceShortlist = () =>
+        isSalesUser.value && !isListingTeamUser.value && !hasAllSourcesPermission.value
+
    const salesSourceOptions = [
             { value: 'My Self Network',    text: 'My Self Network' },
             { value: 'My Social Media App', text: 'My Social Media App' },
@@ -1237,6 +1242,8 @@ watch(selectedExistingClient, (client) => {
                 const role = user.roles.includes('sales')
                 isSalesUser.value = role
                 isListingTeamUser.value = !!user.is_listing_team
+                // assign-branch-leads: full source list, like listing-team sales.
+                hasAllSourcesPermission.value = (user.permissions || []).includes('assign-branch-leads')
                 console.log('Is sales user:', isSalesUser.value, 'Is listing team:', isListingTeamUser.value)
             }
         } catch (error) {
@@ -1256,7 +1263,7 @@ watch(selectedExistingClient, (client) => {
     const dynamicSourceOptions = computed(() => {
         // Listing-team sales users work off the full source list like non-sales users —
         // only regular sales are limited to the 3-option shortlist.
-        if (isSalesUser.value && !isListingTeamUser.value) {
+        if (usesSalesSourceShortlist()) {
             return salesSourceOptions
         }
         return sourceOptions.value
@@ -1477,7 +1484,7 @@ watch(selectedExistingClient, (client) => {
     const fetchSources = async () => {
         try {
             isLoadingSources.value = true
-            if (isSalesUser.value && !isListingTeamUser.value) {
+            if (usesSalesSourceShortlist()) {
                 sourceOptions.value = salesSourceOptions
                 return
             }

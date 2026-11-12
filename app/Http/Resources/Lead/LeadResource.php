@@ -348,8 +348,8 @@ $branchName =
             'can_edit' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || $this->responsible_person_id == auth()->user()->id || (auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)),
             'can_edit_phone_email' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']) || (auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)),
             'can_edit_primary_phone' => auth()->check() && (auth()->user()->hasAnyRole(['super_admin', 'admin']) || (auth()->user()->hasRole('sales') && auth()->user()->is_listing_team)),
-            // Lead source: super_admin / admin / branch_admin only (enforced in LeadController::update).
-            'can_edit_source' => auth()->check() && auth()->user()->hasAnyRole(['super_admin', 'admin', 'branch_admin']),
+            // Lead source: super_admin / admin / branch_admin / assign-branch-leads (enforced in LeadController::update).
+            'can_edit_source' => auth()->check() && auth()->user()->canEditLeadSource(),
             'can_delete' => auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin')),
             'raw_meta_data' => $rawMetaData,
             'facebook_questions_answers' => $facebookFields,

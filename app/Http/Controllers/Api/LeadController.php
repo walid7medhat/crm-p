@@ -879,7 +879,7 @@ class LeadController extends Controller
                 // edit form sends the current value back for everyone else — keep it). A change
                 // is recorded in the lead history by the "updated" log below (lead_source isn't
                 // in $ignoreKeys).
-                if (! $user->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
+                if (! $user->canEditLeadSource()) {
                     unset($leadData['lead_source']);
                 }
                 
