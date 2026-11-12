@@ -7,14 +7,17 @@
         role="status"
         aria-live="polite"
         aria-busy="true"
-        aria-label="Loading Alt CRM"
+        :aria-label="loaderLabel"
       >
         <div class="app-loader__panel">
           <div class="alt-boot__mark" aria-hidden="true">
             <span class="alt-boot__ring" />
-            <span class="alt-boot__core">A</span>
+            <span class="alt-boot__core">{{ productMark }}</span>
           </div>
-          <p class="app-loader__brand"><span>ALT</span> CRM</p>
+          <p class="app-loader__brand">
+            <template v-if="isLuxvant"><span>LUXVANT</span> CRM</template>
+            <template v-else><span>ALT</span> CRM</template>
+          </p>
           <p class="app-loader__text">{{ label }}</p>
           <div class="app-loader__progress" aria-hidden="true">
             <span class="app-loader__progress-line" />
@@ -26,6 +29,8 @@
 </template>
 
 <script setup>
+import { useBrand } from '@/composables/useBrand'
+
 defineOptions({ name: 'AppLoader' })
 
 defineProps({
@@ -38,6 +43,9 @@ defineProps({
     default: 'Loading...',
   },
 })
+
+const { isLuxvant, productMark, copy } = useBrand()
+const loaderLabel = copy.loader_label || 'Loading Alt CRM'
 
 const emit = defineEmits(['hidden'])
 

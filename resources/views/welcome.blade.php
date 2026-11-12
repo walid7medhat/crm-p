@@ -1,20 +1,31 @@
+@php
+    /** @var \App\Support\Brand\BrandContext $brandContext */
+    $brandContext = app(\App\Support\Brand\BrandContext::class);
+    if (!$brandContext->has()) {
+        $brandContext->set(app(\App\Support\Brand\BrandResolver::class)->resolveFromRequest(request()));
+    }
+    $brand = $brandContext->toFrontendArray();
+    $brandColors = $brandContext->colors();
+    $brandCssVars = $brandContext->cssVariableMap();
+    $brandLogos = $brandContext->logos();
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-brand="{{ $brand['key'] }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
         <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
-        <title>Alt CRM</title>
+        <title>{{ $brand['document_title'] }}</title>
         <link rel="manifest" href="/manifest.webmanifest">
-        <meta name="theme-color" content="#ffffff">
+        <meta name="theme-color" content="{{ $brandColors['primary'] ?? '#ffffff' }}">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="Alt CRM">
+        <meta name="apple-mobile-web-app-title" content="{{ $brand['product_name'] }}">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
-        <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/pwa/apple-touch-icon.png">
-        <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/pwa/icon-192.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ $brand['key'] === 'luxvant' ? ($brandLogos['favicon'] ?? '/assets/images/brands/luxvant/favicon.svg') : '/assets/images/pwa/apple-touch-icon.png' }}">
+        <link rel="icon" type="image/png" sizes="192x192" href="{{ $brand['key'] === 'luxvant' ? ($brandLogos['favicon'] ?? '/assets/images/brands/luxvant/favicon.svg') : '/assets/images/pwa/icon-192.png' }}">
         <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)" href="/assets/images/pwa/splash-1320x2868.png">
         <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="/assets/images/pwa/splash-1290x2796.png">
         <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="/assets/images/pwa/splash-1179x2556.png">
@@ -24,7 +35,17 @@
         <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/assets/images/pwa/splash-828x1792.png">
         <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/assets/images/pwa/splash-750x1334.png">
 
-        <link rel="icon" type="image/x-icon" href="/assets/images/Fav icon.svg" />
+        <link rel="icon" type="image/svg+xml" href="{{ $brandLogos['favicon'] ?? '/assets/images/Fav icon.svg' }}" />
+        {{-- Critical early tokens so splash / first paint match the host brand. --}}
+        <style id="tenant-brand-vars-early">
+            :root {
+                @foreach ($brandCssVars as $var => $value)
+                    @if ($value !== null && $value !== '')
+                        {{ $var }}: {!! $value !!};
+                    @endif
+                @endforeach
+            }
+        </style>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" media="print" onload="this.media='all'">
@@ -57,6 +78,7 @@
         <script>
             window.__API_BASE_URL__ = "{{ url('/api') }}";
             window.__APP_ORIGIN__ = "{{ url('') }}";
+            window.__BRAND__ = @json($brand);
             (function () {
                 try {
                     if (window.location.pathname !== '/kanban') return;
@@ -96,6 +118,17 @@
             })();
         </script>
         @vite('resources/js/main.js')
+        {{-- After Vite so host brand tokens win over resources/css/crm-theme.css defaults. --}}
+        <style id="tenant-brand-vars">
+            :root,
+            html[data-brand="{{ $brand['key'] }}"] {
+                @foreach ($brandCssVars as $var => $value)
+                    @if ($value !== null && $value !== '')
+                        {{ $var }}: {!! $value !!};
+                    @endif
+                @endforeach
+            }
+        </style>
     </head>
     <body class="antialiased">
         <div class="crm-bg-image" aria-hidden="true"></div>
@@ -118,7 +151,7 @@
                 inset: 0;
                 z-index: 0;
                 pointer-events: none;
-                background-color: #f5eef8;
+                background-color: {{ $brandColors['crm_bg_tint'] ?? '#f5eef8' }};
                 background-image: url("{{ asset('assets/images/crm-bg-light.jpg') }}?v=3");
                 background-size: cover;
                 background-position: center center;
@@ -140,12 +173,12 @@
             /* Scoped to the splash. A :root block here is parsed after the Vite
                CSS and would override resources/css/crm-theme.css for the whole app. */
             #boot-splash {
-                --color-primary: #733E87;
-                --color-primary-rgb: 115, 62, 135;
-                --color-background-plain: #f6f7f6;
-                --color-text-primary: #171717;
-                --color-primary-soft: #f7f2f8;
-                --gradient-primary: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(212, 175, 55, 0.38) 100%), rgb(115, 62, 135);
+                --color-primary: {{ $brandColors['primary'] ?? '#733E87' }};
+                --color-primary-rgb: {{ $brandColors['primary_rgb'] ?? '115, 62, 135' }};
+                --color-background-plain: {{ $brandColors['background_plain'] ?? '#f6f7f6' }};
+                --color-text-primary: {{ $brandColors['text'] ?? '#171717' }};
+                --color-primary-soft: {{ $brandColors['primary_soft'] ?? '#f7f2f8' }};
+                --gradient-primary: {!! $brandColors['gradient_primary'] ?? 'linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(212, 175, 55, 0.38) 100%), rgb(115, 62, 135)' !!};
             }
 
             #boot-splash {
@@ -262,9 +295,13 @@
             <div class="alt-boot">
                 <div class="alt-boot__mark">
                     <span class="alt-boot__ring"></span>
-                    <span class="alt-boot__core">A</span>
+                    <span class="alt-boot__core">{{ $brand['product_mark'] }}</span>
                 </div>
-                <p class="alt-boot__name"><span>ALT</span> CRM</p>
+                @if ($brand['key'] === 'luxvant')
+                    <p class="alt-boot__name"><span>LUXVANT</span> CRM</p>
+                @else
+                    <p class="alt-boot__name"><span>ALT</span> CRM</p>
+                @endif
                 <span class="alt-boot__bar" aria-hidden="true"><i></i></span>
             </div>
         </div>

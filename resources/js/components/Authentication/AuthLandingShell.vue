@@ -16,29 +16,31 @@
       </main>
 
       <aside class="auth-landing__marketing">
-        <div class="auth-landing__brand-row">
+        <div class="auth-landing__brand-row" :class="{ 'auth-landing__brand-row--luxvant': isLuxvant }">
           <img
-            :src="altcrmLogo"
+            v-if="!isLuxvant"
+            :src="productLogo"
             alt="altcrm"
             class="auth-landing__brand-logo auth-landing__brand-logo--altcrm"
             width="112"
             height="111"
           />
-          <span class="auth-landing__brand-divider" aria-hidden="true" />
+          <span v-if="!isLuxvant" class="auth-landing__brand-divider" aria-hidden="true" />
           <img
-            :src="oiaLogo"
-            alt="Oia Properties"
-            class="auth-landing__brand-logo auth-landing__brand-logo--oia"
-            width="168"
-            height="115"
+            :src="companyLogo"
+            :alt="companyName"
+            class="auth-landing__brand-logo"
+            :class="isLuxvant ? 'auth-landing__brand-logo--luxvant' : 'auth-landing__brand-logo--oia'"
+            :width="isLuxvant ? 220 : 168"
+            :height="isLuxvant ? 68 : 115"
           />
         </div>
 
         <h6 class="auth-landing__headline auth-landing__headline--desktop">
-          A Powerful Digital Workspace for Real Estate Professionals and Growing Businesses
+          {{ headlineDesktop }}
         </h6>
         <h6 class="auth-landing__headline auth-landing__headline--mobile">
-          Access OIA'S Exclusive Tools to Boost Your Brokerage
+          {{ headlineMobile }}
         </h6>
 
         <div
@@ -84,9 +86,22 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { useBrand } from '@/composables/useBrand';
 
-const altcrmLogo = '/assets/images/auth/altcrm-logo.png?v=4';
-const oiaLogo = '/assets/images/auth/oia-properties-logo.svg?v=4';
+const {
+  isLuxvant,
+  companyName,
+  logos,
+  copy,
+} = useBrand();
+
+const productLogo = `${logos.product || '/assets/images/auth/altcrm-logo.png'}?v=4`;
+// Auth marketing panel sits on a dark image — use on_dark / white mark for Luxvant.
+const companyLogo = isLuxvant
+  ? `${logos.on_dark || logos.primary}?v=1`
+  : `${logos.primary || '/assets/images/auth/oia-properties-logo.svg'}?v=4`;
+const headlineDesktop = copy.auth_headline_desktop;
+const headlineMobile = copy.auth_headline_mobile;
 
 const featureCards = [
   {

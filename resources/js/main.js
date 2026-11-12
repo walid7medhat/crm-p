@@ -53,6 +53,12 @@ import { marketingFromNotification, openMarketingFromNotification, photoBookingF
 syncMobileViewport()
 initLeadViewModal(router, router.currentRoute)
 
+// Host brand is injected by Blade before Vue boots — keep document title aligned.
+try {
+  const brandTitle = window.__BRAND__?.document_title
+  if (brandTitle) document.title = brandTitle
+} catch (_) {}
+
 const addCSS = (url) => {
   const link = document.createElement('link')
   link.rel = 'stylesheet'
