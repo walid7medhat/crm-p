@@ -86,6 +86,7 @@ class Bitrix24LeadImporter
     'dead'                   => 'lost',
     'fresh'                  => 'new',
     'pool'                   => 'pool',
+    'lead pool'                   => 'pool',
     'shared'                 => 'shared',
     'assigned'               => 'assigned',
     'successfull'            => 'qualified',
