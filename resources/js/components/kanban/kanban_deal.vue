@@ -106,10 +106,20 @@ const SettingsHub = defineAsyncComponent(() => import('./settings/SettingsHub.vu
 
 const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab'
 
+// accountant: no Lead Pool tab (Converted-stage leads only).
+function storedUserIsAccountant() {
+    try {
+        return !!JSON.parse(localStorage.getItem('user') || 'null')?.roles?.includes('accountant')
+    } catch {
+        return false
+    }
+}
+
 function readStoredKanbanTab() {
     try {
         const v = localStorage.getItem(KANBAN_ACTIVE_TAB_KEY)
         if (v === 'integration') return 'leads'
+        if (v === 'lead-pool' && storedUserIsAccountant()) return 'leads'
         if (['deals', 'leads', 'lead-pool'].includes(v)) return v
     } catch {
         /* ignore */
@@ -394,6 +404,7 @@ watch(showDealViewModal, (isOpen) => {
 })
 provide('kanbanIsMobile', kanbanIsMobile)
 provide('kanbanOpenCreateLead', () => {
+    if (storedUserIsAccountant()) return // accountant: no lead creation
     activeTab.value = 'leads'
     showCreateModal.value = true
 })
@@ -410,7 +421,10 @@ const tabs = computed(() => {
         // { id: 'costumers', name: 'Costumers', hasChevron: true },
         // { id: 'analytics', name: 'Analytics', hasChevron: false }
     ]
-    
+
+    if (user.value?.roles?.includes('accountant')) {
+        return baseTabs.filter((t) => t.id !== 'lead-pool')
+    }
     return baseTabs
 })
 const currentStageType = computed(() => {
@@ -523,7 +537,7 @@ const onKanbanCreateNewEvent = (e) => {
     } else if (tab === 'integration') {
         settingsHubInitialSection.value = 'integrations'
         showSettingsHub.value = true
-    } else {
+    } else if (!storedUserIsAccountant()) {
         showCreateModal.value = true
     }
 }
@@ -1052,7 +1066,7 @@ function onSearchBlur() {
 const handleCreateNew = () => {
     if (activeTab.value === 'deals') {
         showCreateDealModal.value = true
-    } else {
+    } else if (!storedUserIsAccountant()) {
         showCreateModal.value = true
     }
 }

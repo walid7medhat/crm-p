@@ -33,7 +33,9 @@ class DealCommissionDistribution
     {
         $user = auth()->user();
 
-        return $user && $user->hasAnyRole(['admin', 'super_admin']);
+        // accountant: sees + edits the distribution on deals of their branch (deal access is
+        // already branch-scoped by User::canViewDeal()).
+        return $user && $user->hasAnyRole(['admin', 'super_admin', 'accountant']);
     }
 
     public static function applyFromRequest(Deal $deal, Request $request): bool

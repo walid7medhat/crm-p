@@ -58,6 +58,7 @@ const items = computed(() => {
     isShowOnlyListing: isShowOnlyListing.value,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListing.value,
+    hideListings: user.value?.roles?.includes('accountant') ?? false,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
   })
 })

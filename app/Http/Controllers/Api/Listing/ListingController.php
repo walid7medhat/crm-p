@@ -66,6 +66,11 @@ class ListingController extends Controller
     
   public function index(Request $request): JsonResponse
 {
+    // accountant: no Listings (show() is already blocked — no listings-list permission).
+    if (auth()->user()?->isAccountant()) {
+        return ApiResponse::error('You are not authorized to view listings', 403);
+    }
+
     try {
         // 1) cache key — per-user version is bumped on writes so file/database
         // drivers (no tag support) still invalidate correctly.

@@ -426,6 +426,10 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
   const { isAdmin, isSuperAdmin, isShowOnlyListing, hasPermission, user } = ctx; 
 
   if (section === CRM_SECTIONS.LEAD) {
+    // accountant: Converted-stage leads only — no Lead Pool.
+    if (user?.roles?.includes('accountant')) {
+      return [{ id: 'leads', label: 'Lead', type: 'event' }];
+    }
     return [
       { id: 'leads', label: 'Lead', type: 'event' },
       { id: 'lead-pool', label: 'Lead Pool', type: 'event' },
@@ -651,13 +655,15 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
 /**
  * Top header shortcut row on the dashboard — replaces the old CRM / HRM switch.
  */
-export function buildTopModuleNav() {
-  return [
+export function buildTopModuleNav(ctx = {}) {
+  const items = [
     { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
     { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
     { id: 'property', label: 'Property', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
     { id: 'transaction', label: 'Transaction', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
   ];
+  // hideListings: e.g. the accountant role — no Listings ("Property") module.
+  return ctx.hideListings ? items.filter((i) => i.id !== 'property') : items;
 }
 
 export function isTopModuleNavActive(currentPath, activeModule, item) {

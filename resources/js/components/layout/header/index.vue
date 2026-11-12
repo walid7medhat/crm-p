@@ -1341,14 +1341,18 @@ const hasProjectsAccess = computed(() => filteredProjectsItems.value.length > 0)
 const isListingsDropdownAdmin = computed(() =>
   (isAdmin.value || isBranchAdmin.value || hasProjectsAccess.value) && !isShowOnlyListing.value,
 );
+// accountant: no Listings anywhere in the nav (router.js also blocks the routes).
+const isAccountant = computed(() => user.value?.roles?.includes('accountant') ?? false);
+
 const showCrmListingsDropdown = computed(() =>
+  !isAccountant.value &&
   isListingsDropdownAdmin.value &&
   listingsSidebarSections.value.length > 0 &&
   !isShowOnlyListing.value,
 );
 
 const showCrmListingsFlat = computed(() =>
-
+  !isAccountant.value &&
   !isListingsDropdownAdmin.value &&
   !isShowOnlyListing.value,
 );
@@ -1824,7 +1828,8 @@ const showTabLeads = computed(() => canShowLeadsTab.value && !isShowOnlyListing.
 const showTabListings = computed(() =>
   !isHr.value && (showCrmListingsDropdown.value || showCrmListingsFlat.value || isShowOnlyListing.value),
 );
-const canCreateLead = computed(() => showTabLeads.value);
+// accountant: sees Converted-stage leads but never creates leads.
+const canCreateLead = computed(() => showTabLeads.value && !user.value?.roles?.includes('accountant'));
 const canCreateListing = computed(() => {
   if (isShowOnlyListing.value) return false;
   if (!proxy?.$hasPermission) return true;

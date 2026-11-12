@@ -186,12 +186,80 @@
                         </div>
                     </article>
                 </div>
-                <div v-else class="table-responsive">
+                <!-- Bulk actions for the selected users (super admin only) -->
+                <transition name="ubb">
+                <div v-if="!isMobileViewport && canUseBulkActions && selectedUserIds.length" class="ubb" :class="{ 'is-busy': bulkBusy }">
+                    <div class="ubb__count">
+                        <span class="ubb__num">{{ selectedUserIds.length }}</span>
+                        <span class="ubb__label">user{{ selectedUserIds.length === 1 ? '' : 's' }} selected</span>
+                        <button type="button" class="ubb__clear" title="Clear selection" aria-label="Clear selection" @click="clearSelection">
+                            <iconify-icon icon="lucide:x"></iconify-icon>
+                        </button>
+                    </div>
+
+                    <div class="ubb__section">
+                        <span class="ubb__section-label"><iconify-icon icon="lucide:shield"></iconify-icon> Role</span>
+                        <div class="ubb__field">
+                            <select class="ubb__select" v-model="bulkRoleId" aria-label="Role to assign">
+                                <option :value="null" disabled>Choose role…</option>
+                                <option v-for="role in bulkRoles" :key="role.id" :value="role.id">{{ role.name.replace(/_/g, ' ') }}</option>
+                            </select>
+                            <button type="button" class="ubb__btn ubb__btn--primary" :disabled="!bulkRoleId || bulkBusy" @click="runBulk('assign_role')">
+                                Assign
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ubb__section ubb__section--grow">
+                        <span class="ubb__section-label"><iconify-icon icon="lucide:key-round"></iconify-icon> Permissions</span>
+                        <div class="ubb__field">
+                            <v-select
+                                v-model="bulkPermissions"
+                                :options="bulkAllPermissions"
+                                multiple
+                                placeholder="Choose permissions…"
+                                class="ubb__perms"
+                                :close-on-select="false"
+                                :append-to-body="true"
+                            />
+                            <button type="button" class="ubb__btn ubb__btn--primary" :disabled="!bulkPermissions.length || bulkBusy" @click="runBulk('assign_permissions')">
+                                Add<span v-if="bulkPermissions.length">&nbsp;({{ bulkPermissions.length }})</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ubb__section">
+                        <span class="ubb__section-label"><iconify-icon icon="lucide:zap"></iconify-icon> Status</span>
+                        <div class="ubb__field">
+                            <button type="button" class="ubb__btn ubb__btn--success" :disabled="bulkBusy" @click="runBulk('activate')">
+                                <iconify-icon icon="lucide:user-check"></iconify-icon> Activate
+                            </button>
+                            <button type="button" class="ubb__btn ubb__btn--muted" :disabled="bulkBusy" @click="runBulk('deactivate')">
+                                <iconify-icon icon="lucide:user-x"></iconify-icon> Deactivate
+                            </button>
+                        </div>
+                    </div>
+
+                    <span v-if="bulkBusy" class="ubb__spinner" aria-label="Working"></span>
+                </div>
+                </transition>
+
+                <div v-if="!isMobileViewport" class="table-responsive">
                     <table class="table bordered-table mb-0">
                         <thead>
                             <tr>
                                 <th scope="col" @click="sortBy('id')" class="sortable">
                                     <div class="form-check style-check d-flex align-items-center">
+                                        <input
+                                            v-if="canUseBulkActions"
+                                            class="form-check-input me-2"
+                                            type="checkbox"
+                                            title="Select all on this page"
+                                            :checked="allOnPageSelected"
+                                            :indeterminate.prop="someOnPageSelected && !allOnPageSelected"
+                                            @click.stop
+                                            @change="toggleSelectPage($event.target.checked)"
+                                        >
                                         <label class="form-check-label d-flex align-items-center">
                                             ID
                                             <span v-if="sortKey === 'id'">
@@ -234,9 +302,17 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="user in paginatedUsers" :key="user.id">
+                            <tr v-for="user in paginatedUsers" :key="user.id" :class="{ 'users-row--selected': selectedUserIds.includes(user.id) }">
                                 <td>
                                     <div class="form-check style-check d-flex align-items-center">
+                                        <input
+                                            v-if="canUseBulkActions"
+                                            class="form-check-input me-2"
+                                            type="checkbox"
+                                            :value="user.id"
+                                            :disabled="user.id == 1"
+                                            v-model="selectedUserIds"
+                                        >
                                         <label class="form-check-label">{{ user.id }}</label>
                                     </div>
                                 </td>
@@ -478,8 +554,11 @@ import api from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import { useImpersonation } from '@/composables/useImpersonation.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
+import vSelect from 'vue-select';
 export default {
     name: 'UsersTable',
+    // vue-select is not registered globally (main.js only patches its defaults).
+    components: { vSelect },
     setup() {
         const { switchToUser: rawSwitchToUser } = useImpersonation();
         const { isMobileViewport } = useMobileNavigation();
@@ -503,9 +582,30 @@ export default {
             defaultAvatar: '/assets/images/user.png',
             absentEmailLoading: null,
 
+            // Bulk actions — super admin only (kept across pages until cleared)
+            selectedUserIds: [],
+            bulkRoles: [],
+            bulkRoleId: null,
+            bulkAllPermissions: [],
+            bulkPermissions: [],
+            bulkBusy: false,
         };
     },
     computed: {
+        /** Bulk actions are super admin only (UserController::bulkAction checks it too). */
+        canUseBulkActions() {
+            return !!this.hasSuperAdminRole();
+        },
+        selectablePageIds() {
+            return this.users.filter(u => u.id != 1).map(u => u.id);
+        },
+        allOnPageSelected() {
+            return this.selectablePageIds.length > 0
+                && this.selectablePageIds.every(id => this.selectedUserIds.includes(id));
+        },
+        someOnPageSelected() {
+            return this.selectablePageIds.some(id => this.selectedUserIds.includes(id));
+        },
         entriesPerPage() {
             return Number(this.selectedShow);
         },
@@ -579,8 +679,104 @@ export default {
     },
     mounted() {
         this.fetchUsers();
+        if (this.canUseBulkActions) this.loadBulkOptions();
     },
     methods: {
+        // ---------- Bulk actions (super admin only) ----------
+        async loadBulkOptions() {
+            try {
+                const [rolesRes, permsRes] = await Promise.all([api.get('/roles'), api.get('/permissions')]);
+                const roles = rolesRes.data?.data || rolesRes.data || [];
+                this.bulkRoles = (Array.isArray(roles) ? roles : []).map(r => ({ id: r.id, name: r.name }));
+                const perms = permsRes.data?.data || permsRes.data || [];
+                this.bulkAllPermissions = (Array.isArray(perms) ? perms : []).map(p => p.name).sort();
+            } catch (error) {
+                console.error('Error loading bulk action options:', error);
+            }
+        },
+
+        toggleSelectPage(checked) {
+            const pageIds = this.selectablePageIds;
+            if (checked) {
+                this.selectedUserIds = [...new Set([...this.selectedUserIds, ...pageIds])];
+            } else {
+                this.selectedUserIds = this.selectedUserIds.filter(id => !pageIds.includes(id));
+            }
+        },
+
+        clearSelection() {
+            this.selectedUserIds = [];
+            this.bulkRoleId = null;
+            this.bulkPermissions = [];
+        },
+
+        async runBulk(action) {
+            const count = this.selectedUserIds.length;
+            if (!count) return;
+
+            const roleName = this.bulkRoles.find(r => r.id === this.bulkRoleId)?.name?.replace(/_/g, ' ');
+            const dialogs = {
+                assign_role: {
+                    title: 'Assign role',
+                    message: `Set the role of ${count} user(s) to "${roleName}"? It replaces their current role.`,
+                    confirmText: 'Assign role',
+                    type: 'info',
+                },
+                assign_permissions: {
+                    title: 'Add permissions',
+                    message: `Add ${this.bulkPermissions.length} permission(s) to ${count} user(s)?`,
+                    confirmText: 'Add permissions',
+                    type: 'info',
+                },
+                activate: {
+                    title: 'Activate users',
+                    message: `Activate ${count} user(s)? Each one gets an "account activated" email.`,
+                    confirmText: 'Activate',
+                    type: 'success',
+                },
+                deactivate: {
+                    title: 'Deactivate users',
+                    message: `Deactivate ${count} user(s)? They will no longer be able to work in the CRM.`,
+                    confirmText: 'Deactivate',
+                    type: 'warning',
+                },
+            };
+            const confirm = this.$showConfirmation || window.$showConfirmation;
+            const confirmed = confirm
+                ? await confirm({ ...dialogs[action], cancelText: 'Cancel' })
+                : window.confirm(dialogs[action].message);
+            if (!confirmed) return;
+
+            this.bulkBusy = true;
+            try {
+                const payload = { user_ids: this.selectedUserIds, action };
+                if (action === 'assign_role') payload.role_id = this.bulkRoleId;
+                if (action === 'assign_permissions') payload.permissions = this.bulkPermissions;
+
+                const res = await api.post('/users/bulk-action', payload);
+                const data = res.data?.data || {};
+                const skipped = data.skipped || [];
+
+                this.showNotification(res.data?.message || 'Done', skipped.length ? 'warning' : 'success');
+                if (skipped.length) {
+                    const lines = skipped.slice(0, 10).map(s => `${s.name || '#' + s.id}: ${s.reason}`);
+                    if (skipped.length > 10) lines.push(`…and ${skipped.length - 10} more`);
+                    this.showNotification('Skipped — ' + lines.join(' · '), 'warning');
+                }
+
+                // Keep only the skipped users selected so they can be fixed and retried.
+                this.selectedUserIds = skipped.map(s => s.id).filter(id => this.selectedUserIds.includes(id));
+                if (action === 'assign_permissions') this.bulkPermissions = [];
+
+                await this.fetchUsers();
+            } catch (error) {
+                console.error('Bulk action failed:', error);
+                this.showNotification(error.response?.data?.message || 'Bulk action failed', 'error');
+            } finally {
+                this.bulkBusy = false;
+            }
+        },
+
         async updateBiometricCode(user) {
             try {
                 const token = localStorage.getItem('token');
@@ -1200,6 +1396,209 @@ export default {
 </script>
 
 <style scoped>
+/* ================= Bulk action bar ================= */
+.ubb {
+    position: sticky;
+    top: 8px;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 0;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(var(--color-primary-rgb, 13, 110, 253), 0.25);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.ubb.is-busy {
+    opacity: .85;
+}
+.ubb-enter-active, .ubb-leave-active {
+    transition: opacity .18s ease, transform .18s ease;
+}
+.ubb-enter-from, .ubb-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+
+.ubb__count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: center;
+    padding: 6px 8px 6px 6px;
+    margin-right: 6px;
+    border-radius: 999px;
+    background: rgba(var(--color-primary-rgb, 13, 110, 253), 0.08);
+    white-space: nowrap;
+}
+.ubb__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+    background: var(--color-primary, #0d6efd);
+}
+.ubb__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+}
+.ubb__clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #6b7280;
+    transition: background .15s, color .15s;
+}
+.ubb__clear:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #111827;
+}
+
+.ubb__section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 14px;
+    border-left: 1px solid #eef0f3;
+}
+.ubb__section--grow {
+    flex: 1 1 340px;
+}
+.ubb__section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #9ca3af;
+}
+.ubb__field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ubb__select {
+    height: 34px;
+    min-width: 170px;
+    padding: 0 30px 0 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    font-size: 13px;
+    color: #111827;
+    text-transform: capitalize;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+    appearance: none;
+}
+.ubb__select:focus {
+    outline: none;
+    border-color: var(--color-primary, #0d6efd);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 13, 110, 253), 0.12);
+}
+
+.ubb__perms {
+    flex: 1;
+    min-width: 220px;
+}
+.ubb__perms :deep(.vs__dropdown-toggle) {
+    min-height: 34px;
+    border-color: #e2e8f0;
+    border-radius: 9px;
+}
+.ubb__perms :deep(.vs__selected) {
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+.ubb__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s, opacity .15s;
+}
+.ubb__btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+.ubb__btn--primary {
+    color: #fff;
+    background: var(--color-primary, #0d6efd);
+}
+.ubb__btn--primary:not(:disabled):hover {
+    filter: brightness(.93);
+}
+.ubb__btn--success {
+    color: #15803d;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+.ubb__btn--success:not(:disabled):hover {
+    background: #dcfce7;
+}
+.ubb__btn--muted {
+    color: #374151;
+    background: #f9fafb;
+    border-color: #e5e7eb;
+}
+.ubb__btn--muted:not(:disabled):hover {
+    background: #f3f4f6;
+}
+.ubb__btn--danger {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+.ubb__btn--danger:not(:disabled):hover {
+    background: #fee2e2;
+}
+
+.ubb__spinner {
+    align-self: center;
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    border: 2px solid rgba(var(--color-primary-rgb, 13, 110, 253), 0.25);
+    border-top-color: var(--color-primary, #0d6efd);
+    border-radius: 50%;
+    animation: ubb-spin .7s linear infinite;
+}
+@keyframes ubb-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1100px) {
+    .ubb__section {
+        padding: 0 10px;
+    }
+}
+
+.users-row--selected td {
+    background: rgba(var(--color-primary-rgb, 13, 110, 253), 0.05) !important;
+}
 .users-list.card {
     height: auto;
     min-height: 0;

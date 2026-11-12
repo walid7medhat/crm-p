@@ -410,10 +410,21 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             && ! $target->hasRole('super_admin');
     }
 
-    /** Sees every lead in their whole branch: branch_admin, or the show-branch-leads permission. */
+    /**
+     * accountant: works on the money side of closed business only.
+     *  - Deals: every deal in their whole BRANCH (all offices), and may edit them.
+     *  - Leads: read-only, and only CONVERTED leads of their branch (no Lead Pool).
+     * Place the accountant user anywhere inside the branch in the parent_id tree.
+     */
+    public function isAccountant(): bool
+    {
+        return $this->hasRole('accountant');
+    }
+
+    /** Sees every lead in their whole branch: branch_admin, accountant (converted only), or show-branch-leads. */
     public function seesBranchLeads(): bool
     {
-        return $this->hasRole('branch_admin') || $this->hasBranchLeadsPermission();
+        return $this->hasRole('branch_admin') || $this->isAccountant() || $this->hasBranchLeadsPermission();
     }
 
     /**
@@ -488,6 +499,13 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
      */
     public function applyLeadResponsibleScope($leadsQuery, array $scopeIds): void
     {
+        if ($this->isAccountant()) {
+            $leadsQuery->whereIn('responsible_person_id', $scopeIds)
+                ->inConvertedStage();
+
+            return;
+        }
+
         $newLeadStageId = $this->unassignedNewLeadStageId();
         if (! $newLeadStageId) {
             $leadsQuery->whereIn('responsible_person_id', $scopeIds);
@@ -508,6 +526,12 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     {
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
             return true;
+        }
+
+        // accountant: leads in the Converted stage of their branch only (never the Lead Pool).
+        if ($this->isAccountant()) {
+            return $lead->isInConvertedStage()
+                && in_array((int) $lead->responsible_person_id, array_map('intval', $this->getBranchUserIds()), true);
         }
 
         if ((int) $lead->stage_id === 10) {
@@ -578,6 +602,11 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     {
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
             return true;
+        }
+
+        // accountant: every deal in their whole branch (view + edit).
+        if ($this->isAccountant()) {
+            return in_array((int) $deal->responsible_person_id, array_map('intval', $this->getBranchUserIds()), true);
         }
 
         if ($this->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {

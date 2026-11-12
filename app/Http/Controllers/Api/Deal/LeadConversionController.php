@@ -1157,9 +1157,19 @@ private function createDealProperties(Deal $deal, $request)
     public function canConvert(Lead $lead)
     {
         $user = auth()->user();
-        
+        $isAccountant = $user->isAccountant();
+
+        // accountant: may list a converted lead's deals (to open them) but never create one.
+        if ($isAccountant) {
+            if (! $user->canViewLead($lead)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+        }
         // Super admin and users #30 / #33 see "Deals" and "Create deal" on any converted lead.
-        if (!$user->hasAnyRole(['super_admin']) && !in_array((int) $user->id, [30, 33], true)) {
+        elseif (!$user->hasAnyRole(['super_admin']) && !in_array((int) $user->id, [30, 33], true)) {
             $canAccess = false;
             
             if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin'])) {
@@ -1214,8 +1224,8 @@ private function createDealProperties(Deal $deal, $request)
         return response()->json([
             'success' => true,
             'data' => [
-                // A lead can always get another deal.
-                'can_convert' => true,
+                // A lead can always get another deal — except by an accountant.
+                'can_convert' => ! $isAccountant,
                 'is_converted' => !is_null($lead->converted_to_deal_id) || $deals->isNotEmpty(),
                 'converted_to_deal_id' => $lead->converted_to_deal_id,
                 'converted_at' => $lead->converted_at,

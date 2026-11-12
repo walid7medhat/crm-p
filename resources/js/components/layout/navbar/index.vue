@@ -41,7 +41,7 @@
               >
                 <iconify-icon icon="lucide:layers" aria-hidden="true" />
               </button>
-              <button type="button" class="lead-board-add" @click="handleKanbanCreateNew">Add Lead</button>
+              <button v-if="!isAccountant" type="button" class="lead-board-add" @click="handleKanbanCreateNew">Add Lead</button>
               <NotificationBell
                 ref="notificationBellMob"
                 class="kanban-mob-notification"
@@ -666,7 +666,7 @@
         </button>
 
         <!-- Create New Button -->
-        <button v-if="isLeadRoute && activeKanbanTab !== 'lead-pool'" class="btn-create-new btn-primary d-flex align-items-center" @click="handleKanbanCreateNew">
+        <button v-if="isLeadRoute && activeKanbanTab !== 'lead-pool' && !isAccountant" class="btn-create-new btn-primary d-flex align-items-center" @click="handleKanbanCreateNew">
             <span class="btn-create-new-text">Create New</span>
             <iconify-icon icon="lucide:plus" width="18" height="18" class="btn-create-new-icon flex-shrink-0" aria-hidden="true"></iconify-icon>
         </button>
@@ -1084,6 +1084,8 @@ const isAdmin = computed(() => {
 
 const isSuperAdmin = computed(() => user.value?.roles?.includes('super_admin') ?? false);
 const isHr = computed(() => user.value?.roles?.includes('hr') ?? false);
+// accountant: Converted-stage leads only — no Lead Pool, no lead creation.
+const isAccountant = computed(() => user.value?.roles?.includes('accountant') ?? false);
 const isCustomAdmin = computed(() => {
   if (!user.value) return false;
   const userId = Number(user.value.id);
@@ -1175,6 +1177,7 @@ const topModuleNavItems = computed(() => {
     isShowOnlyListing: isShowOnlyListingNav.value,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListingNav.value,
+    hideListings: isAccountant.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
   });
 });
@@ -1602,6 +1605,7 @@ const QUERY_FILTER_LABELS = {
     search: 'Search',
     responsible_person_id: 'Responsible Person',
     inactive_person_id: 'Inactive Sales',
+    added_by: 'Created By',
     team_id: 'Team',
     lead_branch_source: 'Lead Branch Source',
     source: 'Source',

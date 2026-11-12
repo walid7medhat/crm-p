@@ -264,6 +264,11 @@ class Deal extends Model
 
     public function scopeVisibleFor($query, $user)
     {
+        // accountant: every deal in their whole branch (see User::isAccountant()).
+        if ($user->isAccountant()) {
+            return $query->whereIn('responsible_person_id', $user->getBranchUserIds());
+        }
+
         if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) && $user->id != 30 && $user->id != 33) {
             $subordinatesIds = $user->hasRole('branch_admin')
                 ? $user->getBranchAdminSubordinateIds()

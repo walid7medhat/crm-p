@@ -261,6 +261,88 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Bulk actions on the users list — super admin only. Each user is handled on
+     * its own; users that can't be changed are returned in `skipped` (with a
+     * reason) instead of failing the whole batch.
+     *
+     *   POST /api/users/bulk-action
+     *   { user_ids: int[], action: assign_role|assign_permissions|activate|deactivate,
+     *     role_id?: int, permissions?: string[] }
+     */
+    public function bulkAction(Request $request): JsonResponse
+    {
+        if (! Auth::user()?->hasRole('super_admin')) {
+            return ApiResponse::error('Only super admins can run bulk actions on users', 403);
+        }
+
+        $validated = $request->validate([
+            'user_ids' => 'required|array|min:1|max:500',
+            'user_ids.*' => 'integer',
+            'action' => 'required|in:assign_role,assign_permissions,activate,deactivate',
+            'role_id' => 'required_if:action,assign_role|nullable|integer|exists:roles,id',
+            'permissions' => 'required_if:action,assign_permissions|nullable|array|min:1',
+            'permissions.*' => 'string|exists:permissions,name',
+        ]);
+
+        $action = $validated['action'];
+        $role = $action === 'assign_role' ? Role::find($validated['role_id']) : null;
+
+        $users = User::whereIn('id', array_unique($validated['user_ids']))->get();
+        $done = [];
+        $skipped = [];
+        $skip = function (User $u, string $reason) use (&$skipped) {
+            $skipped[] = ['id' => $u->id, 'name' => $u->name, 'reason' => $reason];
+        };
+
+        foreach ($users as $user) {
+            try {
+                if ((int) $user->id === 1) {
+                    $skip($user, 'Main super admin account cannot be changed');
+                    continue;
+                }
+
+                switch ($action) {
+                    case 'assign_role':
+                        // Same as the edit form: the chosen role replaces the current one.
+                        $user->syncRoles([$role->name]);
+                        break;
+
+                    case 'assign_permissions':
+                        $user->givePermissionTo($validated['permissions']);
+                        break;
+
+                    case 'activate':
+                    case 'deactivate':
+                        $newStatus = $action === 'activate' ? 'active' : 'in_active';
+                        if ($user->status === $newStatus) {
+                            $skip($user, 'Already ' . ($newStatus === 'active' ? 'active' : 'inactive'));
+                            continue 2;
+                        }
+                        $user->status = $newStatus;
+                        $user->save();
+                        if ($newStatus === 'active') {
+                            Mail::to($user->email)->queue(new AccountActivatedMail($user->email, $user->name));
+                        }
+                        break;
+                }
+
+                $done[] = $user->id;
+            } catch (\Throwable $e) {
+                $skip($user, $e->getMessage());
+            }
+        }
+
+        foreach (array_diff(array_map('intval', $validated['user_ids']), $users->pluck('id')->all()) as $missingId) {
+            $skipped[] = ['id' => $missingId, 'name' => null, 'reason' => 'User not found'];
+        }
+
+        return ApiResponse::success([
+            'done' => $done,
+            'skipped' => $skipped,
+        ], count($done) . ' user(s) updated' . ($skipped ? ', ' . count($skipped) . ' skipped' : ''));
+    }
+
 
  public function getUsersWithChildren(Request $request)
     {

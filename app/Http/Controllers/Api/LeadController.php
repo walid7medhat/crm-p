@@ -145,8 +145,8 @@ class LeadController extends Controller
                 if ($request->filled('stage_id')) {
                     $leadsQuery->where('stage_id', $request->stage_id);
                 }
-                if ($request->filled('added_by')) {
-                    $leadsQuery->where('added_by', $request->added_by);
+                if ($addedByIds = $this->requestedAddedByIds($request)) {
+                    $leadsQuery->whereIn('added_by', $addedByIds);
                 }
                 if ($request->filled('email')) {
                     $leadsQuery->where('email', $request->email);
@@ -300,6 +300,9 @@ class LeadController extends Controller
                 // we can either paginate or fetch all leads depending on the request.
                 if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33 ) {
                     // super admin sees everything
+                } elseif ($user->isAccountant()) {
+                    // accountant: converted leads of their branch only — never the Lead Pool.
+                    $user->applyLeadResponsibleScope($leadsQuery, $user->getBranchUserIds());
                 } elseif ((int) $request->stage_id === 10) {
 
                         // Lead Pool:
@@ -564,6 +567,9 @@ class LeadController extends Controller
                 // Current responsible person only — a lead reassigned outside the
                 // team must stop showing up here just because someone on the team added it.
                 $query->whereIn('responsible_person_id', array_merge($subordinatesIds, [$user->id]));
+                if ($user->isAccountant()) {
+                    $query->inConvertedStage();
+                }
             } else {
                 // Once reassigned, a lead a sales agent merely added no longer belongs to
                 // them — visibility is by current responsible person only.
@@ -1604,6 +1610,22 @@ class LeadController extends Controller
             $this->requestedIdList($request->input('responsible_person_id')),
             $inactiveIds
         )));
+    }
+
+    /**
+     * Lead search "Created By" (added_by) — one id or several. Only super_admin, admin
+     * and branch_admin may filter by creator; for anyone else it is ignored.
+     *
+     * @return array<int, int>
+     */
+    private function requestedAddedByIds(Request $request): array
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+            return [];
+        }
+
+        return $this->requestedIdList($request->input('added_by'));
     }
 
     /**
