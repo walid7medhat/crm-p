@@ -508,7 +508,7 @@
         <span class="navbar-birthday-greeting__emoji" aria-hidden="true">🎉</span>
         <span class="navbar-birthday-greeting__text">
           <span class="navbar-birthday-greeting__title">{{ birthdayBannerTitle }}</span>
-          <span class="navbar-birthday-greeting__sub">Warm wishes from OIA Properties</span>
+          <span class="navbar-birthday-greeting__sub">{{ brandBirthdaySub }}</span>
         </span>
       </div>
 
@@ -983,6 +983,7 @@ import {
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
+import { useBrand } from '@/composables/useBrand.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
@@ -1002,6 +1003,8 @@ import Swal from 'sweetalert2';
 import { BFormInput } from 'bootstrap-vue-3';
 const userPlaceholder = userAvatarPlaceholder;
 const { theme, toggleTheme } = useTheme();
+const { copy: brandCopy } = useBrand();
+const brandBirthdaySub = brandCopy.birthday_sub || 'Warm wishes from OIA Properties';
 const { birthdayBannerVisible, birthdayBannerTitle } = useBirthdayCelebrationBanner();
 const router = useRouter();
 const route = useRoute();

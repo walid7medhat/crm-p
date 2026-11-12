@@ -2,7 +2,7 @@
   <AuthLandingShell>
     <div class="auth-glass-card auth-glass-card--compact">
       <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
-      <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
+      <h6 class="auth-glass-card__title">{{ companyNameDisplay }}</h6>
 
       <div class="auth-reset-heading">
         <h6 class="auth-reset-heading__title">Reset Password</h6>
@@ -71,6 +71,7 @@
 <script>
 import api from '@/plugins/axios';
 import AuthLandingShell from './AuthLandingShell.vue';
+import { useBrand } from '@/composables/useBrand';
 
 export default {
   components: {
@@ -85,6 +86,10 @@ export default {
       message: '',
       showPassword: false,
     };
+  },
+  setup() {
+    const { companyNameDisplay } = useBrand();
+    return { companyNameDisplay };
   },
   mounted() {
     this.token = this.$route.query.token;

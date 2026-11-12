@@ -15,7 +15,7 @@
   >
     <header v-if="isMobileViewport" class="mobile-drawer-header">
       <div class="mobile-drawer-header__brand">
-        <span class="mobile-drawer-header__logo">Oia</span>
+        <span class="mobile-drawer-header__logo">{{ brandShortName }}</span>
         <span class="mobile-drawer-header__title">Properties</span>
       </div>
       <button
@@ -46,6 +46,7 @@
       v-if="!isMobileViewport"
       class="sidebar-brand"
       :class="{ 'sidebar-brand--collapsed': isSidebarActive, 'sidebar-brand--opens': isSidebarActive }"
+      :style="{ '--sidebar-collapsed-logo': `url('${collapsedBrandLogo}')` }"
       :role="isSidebarActive ? 'button' : undefined"
       :tabindex="isSidebarActive ? 0 : undefined"
       :aria-label="isSidebarActive ? 'Open menu' : undefined"
@@ -56,8 +57,9 @@
       <div class="sidebar-brand__mark">
         <img
           :src="oiaBrandLogo"
-          alt="Oia Properties"
+          :alt="brandCompanyName"
           class="sidebar-brand__logo"
+          :class="{ 'sidebar-brand__logo--luxvant': isLuxvantBrand }"
         />
       </div>
     </div>
@@ -904,9 +906,18 @@ import {
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useRoutePrefetch } from '@/composables/useRoutePrefetch.js';
 import { startNavProgress } from '@/composables/useNavProgress.js';
+import { useBrand } from '@/composables/useBrand.js';
 
-const logo = ref('/assets/images/LogoWhite.png');
-const oiaBrandLogo = ref('/assets/images/auth/oia-properties-logo.svg');
+const {
+  isLuxvant: isLuxvantBrand,
+  companyName: brandCompanyName,
+  companyNameShort: brandShortName,
+  logos: brandLogos,
+} = useBrand();
+
+const logo = ref(brandLogos.on_dark || '/assets/images/LogoWhite.png');
+const oiaBrandLogo = ref(brandLogos.primary || '/assets/images/auth/oia-properties-logo.svg');
+const collapsedBrandLogo = brandLogos.collapsed || brandLogos.primary || '/assets/images/auth/oia-properties-logo.svg';
 const dashboardIcon = ref('/assets/icons/dashboard-icon.svg?v=2');
 const leadsIcon = ref('/assets/icons/leads-icon.svg?v=2');
 const dealsIcon = ref('/assets/icons/deals-icon.svg?v=2');
@@ -2417,6 +2428,12 @@ aside.sidebar {
   width: 86px;
   height: auto;
   display: block;
+  object-fit: contain;
+}
+
+.sidebar-brand__logo--luxvant {
+  width: 118px;
+  max-width: 118px;
 }
 
 .sidebar-brand--collapsed {
@@ -2429,7 +2446,7 @@ aside.sidebar {
   height: 26px;
   flex: 0 0 28px;
   overflow: hidden;
-  background: url('/assets/images/auth/oia-properties-logo.svg') center top / 49px auto no-repeat;
+  background: var(--sidebar-collapsed-logo, url('/assets/images/auth/oia-properties-logo.svg')) center top / 49px auto no-repeat;
 }
 
 .sidebar-brand--collapsed .sidebar-brand__logo {
