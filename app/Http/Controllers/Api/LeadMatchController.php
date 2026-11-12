@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Jobs\RefreshLeadMatchesJob;
 use App\Models\Lead;
 use App\Models\LeadComment;
 use App\Models\LeadListingMatch;
@@ -71,7 +72,7 @@ class LeadMatchController extends Controller
         ]);
     }
 
-    /** GET /leads/{lead}/matches: what fits this client now, refreshed at most every 30 minutes. */
+    /** GET /leads/{lead}/matches: cached rows immediately; cold refresh runs after the response. */
     public function forLead(Request $request, Lead $lead)
     {
         if (! $request->user()->canViewLead($lead)) {
@@ -79,9 +80,12 @@ class LeadMatchController extends Controller
         }
 
         $freshKey = $this->freshKey($lead->id);
+        $refreshing = false;
         if (in_array((int) $lead->stage_id, $this->matcher->workingStageIds(), true) && ! Cache::has($freshKey)) {
-            $this->matcher->refreshLead($lead);
-            Cache::put($freshKey, true, now()->addMinutes(self::FRESH_MINUTES));
+            // Stampede guard — job sets the real fresh flag when scoring finishes.
+            Cache::put($freshKey, 'queued', now()->addMinutes(2));
+            $refreshing = true;
+            RefreshLeadMatchesJob::dispatch($lead->id, false)->afterResponse();
         }
 
         $rows = LeadListingMatch::query()
@@ -122,6 +126,7 @@ class LeadMatchController extends Controller
             'why_now' => $this->whyNow($lead, $open),
             'matches' => $open->values()->map(fn ($row) => $this->presenter->match($row)),
             'history' => $history->values()->map(fn ($row) => $this->presenter->match($row)),
+            'refreshing' => $refreshing,
             'counts' => [
                 'new' => $open->where('status', LeadListingMatch::STATUS_NEW)->count(),
                 'shortlisted' => $open->where('status', LeadListingMatch::STATUS_SHORTLISTED)->count(),
