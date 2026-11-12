@@ -1,71 +1,119 @@
-// resources/js/config/api.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// resources/js/config/api.js — endpoint paths resolved at call time (same-origin).
+import { getApiBaseUrl } from './apiBaseUrl.js'
+
+function apiUrl(path) {
+  const base = String(getApiBaseUrl() || '/api').replace(/\/$/, '')
+  const suffix = path.startsWith('/') ? path : `/${path}`
+  return `${base}${suffix}`
+}
 
 export const API_ENDPOINTS = {
   // Auth
-  LOGIN: `${API_BASE_URL}/auth/login`,
-  PROFILE: `${API_BASE_URL}/auth/profile`,
-  PROFILE_ATTENDANCE_HISTORY: `${API_BASE_URL}/profile/attendance-history`,
-  
+  get LOGIN() {
+    return apiUrl('/auth/login')
+  },
+  get PROFILE() {
+    return apiUrl('/auth/profile')
+  },
+  get PROFILE_ATTENDANCE_HISTORY() {
+    return apiUrl('/profile/attendance-history')
+  },
+
   // Developers
-  DEVELOPERS: `${API_BASE_URL}/listings/developers`,
-  DEVELOPER_BY_ID: (id) => `${API_BASE_URL}/listings/developers/${id}`,
+  get DEVELOPERS() {
+    return apiUrl('/listings/developers')
+  },
+  DEVELOPER_BY_ID: (id) => apiUrl(`/listings/developers/${id}`),
 
   // Owners
-  OWNERS: `${API_BASE_URL}/listings/owners`,
-  OWNER_BY_ID: (id) => `${API_BASE_URL}/listings/owners/${id}`,
+  get OWNERS() {
+    return apiUrl('/listings/owners')
+  },
+  OWNER_BY_ID: (id) => apiUrl(`/listings/owners/${id}`),
 
-   // Property_types
-  PROPERTY_TYPES: `${API_BASE_URL}/listings/property-types`,
-  PROPERTY_TYPE_BY_ID : (id) => `${API_BASE_URL}/listings/property-types/${id}`,
+  // Property_types
+  get PROPERTY_TYPES() {
+    return apiUrl('/listings/property-types')
+  },
+  PROPERTY_TYPE_BY_ID: (id) => apiUrl(`/listings/property-types/${id}`),
 
-     // unit_views
-  UNIT_VIEWS: `${API_BASE_URL}/listings/unit_views`,
-  UNIT_VIEW_BY_ID: (id) => `${API_BASE_URL}/listings/unit_views/${id}`,
+  // unit_views
+  get UNIT_VIEWS() {
+    return apiUrl('/listings/unit_views')
+  },
+  UNIT_VIEW_BY_ID: (id) => apiUrl(`/listings/unit_views/${id}`),
 
-   // layout_types
-  LAYOUT_TYPES: `${API_BASE_URL}/listings/layout_types`,
-  LAYOUT_TYPE_BY_ID: (id) => `${API_BASE_URL}/listings/layout_types/${id}`,
-  
- 
+  // layout_types
+  get LAYOUT_TYPES() {
+    return apiUrl('/listings/layout_types')
+  },
+  LAYOUT_TYPE_BY_ID: (id) => apiUrl(`/listings/layout_types/${id}`),
+
   // Areas
-  AREAS: `${API_BASE_URL}/listings/areas`,
-  AREA_BY_ID: (id) => `${API_BASE_URL}/listings/areas/${id}`,
-  
-  ROLES: `${API_BASE_URL}/roles`,
-  ROLE_BY_ID: (id) => `${API_BASE_URL}/roles/${id}`,
-  PERMISSIONS: `${API_BASE_URL}/permissions`,
-  ASSIGN_PERMISSIONS: (id) => `${API_BASE_URL}/roles/${id}/permissions`,
+  get AREAS() {
+    return apiUrl('/listings/areas')
+  },
+  AREA_BY_ID: (id) => apiUrl(`/listings/areas/${id}`),
 
-  
-    USERS: `${API_BASE_URL}/users`,
-      USER_PERMISSIONS: (id) => `${API_BASE_URL}/users/${id}/permissions`,
-  USER_BY_ID: (id) => `${API_BASE_URL}/users/${id}`,
-    USER_MANAGERS: `${API_BASE_URL}/users/managers/available`,
-  USER_STATISTICS: `${API_BASE_URL}/users/statistics`,
-  USER_TEAM_MEMBERS: (userId) => `${API_BASE_URL}/users/${userId}/team-members`,
-  USER_ATTENDANCE_HISTORY: (userId) => `${API_BASE_URL}/users/${userId}/attendance-history`,
-     TEAM_HIERARCHY: `${API_BASE_URL}/team/hierarchy`,
-    TEAM_REASSIGN: `${API_BASE_URL}/team/reassign`,
-    USERS_WITH_CHILDREN: `${API_BASE_URL}/users/with-children`,
-    USER_STATUS: (id) => `${API_BASE_URL}/users/${id}/status`,
-    USER_BIOMETRIC: (id) => `${API_BASE_URL}/users/${id}/biometric-code`,
-    USER_IMPERSONATE: (id) => `${API_BASE_URL}/users/${id}/impersonate`,
-    USER_ABSENT_EMAIL: (id) => `${API_BASE_URL}/users/${id}/absent-email`,
-    
-     // features
-  FEATURES: `${API_BASE_URL}/listings/features`,
-  Feature_BY_ID: (id) => `${API_BASE_URL}/listings/features/${id}`,
-  
-  PROJECTS: `${API_BASE_URL}/listings/projects`,
-  PROJECT_BY_ID: (id) => `${API_BASE_URL}/listings/projects/${id}`,
-    PROJECT_DEVELOPERS: `${API_BASE_URL}/listings/developers`,
-  PROJECT_FEATURES: (id) => `${API_BASE_URL}/listings/features`,
+  get ROLES() {
+    return apiUrl('/roles')
+  },
+  ROLE_BY_ID: (id) => apiUrl(`/roles/${id}`),
+  get PERMISSIONS() {
+    return apiUrl('/permissions')
+  },
+  ASSIGN_PERMISSIONS: (id) => apiUrl(`/roles/${id}/permissions`),
 
-      DEAL_COST_SETTINGS: `${API_BASE_URL}/settings/deal-costs`,
-    DEAL_COST_SETTINGS_UPDATE: `${API_BASE_URL}/settings/deal-costs`,
-    DEAL_COST_SETTING_BY_KEY: (key) => `${API_BASE_URL}/settings/deal-costs/${key}`,
+  get USERS() {
+    return apiUrl('/users')
+  },
+  USER_PERMISSIONS: (id) => apiUrl(`/users/${id}/permissions`),
+  USER_BY_ID: (id) => apiUrl(`/users/${id}`),
+  get USER_MANAGERS() {
+    return apiUrl('/users/managers/available')
+  },
+  get USER_STATISTICS() {
+    return apiUrl('/users/statistics')
+  },
+  USER_TEAM_MEMBERS: (userId) => apiUrl(`/users/${userId}/team-members`),
+  USER_ATTENDANCE_HISTORY: (userId) => apiUrl(`/users/${userId}/attendance-history`),
+  get TEAM_HIERARCHY() {
+    return apiUrl('/team/hierarchy')
+  },
+  get TEAM_REASSIGN() {
+    return apiUrl('/team/reassign')
+  },
+  get USERS_WITH_CHILDREN() {
+    return apiUrl('/users/with-children')
+  },
+  USER_STATUS: (id) => apiUrl(`/users/${id}/status`),
+  USER_BIOMETRIC: (id) => apiUrl(`/users/${id}/biometric-code`),
+  USER_IMPERSONATE: (id) => apiUrl(`/users/${id}/impersonate`),
+  USER_ABSENT_EMAIL: (id) => apiUrl(`/users/${id}/absent-email`),
 
-};
+  // features
+  get FEATURES() {
+    return apiUrl('/listings/features')
+  },
+  Feature_BY_ID: (id) => apiUrl(`/listings/features/${id}`),
 
-export default API_BASE_URL;
+  get PROJECTS() {
+    return apiUrl('/listings/projects')
+  },
+  PROJECT_BY_ID: (id) => apiUrl(`/listings/projects/${id}`),
+  get PROJECT_DEVELOPERS() {
+    return apiUrl('/listings/developers')
+  },
+  PROJECT_FEATURES: (id) => apiUrl('/listings/features'),
+
+  get DEAL_COST_SETTINGS() {
+    return apiUrl('/settings/deal-costs')
+  },
+  get DEAL_COST_SETTINGS_UPDATE() {
+    return apiUrl('/settings/deal-costs')
+  },
+  DEAL_COST_SETTING_BY_KEY: (key) => apiUrl(`/settings/deal-costs/${key}`),
+}
+
+export { getApiBaseUrl }
+export default getApiBaseUrl

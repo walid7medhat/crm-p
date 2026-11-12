@@ -39,13 +39,13 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import api from '@/plugins/axios'
 // TEMPORARY DEV/TEST — remove with useBirthdayCelebrationDevTest.js
 import {
   clearBirthdayCelebrationDevTest,
   useBirthdayCelebrationDevTest,
 } from '@/composables/useBirthdayCelebrationDevTest'
 import { setBirthdayBanner, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner'
+import { subscribeTodaysBirthdays } from '@/composables/useShellPolling'
 
 const props = defineProps({
   enabled: { type: Boolean, default: true },
@@ -55,7 +55,7 @@ const STORAGE_PREFIX = 'birthday_celebration_stopped_'
 const hasBirthdayToday = ref(false)
 const birthdayFirstName = ref(null)
 const stopped = ref(false)
-let pollTimer = null
+let unsubscribeBirthdays = null
 
 // TEMPORARY DEV/TEST — Super Admin force-preview (does not touch birthday API)
 const { forceShow } = useBirthdayCelebrationDevTest()
@@ -107,32 +107,24 @@ function stopCelebration() {
   clearBirthdayCelebrationDevTest()
 }
 
-async function checkBirthdays() {
-  if (!props.enabled) return
-  try {
-    const response = await api.get('/auth/birthdays/today')
-    const data = response?.data?.data ?? response?.data ?? {}
-    hasBirthdayToday.value = !!data.has_birthday
-    const name = typeof data.first_name === 'string' ? data.first_name.trim() : ''
-    birthdayFirstName.value = name || null
-  } catch (error) {
-    console.warn('Unable to check today\'s birthdays', error)
-  }
+function applyBirthdayPayload(data) {
+  hasBirthdayToday.value = !!data?.has_birthday
+  const name = typeof data?.first_name === 'string' ? data.first_name.trim() : ''
+  birthdayFirstName.value = name || null
 }
 
 function startPolling() {
   stopPolling()
   if (!props.enabled) return
   stopped.value = readStopped()
-  checkBirthdays()
-  // Re-check periodically so the layer appears after the 08:00 celebrate job.
-  pollTimer = setInterval(checkBirthdays, 5 * 60 * 1000)
+  // Shared shell poll — pauses when the tab is hidden; dedupes with navbar.
+  unsubscribeBirthdays = subscribeTodaysBirthdays(applyBirthdayPayload)
 }
 
 function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
+  if (typeof unsubscribeBirthdays === 'function') {
+    unsubscribeBirthdays()
+    unsubscribeBirthdays = null
   }
 }
 

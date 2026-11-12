@@ -630,7 +630,8 @@ const fetchMapData = async ({ useBbox = false } = {}) => {
   }
   mapFetchController = new AbortController()
   try {
-    const params = { per_page: 3000 }
+    // Keep first paint light; pan/zoom already refetches with bbox.
+    const params = { per_page: 500 }
     if (listingStatus.value) {
       params.listing_status = listingStatus.value
     }

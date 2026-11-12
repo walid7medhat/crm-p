@@ -55,7 +55,7 @@
 </template>
 
 <script>
-import api from '@/plugins/axios'
+import api, { getApiBaseUrl as resolveApiBaseUrl } from '@/plugins/axios'
 import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
 import { openMarketingFromNotification } from '@/composables/useMarketingNotification.js'
@@ -67,10 +67,8 @@ import { openLeadMatching } from '@/composables/useLeadViewModal.js'
 function getApiBaseUrl() {
   const base =
     (api.defaults && api.defaults.baseURL) ||
-    (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
-    import.meta.env.VITE_API_BASE_URL ||
-    import.meta.env.VITE_API_URL ||
-    'http://127.0.0.1:8001/api'
+    resolveApiBaseUrl() ||
+    '/api'
   return String(base).replace(/\/$/, '')
 }
 

@@ -272,7 +272,7 @@
             </div>
             <Teleport to="body">
               <div
-                v-if="searchModalMounted"
+                v-if="searchModalMounted && isMobileViewport"
                 v-show="showSearchModal"
                 ref="searchDropdownPanelRef"
                 class="lead-search-dropdown-outer lead-search-dropdown-outer--teleport"
@@ -508,7 +508,7 @@
         <span class="navbar-birthday-greeting__emoji" aria-hidden="true">🎉</span>
         <span class="navbar-birthday-greeting__text">
           <span class="navbar-birthday-greeting__title">{{ birthdayBannerTitle }}</span>
-          <span class="navbar-birthday-greeting__sub">Warm wishes from OIA Properties</span>
+          <span class="navbar-birthday-greeting__sub">{{ brandBirthdaySub }}</span>
         </span>
       </div>
 
@@ -606,7 +606,7 @@
             </div>
             <Teleport to="body">
                 <div
-                    v-if="searchModalMounted"
+                    v-if="searchModalMounted && !isMobileViewport"
                     v-show="showSearchModal"
                     ref="searchDropdownPanelRef"
                     class="lead-search-dropdown-outer lead-search-dropdown-outer--teleport"
@@ -983,6 +983,7 @@ import {
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
+import { useBrand } from '@/composables/useBrand.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
@@ -994,14 +995,21 @@ import SystemOverviewLangToggle from '@/components/system-overview/SystemOvervie
 import userAvatarPlaceholder from '@/assets/images/users/user1.png';
 const DealSearchModal = defineAsyncComponent(() => import('@/components/kanban/deals/DealSearchModal.vue'));
 const LeadSearchModal = defineAsyncComponent(() => import('@/components/kanban/leadList/LeadSearchModal.vue'));
-import { getUnreadAnnouncements, getAnnouncement } from '@/services/announcementsApi';
+import { getAnnouncement } from '@/services/announcementsApi';
+import {
+  subscribeUnreadAnnouncements,
+  subscribeTodaysBirthdays,
+  getCachedTodaysBirthdays,
+} from '@/composables/useShellPolling';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
 const { isMobileViewport, toggleMobileMenu } = useMobileNavigation();
-import api, { clearAuthToken } from '@/plugins/axios';
+import api, { clearAuthToken, getApiBaseUrl } from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import { BFormInput } from 'bootstrap-vue-3';
 const userPlaceholder = userAvatarPlaceholder;
 const { theme, toggleTheme } = useTheme();
+const { copy: brandCopy } = useBrand();
+const brandBirthdaySub = brandCopy.birthday_sub || 'Warm wishes from OIA Properties';
 const { birthdayBannerVisible, birthdayBannerTitle } = useBirthdayCelebrationBanner();
 const router = useRouter();
 const route = useRoute();
@@ -1213,7 +1221,8 @@ const searchDropdownPanelRef = ref(null);
 const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
 // Live client filter runs immediately; this only gates the board API refetch.
-const SEARCH_DEBOUNCE_MS = 120;
+// Sole text debounce for the navbar free-text path (~350ms). Board fetch is immediate after.
+const SEARCH_DEBOUNCE_MS = 350;
 const suppressSearchWatcher = ref(false);
 const isSearchLoading = ref(false);
 const leadsRef = ref(null);
@@ -1315,7 +1324,6 @@ function applySearchToApi() {
 // Watch على search لتطبيق البحث مع debounce
 watch(search, () => {
     if (suppressSearchWatcher.value) return
-    console.log('Search value changed:', search.value)
     // Instant: hide non-matching cards already on the board (no API wait).
     if (isLeadRoute.value || activeKanbanTab.value === 'leads' || activeKanbanTab.value === 'lead-pool') {
         window.dispatchEvent(new CustomEvent('kanban-lead-live-filter', {
@@ -2452,7 +2460,7 @@ async function savePersonalInfoEdit() {
       return;
     }
 
-    const url = `${import.meta.env.VITE_API_URL || '/api'}/users/${u.id}`;
+    const url = `${getApiBaseUrl()}/users/${u.id}`;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -2676,18 +2684,15 @@ watch(
   },
 )
 
-// Due, unread announcements shown one at a time. Polled periodically so one
-// that becomes due while the user is already logged in (no refresh) still
-// pops up, not just on the initial page load.
+// Due, unread announcements shown one at a time. Shared shell poll (90s, pauses
+// when the tab is hidden) so one that becomes due while logged in still pops up.
 const pendingAnnouncementPopups = ref([]);
 const activeAnnouncementPopup = ref(null);
 const closingAnnouncementPopup = ref(false);
-let announcementPopupPollTimer = null;
-const ANNOUNCEMENT_POPUP_POLL_MS = 60000;
+let unsubscribeAnnouncementPoll = null;
 
-async function loadPendingAnnouncementPopups() {
+function onUnreadAnnouncements(items) {
   try {
-    const items = await getUnreadAnnouncements();
     const incoming = Array.isArray(items) ? items : [];
     const knownIds = new Set(pendingAnnouncementPopups.value.map((a) => a.id));
     if (activeAnnouncementPopup.value) knownIds.add(activeAnnouncementPopup.value.id);
@@ -2733,8 +2738,7 @@ async function closeAnnouncementPopup() {
 // bring the same popup back a second time in this browser tab.
 const activeBirthdayPopup = ref(null);
 const closingBirthdayPopup = ref(false);
-let birthdayPopupPollTimer = null;
-const BIRTHDAY_POPUP_POLL_MS = 60000;
+let unsubscribeBirthdayPoll = null;
 const BIRTHDAY_SELF_NOTIFICATION_TYPE = 'App\\Notifications\\BirthdaySelfNotification';
 const BIRTHDAY_POPUP_SEEN_KEY = 'birthday_popup_seen_ids';
 
@@ -2784,19 +2788,19 @@ function dismissBirthdayPopupForToday() {
   }
 }
 
-async function loadBirthdayPopup() {
+async function loadBirthdayPopup(birthdayPayload = null) {
   if (activeBirthdayPopup.value || birthdayPopupDismissedToday()) return;
   try {
-    const [notesRes, birthdayRes] = await Promise.all([
-      api.get('/auth/notifications', { params: { type: BIRTHDAY_SELF_NOTIFICATION_TYPE } }),
-      api.get('/auth/birthdays/today'),
-    ]);
+    // Reuse shared /auth/birthdays/today from useShellPolling (not a second poller).
+    const notesRes = await api.get('/auth/notifications', {
+      params: { type: BIRTHDAY_SELF_NOTIFICATION_TYPE },
+    });
     const items = Array.isArray(notesRes?.data?.data) ? notesRes.data.data : [];
     const seen = getSeenBirthdayPopupIds();
     const unread = items.find(
       (n) => n.type === BIRTHDAY_SELF_NOTIFICATION_TYPE && !n.read_at && !seen.has(n.id),
     );
-    const birthday = birthdayRes?.data?.data ?? {};
+    const birthday = birthdayPayload || getCachedTodaysBirthdays() || {};
     setBirthdayBackgroundActive(!!birthday.has_birthday);
     if (!birthday.has_birthday && !unread) return;
     const firstName = typeof birthday.first_name === 'string' ? birthday.first_name.trim() : '';
@@ -2848,10 +2852,10 @@ onMounted(() => {
       return;
     }
     shellPopupsStarted = true;
-    loadPendingAnnouncementPopups();
-    announcementPopupPollTimer = setInterval(loadPendingAnnouncementPopups, ANNOUNCEMENT_POPUP_POLL_MS);
-    loadBirthdayPopup();
-    birthdayPopupPollTimer = setInterval(loadBirthdayPopup, BIRTHDAY_POPUP_POLL_MS);
+    unsubscribeAnnouncementPoll = subscribeUnreadAnnouncements(onUnreadAnnouncements);
+    unsubscribeBirthdayPoll = subscribeTodaysBirthdays((payload) => {
+      loadBirthdayPopup(payload);
+    });
   };
   if (typeof window.requestIdleCallback === 'function') {
     shellPopupUsesIdle = true;
@@ -2944,13 +2948,13 @@ onUnmounted(() => {
     }
     shellPopupIdle = 0
   }
-  if (announcementPopupPollTimer) {
-    clearInterval(announcementPopupPollTimer);
-    announcementPopupPollTimer = null;
+  if (typeof unsubscribeAnnouncementPoll === 'function') {
+    unsubscribeAnnouncementPoll();
+    unsubscribeAnnouncementPoll = null;
   }
-  if (birthdayPopupPollTimer) {
-    clearInterval(birthdayPopupPollTimer);
-    birthdayPopupPollTimer = null;
+  if (typeof unsubscribeBirthdayPoll === 'function') {
+    unsubscribeBirthdayPoll();
+    unsubscribeBirthdayPoll = null;
   }
   if (modalOpenFrame) {
     window.cancelAnimationFrame(modalOpenFrame)

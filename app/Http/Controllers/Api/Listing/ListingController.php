@@ -218,7 +218,7 @@ public function map(Request $request, ListingMapCoordinateResolver $coordinateRe
             'listing_status' => 'nullable|string|max:50',
             'min_price' => 'nullable|numeric|min:0',
             'max_price' => 'nullable|numeric|min:0',
-            'per_page' => 'nullable|integer|min:1|max:3000',
+            'per_page' => 'nullable|integer|min:1|max:1000',
         ]);
 
         $maxGeocode = (int) config('services.nominatim.map_max_geocode_fallback_per_request', 40);
@@ -358,7 +358,9 @@ SQL;
             });
         }
 
-        $perPage = (int) ($validated['per_page'] ?? 2500);
+        // Cap map pins to keep first paint and pan/zoom payloads bounded.
+        // Clients should pass bbox after the map viewport is ready.
+        $perPage = (int) ($validated['per_page'] ?? 500);
         $paginator = $query->with([
             'propertyType:id,name',
             'project:id,title,area_id',

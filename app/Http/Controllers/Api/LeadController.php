@@ -301,7 +301,7 @@ class LeadController extends Controller
                 // Apply permission scope to the query (without consuming it with ->get()) so
                 // we can either paginate or fetch all leads depending on the request.
                 if ($user->hasRole('super_admin') || $user->id == 30 || $user->id == 33 ) {
-                    // super admin sees everything
+                    // Super admin sees everything on OIA; Luxvant host still scoped below.
                 } elseif ($user->isAccountant()) {
                     // accountant: converted leads of their branch only — never the Lead Pool.
                     $user->applyLeadResponsibleScope($leadsQuery, $user->getBranchUserIds());
@@ -370,6 +370,10 @@ class LeadController extends Controller
                     // them — visibility is by current responsible person only.
                     $leadsQuery->where('responsible_person_id', $user->id);
                 }
+
+                // Luxvant host: Admin Luxvant branch only (no-op on OIA).
+                \App\Support\Brand\BrandCrmScope::constrainLeads($leadsQuery);
+
               $typeSql = $this->selectedLeadTypeSql();
                 $normalizedTypeSql = $this->normalizedLeadTypeSql();
 
@@ -2760,16 +2764,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                   ->orWhere('responsible_person_id', $user->id);
             });
             
-            // بحث باسم العميل
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('lead_name', 'like', "%{$search}%")
-                      ->orWhere('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('work_phone', 'like', "%{$search}%");
-                });
+            // Shared LeadTextSearch (phone digits, email, FULLTEXT/LIKE identity).
+            if ($request->filled('search') && LeadTextSearch::isActionable((string) $request->search)) {
+                LeadTextSearch::apply($query, (string) $request->search, [
+                    'comments' => false,
+                    'relations' => false,
+                    'admin' => true,
+                    'lean' => true,
+                ]);
             }
             
             // تصفية حسب المرحلة

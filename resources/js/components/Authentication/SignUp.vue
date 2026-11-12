@@ -2,7 +2,7 @@
   <AuthLandingShell>
     <div class="auth-glass-card auth-glass-card--compact">
       <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
-      <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
+      <h6 class="auth-glass-card__title">{{ companyNameDisplay }}</h6>
       <div class="auth-mobile-hero">
         <h6 class="auth-mobile-hero__title">Create Account</h6>
         <p class="auth-mobile-hero__lead">Sign up with your email to join the workspace.</p>
@@ -130,6 +130,7 @@ import api from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 import AuthMobileStack from './AuthMobileStack.vue';
+import { useBrand } from '@/composables/useBrand';
 
 export default {
   name: 'SignUp',
@@ -159,7 +160,8 @@ export default {
   },
   setup() {
     const router = useRouter();
-    return { router };
+    const { companyNameDisplay } = useBrand();
+    return { router, companyNameDisplay };
   },
   computed: {
     filteredTeamLeads() {

@@ -2,7 +2,7 @@
   <AuthLandingShell>
     <div class="auth-glass-card auth-glass-card--signin">
       <h6 class="auth-glass-card__eyebrow auth-glass-card__eyebrow--desktop">Welcome To</h6>
-      <h6 class="auth-glass-card__title auth-glass-card__title--desktop">OIA PROPERTIES</h6>
+      <h6 class="auth-glass-card__title auth-glass-card__title--desktop">{{ companyNameDisplay }}</h6>
       <div class="auth-mobile-hero">
         <h6 class="auth-mobile-hero__title">Welcome Back</h6>
         <p class="auth-mobile-hero__lead">Sign in with your email to access your workspace.</p>
@@ -136,6 +136,7 @@ import { captureDeviceLocation } from '@/utils/deviceLocation.mjs';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 import AuthMobileStack from './AuthMobileStack.vue';
+import { useBrand } from '@/composables/useBrand';
 
 export default {
   components: {
@@ -155,7 +156,8 @@ export default {
   },
   setup() {
     const router = useRouter();
-    return { router };
+    const { companyNameDisplay } = useBrand();
+    return { router, companyNameDisplay };
   },
   mounted() {
     // Start the location request now, so the user answers the prompt while typing

@@ -4,6 +4,7 @@ use App\Helpers\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MyDayController;
 use App\Http\Controllers\Api\SalesActionCenterController;
@@ -121,9 +122,10 @@ Route::get('/test-account-activated-email', function () {
             'hint' => config('mail.default') === 'log' ? 'Emails are only written to storage/logs. Set MAIL_MAILER=smtp in .env and configure SMTP to send to real inbox.' : 'Check .env MAIL_* settings and credentials.',
         ], 500);
     }
-});
+})->middleware('brand.block_luxvant_public');
 
-/* Save account-activated email HTML to file so you can open it in browser */
+/* Save account-activated email HTML to file so you can open it in browser.
+   Blocked on Luxvant host only — OIA behavior unchanged. */
 Route::get('/save-account-activated-email-html', function () {
     $html = view('emails.account-activated', ['userName' => 'Walid'])->render();
     $path = storage_path('app/account-activated-email-preview.html');
@@ -133,8 +135,9 @@ Route::get('/save-account-activated-email-html', function () {
         'file_path' => $path,
         'open_url' => 'file://' . $path,
     ]);
-});
+})->middleware('brand.block_luxvant_public');
 
+Route::get('brand', [BrandController::class, 'show']);
 Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
@@ -156,17 +159,21 @@ Route::get('/webhook/facebook', [IntegrationController::class, 'verifyWebhook'])
 Route::post('/webhook/facebook', [IntegrationController::class, 'handleWebhook']);
 Route::post('/website-lead', [IntegrationController::class, 'store_website']);
 Route::post('/website-lead/wordpress', [IntegrationController::class, 'store_wordpress']);
-Route::get('/get-from-meta-in-day/{id}',[IntegrationController::class,'get_from_date']);
+// Meta pull — OIA ops tool; blocked on Luxvant host only.
+Route::get('/get-from-meta-in-day/{id}',[IntegrationController::class,'get_from_date'])
+    ->middleware('brand.block_luxvant_public');
 Route::prefix('auth')->group(function () {
 
     Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);
     Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
-    Route::get('users/role/{role}', [UserController::class, 'getByRole']);
+    // Sign-up supervisor list — required by OIA public register; blocked on Luxvant only.
+    Route::get('users/role/{role}', [UserController::class, 'getByRole'])
+        ->middleware('brand.block_luxvant_public');
 
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::middleware(['jwt.auth'])->group(function () {
-        Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:30,1');
+        Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:location-tracking');
         Route::get('location-settings', [AuthController::class, 'locationSettings']);
         Route::post('logout', [AuthController::class,'logout']);
         Route::get('notifications',[AuthController::class,'notifications']);
@@ -458,7 +465,9 @@ Route::middleware(['jwt.auth', 'role:super_admin|admin'])->group(function () {
         ]);
     });
 });
+// WhatsApp qualification webhook — required by OIA AltCRM; blocked on Luxvant host only.
 Route::post('/altcrm/update-more-info', [AltCRMLeadController::class, 'updateWhatsappQualification'])
+    ->middleware('brand.block_luxvant_public')
     ->name('altcrm.update.more.info');
 Route::middleware('jwt.auth')->group(function () {
     Route::prefix('sales-intelligence')->group(function () {

@@ -2,7 +2,7 @@
   <AuthLandingShell>
     <div class="auth-glass-card auth-glass-card--compact">
       <h6 class="auth-glass-card__eyebrow">Welcome To</h6>
-      <h6 class="auth-glass-card__title">OIA PROPERTIES</h6>
+      <h6 class="auth-glass-card__title">{{ companyNameDisplay }}</h6>
 
       <template v-if="!success">
         <div class="auth-reset-heading">
@@ -90,10 +90,12 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/plugins/axios'
 import AuthLandingShell from './AuthLandingShell.vue'
+import { useBrand } from '@/composables/useBrand'
 
 defineOptions({ name: 'ForgotPassword' })
 
 const router = useRouter()
+const { companyNameDisplay } = useBrand()
 
 const email = ref('')
 const loading = ref(false)

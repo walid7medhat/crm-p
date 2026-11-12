@@ -386,7 +386,7 @@ function hasSearchInput() {
 }
 
 /** Typing feel: short debounce; AbortController cancels superseded keystrokes. */
-const SEARCH_DEBOUNCE_MS = 160
+const SEARCH_DEBOUNCE_MS = 200
 
 let lastRequestKey = ''
 let lastCompletedKey = ''

@@ -5,8 +5,8 @@ import api from '@/plugins/axios'
  * Calling another origin (e.g. :8000 from :8010) triggers browser CORS unless that server sends
  * Access-Control-Allow-Origin — which breaks SPAs in dev/production.
  *
- * To point at a different host, set VITE_API_BASE_URL (or window.__API_BASE_URL__) to that host
- * and expose /api/attendance there with CORS, or add a reverse proxy so the browser only talks to one origin.
+ * Production multi-host (OIA/Luxvant): axios uses same-origin `/api` via getApiBaseUrl().
+ * Local Vite DEV may override with VITE_API_BASE_URL when the SPA origin differs from Laravel.
  */
 export async function fetchAttendanceToday(params = {}) {
   const { data } = await api.get('/attendance/today', { params })

@@ -448,86 +448,116 @@ private function getChartDataByPeriod($period, $currentUser, $user_hierarchy)
 {
     $labels = [];
     $values = [];
+    $base = $this->scopedListingChartQuery($currentUser, $user_hierarchy);
 
     switch ($period) {
         case 'yearly':
-            // بيانات السنة الحالية
+            $year = now()->year;
+            $counts = (clone $base)
+                ->whereYear('created_at', $year)
+                ->selectRaw('MONTH(created_at) as m, COUNT(*) as total')
+                ->groupBy('m')
+                ->pluck('total', 'm');
+
             for ($i = 1; $i <= 12; $i++) {
-                $count = Listing::when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function($q) use ($user_hierarchy) {
-                    $q->whereIn('agent_id', $user_hierarchy);
-                })->whereYear('created_at', now()->year)
-                  ->whereMonth('created_at', $i)
-                  ->count();
                 $labels[] = date('M', mktime(0, 0, 0, $i, 1));
-                $values[] = $count;
+                $values[] = (int) ($counts[$i] ?? 0);
             }
             break;
 
         case 'monthly':
-            // بيانات آخر 30 يوم
-            for ($i = 29; $i >= 0; $i--) {
-                $date = now()->subDays($i);
-                $count = Listing::when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function($q) use ($user_hierarchy) {
-                    $q->whereIn('agent_id', $user_hierarchy);
-                })->whereDate('created_at', $date)
-                  ->count();
-                $labels[] = $date->format('d M');
-                $values[] = $count;
-            }
-            break;
+            return $this->fillListingChartFromDailyCounts(
+                $base,
+                now()->subDays(29)->startOfDay(),
+                now()->endOfDay(),
+                'd M'
+            );
 
         case 'weekly':
-            // بيانات آخر 7 أيام
-            for ($i = 6; $i >= 0; $i--) {
-                $date = now()->subDays($i);
-                $count = Listing::when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function($q) use ($user_hierarchy) {
-                    $q->whereIn('agent_id', $user_hierarchy);
-                })->whereDate('created_at', $date)
-                  ->count();
-                $labels[] = $date->format('D');
-                $values[] = $count;
-            }
-            break;
+            return $this->fillListingChartFromDailyCounts(
+                $base,
+                now()->subDays(6)->startOfDay(),
+                now()->endOfDay(),
+                'D'
+            );
     }
 
     return [
         'labels' => $labels,
-        'values' => $values
+        'values' => $values,
     ];
 }
 
 private function getChartDataByDateRange(Carbon $from, Carbon $to, $currentUser, $user_hierarchy): array
 {
-    $labels = [];
-    $values = [];
-    $days = $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay());
-
-    $listingQuery = function () use ($currentUser, $user_hierarchy) {
-        return Listing::when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function ($q) use ($user_hierarchy) {
-            $q->whereIn('agent_id', $user_hierarchy);
-        });
-    };
+    $rangeFrom = $from->copy()->startOfDay();
+    $rangeTo = $to->copy()->endOfDay();
+    $days = $rangeFrom->diffInDays($to->copy()->startOfDay());
+    $base = $this->scopedListingChartQuery($currentUser, $user_hierarchy);
 
     if ($days <= 31) {
-        for ($d = $from->copy()->startOfDay(); $d->lte($to); $d->addDay()) {
-            $count = $listingQuery()->whereDate('created_at', $d)->count();
-            $labels[] = $d->format('d M');
-            $values[] = $count;
+        return $this->fillListingChartFromDailyCounts($base, $rangeFrom, $rangeTo, 'd M');
+    }
+
+    $dailyCounts = (clone $base)
+        ->whereBetween('created_at', [$rangeFrom, $rangeTo])
+        ->selectRaw('DATE(created_at) as d, COUNT(*) as total')
+        ->groupBy('d')
+        ->pluck('total', 'd');
+
+    $labels = [];
+    $values = [];
+    $cursor = $rangeFrom->copy();
+    while ($cursor->lte($to)) {
+        $weekEnd = $cursor->copy()->addDays(6)->endOfDay();
+        if ($weekEnd->gt($to)) {
+            $weekEnd = $to->copy()->endOfDay();
         }
-    } else {
-        $cursor = $from->copy()->startOfDay();
-        while ($cursor->lte($to)) {
-            $weekEnd = $cursor->copy()->addDays(6)->endOfDay();
-            if ($weekEnd->gt($to)) {
-                $weekEnd = $to->copy();
-            }
-            $count = $listingQuery()
-                ->whereBetween('created_at', [$cursor->copy()->startOfDay(), $weekEnd])
-                ->count();
-            $labels[] = $cursor->format('d M');
-            $values[] = $count;
-            $cursor->addDays(7);
+
+        $weekTotal = 0;
+        for ($d = $cursor->copy()->startOfDay(); $d->lte($weekEnd); $d->addDay()) {
+            $weekTotal += (int) ($dailyCounts[$d->toDateString()] ?? 0);
         }
+
+        $labels[] = $cursor->format('d M');
+        $values[] = $weekTotal;
+        $cursor->addDays(7)->startOfDay();
+    }
+
+    return ['labels' => $labels, 'values' => $values];
+}
+
+/**
+ * Listing chart scope shared by period and custom-range helpers.
+ */
+private function scopedListingChartQuery($currentUser, $user_hierarchy)
+{
+    return Listing::query()->when(
+        ! ($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
+        function ($q) use ($user_hierarchy) {
+            $q->whereIn('agent_id', $user_hierarchy);
+        }
+    );
+}
+
+/**
+ * One GROUP BY DATE query, then fill every calendar day in the window (zeros included).
+ *
+ * @return array{labels: list<string>, values: list<int>}
+ */
+private function fillListingChartFromDailyCounts($baseQuery, Carbon $from, Carbon $to, string $labelFormat): array
+{
+    $counts = (clone $baseQuery)
+        ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+        ->selectRaw('DATE(created_at) as d, COUNT(*) as total')
+        ->groupBy('d')
+        ->pluck('total', 'd');
+
+    $labels = [];
+    $values = [];
+    for ($d = $from->copy()->startOfDay(); $d->lte($to); $d->addDay()) {
+        $labels[] = $d->format($labelFormat);
+        $values[] = (int) ($counts[$d->toDateString()] ?? 0);
     }
 
     return ['labels' => $labels, 'values' => $values];
@@ -575,20 +605,23 @@ public function getActiveAgents()
         $q->whereIn('parent_id', $user_hierarchy);
     })->whereDate('created_at', today())->count();
 
-    // بيانات الأسبوع
-    $weeklyData = [];
-    $days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
-    for ($i = 6; $i >= 0; $i--) {
-        $date = now()->subDays($i);
-        $count = User::
-        // whereHas('roles', function($query) {
-        //     $query->whereIn('name', ['sales','team_lead']);
-        // })->
-        when(!($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function($q) use ($user_hierarchy) {
+    // Last 7 days (one GROUP BY instead of 7 COUNT queries). Labels stay chronological.
+    $weekFrom = now()->subDays(6)->startOfDay();
+    $weekTo = now()->endOfDay();
+    $agentWeekBase = User::query()
+        ->when(! ($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function ($q) use ($user_hierarchy) {
             $q->whereIn('parent_id', $user_hierarchy);
-        })->whereDate('created_at', $date)->count();
-        $weeklyData[] = $count;
+        });
+    $weeklyCounts = (clone $agentWeekBase)
+        ->whereBetween('created_at', [$weekFrom, $weekTo])
+        ->selectRaw('DATE(created_at) as d, COUNT(*) as total')
+        ->groupBy('d')
+        ->pluck('total', 'd');
+
+    $weeklyData = [];
+    for ($i = 6; $i >= 0; $i--) {
+        $date = now()->subDays($i)->toDateString();
+        $weeklyData[] = (int) ($weeklyCounts[$date] ?? 0);
     }
 
     return response()->json([

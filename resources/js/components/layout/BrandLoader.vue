@@ -9,9 +9,12 @@
     <div class="brand-loader__card">
       <div class="brand-loader__mark" aria-hidden="true">
         <span class="brand-loader__ring" />
-        <span class="brand-loader__core">A</span>
+        <span class="brand-loader__core">{{ productMark }}</span>
       </div>
-      <p class="brand-loader__name"><span>ALT</span> CRM</p>
+      <p class="brand-loader__name">
+        <template v-if="isLuxvant"><span>LUXVANT</span> CRM</template>
+        <template v-else><span>ALT</span> CRM</template>
+      </p>
       <p class="brand-loader__label">{{ label }}</p>
       <span class="brand-loader__bar" aria-hidden="true"><i /></span>
     </div>
@@ -19,6 +22,8 @@
 </template>
 
 <script setup>
+import { useBrand } from '@/composables/useBrand'
+
 defineOptions({ name: 'BrandLoader' })
 
 defineProps({
@@ -31,6 +36,8 @@ defineProps({
     default: 'overlay',
   },
 })
+
+const { isLuxvant, productMark } = useBrand()
 </script>
 
 <style scoped>

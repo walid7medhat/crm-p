@@ -1,5 +1,9 @@
 import { ref } from 'vue'
 import api from '@/plugins/axios'
+import {
+  fetchAreasReference,
+  fetchPropertyTypesReference,
+} from '@/services/referenceDataCache'
 
 const cache = {
   offices: null,
@@ -40,12 +44,7 @@ export function useCache() {
   const fetchAreas = async () => {
     if (cache.areas) return cache.areas
     try {
-      const res = await api.get('/listings/areas')
-      let data = res.data?.data
-      if (!Array.isArray(data)) {
-        data = Array.isArray(res.data) ? res.data : []
-      }
-      
+      const data = await fetchAreasReference()
       // تحويل المناطق إلى التنسيق المطلوب
       if (Array.isArray(data) && data.length) {
         cache.areas = data.map(area => ({
@@ -68,12 +67,7 @@ export function useCache() {
   const fetchPropertyTypes = async () => {
     if (cache.propertyTypes) return cache.propertyTypes
     try {
-      const res = await api.get('/listings/property-types')
-      let data = res.data?.data
-      if (!Array.isArray(data)) {
-        data = Array.isArray(res.data) ? res.data : []
-      }
-      
+      const data = await fetchPropertyTypesReference()
       // تحويل أنواع العقارات إلى التنسيق المطلوب { value, text }
       if (Array.isArray(data) && data.length) {
         cache.propertyTypes = data.map(type => ({
