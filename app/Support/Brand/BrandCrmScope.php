@@ -5,6 +5,7 @@ namespace App\Support\Brand;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -176,7 +177,10 @@ class BrandCrmScope
         return false;
     }
 
-    public static function constrainUsers(Builder $query): void
+    /**
+     * @param  Builder<User>|Relation  $query
+     */
+    public static function constrainUsers(Builder|Relation $query): void
     {
         if (! self::active()) {
             return;
@@ -192,7 +196,14 @@ class BrandCrmScope
         $query->whereIn($query->getModel()->getTable().'.id', $ids);
     }
 
-    public static function constrainLeads(Builder $query): void
+    /**
+     * Accepts Eloquent Builder or relation builders (e.g. Stage::leads() HasMany
+     * used by kanban infinite scroll). Type must allow Relation: PHP checks the
+     * signature before the OIA no-op early-return.
+     *
+     * @param  Builder<Lead>|Relation  $query
+     */
+    public static function constrainLeads(Builder|Relation $query): void
     {
         if (! self::active()) {
             return;
@@ -208,7 +219,7 @@ class BrandCrmScope
             return;
         }
 
-        $query->where(function (Builder $q) use ($ids, $branchName) {
+        $query->where(function ($q) use ($ids, $branchName) {
             $q->whereIn('responsible_person_id', $ids)
                 ->orWhereIn('added_by', $ids);
 
@@ -218,7 +229,10 @@ class BrandCrmScope
         });
     }
 
-    public static function constrainDeals(Builder $query): void
+    /**
+     * @param  Builder<\App\Models\Deal>|Relation  $query
+     */
+    public static function constrainDeals(Builder|Relation $query): void
     {
         if (! self::active()) {
             return;
