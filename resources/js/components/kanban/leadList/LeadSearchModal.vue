@@ -124,7 +124,7 @@
 
                     <template v-for="field in section.fields" :key="field.id">
 
-                        <div class="col-md-6 mt-3" :class="{ 'sheet-date-col': field.id === 'created_on' || field.id === 'assigned_on' }">
+                        <div class="col-md-6 mt-3" :class="{ 'sheet-date-col': isDateField(field.id) }">
 
                             <label v-if="field.id === 'inactive_sales'" class="form-label-custom d-flex align-items-center gap-2">
 
@@ -160,7 +160,7 @@
 
                             <button
 
-                                v-if="field.id === 'created_on' || field.id === 'assigned_on'"
+                                v-if="isDateField(field.id)"
 
                                 type="button"
 
@@ -170,7 +170,7 @@
 
                             >
 
-                                <span>{{ field.id === 'assigned_on' ? assignedOnDisplay : createdOnDisplay }}</span>
+                                <span>{{ dateFieldDisplay(field.id) }}</span>
 
                                 <iconify-icon icon="lucide:calendar-days" />
 
@@ -1202,7 +1202,7 @@
 
                     <template v-for="field in section.fields" :key="field.id">
 
-                        <div class="col-md-6 mt-3" :class="{ 'sheet-date-col': field.id === 'created_on' || field.id === 'assigned_on' }">
+                        <div class="col-md-6 mt-3" :class="{ 'sheet-date-col': isDateField(field.id) }">
 
                             <label v-if="field.id === 'inactive_sales'" class="form-label-custom d-flex align-items-center gap-2">
 
@@ -1238,7 +1238,7 @@
 
                             <button
 
-                                v-if="field.id === 'created_on' || field.id === 'assigned_on'"
+                                v-if="isDateField(field.id)"
 
                                 type="button"
 
@@ -1248,7 +1248,7 @@
 
                             >
 
-                                <span>{{ field.id === 'assigned_on' ? assignedOnDisplay : createdOnDisplay }}</span>
+                                <span>{{ dateFieldDisplay(field.id) }}</span>
 
                                 <iconify-icon icon="lucide:calendar-days" />
 
@@ -2943,6 +2943,12 @@ const queryToFormKeys = {
 
     assigned_to: 'assignedTo',
 
+    modified_at: 'modifiedOn',
+
+    modified_from: 'modifiedFrom',
+
+    modified_to: 'modifiedTo',
+
     lead_branch_source: 'branchSource',
 
     work_phone: 'workPhone',
@@ -3047,6 +3053,9 @@ function syncFormFromQuery(query) {
         assignedOn: '',
         assignedFrom: '',
         assignedTo: '',
+        modifiedOn: '',
+        modifiedFrom: '',
+        modifiedTo: '',
         stageChangedBy: '',
         branchSource: '',
         workPhone: '',
@@ -3108,6 +3117,14 @@ function syncFormFromQuery(query) {
         next.assignedOn = 'custom_date'
         next.assignedFrom = query.assigned_at
         next.assignedTo = query.assigned_at
+    }
+
+    if (next.modifiedFrom || next.modifiedTo) {
+        next.modifiedOn = 'custom_date'
+    } else if (query.modified_at) {
+        next.modifiedOn = 'custom_date'
+        next.modifiedFrom = query.modified_at
+        next.modifiedTo = query.modified_at
     }
     
     next.budgetFrom = formatBudgetWithCommas(next.budgetFrom)
@@ -3361,6 +3378,12 @@ const form = ref({
     assignedFrom: '',
 
     assignedTo: '',
+
+    modifiedOn: '',
+
+    modifiedFrom: '',
+
+    modifiedTo: '',
 
     branchSource: '',
 
@@ -4482,6 +4505,8 @@ const searchFieldsConfig = computed(() => {
 
         { id: 'assigned_on', label: 'Assign On', formKey: 'assignedOn', queryKey: 'assigned_at', type: 'select', options: createdOnOptions },
 
+        { id: 'modified_on', label: 'Modified On', formKey: 'modifiedOn', queryKey: 'modified_at', type: 'select', options: createdOnOptions },
+
         { id: 'responsible_person', label: 'Responsible Person', formKey: 'responsible', queryKey: 'responsible_person_id', type: 'select', options: [] }
 
     ]
@@ -4607,6 +4632,36 @@ const createdOnDisplay = computed(() => {
 
 })
 
+/** Date-range search fields → their form keys (preset / custom from / custom to). */
+const DATE_FIELD_KEYS = {
+    created_on: { dateKey: 'createdOn', fromKey: 'createdFrom', toKey: 'createdTo' },
+    assigned_on: { dateKey: 'assignedOn', fromKey: 'assignedFrom', toKey: 'assignedTo' },
+    modified_on: { dateKey: 'modifiedOn', fromKey: 'modifiedFrom', toKey: 'modifiedTo' },
+}
+
+function isDateField(fieldId) {
+    return Object.prototype.hasOwnProperty.call(DATE_FIELD_KEYS, fieldId)
+}
+
+function dateFieldKeys(fieldId) {
+    return DATE_FIELD_KEYS[fieldId] || DATE_FIELD_KEYS.created_on
+}
+
+/** Text for a date field: "from to to", one day, or the preset name. */
+function dateFieldText(fieldId) {
+    const { dateKey, fromKey, toKey } = dateFieldKeys(fieldId)
+    const from = form.value[fromKey]
+    const to = form.value[toKey]
+    if (form.value[dateKey] === 'custom_date' && from && to) {
+        return from !== to ? `${from} to ${to}` : from
+    }
+    return createdOnOptions.find(opt => opt.value === form.value[dateKey])?.text || null
+}
+
+function dateFieldDisplay(fieldId) {
+    return dateFieldText(fieldId) || 'Select Date'
+}
+
 const assignedOnDisplay = computed(() => {
 
     if (form.value.assignedOn === 'custom_date' && form.value.assignedFrom && form.value.assignedTo) {
@@ -4655,7 +4710,8 @@ const visibleSearchFields = computed(() => {
 
             // Inactive Sales isn't in the saved field settings (added later) — always show it
             // to the roles that get it (searchFieldsConfig already checks the role).
-            if (f.id === 'inactive_sales' || f.id === 'created_by') return true
+            // Modified On was added after users saved their field settings — always show it.
+            if (f.id === 'inactive_sales' || f.id === 'created_by' || f.id === 'modified_on') return true
 
             if (!selectedSet.has(f.id)) return false
 
@@ -4702,6 +4758,8 @@ const visibleSearchFields = computed(() => {
                 f.formKey === 'createdOn' ? createdOnOptions :
 
                 f.formKey === 'assignedOn' ? createdOnOptions :
+
+                f.formKey === 'modifiedOn' ? createdOnOptions :
 
                 f.formKey === 'team' ? computedTeamOptions.value :
 
@@ -4778,7 +4836,7 @@ const searchFieldSections = [
 
         title: 'Lead Information',
 
-        fieldIds: ['lead_name','first_name',  'work_phone', 'email', 'created_on', 'assigned_on']
+        fieldIds: ['lead_name','first_name',  'work_phone', 'email', 'created_on', 'assigned_on', 'modified_on']
 
     },
 
@@ -5070,6 +5128,12 @@ function getDisplayValue(field, rawValue) {
 
     
 
+    if (field.id === 'modified_on') {
+
+        return dateFieldText('modified_on')
+
+    }
+
     if (field.id === 'assigned_on') {
 
         if (form.value.assignedOn === 'custom_date' && form.value.assignedFrom && form.value.assignedTo) {
@@ -5240,6 +5304,58 @@ const isFormEmpty = () => {
         if (Array.isArray(val)) return val.length === 0
         return val === null || val === '' || val === undefined
     })
+}
+
+/**
+ * A date preset (today, this_week, last_30_days, custom_date, …) → { from, to } as
+ * Y-m-d, normalized like the other lead date filters.
+ */
+function presetDateRange(preset, customFrom, customTo) {
+    const toLocalDateStr = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const y = today.getFullYear()
+    const m = today.getMonth()
+    const daysFromMonday = today.getDay() === 0 ? 6 : today.getDay() - 1
+    const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d }
+
+    let from
+    let to
+    let at
+
+    switch (preset) {
+        case 'today': at = toLocalDateStr(today); break
+        case 'yesterday': at = toLocalDateStr(daysAgo(1)); break
+        case 'this_week': {
+            const start = daysAgo(daysFromMonday)
+            const end = new Date(start)
+            end.setDate(start.getDate() + 6)
+            from = toLocalDateStr(start)
+            to = toLocalDateStr(end)
+            break
+        }
+        case 'last_week': {
+            const end = daysAgo(daysFromMonday + 1)
+            const start = new Date(end)
+            start.setDate(end.getDate() - 6)
+            from = toLocalDateStr(start)
+            to = toLocalDateStr(end)
+            break
+        }
+        case 'this_month': from = toLocalDateStr(new Date(y, m, 1)); to = toLocalDateStr(new Date(y, m + 1, 0)); break
+        case 'last_month': from = toLocalDateStr(new Date(y, m - 1, 1)); to = toLocalDateStr(new Date(y, m, 0)); break
+        case 'last_7_days': from = toLocalDateStr(daysAgo(7)); to = toLocalDateStr(today); break
+        case 'last_30_days': from = toLocalDateStr(daysAgo(30)); to = toLocalDateStr(today); break
+        case 'last_60_days': from = toLocalDateStr(daysAgo(60)); to = toLocalDateStr(today); break
+        case 'last_90_days': from = toLocalDateStr(daysAgo(90)); to = toLocalDateStr(today); break
+        case 'this_year': from = toLocalDateStr(new Date(y, 0, 1)); to = toLocalDateStr(new Date(y, 11, 31)); break
+        case 'last_year': from = toLocalDateStr(new Date(y - 1, 0, 1)); to = toLocalDateStr(new Date(y - 1, 11, 31)); break
+        case 'custom_date': from = customFrom || undefined; to = customTo || undefined; break
+    }
+
+    const normalized = normalizeLeadDateRange(from, to, at)
+    return { from: normalized.from, to: normalized.to }
 }
 
 async function applySearch(options = {}) {
@@ -5858,6 +5974,11 @@ async function applySearch(options = {}) {
 
     }
 
+    // Modified On — leads.updated_at, same presets as Created / Assign On.
+    const modifiedRange = form.value.modifiedOn
+        ? presetDateRange(form.value.modifiedOn, form.value.modifiedFrom, form.value.modifiedTo)
+        : { from: undefined, to: undefined }
+
 
 
     // Several parent sources at once; each parent's picked children replace it.
@@ -5908,6 +6029,10 @@ async function applySearch(options = {}) {
         assigned_from: assignedFrom || undefined,
 
         assigned_to: assignedTo || undefined,
+
+        modified_from: modifiedRange.from || undefined,
+
+        modified_to: modifiedRange.to || undefined,
 
         team_id: teamId || undefined,
 
@@ -5963,7 +6088,7 @@ async function applySearch(options = {}) {
 
     const activeFilters = []
 
-    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || f.id === 'created_by' || selectedLeadFieldIds.value.includes(f.id))
+    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || f.id === 'created_by' || f.id === 'modified_on' || selectedLeadFieldIds.value.includes(f.id))
 
     
 
@@ -6557,7 +6682,13 @@ function resetFormValues() {
 
         assignedTo: '',
 
-        created_from: '',     
+        modifiedOn: '',
+
+        modifiedFrom: '',
+
+        modifiedTo: '',
+
+        created_from: '',
 
         created_to: '',  
 
@@ -6690,13 +6821,7 @@ function openDatePicker(fieldId = 'created_on', event) {
 
     activeDateField.value = fieldId
 
-    const isAssigned = fieldId === 'assigned_on'
-
-    const dateKey = isAssigned ? 'assignedOn' : 'createdOn'
-
-    const fromKey = isAssigned ? 'assignedFrom' : 'createdFrom'
-
-    const toKey = isAssigned ? 'assignedTo' : 'createdTo'
+    const { dateKey, fromKey, toKey } = dateFieldKeys(fieldId)
 
 
 
@@ -6870,13 +6995,7 @@ function changeMonth(delta) {
 
 function applyDateRange() {
 
-    const isAssigned = activeDateField.value === 'assigned_on'
-
-    const dateKey = isAssigned ? 'assignedOn' : 'createdOn'
-
-    const fromKey = isAssigned ? 'assignedFrom' : 'createdFrom'
-
-    const toKey = isAssigned ? 'assignedTo' : 'createdTo'
+    const { dateKey, fromKey, toKey } = dateFieldKeys(activeDateField.value)
 
 
 
@@ -7091,6 +7210,18 @@ watch(() => form.value.createdOn, (newVal, oldVal) => {
 })
 
 
+
+watch(() => form.value.modifiedOn, (newVal, oldVal) => {
+
+    if (oldVal === 'custom_date' && newVal !== 'custom_date') {
+
+        form.value.modifiedFrom = ''
+
+        form.value.modifiedTo = ''
+
+    }
+
+})
 
 watch(() => form.value.assignedOn, (newVal, oldVal) => {
 

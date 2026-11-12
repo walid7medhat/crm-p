@@ -159,6 +159,8 @@ class LeadController extends Controller
                 }
                 // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
                 UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
+                // Lead search "Modified On" — last update of the lead (updated_at).
+                UaeDateRange::apply($leadsQuery, 'updated_at', $request->modified_from, $request->modified_to, $request->modified_at);
                 if ($request->filled('changed_by')) {
                     $leadsQuery->whereHas('histories', function ($query) use ($request) {
                         $query->where('changes->action', 'stage_changed')

@@ -57,6 +57,9 @@ class LeadKanbanHeatCache
         'assigned_from',
         'assigned_to',
         'assigned_at',
+        'modified_from',
+        'modified_to',
+        'modified_at',
         'search',
     ];
 
