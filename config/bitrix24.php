@@ -12,6 +12,14 @@ return [
     'event_token' => env('BITRIX24_EVENT_TOKEN'),
 
     /** Local user id used when a Bitrix24 user has no local match. */
+    // Force a Bitrix24 lead STATUS_ID to a local stage id (wins over name matching).
+    // BITRIX24_STATUS_STAGE_MAP="UC_ABC123:10,UC_XYZ789:10"   (10 = Lead Pool)
+    'status_stage_map' => collect(explode(',', (string) env('BITRIX24_STATUS_STAGE_MAP', '')))
+        ->map(fn ($pair) => array_map('trim', explode(':', $pair, 2)))
+        ->filter(fn ($p) => count($p) === 2 && $p[0] !== '' && is_numeric($p[1]))
+        ->mapWithKeys(fn ($p) => [strtoupper($p[0]) => (int) $p[1]])
+        ->all(),
+
     'fallback_user_id' => (int) env('BITRIX24_FALLBACK_USER_ID', 1),
 
     'http_timeout' => (int) env('BITRIX24_HTTP_TIMEOUT', 60),

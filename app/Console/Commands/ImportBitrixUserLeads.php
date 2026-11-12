@@ -33,6 +33,7 @@ class ImportBitrixUserLeads extends Command
         {--only-missing : With --import: only create missing leads, do not update existing ones}
         {--dry-run : Show, lead by lead, what --import would create / change — writes nothing}
         {--stages : List every lead with its Bitrix24 stage and CRM stage — writes nothing}
+        {--move-pool : Also move leads that are in the CRM Lead Pool (default: keep their stage + responsible)}
         {--force : Do not ask for confirmation}';
 
     protected $description = 'Check / import the Bitrix24 leads of one user (responsible in Bitrix24)';
@@ -91,6 +92,8 @@ class ImportBitrixUserLeads extends Command
             ->keyBy('bitrix24_id');
 
         $importer = new Bitrix24LeadImporter($client, 1);
+        // Leads in the CRM Lead Pool stay there (stage + responsible) unless --move-pool.
+        $importer->keepLeadPool = ! $this->option('move-pool');
         $missing = $otherOwner = $deleted = $mine = [];
         foreach ($b24Leads as $b24Id => $b) {
             $lead = $local[$b24Id] ?? null;
@@ -286,13 +289,16 @@ class ImportBitrixUserLeads extends Command
             $b = $b24Leads[$id];
             $lead = $local[$id];
             $changes = [];
+            $keepPool = $importer->keepsLeadPoolStage($lead);
 
             $stage = $importer->resolveStageId($b['STATUS_ID'] ?? null);
-            if ($stage && (int) $stage !== (int) $lead->stage_id) {
+            if ($keepPool && $stage && (int) $stage !== (int) $lead->stage_id) {
+                $changes[] = 'stage: stays Lead Pool (Bitrix: '.($stageNames[$stage] ?? $stage).')';
+            } elseif ($stage && (int) $stage !== (int) $lead->stage_id) {
                 $changes[] = 'stage: '.($stageNames[$lead->stage_id] ?? $lead->stage_id).' → '.($stageNames[$stage] ?? $stage);
             }
             $resp = $importer->mapBitrixUser($user->bitrix24_id) ?: $user->id;
-            if ((int) $resp !== (int) $lead->responsible_person_id) {
+            if (! $keepPool && (int) $resp !== (int) $lead->responsible_person_id) {
                 $changes[] = 'responsible: '.$uname($lead->responsible_person_id).' → '.$uname($resp);
             }
             $source = $importer->resolveLeadSource($b['SOURCE_ID'] ?? null) ?? 'Bitrix24';

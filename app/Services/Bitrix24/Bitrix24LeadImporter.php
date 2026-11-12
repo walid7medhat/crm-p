@@ -27,6 +27,20 @@ class Bitrix24LeadImporter
     /** Cache: STATUS_ID code => human name (lead pipeline statuses) */
     private ?array $statusMap = null;
 
+    /**
+     * When true, an existing lead that is in the CRM Lead Pool keeps its stage AND
+     * responsible person on re-sync (data fields are still refreshed). Off by default
+     * so the normal sync behaves as before; bitrix:import-user-leads turns it on.
+     */
+    public bool $keepLeadPool = false;
+
+    /** Would a re-sync keep this existing lead's stage/responsible (see $keepLeadPool)? */
+    public function keepsLeadPoolStage(Lead $existing): bool
+    {
+        return $this->keepLeadPool
+            && (int) $existing->stage_id === (int) self::LOCAL_STAGE_KEYWORD_TO_ID['pool'];
+    }
+
     /** Cache: SOURCE_ID code => human name */
     private ?array $sourceMap = null;
 
@@ -193,7 +207,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                  $oldStatus = $existing->status_lead;
                 $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
                 
-                if ($oldStatus !== $newStatus && $newStatus !== null) {
+                if ($oldStatus !== $newStatus && $newStatus !== null && ! $this->keepsLeadPoolStage($existing)) {
                     LeadHistoryHelper::log($existing->id, [
                         'action' => 'stage_changed',
                         'old_stage' => $oldStatus,
@@ -268,7 +282,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                 $oldStatus = $existing->status_lead;
                 $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
 
-                if ($oldStatus !== $newStatus && $newStatus !== null) {
+                if ($oldStatus !== $newStatus && $newStatus !== null && ! $this->keepsLeadPoolStage($existing)) {
                     LeadHistoryHelper::log($existing->id, [
                         'action'       => 'stage_changed',
                         'old_stage'    => $oldStatus,
@@ -1061,7 +1075,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             $refresh['bitrix24_assigned_user_id'] = $assignedB24;
 
             $localResponsible = $this->mapBitrixUser($assignedB24);
-            if ($localResponsible && (int) $existing->responsible_person_id !== (int) $localResponsible) {
+            if ($localResponsible && (int) $existing->responsible_person_id !== (int) $localResponsible
+                && ! $this->keepsLeadPoolStage($existing)) {
                 $refresh['responsible_person_id'] = $localResponsible;
             }
         }
@@ -1125,6 +1140,11 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         }
 
         if ($newStageId === null) {
+            return;
+        }
+
+        // CRM Lead Pool is kept (bitrix:import-user-leads): don't pull the lead out.
+        if ($this->keepsLeadPoolStage($existing)) {
             return;
         }
 
@@ -1193,6 +1213,13 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             return $this->defaultStageId;
         }
 
+        // Explicit STATUS_ID → local stage id overrides (config bitrix24.status_stage_map,
+        // env BITRIX24_STATUS_STAGE_MAP="UC_ABC123:10,UC_XYZ:10") win over name matching.
+        $override = config('bitrix24.status_stage_map', [])[strtoupper($code)] ?? null;
+        if ($override) {
+            return (int) $override;
+        }
+
         $this->ensureFieldMaps();
         $name = $this->statusMap[$code] ?? $code;
         $key = mb_strtolower(trim((string) $name));
@@ -1219,7 +1246,14 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         return self::LOCAL_STAGE_KEYWORD_TO_ID[$lcName];
     }
 
-    // 2. synonyms → keyword → id
+    // 2. Any Bitrix status with "pool" in its name is the Lead Pool — checked before the
+    //    synonyms, otherwise e.g. "Lead Pool - Follow up" matched "follow up" → Contacted
+    //    and "Lead Pool (junk)" matched "junk" → Unqualified.
+    if (mb_strpos($lcName, 'pool') !== false) {
+        return self::LOCAL_STAGE_KEYWORD_TO_ID['pool'];
+    }
+
+    // 3. synonyms → keyword → id
     foreach (self::STATUS_NAME_SYNONYMS as $syn => $localKeyword) {
         if (mb_strpos($lcName, $syn) !== false) {
             return self::LOCAL_STAGE_KEYWORD_TO_ID[$localKeyword] ?? null;
