@@ -1174,6 +1174,7 @@ const topModuleNavItems = computed(() => {
     isShowOnlyListing: isShowOnlyListingNav.value,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListingNav.value,
+    hideListings: isAccountant.value,
     hasPermission: (p) => proxy?.$hasPermission?.(p) ?? true,
   });
 });

@@ -655,13 +655,15 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
 /**
  * Top header shortcut row on the dashboard — replaces the old CRM / HRM switch.
  */
-export function buildTopModuleNav() {
-  return [
+export function buildTopModuleNav(ctx = {}) {
+  const items = [
     { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
     { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
     { id: 'property', label: 'Property', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
     { id: 'transaction', label: 'Transaction', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
   ];
+  // hideListings: e.g. the accountant role — no Listings ("Property") module.
+  return ctx.hideListings ? items.filter((i) => i.id !== 'property') : items;
 }
 
 export function isTopModuleNavActive(currentPath, activeModule, item) {

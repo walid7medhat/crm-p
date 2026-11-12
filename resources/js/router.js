@@ -5,6 +5,7 @@ import { installNavProgress } from './composables/useNavProgress.js'
 import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 import { confirmRegisteredLeadDrafts } from './composables/useLeadFormDraft.js'
+import { resolveCrmSection, CRM_SECTIONS } from './composables/useLayoutNavigation.js'
 /**
  * Route components are lazy-loaded so the initial main bundle no longer pulls
  * every page (HR, kanban, listings, maps, etc.). Auth guards / meta below are
@@ -356,6 +357,16 @@ const isHrFromStorage = () => {
     return false
   }
 }
+const isAccountantFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    return Array.isArray(u.roles) && u.roles.includes('accountant')
+  } catch {
+    return false
+  }
+}
 const hasPermissionFromStorage = (permission) => {
   try {
     const raw = localStorage.getItem('user')
@@ -427,6 +438,12 @@ router.beforeEach(async (to, from, next) => {
           next('/')
           return
       }
+
+  // accountant: Leads (Converted) + Deals only — no Listings pages at all.
+  if (isAccountantFromStorage() && resolveCrmSection(to.path) === CRM_SECTIONS.LISTINGS) {
+    next('/')
+    return
+  }
 
   const requiredPermission = to.matched.find((r) => r.meta.requiresPermission)?.meta.requiresPermission
   // strictPermission: the admin role doesn't bypass the permission (only super_admin does).
