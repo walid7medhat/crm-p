@@ -336,27 +336,60 @@ export default {
         const assigningPermissions = ref(false);
         const isMobileLayout = ref(window.matchMedia('(max-width: 768px)').matches);
 
-        const placePermissionDropdown = (dropdownList, component, { width, top, left }) => {
-            dropdownList.style.setProperty('z-index', '13000', 'important');
-            dropdownList.style.left = left;
-            dropdownList.style.width = width;
-            dropdownList.style.top = top;
-
-            requestAnimationFrame(() => {
+        // The menu is appended to <body> and vue-select-overrides.css forces it to
+        // position: fixed — so place it in VIEWPORT coordinates (vue-select's own `top`
+        // includes window.scrollY, which pushed it off-screen once the page was scrolled,
+        // e.g. on mobile where this field sits far down the form). Follows scroll/resize,
+        // keeps clear of the mobile bottom bar, and flips above when there's no room.
+        const placePermissionDropdown = (dropdownList, component, { width }) => {
+            const update = () => {
                 const toggle = component?.$refs?.toggle;
                 const rect = toggle?.getBoundingClientRect?.();
                 if (!rect) return;
 
-                const menuHeight = dropdownList.getBoundingClientRect().height || 200;
-                const dockClearance = 96;
-                const spaceBelow = window.innerHeight - rect.bottom;
-                if (spaceBelow < menuHeight + dockClearance) {
-                    const available = Math.max(140, rect.top - 12);
-                    const height = Math.min(menuHeight, available);
-                    dropdownList.style.maxHeight = `${height}px`;
-                    dropdownList.style.top = `${Math.max(8, rect.top + window.scrollY - height - 4)}px`;
+                const vv = window.visualViewport;
+                const viewportHeight = vv ? vv.height : window.innerHeight;
+                const offsetTop = vv ? vv.offsetTop : 0;
+                const offsetLeft = vv ? vv.offsetLeft : 0;
+                const dockClearance = isMobileLayout.value ? 96 : 12;
+
+                const spaceBelow = viewportHeight - rect.bottom - dockClearance;
+                const spaceAbove = rect.top - 12;
+                const openAbove = spaceBelow < 200 && spaceAbove > spaceBelow;
+                const maxHeight = Math.max(140, Math.min(300, openAbove ? spaceAbove : spaceBelow));
+
+                dropdownList.style.setProperty('z-index', '13000', 'important');
+                dropdownList.style.position = 'fixed';
+                dropdownList.style.width = width;
+                dropdownList.style.left = `${Math.max(8, rect.left + offsetLeft)}px`;
+                dropdownList.style.right = 'auto';
+                dropdownList.style.maxHeight = `${maxHeight}px`;
+                dropdownList.style.overflowY = 'auto';
+                if (openAbove) {
+                    dropdownList.style.top = 'auto';
+                    dropdownList.style.bottom = `${Math.max(8, viewportHeight - rect.top + 4)}px`;
+                } else {
+                    dropdownList.style.bottom = 'auto';
+                    dropdownList.style.top = `${rect.bottom + offsetTop + 2}px`;
                 }
-            });
+            };
+
+            update();
+            requestAnimationFrame(update);
+
+            const vv = window.visualViewport;
+            window.addEventListener('scroll', update, true);
+            window.addEventListener('resize', update);
+            vv?.addEventListener('scroll', update);
+            vv?.addEventListener('resize', update);
+
+            // vue-select calls this when the menu closes.
+            return () => {
+                window.removeEventListener('scroll', update, true);
+                window.removeEventListener('resize', update);
+                vv?.removeEventListener('scroll', update);
+                vv?.removeEventListener('resize', update);
+            };
         };
 
         const isSuperAdmin = computed(() => {
