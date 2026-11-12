@@ -285,6 +285,7 @@ class ImportBitrixUserLeads extends Command
         }
 
         $noChange = 0;
+        $keptInPool = 0;
         foreach ($existing as $id) {
             $b = $b24Leads[$id];
             $lead = $local[$id];
@@ -292,8 +293,11 @@ class ImportBitrixUserLeads extends Command
             $keepPool = $importer->keepsLeadPoolStage($lead);
 
             $stage = $importer->resolveStageId($b['STATUS_ID'] ?? null);
-            if ($keepPool && $stage && (int) $stage !== (int) $lead->stage_id) {
-                $changes[] = 'stage: stays Lead Pool (Bitrix: '.($stageNames[$stage] ?? $stage).')';
+            if ($keepPool) {
+                // Kept in Lead Pool on purpose — not a pending change (would never "go away").
+                if ($stage && (int) $stage !== (int) $lead->stage_id) {
+                    $keptInPool++;
+                }
             } elseif ($stage && (int) $stage !== (int) $lead->stage_id) {
                 $changes[] = 'stage: '.($stageNames[$lead->stage_id] ?? $lead->stage_id).' → '.($stageNames[$stage] ?? $stage);
             }
@@ -327,6 +331,7 @@ class ImportBitrixUserLeads extends Command
             ['Create (missing in CRM)', count($missing)],
             ['Update (data differs from Bitrix)', count($rows) - count($missing)],
             ['Existing, data already same (only new comments/activities)', $noChange],
+            ['In CRM Lead Pool — kept there although Bitrix stage differs', $keptInPool],
             ['Skip (deleted in CRM)', count($deleted)],
         ]);
 
