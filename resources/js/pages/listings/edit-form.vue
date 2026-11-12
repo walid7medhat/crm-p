@@ -647,13 +647,45 @@
                   </thead>
                   <tbody>
                     <!-- Developer NOC: shown and totalled like the listing page / offer PDF (not a saved cost line). -->
-                    <tr v-if="nocFixedAmount > 0" class="assignment-expenses-noc-row">
-                      <td><span class="fw-semibold small">NOC Fees</span></td>
+                    <tr v-if="nocFixedAmount > 0">
+                      <td>
+                        <input
+                          value="NOC Fees"
+                          type="text"
+                          class="form-control form-control-sm assignment-expenses-inline-input"
+                          disabled
+                        />
+                      </td>
                       <td class="d-none d-md-table-cell"><span class="text-muted small">—</span></td>
-                      <td><span class="text-muted small">Fixed (AED)</span></td>
-                      <td><span class="small">{{ formatAed(nocFixedAmount) }}</span></td>
+                      <td>
+                        <v-select
+                          model-value="fixed"
+                          :options="assignmentExpenseTypeOptions"
+                          :reduce="(item) => item.value"
+                          label="label"
+                          :clearable="false"
+                          class="assignment-expenses-inline-select"
+                          disabled
+                        />
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center gap-1">
+                          <input
+                            :value="nocFixedAmount"
+                            type="number"
+                            class="form-control form-control-sm assignment-expenses-inline-input assignment-expenses-value-input"
+                            disabled
+                          />
+                          <span class="text-muted small text-nowrap">AED</span>
+                        </div>
+                      </td>
                       <td class="text-end text-nowrap">{{ formatAed(nocFixedAmount) }}</td>
-                      <td class="text-end text-nowrap">{{ nocVatForm > 0 ? formatAed(nocVatForm) : '—' }}</td>
+                      <td class="text-end text-nowrap">
+                        <label class="assignment-expenses-vat-inline d-inline-flex align-items-center justify-content-end gap-1 mb-0 small">
+                          <input type="checkbox" class="form-check-input m-0 flex-shrink-0" disabled :checked="nocVatForm > 0" />
+                          <span>{{ nocVatForm > 0 ? formatAed(nocVatForm) : '—' }}</span>
+                        </label>
+                      </td>
                       <td class="text-end text-nowrap fw-semibold">{{ formatAed(nocFixedAmount + nocVatForm) }}</td>
                     </tr>
                     <tr v-for="line in assignmentExpenseLines" :key="line.id">
