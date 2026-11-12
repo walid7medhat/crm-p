@@ -785,6 +785,7 @@ Route::middleware(['jwt.auth'])->group(function () {
      // User routes
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
+    Route::post('/users/bulk-action', [UserController::class, 'bulkAction']);
     Route::put('users/{id}/biometric-code',[UserController::class,'updateBiometricCode']);
     Route::get('/users/{user}/permissions', [UserController::class, 'permissions']);
     Route::post('/users/{user}/permissions', [UserController::class, 'assignPermissions']);

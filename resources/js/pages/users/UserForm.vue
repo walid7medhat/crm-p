@@ -208,7 +208,7 @@
                                 </div>
 
                                 <!-- Direct Permission Assignment (super admin only; hidden for admin role) -->
-                                <div class="col-12" v-if="isSuperAdmin && isEditMode && !isEditingAdminRole">
+                                <div class="col-12 extra-permissions-section" v-if="isSuperAdmin && isEditMode && !isEditingAdminRole">
                                     <hr class="my-2">
                                     <div class="mb-3">
                                         <label class="form-label">
@@ -1096,6 +1096,12 @@ watch(roles, (newRoles) => {
 @media (max-width: 1024px) {
     .user-form-page {
         padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Room below the permission select so its dropdown can open below it
+       instead of being cut off by the bottom bar / end of the page. */
+    .extra-permissions-section {
+        padding-bottom: 260px;
     }
 
     .user-form-actions {
