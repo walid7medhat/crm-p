@@ -1389,7 +1389,7 @@ import { useMergedLeadsPopover } from './composables/useMergedLeadsPopover.js'
 convertLeadModalLoader()
 
 
-import api, { getApiErrorMessage } from '@/plugins/axios'
+import api, { getApiBaseUrl, getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { peekLeadBoardPrefetchPromise, peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated, closeLeadView, showLeadViewModal } from '@/composables/useLeadViewModal.js'
@@ -6418,7 +6418,7 @@ const fetchRevertNotifications = async () => {
     try {
         const token = localStorage.getItem('token')
         const revertType = encodeURIComponent('App\\Notifications\\LeadRevertWarningNotification')
-        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/notifications?type=${revertType}`, {
+        const response = await fetch(`${getApiBaseUrl()}/auth/notifications?type=${revertType}`, {
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         })
         if (!response.ok) return

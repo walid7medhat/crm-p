@@ -76,8 +76,9 @@
         @endforeach
         <link rel="preload" href="{{ asset('assets/images/crm-bg-light.jpg') }}?v=3" as="image" type="image/jpeg">
         <script>
-            window.__API_BASE_URL__ = "{{ url('/api') }}";
-            window.__APP_ORIGIN__ = "{{ url('') }}";
+            {{-- Same-origin API for OIA + Luxvant hosts (never bake APP_URL / OIA hostname). --}}
+            window.__API_BASE_URL__ = '/api';
+            window.__APP_ORIGIN__ = window.location.origin;
             window.__BRAND__ = @json($brand);
             (function () {
                 try {

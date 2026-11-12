@@ -1,21 +1,9 @@
 import axios from 'axios'
 import Swal from 'sweetalert2'
 import { waitForLeadBoardPriority } from '../composables/leadBoardPriority.js'
+import { getApiBaseUrl, getAppOrigin } from '../config/apiBaseUrl.js'
 
-export function getApiBaseUrl() {
-  return (
-    (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
-    import.meta.env.VITE_API_BASE_URL ||
-    (typeof window !== 'undefined'
-      ? `${window.location.origin}/api`
-      : 'http://127.0.0.1:8000/api')
-  )
-}
-
-export function getAppOrigin() {
-  const base = getApiBaseUrl()
-  return base.replace(/\/api\/?$/, '')
-}
+export { getApiBaseUrl, getAppOrigin }
 
 export function resolveAuthToken() {
   let token =

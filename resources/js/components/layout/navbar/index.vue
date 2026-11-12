@@ -998,7 +998,7 @@ const LeadSearchModal = defineAsyncComponent(() => import('@/components/kanban/l
 import { getUnreadAnnouncements, getAnnouncement } from '@/services/announcementsApi';
 const { isMobileOpen, openMobileSidebar } = useSidebar();
 const { isMobileViewport, toggleMobileMenu } = useMobileNavigation();
-import api, { clearAuthToken } from '@/plugins/axios';
+import api, { clearAuthToken, getApiBaseUrl } from '@/plugins/axios';
 import Swal from 'sweetalert2';
 import { BFormInput } from 'bootstrap-vue-3';
 const userPlaceholder = userAvatarPlaceholder;
@@ -2454,7 +2454,7 @@ async function savePersonalInfoEdit() {
       return;
     }
 
-    const url = `${import.meta.env.VITE_API_URL || '/api'}/users/${u.id}`;
+    const url = `${getApiBaseUrl()}/users/${u.id}`;
     
     const response = await fetch(url, {
       method: 'POST',

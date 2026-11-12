@@ -184,6 +184,7 @@ import { openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { openDealFromNotification } from '@/composables/useDealViewModal.js'
 import { openMarketingFromNotification } from '@/composables/useMarketingNotification.js'
 import { openPropertyDetails } from '@/composables/usePropertyDetailsModal'
+import { getApiBaseUrl } from '@/config/apiBaseUrl.js'
 
 export default {
   name: 'AllNotifications',
@@ -202,11 +203,7 @@ export default {
       searchQuery: '',
       activeFeedTab: 'all',
       activeTypeFilter: 'all',
-      apiBaseUrl:
-        (typeof window !== 'undefined' && window.__API_BASE_URL__) ||
-        import.meta.env.VITE_API_URL ||
-        import.meta.env.VITE_API_BASE_URL ||
-        'http://127.0.0.1:8001/api',
+      apiBaseUrl: getApiBaseUrl(),
     }
   },
   mounted() {
