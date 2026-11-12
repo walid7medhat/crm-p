@@ -733,8 +733,24 @@ public function activitiesWithTrashed()
             ->when($convertedStageIds !== [], fn ($q) => $q->orWhereIn('stage_id', $convertedStageIds));
     }
 
+    /** Leads sitting in a Converted lead stage only — the accountant role's lead scope. */
+    public function scopeInConvertedStage($query)
+    {
+        $stageIds = static::convertedStageIds();
+
+        return $stageIds === []
+            ? $query->whereRaw('1 = 0')
+            : $query->whereIn('stage_id', $stageIds);
+    }
+
+    /** Instance version of scopeInConvertedStage(). */
+    public function isInConvertedStage(): bool
+    {
+        return in_array((int) $this->stage_id, static::convertedStageIds(), true);
+    }
+
     /** Lead stages named "…Converted…" (dashboard rule), once per request. @return int[] */
-    protected static function convertedStageIds(): array
+    public static function convertedStageIds(): array
     {
         return once(fn () => Stage::query()
             ->where('stage_type', 'lead')

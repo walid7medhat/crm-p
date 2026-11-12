@@ -271,6 +271,11 @@ class StageController extends Controller
             $visibleStageIds = Stage::where('stage_type', 'lead')->pluck('id')->toArray();
         }
 
+        // accountant: only the Converted stage column — no other lead stages at all.
+        if ($user->isAccountant()) {
+            $visibleStageIds = \App\Models\Lead::convertedStageIds() ?: [0];
+        }
+
         // Listing-team managers and sales always see the first stage (New Lead) — they create
         // leads straight into it — even when stage visibility hides it for their role.
         // branch_admin too: they see unassigned (#1) New Lead leads (User::unassignedNewLeadStageId).
@@ -672,7 +677,8 @@ class StageController extends Controller
             $user->applyLeadResponsibleScope($baseLeadsQuery, array_merge($subordinatesIds, [$user->id]));
             // Reverted leads stay hidden from everyone below admin level (incl. sales with
             // show-branch-leads), same as before.
-            if (! $user->hasAnyRole(['admin', 'branch_admin'])) {
+            // accountant: revert timers don't apply to Converted-stage leads they review.
+            if (! $user->hasAnyRole(['admin', 'branch_admin', 'accountant'])) {
                 $baseLeadsQuery->whereNull('revert');
             }
         } else {
@@ -898,7 +904,7 @@ class StageController extends Controller
                 // must stop showing up here just because someone on the team added it.
                 // (+ branch_admin: unassigned New Lead leads — User::applyLeadResponsibleScope.)
                 $user->applyLeadResponsibleScope($leadsQuery, array_merge($subordinatesIds, [$user->id]));
-                if (! $user->hasAnyRole(['admin', 'branch_admin'])) {
+                if (! $user->hasAnyRole(['admin', 'branch_admin', 'accountant'])) {
                     $leadsQuery->whereNull('revert');
                 }
             } 

@@ -426,6 +426,10 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
   const { isAdmin, isSuperAdmin, isShowOnlyListing, hasPermission, user } = ctx; 
 
   if (section === CRM_SECTIONS.LEAD) {
+    // accountant: Converted-stage leads only — no Lead Pool.
+    if (user?.roles?.includes('accountant')) {
+      return [{ id: 'leads', label: 'Lead', type: 'event' }];
+    }
     return [
       { id: 'leads', label: 'Lead', type: 'event' },
       { id: 'lead-pool', label: 'Lead Pool', type: 'event' },

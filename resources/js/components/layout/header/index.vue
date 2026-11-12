@@ -1813,7 +1813,8 @@ const showTabLeads = computed(() => canShowLeadsTab.value && !isShowOnlyListing.
 const showTabListings = computed(() =>
   !isHr.value && (showCrmListingsDropdown.value || showCrmListingsFlat.value || isShowOnlyListing.value),
 );
-const canCreateLead = computed(() => showTabLeads.value);
+// accountant: sees Converted-stage leads but never creates leads.
+const canCreateLead = computed(() => showTabLeads.value && !user.value?.roles?.includes('accountant'));
 const canCreateListing = computed(() => {
   if (isShowOnlyListing.value) return false;
   if (!proxy?.$hasPermission) return true;

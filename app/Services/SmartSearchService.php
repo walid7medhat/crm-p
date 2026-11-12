@@ -1169,6 +1169,11 @@ class SmartSearchService
             return $query;
         }
 
+        // accountant: converted leads of their branch only (User::canViewLead()).
+        if ($user->isAccountant()) {
+            return $query->where(fn ($q) => $user->applyLeadResponsibleScope($q, $user->getBranchUserIds()));
+        }
+
         return $query->where(function ($outer) use ($user) {
             $outer->where(function ($pool) use ($user) {
                 $pool->where('stage_id', 10)
