@@ -266,10 +266,8 @@ class Deal extends Model
     {
         // accountant: every deal in their whole branch (see User::isAccountant()).
         if ($user->isAccountant()) {
-            return $query->whereIn('responsible_person_id', $user->getBranchUserIds());
-        }
-
-        if ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) && $user->id != 30 && $user->id != 33) {
+            $query->whereIn('responsible_person_id', $user->getBranchUserIds());
+        } elseif ($user->hasAnyRole(['manager', 'team_lead', 'admin', 'branch_admin']) && $user->id != 30 && $user->id != 33) {
             $subordinatesIds = $user->hasRole('branch_admin')
                 ? $user->getBranchAdminSubordinateIds()
                 : $user->getAllSubordinatesIds();
@@ -280,6 +278,10 @@ class Deal extends Model
         } elseif (!$user->hasRole('super_admin') && $user->id != 30 && $user->id != 33) {
             $query->where('responsible_person_id', $user->id);
         }
+
+        // Luxvant host: further restrict to Admin Luxvant tree (no-op on OIA).
+        \App\Support\Brand\BrandCrmScope::constrainDeals($query);
+
         return $query;
     }
 

@@ -688,6 +688,9 @@ class StageController extends Controller
                 ->whereNull('revert');
         }
 
+        // Luxvant host: Admin Luxvant branch only (no-op on OIA).
+        \App\Support\Brand\BrandCrmScope::constrainLeads($baseLeadsQuery);
+
         // ================= apply all filters (unchanged logic) =================
         $baseLeadsQuery->where(function ($q) use ($request) {
             if ($request->filled('changed_by')) {
@@ -916,6 +919,9 @@ class StageController extends Controller
                 $leadsQuery->where('responsible_person_id', $user->id)
                     ->whereNull('revert');
             }
+
+            // Luxvant host: Admin Luxvant branch only (no-op on OIA).
+            \App\Support\Brand\BrandCrmScope::constrainLeads($leadsQuery);
 
             // ================= نفس الفلاتر =================
             if ($request->filled('changed_by')) {
@@ -1328,6 +1334,8 @@ public function getOffices()
                     $leadsQuery->where('responsible_person_id', $user->id);
                 }
             }
+
+            \App\Support\Brand\BrandCrmScope::constrainLeads($leadsQuery);
             
             $leads = $leadsQuery
                 ->orderBy('updated_at', 'desc')

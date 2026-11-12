@@ -128,6 +128,11 @@ class BrandResolver
             return true;
         }
 
+        // Luxvant host: members of the configured CRM branch (Admin Luxvant tree) may enter.
+        if (($brand['key'] ?? '') === 'luxvant') {
+            return BrandCrmScope::userInConfiguredCrmBranch((int) $user->id);
+        }
+
         return false;
     }
 }

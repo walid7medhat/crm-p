@@ -123,6 +123,18 @@ return [
                     array_map('trim', explode(',', (string) env('LUXVANT_ACCESS_EMAILS', '')))
                 ))),
             ],
+            /*
+            | CRM data scope on Luxvant hosts only (OIA unchanged).
+            | Limits agents / leads / deals to this branch root + descendants.
+            | Prefer LUXVANT_CRM_BRANCH_USER_ID in production once known; name is fallback.
+            */
+            'crm_scope' => [
+                'enabled' => (bool) env('LUXVANT_CRM_SCOPE_ENABLED', true),
+                'branch_user_id' => (($__luxBranchId = (int) env('LUXVANT_CRM_BRANCH_USER_ID', 0)) > 0)
+                    ? $__luxBranchId
+                    : null,
+                'branch_user_name' => env('LUXVANT_CRM_BRANCH_USER_NAME', 'Admin Luxvant'),
+            ],
             'logos' => [
                 // Green on light UI chrome; white on dark / auth marketing panels.
                 'primary' => '/assets/images/brands/luxvant/logo-green.png',

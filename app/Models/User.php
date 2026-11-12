@@ -524,6 +524,11 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
 
     public function canViewLead(Lead $lead): bool
     {
+        // Luxvant host: never open OIA-branch leads (even for super_admin).
+        if (! \App\Support\Brand\BrandCrmScope::leadAllowed($lead)) {
+            return false;
+        }
+
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
             return true;
         }
@@ -600,6 +605,12 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
     /** Deal equivalent of canViewLead() — matches DealController::authorizeAccess(). */
     public function canViewDeal(Deal $deal): bool
     {
+        // Luxvant host: deals must belong to Admin Luxvant tree agents.
+        if (\App\Support\Brand\BrandCrmScope::active()
+            && ! \App\Support\Brand\BrandCrmScope::userAllowed((int) $deal->responsible_person_id)) {
+            return false;
+        }
+
         if ($this->hasRole('super_admin') || $this->id == 30 || $this->id == 33) {
             return true;
         }

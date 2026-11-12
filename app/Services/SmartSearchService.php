@@ -1165,87 +1165,91 @@ class SmartSearchService
      */
     private function constrainLeads(Builder $query, User $user): Builder
     {
-        if ($user->hasRole('super_admin') || (int) $user->id === 30 || (int) $user->id === 33) {
-            return $query;
-        }
+        if (! ($user->hasRole('super_admin') || (int) $user->id === 30 || (int) $user->id === 33)) {
+            // accountant: converted leads of their branch only (User::canViewLead()).
+            if ($user->isAccountant()) {
+                $query->where(fn ($q) => $user->applyLeadResponsibleScope($q, $user->getBranchUserIds()));
+            } else {
+                $query->where(function ($outer) use ($user) {
+                    $outer->where(function ($pool) use ($user) {
+                        $pool->where('stage_id', 10)
+                            ->where(function ($own) use ($user) {
+                                $own->whereNull('responsible_person_id')
+                                    ->orWhere('responsible_person_id', '!=', $user->id);
+                            });
 
-        // accountant: converted leads of their branch only (User::canViewLead()).
-        if ($user->isAccountant()) {
-            return $query->where(fn ($q) => $user->applyLeadResponsibleScope($q, $user->getBranchUserIds()));
-        }
+                        $branchAdmin = $user->admin_parent;
+                        $userBranch = $branchAdmin?->name;
+                        if (! $userBranch || ! $branchAdmin) {
+                            $pool->whereRaw('1 = 0');
 
-        return $query->where(function ($outer) use ($user) {
-            $outer->where(function ($pool) use ($user) {
-                $pool->where('stage_id', 10)
-                    ->where(function ($own) use ($user) {
-                        $own->whereNull('responsible_person_id')
-                            ->orWhere('responsible_person_id', '!=', $user->id);
-                    });
+                            return;
+                        }
 
-                $branchAdmin = $user->admin_parent;
-                $userBranch = $branchAdmin?->name;
-                if (! $userBranch || ! $branchAdmin) {
-                    $pool->whereRaw('1 = 0');
-
-                    return;
-                }
-
-                $branchUserIds = $branchAdmin->getAllSubordinatesIds();
-                $pool->where(function ($q) use ($userBranch, $branchUserIds) {
-                    $q->where('lead_branch_source', $userBranch)
-                        ->orWhere(function ($q2) use ($branchUserIds) {
-                            $q2->whereNull('lead_branch_source')
-                                ->whereIn('responsible_person_id', $branchUserIds);
-                        })
-                        ->orWhere(function ($q2) use ($branchUserIds) {
-                            $q2->whereNull('lead_branch_source')
-                                ->whereNull('responsible_person_id')
-                                ->whereIn('added_by', $branchUserIds);
+                        $branchUserIds = $branchAdmin->getAllSubordinatesIds();
+                        $pool->where(function ($q) use ($userBranch, $branchUserIds) {
+                            $q->where('lead_branch_source', $userBranch)
+                                ->orWhere(function ($q2) use ($branchUserIds) {
+                                    $q2->whereNull('lead_branch_source')
+                                        ->whereIn('responsible_person_id', $branchUserIds);
+                                })
+                                ->orWhere(function ($q2) use ($branchUserIds) {
+                                    $q2->whereNull('lead_branch_source')
+                                        ->whereNull('responsible_person_id')
+                                        ->whereIn('added_by', $branchUserIds);
+                                });
                         });
+                    })->orWhere(function ($nonPool) use ($user) {
+                        $nonPool->where(function ($stage) {
+                            $stage->where('stage_id', '!=', 10)->orWhereNull('stage_id');
+                        });
+
+                        if ($user->hasRole('sales') && ! $user->seesBranchLeads()) {
+                            $nonPool->where('responsible_person_id', $user->id);
+
+                            return;
+                        }
+
+                        if ($user->hasRole('admin')) {
+                            $branchAdmin = $user->admin_parent;
+                            if (! $branchAdmin) {
+                                $nonPool->whereRaw('1 = 0');
+
+                                return;
+                            }
+                            $ids = $branchAdmin->getAllSubordinatesIds();
+                            $ids[] = (int) $branchAdmin->id;
+                            $nonPool->whereIn('responsible_person_id', $ids);
+
+                            return;
+                        }
+
+                        $user->applyLeadResponsibleScope($nonPool, array_merge($user->leadScopeUserIds(), [$user->id]));
+                    });
                 });
-            })->orWhere(function ($nonPool) use ($user) {
-                $nonPool->where(function ($stage) {
-                    $stage->where('stage_id', '!=', 10)->orWhereNull('stage_id');
-                });
+            }
+        }
 
-                if ($user->hasRole('sales') && ! $user->seesBranchLeads()) {
-                    $nonPool->where('responsible_person_id', $user->id);
+        \App\Support\Brand\BrandCrmScope::constrainLeads($query);
 
-                    return;
-                }
-
-                if ($user->hasRole('admin')) {
-                    $branchAdmin = $user->admin_parent;
-                    if (! $branchAdmin) {
-                        $nonPool->whereRaw('1 = 0');
-
-                        return;
-                    }
-                    $ids = $branchAdmin->getAllSubordinatesIds();
-                    $ids[] = (int) $branchAdmin->id;
-                    $nonPool->whereIn('responsible_person_id', $ids);
-
-                    return;
-                }
-
-                $user->applyLeadResponsibleScope($nonPool, array_merge($user->leadScopeUserIds(), [$user->id]));
-            });
-        });
+        return $query;
     }
 
     private function constrainDeals(Builder $query, User $user): Builder
     {
-        if ($user->hasRole('super_admin') || (int) $user->id === 30 || (int) $user->id === 33) {
-            return $query;
+        if (! ($user->hasRole('super_admin') || (int) $user->id === 30 || (int) $user->id === 33)) {
+            $query->where(function ($outer) use ($user) {
+                $outer->where(function ($direct) use ($user) {
+                    $direct->visibleFor($user);
+                })->orWhereHas('lead', function ($lead) use ($user) {
+                    $this->constrainLeads($lead, $user);
+                });
+            });
         }
 
-        return $query->where(function ($outer) use ($user) {
-            $outer->where(function ($direct) use ($user) {
-                $direct->visibleFor($user);
-            })->orWhereHas('lead', function ($lead) use ($user) {
-                $this->constrainLeads($lead, $user);
-            });
-        });
+        \App\Support\Brand\BrandCrmScope::constrainDeals($query);
+
+        return $query;
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\Brand\BrandContext;
+use App\Support\Brand\BrandCrmScope;
 use App\Support\Brand\BrandResolver;
 use Closure;
 use Illuminate\Http\Request;
@@ -17,6 +18,8 @@ class ResolveBrandFromHost
 
     public function handle(Request $request, Closure $next)
     {
+        BrandCrmScope::reset();
+
         $brand = $this->resolver->resolveFromRequest($request);
         $this->context->set($brand);
 

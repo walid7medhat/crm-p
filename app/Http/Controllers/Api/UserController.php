@@ -86,6 +86,11 @@ class UserController extends Controller
                             });
                     }
                 }
+
+            // Luxvant host: Agents list = Admin Luxvant tree only (no-op on OIA).
+            // Applies even for super_admin / hr / users-code, which otherwise see everyone.
+            \App\Support\Brand\BrandCrmScope::constrainUsers($query);
+
            if ($request->filled('parent_id')) {
 
                 $parent = User::with('children')->find($request->parent_id);
