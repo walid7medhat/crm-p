@@ -101,6 +101,7 @@ class Bitrix24LeadImporter
     'fresh'                  => 'new',
     'pool'                   => 'pool',
     'lead pool'                   => 'pool',
+    'leads pool'                   => 'pool',
     'shared'                 => 'shared',
     'assigned'               => 'assigned',
     'successfull'            => 'qualified',
