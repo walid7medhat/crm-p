@@ -16,7 +16,10 @@ use App\Services\Auth\LocationTrackingService;
 use Illuminate\Http\JsonResponse;
 use App\Notifications\BirthdaySelfNotification;
 use App\Notifications\NewSalesAgentNotification;
+use App\Support\Brand\BrandContext;
+use App\Support\Brand\BrandResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 class AuthController extends Controller
@@ -152,8 +155,27 @@ public function resetPassword(Request $request): JsonResponse
             return ApiResponse::error($statusMessage, 403);
         }
 
-        // Create token
-        $token = auth()->login($user);
+        // Host-based brand gate (Luxvant allowlist). Same Super Admin user id/email/password.
+        $brand = app(BrandContext::class)->get();
+        $brandResolver = app(BrandResolver::class);
+        if (!$brandResolver->userMayAccess($brand, $user)) {
+            Log::warning('brand login denied', [
+                'brand' => $brand['key'] ?? null,
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'host' => $request->getHost(),
+            ]);
+
+            return ApiResponse::error(
+                'Your account is not authorized for ' . ($brand['company_name'] ?? 'this workspace') . '.',
+                403
+            );
+        }
+
+        // Create token with brand claim for host/JWT consistency checks.
+        $token = JWTAuth::claims([
+            'brand_key' => $brand['key'] ?? 'oia',
+        ])->fromUser($user);
 
         // Always stamp last login time/IP (location/geolocation stays optional via auth/location).
         $user->forceFill([
@@ -167,6 +189,7 @@ public function resetPassword(Request $request): JsonResponse
         $payload = [
             'user' => new UserResource($user),
             'token' => $token,
+            'brand' => app(BrandContext::class)->toFrontendArray(),
         ];
 
         $publicKey = (string) config('services.web_push.public_key');
@@ -254,9 +277,20 @@ public function updateLocation(Request $request, LocationTrackingService $tracki
                 return ApiResponse::error('Cannot switch to an inactive account', 422);
             }
 
+            $brand = app(BrandContext::class)->get();
+            if (!app(BrandResolver::class)->userMayAccess($brand, $user)) {
+                return ApiResponse::error(
+                    'This account is not authorized for ' . ($brand['company_name'] ?? 'this workspace') . '.',
+                    403
+                );
+            }
+
             // Tag the token so presence (last_login_at) and device location are not
             // touched while the super admin is browsing as this user.
-            $token = auth()->claims(['impersonated_by' => (int) $currentUser->id])->login($user);
+            $token = auth()->claims([
+                'impersonated_by' => (int) $currentUser->id,
+                'brand_key' => $brand['key'] ?? 'oia',
+            ])->login($user);
             $user->load('roles', 'permissions');
 
             \Log::info('User switched account', [

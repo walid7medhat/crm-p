@@ -12,6 +12,7 @@ class RequireTrustedReferer
     private array $allowedHosts = [
         // CRM
         'oiaproperties.altcrm.com',
+        'luxvant.altcrm.com',
         // 'oiaproperties.altcrm.ae',
 
         // Landing pages

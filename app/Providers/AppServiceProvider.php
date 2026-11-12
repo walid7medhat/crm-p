@@ -26,6 +26,8 @@ use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadCommentObserver;
 use App\Observers\AiSalesIntelligence\AiSalesIntelligenceLeadObserver;
 use App\Observers\LeadCommentObserver;
 use App\Observers\LeadObserver;
+use App\Support\Brand\BrandContext;
+use App\Support\Brand\BrandResolver;
 use App\Support\InfrastructureBootstrap;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         InfrastructureBootstrap::boot($this->app);
+
+        $this->app->singleton(BrandContext::class);
+        $this->app->singleton(BrandResolver::class);
     }
 
     /**
@@ -43,6 +48,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // tymon/jwt-auth registers jwt.auth → Tymon\Authenticate during package boot and
+        // overwrites bootstrap/app.php aliases. Re-assert after boot so our wrapper runs:
+        // Tymon auth (unchanged OIA) → Luxvant-only brand allowlist.
+        $this->app->booted(function () {
+            $router = $this->app['router'];
+            $router->aliasMiddleware('jwt.auth', \App\Http\Middleware\JwtAuthMiddleware::class);
+            $router->aliasMiddleware('brand.access', \App\Http\Middleware\EnsureBrandAccess::class);
+            $router->aliasMiddleware('brand.resolve', \App\Http\Middleware\ResolveBrandFromHost::class);
+            $router->aliasMiddleware(
+                'brand.block_luxvant_public',
+                \App\Http\Middleware\BlockRiskyPublicOnLuxvant::class
+            );
+        });
+
         // Settings → Account Emails "send" endpoint. Own key: plain `throttle:N,1` shares one
         // per-user counter with other throttled routes (e.g. location pings every few seconds).
         \Illuminate\Support\Facades\RateLimiter::for('account-emails', function (\Illuminate\Http\Request $request) {
