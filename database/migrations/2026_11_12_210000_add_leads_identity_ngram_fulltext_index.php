@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -17,6 +18,14 @@ use Illuminate\Support\Facades\Schema;
  * - lead_name is utf8mb4_general_ci while the other identity columns are
  *   utf8mb4_unicode_ci. MySQL requires identical collations inside one FULLTEXT index.
  * - Splitting avoids a collation rewrite on lead_name.
+ *
+ * Hosting note:
+ * - MariaDB and MySQL builds without the ngram plugin raise SQLSTATE 1128
+ *   ("Function 'ngram' is not defined"). This migration detects the active ngram
+ *   parser and skips index creation when unsupported. LeadTextSearch keeps the
+ *   LIKE identity fallback when these indexes are absent.
+ * - Never create parser-less FULLTEXT under these index names — that would enable
+ *   MATCH with incorrect contains semantics.
  *
  * Do not run against production without staging EXPLAIN + correctness checks.
  * Online DDL: MySQL 8 InnoDB FULLTEXT add typically rebuilds the table — schedule
@@ -39,6 +48,16 @@ return new class extends Migration
     public function up(): void
     {
         if (! Schema::hasTable('leads')) {
+            return;
+        }
+
+        if (! $this->ngramParserAvailable()) {
+            Log::warning(
+                'Skipping leads ngram FULLTEXT indexes: MySQL ngram parser is not available/active on this database. '.
+                'Lead identity search will continue using the LIKE fallback. '.
+                'Indexes not created: '.self::INDEX_LEAD_NAME.', '.self::INDEX_IDENTITY.'.'
+            );
+
             return;
         }
 
@@ -72,6 +91,32 @@ return new class extends Migration
             if ($this->indexExists($index)) {
                 DB::statement('ALTER TABLE leads DROP INDEX '.$index);
             }
+        }
+    }
+
+    /**
+     * True only when the MySQL ngram full-text parser plugin is present and ACTIVE.
+     * MariaDB and hosts without ngram return false (safe skip).
+     */
+    public function ngramParserAvailable(): bool
+    {
+        try {
+            $row = DB::selectOne(
+                "SELECT PLUGIN_STATUS AS status
+                 FROM INFORMATION_SCHEMA.PLUGINS
+                 WHERE PLUGIN_NAME = 'ngram'
+                 LIMIT 1"
+            );
+
+            if ($row === null) {
+                return false;
+            }
+
+            $status = strtoupper(trim((string) ($row->status ?? '')));
+
+            return $status === 'ACTIVE';
+        } catch (\Throwable) {
+            return false;
         }
     }
 
