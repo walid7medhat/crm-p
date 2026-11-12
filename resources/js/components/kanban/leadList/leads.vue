@@ -2813,6 +2813,8 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.inactive_person_id != null && q.inactive_person_id !== '' && { inactive_person_id: q.inactive_person_id }),
         // Search "Created By" (lead creator) — super admin / admin / branch admin only on the API side.
         ...(q.added_by != null && q.added_by !== '' && (!Array.isArray(q.added_by) || q.added_by.length > 0) && { added_by: q.added_by }),
+        // Search "Modified By" (who made a real change in the lead's history) — same roles.
+        ...(q.modified_by != null && q.modified_by !== '' && (!Array.isArray(q.modified_by) || q.modified_by.length > 0) && { modified_by: q.modified_by }),
         ...(q.created_at && { created_at: q.created_at }),
         ...(q.created_from && { created_from: q.created_from }),
         ...(q.created_to && { created_to: q.created_to }),

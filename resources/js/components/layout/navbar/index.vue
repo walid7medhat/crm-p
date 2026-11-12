@@ -1603,6 +1603,7 @@ const QUERY_FILTER_LABELS = {
     responsible_person_id: 'Responsible Person',
     inactive_person_id: 'Inactive Sales',
     added_by: 'Created By',
+    modified_by: 'Modified By',
     team_id: 'Team',
     lead_branch_source: 'Lead Branch Source',
     source: 'Source',

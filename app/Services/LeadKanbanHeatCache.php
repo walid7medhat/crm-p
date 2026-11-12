@@ -32,6 +32,7 @@ class LeadKanbanHeatCache
         'email',
         'work_phone',
         'added_by',
+        'modified_by',
         'created_from',
         'created_to',
         'created_at',

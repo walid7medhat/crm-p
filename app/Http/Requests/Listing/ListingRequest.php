@@ -21,6 +21,35 @@ class ListingRequest extends FormRequest
         return true;
     }
 
+    /**
+     * The Dubai branch admin may edit Dubai listings but never sees the unit number or
+     * owner (the edit form hides both and sends neither). On their update keep the saved
+     * values, so the required rules pass and they can't change what they can't see.
+     */
+    private function keepHiddenFieldsForDubaiApprover(): void
+    {
+        if (! ($this->isMethod('put') || $this->isMethod('patch'))) {
+            return;
+        }
+
+        $user = $this->user();
+        $listing = \App\Models\Listing::find($this->route('property'));
+        if (! $user || ! $listing) {
+            return;
+        }
+
+        $isOwnListing = (int) $listing->agent_id === (int) $user->id || (int) $listing->added_by === (int) $user->id;
+        if ($isOwnListing || $user->hasRole('super_admin')
+            || ! app(\App\Services\Listing\ListingApprovalPolicy::class)->isDubaiApprover($user)) {
+            return;
+        }
+
+        $this->merge([
+            'unit_number' => $listing->unit_number,
+            'owner_id' => $listing->owner_id,
+        ]);
+    }
+
     public function rules(): array
     {
         $isDraft = $this->input('action') === 'draft';
@@ -342,6 +371,8 @@ $listingId = $this->route('property');
     }
      public function prepareForValidation()
     {
+        $this->keepHiddenFieldsForDubaiApprover();
+
         if ($this->has('payment_plan') && is_array($this->payment_plan)) {
             $this->merge([
                 'payment_plan' => json_encode($this->payment_plan)

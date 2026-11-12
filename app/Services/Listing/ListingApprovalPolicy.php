@@ -36,6 +36,16 @@ class ListingApprovalPolicy
         return $branch && strcasecmp(trim((string) $branch->name), 'dubai') === 0;
     }
 
+    /**
+     * The Dubai branch admin may also edit Dubai listings (the ones they approve).
+     * Unit number and owner stay hidden from them — ListingRequest keeps the saved
+     * values on their edits.
+     */
+    public function canEditAsDubaiApprover(User $user, Listing $listing): bool
+    {
+        return $listing->isInDubai() && $this->isDubaiApprover($user);
+    }
+
     /** The pre-existing listing-team rule, now only for non-Dubai listings. */
     public function isListingTeamApprover(User $user): bool
     {

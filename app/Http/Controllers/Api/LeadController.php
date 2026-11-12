@@ -160,7 +160,7 @@ class LeadController extends Controller
                 // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
                 UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
                 // Lead search "Modified On" — a real change in the lead's history on those days.
-                UaeDateRange::applyModified($leadsQuery, $request->modified_from, $request->modified_to, $request->modified_at);
+                UaeDateRange::applyModified($leadsQuery, $request->modified_from, $request->modified_to, $request->modified_at, $this->requestedAddedByIds($request, 'modified_by'));
                 if ($request->filled('changed_by')) {
                     $leadsQuery->whereHas('histories', function ($query) use ($request) {
                         $query->where('changes->action', 'stage_changed')
@@ -1620,14 +1620,14 @@ class LeadController extends Controller
      *
      * @return array<int, int>
      */
-    private function requestedAddedByIds(Request $request): array
+    private function requestedAddedByIds(Request $request, string $key = 'added_by'): array
     {
         $user = auth()->user();
         if (! $user || ! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
             return [];
         }
 
-        return $this->requestedIdList($request->input('added_by'));
+        return $this->requestedIdList($request->input($key));
     }
 
     /**

@@ -25,7 +25,7 @@ class ProjectRequest extends FormRequest
         $rules = [
             'title' => ['required', 'string', 'max:255'],
             'developer_id' => ['nullable', 'exists:developers,id'],
-            'area_id' => 'required|exists:areas,id',
+            'area_id' => ['required', 'exists:areas,id', $this->uniqueProjectForArea($projectId)],
             'status' => ['nullable', Rule::in(['Under Construction', 'Ready'])],
             'about' => ['nullable', 'string'],
             'features' => ['nullable', 'array'],
@@ -82,6 +82,31 @@ class ProjectRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * No second project with the same title in the same location (case and outer
+     * spaces ignored). The title comes from the selected location, so the error is
+     * reported on area_id, which is the field the user sees.
+     */
+    private function uniqueProjectForArea($projectId): \Closure
+    {
+        return function (string $attribute, $value, \Closure $fail) use ($projectId) {
+            $title = trim((string) $this->input('title'));
+            if ($title === '' || ! $value) {
+                return;
+            }
+
+            $existing = \App\Models\Project::query()
+                ->where('area_id', $value)
+                ->whereRaw('LOWER(TRIM(title)) = ?', [mb_strtolower($title)])
+                ->when($projectId, fn ($q) => $q->where('id', '!=', $projectId))
+                ->first(['id', 'title']);
+
+            if ($existing) {
+                $fail("A project named \"{$existing->title}\" already exists for this location.");
+            }
+        };
     }
 
     /**

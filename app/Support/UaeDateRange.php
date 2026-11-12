@@ -61,16 +61,22 @@ class UaeDateRange
      * leads.updated_at can't be used: leads:score re-saves every lead every 10
      * minutes (last_scored_at), so updated_at is always "now".
      *
+     * $userIds ("Modified By") limits it to changes made by those users. With both
+     * dates and users, the same history entry must match both (changed by X on day D).
+     *
      * $query must be an Eloquent Lead query (uses the `histories` relation).
      */
-    public static function applyModified($query, $from = null, $to = null, $exact = null)
+    public static function applyModified($query, $from = null, $to = null, $exact = null, array $userIds = [])
     {
-        if (! filled($from) && ! filled($to) && ! filled($exact)) {
+        if (! filled($from) && ! filled($to) && ! filled($exact) && empty($userIds)) {
             return $query;
         }
 
-        return $query->whereHas('histories', function ($history) use ($from, $to, $exact) {
+        return $query->whereHas('histories', function ($history) use ($from, $to, $exact, $userIds) {
             self::apply($history, 'lead_histories.created_at', $from, $to, $exact);
+            if (! empty($userIds)) {
+                $history->whereIn('lead_histories.user_id', $userIds);
+            }
             $history->where(function ($q) {
                 $q->whereNull('changes->action')
                     ->orWhereNotIn('changes->action', self::NON_MODIFYING_HISTORY_ACTIONS);

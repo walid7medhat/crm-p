@@ -3969,14 +3969,15 @@ const handleSubmit = async (action = 'draft') => {
       return;
     }
 
-    // Basic validation
-    if (!selectedOwner.value) {
+    // Basic validation. When the owner section is hidden (e.g. the Dubai branch admin
+    // editing a Dubai listing), owner + unit number aren't sent; the server keeps the saved ones.
+    if (canShowOwnerSection.value && !selectedOwner.value) {
       proxy.$showNotification("❌ Please select an owner first!", "error");
       isSubmitting.value = false;
       return;
     }
 
-    if (!selectedOwner.value.id) {
+    if (canShowOwnerSection.value && !selectedOwner.value.id) {
       proxy.$showNotification("❌ Invalid owner selected!", "error");
       isSubmitting.value = false;
       return;
@@ -4080,7 +4081,9 @@ const handleSubmit = async (action = 'draft') => {
     formData.append('action', action);
 
     // Add required IDs
-    formData.append('owner_id', selectedOwner.value.id);
+    if (selectedOwner.value?.id) {
+      formData.append('owner_id', selectedOwner.value.id);
+    }
     formData.append('agent_id', currentAgentId);
     formData.append('property_type_id', form.value.property_type.id);
     formData.append('area_id', form.value.area.id);
@@ -4306,8 +4309,18 @@ const handleSubmit = async (action = 'draft') => {
     
     proxy.$showNotification(successMessage, "success");
     
-    // Back to My Listings with the listing's popup open (?listing= opens it).
-    router.push({ path: '/my-listing', query: { listing: String(propertyId.value) } });
+    // The Dubai branch admin edits other agents' listings — those aren't in their
+    // My Listings, so send them back to the listing page instead.
+    let isDubaiApprover = false;
+    try {
+      isDubaiApprover = !!JSON.parse(localStorage.getItem('user') || '{}')?.is_dubai_listing_approver;
+    } catch { /* ignore */ }
+    if (isDubaiApprover) {
+      router.push({ path: `/property-details/${propertyId.value}` });
+    } else {
+      // Back to My Listings with the listing's popup open (?listing= opens it).
+      router.push({ path: '/my-listing', query: { listing: String(propertyId.value) } });
+    }
     
   } catch (error) {
     console.error("❌ Full Error:", error);

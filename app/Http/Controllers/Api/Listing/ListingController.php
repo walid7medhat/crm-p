@@ -1768,7 +1768,9 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         }
 
         // Check if user has permission to update this listing
-        if ($listing->added_by !== $user->id && $listing->agent_id !== $user->id && ! $user->hasRole('super_admin') && !$user->canEditListings($listing->agent_id)) {
+        // (owner/agent, super_admin, listing-team hierarchy, or the Dubai branch admin on a Dubai listing)
+        if (! $this->canEditListing($user, $listing)) {
+            DB::rollBack();
             return ApiResponse::error('You are Not authorized to update this listing', 403);
         }
 
@@ -2096,7 +2098,8 @@ private function canEditListing($user, Listing $listing): bool
     return (int) $listing->added_by === (int) $user->id
         || (int) $listing->agent_id === (int) $user->id
         || $user->hasRole('super_admin')
-        || $user->canEditListings($listing->agent_id);
+        || $user->canEditListings($listing->agent_id)
+        || app(ListingApprovalPolicy::class)->canEditAsDubaiApprover($user, $listing);
 }
 
 /**

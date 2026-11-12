@@ -554,9 +554,9 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id === 'created_by'"
+                                v-else-if="field.type === 'select' && USER_PICKER_FIELD_IDS.includes(field.id)"
 
-                                v-model="form.createdBy"
+                                v-model="form[field.formKey]"
 
                                 :options="creatorOptions"
 
@@ -570,7 +570,7 @@
 
                                 :close-on-select="false"
 
-                                :clearable="hasValue(form.createdBy)"
+                                :clearable="hasValue(form[field.formKey])"
 
                                 append-to-body
 
@@ -1017,7 +1017,7 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'created_by' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && !USER_PICKER_FIELD_IDS.includes(field.id) && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -1632,9 +1632,9 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id === 'created_by'"
+                                v-else-if="field.type === 'select' && USER_PICKER_FIELD_IDS.includes(field.id)"
 
-                                v-model="form.createdBy"
+                                v-model="form[field.formKey]"
 
                                 :options="creatorOptions"
 
@@ -1648,7 +1648,7 @@
 
                                 :close-on-select="false"
 
-                                :clearable="hasValue(form.createdBy)"
+                                :clearable="hasValue(form[field.formKey])"
 
                                 append-to-body
 
@@ -2095,7 +2095,7 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'created_by' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && !USER_PICKER_FIELD_IDS.includes(field.id) && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -2931,6 +2931,8 @@ const queryToFormKeys = {
 
     added_by: 'createdBy',
 
+    modified_by: 'modifiedBy',
+
     created_at: 'createdOn',
 
     created_from: 'createdFrom',    
@@ -3027,7 +3029,7 @@ async function loadAllSelectDataForCurrentForm() {
     if (form.value.propertyType) promises.push(loadPropertyTypes())
     if (hasValue(form.value.responsible)) promises.push(loadResponsiblePersons())
     if (hasValue(form.value.inactiveSales)) promises.push(loadInactiveSales())
-    if (hasValue(form.value.createdBy)) promises.push(loadCreators())
+    if (hasValue(form.value.createdBy) || hasValue(form.value.modifiedBy)) promises.push(loadCreators())
     if (hasValue(form.value.team)) promises.push(loadTeams())
     if (form.value.office?.length) promises.push(loadOffices())
     if (form.value.branchSource) promises.push(loadBranchSources())
@@ -3047,6 +3049,7 @@ function syncFormFromQuery(query) {
         responsible: [],
         inactiveSales: [],
         createdBy: [],
+        modifiedBy: [],
         createdOn: '',
         createdFrom: '',
         createdTo: '', 
@@ -3137,6 +3140,8 @@ function syncFormFromQuery(query) {
     next.inactiveSales = normalizeInactiveSelection(next.inactiveSales)
 
     next.createdBy = normalizeResponsibleIds(next.createdBy)
+
+    next.modifiedBy = normalizeResponsibleIds(next.modifiedBy)
 
     form.value = next
 
@@ -3368,6 +3373,8 @@ const form = ref({
     inactiveSales: [],
 
     createdBy: [],
+
+    modifiedBy: [],
 
     createdOn: '',
 
@@ -4313,9 +4320,20 @@ async function loadInactiveSales(force = false) {
     }
 }
 
-// "Created By" select — leads.added_by (who created the lead). Super admin, admin and
-// branch admin only (the API ignores added_by for anyone else).
+// "Created By" (leads.added_by) and "Modified By" (who made a real change in the lead's
+// history) user pickers. Super admin, admin and branch admin only (the API ignores
+// added_by / modified_by for anyone else). Both share one user option list.
 const CREATED_BY_ROLES = ['super_admin', 'admin', 'branch_admin']
+
+const USER_PICKER_FIELD_IDS = ['created_by', 'modified_by']
+
+/** Users picked in Created By and Modified By. */
+function pickedUserIds() {
+    return [...new Set([
+        ...normalizeResponsibleIds(form.value.createdBy),
+        ...normalizeResponsibleIds(form.value.modifiedBy),
+    ])]
+}
 
 const canUseCreatedBy = computed(() =>
     (user.value?.roles || []).some(role => CREATED_BY_ROLES.includes(role))
@@ -4349,7 +4367,7 @@ const creatorOptions = computed(() => {
 
 /** Keep picked creators in the options so their chips keep a name after a new search. */
 function rememberCreators(people) {
-    const ids = normalizeResponsibleIds(form.value.createdBy)
+    const ids = pickedUserIds()
     people.forEach((person) => {
         if (!ids.includes(Number(person.id))) return
         if (pinnedCreators.value.some((p) => Number(p.id) === Number(person.id))) return
@@ -4365,7 +4383,7 @@ async function fetchCreators(search = '') {
         lastCreatorSearchTerm = term
         const params = { limit: 30 }
         if (term) params.search = term
-        const selectedIds = normalizeResponsibleIds(form.value.createdBy)
+        const selectedIds = pickedUserIds()
         if (selectedIds.length) params.selected_id = selectedIds.join(',')
         const res = await api.get('/available-responsible-persons', { params })
         if (seq !== creatorFetchSeq) return
@@ -4407,7 +4425,7 @@ function onCreatorSearch(search, loading) {
     }, 300)
 }
 
-watch(() => normalizeResponsibleIds(form.value.createdBy).join(','), () => {
+watch(() => pickedUserIds().join(','), () => {
     rememberCreators(creatorList.value)
 })
 
@@ -4520,6 +4538,8 @@ const searchFieldsConfig = computed(() => {
     if (canUseCreatedBy.value) {
 
         fields.push({ id: 'created_by', label: 'Created By', formKey: 'createdBy', queryKey: 'added_by', type: 'select', options: [] })
+
+        fields.push({ id: 'modified_by', label: 'Modified By', formKey: 'modifiedBy', queryKey: 'modified_by', type: 'select', options: [] })
 
     }
 
@@ -4711,7 +4731,7 @@ const visibleSearchFields = computed(() => {
             // Inactive Sales isn't in the saved field settings (added later) — always show it
             // to the roles that get it (searchFieldsConfig already checks the role).
             // Modified On was added after users saved their field settings — always show it.
-            if (f.id === 'inactive_sales' || f.id === 'created_by' || f.id === 'modified_on') return true
+            if (f.id === 'inactive_sales' || USER_PICKER_FIELD_IDS.includes(f.id) || f.id === 'modified_on') return true
 
             if (!selectedSet.has(f.id)) return false
 
@@ -4749,7 +4769,7 @@ const visibleSearchFields = computed(() => {
 
                 f.formKey === 'responsible' ? personOptions.value :
 
-                f.formKey === 'createdBy' ? creatorOptions.value :
+                (f.formKey === 'createdBy' || f.formKey === 'modifiedBy') ? creatorOptions.value :
 
                 f.formKey === 'branchSource' ? branchSourceOptions.value :
 
@@ -4846,7 +4866,7 @@ const searchFieldSections = [
 
         title: 'Assignment',
 
-        fieldIds: ['responsible_person', 'inactive_sales', 'created_by', 'team' , 'office']
+        fieldIds: ['responsible_person', 'inactive_sales', 'created_by', 'modified_by', 'team' , 'office']
 
     },
 
@@ -6002,6 +6022,10 @@ async function applySearch(options = {}) {
             ? normalizeResponsibleIds(form.value.createdBy)
             : undefined,
 
+        modified_by: canUseCreatedBy.value && normalizeResponsibleIds(form.value.modifiedBy).length
+            ? normalizeResponsibleIds(form.value.modifiedBy)
+            : undefined,
+
         lead_branch_source: branchSource,
 
         work_phone: form.value.workPhone || undefined,
@@ -6088,7 +6112,7 @@ async function applySearch(options = {}) {
 
     const activeFilters = []
 
-    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || f.id === 'created_by' || f.id === 'modified_on' || selectedLeadFieldIds.value.includes(f.id))
+    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || USER_PICKER_FIELD_IDS.includes(f.id) || f.id === 'modified_on' || selectedLeadFieldIds.value.includes(f.id))
 
     
 
@@ -6116,7 +6140,7 @@ async function applySearch(options = {}) {
 
                     field.formKey === 'inactiveSales' ? [{ value: 'all', text: 'All Inactive' }, ...inactiveSalesOptions.value] :
 
-                    field.formKey === 'createdBy' ? creatorOptions.value :
+                    (field.formKey === 'createdBy' || field.formKey === 'modifiedBy') ? creatorOptions.value :
 
                     field.formKey === 'branchSource' ? branchSourceOptions.value :
 
@@ -6669,6 +6693,8 @@ function resetFormValues() {
         inactiveSales: [],
 
         createdBy: [],
+
+        modifiedBy: [],
 
         createdOn: '',
 
