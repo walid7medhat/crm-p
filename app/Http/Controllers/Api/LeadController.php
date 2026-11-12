@@ -145,8 +145,8 @@ class LeadController extends Controller
                 if ($request->filled('stage_id')) {
                     $leadsQuery->where('stage_id', $request->stage_id);
                 }
-                if ($request->filled('added_by')) {
-                    $leadsQuery->where('added_by', $request->added_by);
+                if ($addedByIds = $this->requestedAddedByIds($request)) {
+                    $leadsQuery->whereIn('added_by', $addedByIds);
                 }
                 if ($request->filled('email')) {
                     $leadsQuery->where('email', $request->email);
@@ -1610,6 +1610,22 @@ class LeadController extends Controller
             $this->requestedIdList($request->input('responsible_person_id')),
             $inactiveIds
         )));
+    }
+
+    /**
+     * Lead search "Created By" (added_by) — one id or several. Only super_admin, admin
+     * and branch_admin may filter by creator; for anyone else it is ignored.
+     *
+     * @return array<int, int>
+     */
+    private function requestedAddedByIds(Request $request): array
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+            return [];
+        }
+
+        return $this->requestedIdList($request->input('added_by'));
     }
 
     /**

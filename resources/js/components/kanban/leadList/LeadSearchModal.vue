@@ -554,6 +554,110 @@
 
                             <v-select
 
+                                v-else-if="field.type === 'select' && field.id === 'created_by'"
+
+                                v-model="form.createdBy"
+
+                                :options="creatorOptions"
+
+                                :reduce="opt => opt.value"
+
+                                label="text"
+
+                                placeholder="Search name, email, or phone"
+
+                                multiple
+
+                                :close-on-select="false"
+
+                                :clearable="hasValue(form.createdBy)"
+
+                                append-to-body
+
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
+
+                                @click.stop
+
+                                @mousedown.stop
+
+                                @open="loadCreators"
+
+                                @search="onCreatorSearch"
+
+                                :clear-search-on-select="false"
+
+                                :filterable="false"
+
+                                :loading="loadingCreators"
+
+                            >
+
+                                <template #open-indicator="{ attributes }">
+
+                                    <span v-bind="attributes">
+
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+
+                                    </span>
+
+                                </template>
+
+                                <template #option="option">
+
+                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
+
+                                        <img
+
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+
+                                            alt=""
+
+                                            class="lead-rp-opt-avatar"
+
+                                        />
+
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+
+                                                <span class="user-item-name">{{ option.text }}</span>
+
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+
+                                            </div>
+
+                                            <div class="user-item-meta-line">
+
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+
+                                                <span v-if="option.branch_name" class="meta-divider">|</span>
+
+                                                <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </template>
+
+                                <template #selected-option="option">
+
+                                    <span class="lead-rp-chip">
+
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+
+                                        <span>{{ option.text }}</span>
+
+                                    </span>
+
+                                </template>
+
+                            </v-select>
+
+                            <v-select
+
                                 v-else-if="field.type === 'select' && field.id === 'inactive_sales'"
 
                                 :model-value="inactiveSalesPickedIds"
@@ -913,7 +1017,7 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'created_by' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -1528,6 +1632,110 @@
 
                             <v-select
 
+                                v-else-if="field.type === 'select' && field.id === 'created_by'"
+
+                                v-model="form.createdBy"
+
+                                :options="creatorOptions"
+
+                                :reduce="opt => opt.value"
+
+                                label="text"
+
+                                placeholder="Search name, email, or phone"
+
+                                multiple
+
+                                :close-on-select="false"
+
+                                :clearable="hasValue(form.createdBy)"
+
+                                append-to-body
+
+                                class="custom-v-select lead-search-rp-select lead-rp-multi"
+
+                                @click.stop
+
+                                @mousedown.stop
+
+                                @open="loadCreators"
+
+                                @search="onCreatorSearch"
+
+                                :clear-search-on-select="false"
+
+                                :filterable="false"
+
+                                :loading="loadingCreators"
+
+                            >
+
+                                <template #open-indicator="{ attributes }">
+
+                                    <span v-bind="attributes">
+
+                                        <iconify-icon icon="lucide:chevron-down" class="vs__open-indicator-icon"></iconify-icon>
+
+                                    </span>
+
+                                </template>
+
+                                <template #option="option">
+
+                                    <div class="lead-rp-opt d-flex align-items-center gap-2">
+
+                                        <img
+
+                                            :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR"
+
+                                            alt=""
+
+                                            class="lead-rp-opt-avatar"
+
+                                        />
+
+                                        <div class="lead-rp-opt-info min-w-0 flex-grow-1">
+
+                                            <div class="lead-rp-opt-name-row d-flex align-items-center flex-wrap gap-1">
+
+                                                <span class="user-item-name">{{ option.text }}</span>
+
+                                                <span v-if="option.role_name" class="user-position-badge">{{ option.role_name }}</span>
+
+                                            </div>
+
+                                            <div class="user-item-meta-line">
+
+                                                <span class="meta-value">{{ option.parent_name }}</span>
+
+                                                <span v-if="option.branch_name" class="meta-divider">|</span>
+
+                                                <span v-if="option.branch_name" class="meta-value">{{ option.branch_name }}</span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </template>
+
+                                <template #selected-option="option">
+
+                                    <span class="lead-rp-chip">
+
+                                        <img :src="option.avatar || DEFAULT_RESPONSIBLE_AVATAR" alt="" />
+
+                                        <span>{{ option.text }}</span>
+
+                                    </span>
+
+                                </template>
+
+                            </v-select>
+
+                            <v-select
+
                                 v-else-if="field.type === 'select' && field.id === 'inactive_sales'"
 
                                 :model-value="inactiveSalesPickedIds"
@@ -1887,7 +2095,7 @@
 
                             <v-select
 
-                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
+                                v-else-if="field.type === 'select' && field.id !== 'office' && field.id !== 'responsible_person' && field.id !== 'inactive_sales' && field.id !== 'created_by' && field.id !== 'team' && field.id !== 'stage' && field.id !== 'location' && field.id !== 'property_type' && field.id !== 'lead_branch_source' && field.id !== 'source'"
 
                                 v-model="form[field.formKey]"
 
@@ -2721,6 +2929,8 @@ const queryToFormKeys = {
 
     inactive_person_id: 'inactiveSales',
 
+    added_by: 'createdBy',
+
     created_at: 'createdOn',
 
     created_from: 'createdFrom',    
@@ -2811,6 +3021,7 @@ async function loadAllSelectDataForCurrentForm() {
     if (form.value.propertyType) promises.push(loadPropertyTypes())
     if (hasValue(form.value.responsible)) promises.push(loadResponsiblePersons())
     if (hasValue(form.value.inactiveSales)) promises.push(loadInactiveSales())
+    if (hasValue(form.value.createdBy)) promises.push(loadCreators())
     if (hasValue(form.value.team)) promises.push(loadTeams())
     if (form.value.office?.length) promises.push(loadOffices())
     if (form.value.branchSource) promises.push(loadBranchSources())
@@ -2829,6 +3040,7 @@ function syncFormFromQuery(query) {
         firstName: '',
         responsible: [],
         inactiveSales: [],
+        createdBy: [],
         createdOn: '',
         createdFrom: '',
         createdTo: '', 
@@ -2906,6 +3118,8 @@ function syncFormFromQuery(query) {
     next.responsible = normalizeResponsibleIds(next.responsible)
 
     next.inactiveSales = normalizeInactiveSelection(next.inactiveSales)
+
+    next.createdBy = normalizeResponsibleIds(next.createdBy)
 
     form.value = next
 
@@ -3135,6 +3349,8 @@ const form = ref({
     responsible: [],
 
     inactiveSales: [],
+
+    createdBy: [],
 
     createdOn: '',
 
@@ -4074,6 +4290,104 @@ async function loadInactiveSales(force = false) {
     }
 }
 
+// "Created By" select — leads.added_by (who created the lead). Super admin, admin and
+// branch admin only (the API ignores added_by for anyone else).
+const CREATED_BY_ROLES = ['super_admin', 'admin', 'branch_admin']
+
+const canUseCreatedBy = computed(() =>
+    (user.value?.roles || []).some(role => CREATED_BY_ROLES.includes(role))
+)
+
+const creatorList = ref([])
+
+const pinnedCreators = ref([])
+
+const loadingCreators = ref(false)
+
+let creatorFetchSeq = 0
+
+let creatorSearchTimer = null
+
+let lastCreatorSearchTerm = null
+
+const creatorOptions = computed(() => {
+    const opts = []
+    const seen = new Set()
+    const push = (person) => {
+        const id = Number(person?.id)
+        if (!Number.isFinite(id) || seen.has(id)) return
+        seen.add(id)
+        opts.push(personToOption(person))
+    }
+    pinnedCreators.value.forEach(push)
+    creatorList.value.forEach(push)
+    return opts
+})
+
+/** Keep picked creators in the options so their chips keep a name after a new search. */
+function rememberCreators(people) {
+    const ids = normalizeResponsibleIds(form.value.createdBy)
+    people.forEach((person) => {
+        if (!ids.includes(Number(person.id))) return
+        if (pinnedCreators.value.some((p) => Number(p.id) === Number(person.id))) return
+        pinnedCreators.value.push(person)
+    })
+    pinnedCreators.value = pinnedCreators.value.filter((p) => ids.includes(Number(p.id)))
+}
+
+async function fetchCreators(search = '') {
+    const seq = ++creatorFetchSeq
+    try {
+        const term = String(search || '').trim()
+        lastCreatorSearchTerm = term
+        const params = { limit: 30 }
+        if (term) params.search = term
+        const selectedIds = normalizeResponsibleIds(form.value.createdBy)
+        if (selectedIds.length) params.selected_id = selectedIds.join(',')
+        const res = await api.get('/available-responsible-persons', { params })
+        if (seq !== creatorFetchSeq) return
+        creatorList.value = Array.isArray(res?.data?.data) ? res.data.data : []
+        rememberCreators(creatorList.value)
+    } catch (error) {
+        if (seq !== creatorFetchSeq) return
+        lastCreatorSearchTerm = null
+        console.error('Error loading creators:', error)
+        creatorList.value = []
+    }
+}
+
+async function loadCreators(force = false) {
+    if (!canUseCreatedBy.value) return
+    if (!force && creatorList.value.length > 0) return
+    loadingCreators.value = true
+    try {
+        await fetchCreators()
+    } finally {
+        loadingCreators.value = false
+    }
+}
+
+function onCreatorSearch(search, loading) {
+    const term = String(search || '').trim()
+    if (creatorSearchTimer) clearTimeout(creatorSearchTimer)
+    if (term === lastCreatorSearchTerm && creatorList.value.length) {
+        loading?.(false)
+        loadingCreators.value = false
+        return
+    }
+    loading?.(true)
+    loadingCreators.value = true
+    creatorSearchTimer = setTimeout(async () => {
+        await fetchCreators(term)
+        loading?.(false)
+        loadingCreators.value = false
+    }, 300)
+}
+
+watch(() => normalizeResponsibleIds(form.value.createdBy).join(','), () => {
+    rememberCreators(creatorList.value)
+})
+
 const isAdminOrSuperAdmin = computed(() => {
 
     if (!user.value) return false
@@ -4175,6 +4489,12 @@ const searchFieldsConfig = computed(() => {
     if (canUseInactiveSales.value) {
 
         fields.push({ id: 'inactive_sales', label: 'Inactive Sales', formKey: 'inactiveSales', queryKey: 'inactive_person_id', type: 'select', options: [] })
+
+    }
+
+    if (canUseCreatedBy.value) {
+
+        fields.push({ id: 'created_by', label: 'Created By', formKey: 'createdBy', queryKey: 'added_by', type: 'select', options: [] })
 
     }
 
@@ -4335,7 +4655,7 @@ const visibleSearchFields = computed(() => {
 
             // Inactive Sales isn't in the saved field settings (added later) — always show it
             // to the roles that get it (searchFieldsConfig already checks the role).
-            if (f.id === 'inactive_sales') return true
+            if (f.id === 'inactive_sales' || f.id === 'created_by') return true
 
             if (!selectedSet.has(f.id)) return false
 
@@ -4372,6 +4692,8 @@ const visibleSearchFields = computed(() => {
             options:
 
                 f.formKey === 'responsible' ? personOptions.value :
+
+                f.formKey === 'createdBy' ? creatorOptions.value :
 
                 f.formKey === 'branchSource' ? branchSourceOptions.value :
 
@@ -4466,7 +4788,7 @@ const searchFieldSections = [
 
         title: 'Assignment',
 
-        fieldIds: ['responsible_person', 'inactive_sales', 'team' , 'office']
+        fieldIds: ['responsible_person', 'inactive_sales', 'created_by', 'team' , 'office']
 
     },
 
@@ -5555,6 +5877,10 @@ async function applySearch(options = {}) {
             ? normalizeInactiveSelection(form.value.inactiveSales)
             : undefined,
 
+        added_by: canUseCreatedBy.value && normalizeResponsibleIds(form.value.createdBy).length
+            ? normalizeResponsibleIds(form.value.createdBy)
+            : undefined,
+
         lead_branch_source: branchSource,
 
         work_phone: form.value.workPhone || undefined,
@@ -5637,7 +5963,7 @@ async function applySearch(options = {}) {
 
     const activeFilters = []
 
-    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || selectedLeadFieldIds.value.includes(f.id))
+    const visibleFields = searchFieldsConfig.value.filter(f => f.id === 'inactive_sales' || f.id === 'created_by' || selectedLeadFieldIds.value.includes(f.id))
 
     
 
@@ -5664,6 +5990,8 @@ async function applySearch(options = {}) {
                     field.formKey === 'responsible' ? personOptions.value :
 
                     field.formKey === 'inactiveSales' ? [{ value: 'all', text: 'All Inactive' }, ...inactiveSalesOptions.value] :
+
+                    field.formKey === 'createdBy' ? creatorOptions.value :
 
                     field.formKey === 'branchSource' ? branchSourceOptions.value :
 
@@ -6214,6 +6542,8 @@ function resetFormValues() {
         responsible: [],
 
         inactiveSales: [],
+
+        createdBy: [],
 
         createdOn: '',
 

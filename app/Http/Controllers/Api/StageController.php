@@ -712,8 +712,8 @@ class StageController extends Controller
                           ->orWhere('work_phone_2', $request->work_phone);
                 });
             }
-            if ($request->filled('added_by')) {
-                $q->where('added_by', $request->added_by);
+            if ($addedByIds = $this->requestedAddedByIds($request)) {
+                $q->whereIn('added_by', $addedByIds);
             }
             // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
             UaeDateRange::apply($q, 'created_at', $request->created_from, $request->created_to, $request->created_at);
@@ -935,8 +935,8 @@ class StageController extends Controller
                           ->orWhere('work_phone_2', $request->work_phone);
                 });
             }
-            if ($request->filled('added_by')) {
-                $leadsQuery->where('added_by', $request->added_by);
+            if ($addedByIds = $this->requestedAddedByIds($request)) {
+                $leadsQuery->whereIn('added_by', $addedByIds);
             }
             // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
             UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
@@ -1535,6 +1535,22 @@ public function getOffices()
             $this->requestedIdList($request->input('responsible_person_id')),
             $inactiveIds
         )));
+    }
+
+    /**
+     * Lead search "Created By" (added_by) — one id or several. Only super_admin, admin
+     * and branch_admin may filter by creator; for anyone else it is ignored.
+     *
+     * @return array<int, int>
+     */
+    private function requestedAddedByIds(Request $request): array
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasAnyRole(['super_admin', 'admin', 'branch_admin'])) {
+            return [];
+        }
+
+        return $this->requestedIdList($request->input('added_by'));
     }
 
     /**
