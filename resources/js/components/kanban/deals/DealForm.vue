@@ -1032,7 +1032,7 @@ const canManageCommissionDistribution = computed(() => {
   const roles = (raw?.roles || []).map((r) =>
     String(typeof r === 'string' ? r : r?.name).toLowerCase()
   )
-  return roles.includes('super_admin') || roles.includes('admin')
+  return roles.includes('super_admin') || roles.includes('admin') || roles.includes('accountant')
 })
 const isBudgetRequired = computed(() => {
   const missingFields = props.missingFields || []
