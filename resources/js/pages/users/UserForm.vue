@@ -248,7 +248,7 @@
                                                     placeholder="Select permissions to grant..."
                                                     class="permission-select flex-grow-1"
                                                     :clearable="false"
-                                                    :close-on-select="false"
+                                                    :close-on-select="isMobileLayout"
                                                     :searchable="!isMobileLayout"
                                                     :append-to-body="true"
                                                     :calculate-position="placePermissionDropdown"
@@ -1135,6 +1135,15 @@ watch(roles, (newRoles) => {
        instead of being cut off by the bottom bar / end of the page. */
     .extra-permissions-section {
         padding-bottom: 260px;
+    }
+
+    /* Select on its own row, Assign full width below it — beside the select it sat
+       under the floating chat / tools buttons on phones. */
+    .extra-permissions-section .permission-select-wrapper {
+        flex-direction: column;
+    }
+    .extra-permissions-section .permission-select-wrapper .btn {
+        width: 100%;
     }
 
     .user-form-actions {

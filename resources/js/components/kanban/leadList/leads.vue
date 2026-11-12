@@ -2833,6 +2833,10 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.area_id != null && q.area_id !== '' && { area_id: q.area_id }),
         ...(q.assigned_at != null && q.assigned_at !== '' && { assigned_at: q.assigned_at }),
         ...(q.assigned_from != null && q.assigned_from !== '' && { assigned_from: q.assigned_from }),
+        // Search "Modified On" — leads.updated_at.
+        ...(q.modified_from != null && q.modified_from !== '' && { modified_from: q.modified_from }),
+        ...(q.modified_to != null && q.modified_to !== '' && { modified_to: q.modified_to }),
+        ...(q.modified_at != null && q.modified_at !== '' && { modified_at: q.modified_at }),
         ...(q.assigned_to != null && q.assigned_to !== '' && { assigned_to: q.assigned_to }),
         ...(q.status_lead != null && q.status_lead !== '' && { status_lead: q.status_lead }),
         ...(q.purpose_buying != null && q.purpose_buying !== '' && { purpose_buying: q.purpose_buying }),

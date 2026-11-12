@@ -1633,6 +1633,12 @@ function formatNavbarFilterValue(key, query) {
         }
         return query.assigned_from || query.assigned_to || query.assigned_at || '';
     }
+    if (key === 'modified_from' || key === 'modified_at') {
+        if (query.modified_from && query.modified_to && query.modified_from !== query.modified_to) {
+            return `${query.modified_from} to ${query.modified_to}`;
+        }
+        return query.modified_from || query.modified_to || query.modified_at || '';
+    }
     if (key === 'office_branch') {
         const v = query.office_branch;
         return Array.isArray(v) ? v.join(', ') : String(v ?? '');
@@ -1682,6 +1688,14 @@ function buildNavbarFiltersFromQuery(query) {
             'assigned_at',
             'Assign On',
             formatNavbarFilterValue('assigned_from', query) || formatNavbarFilterValue('assigned_at', query),
+        );
+    }
+    if (query.modified_from || query.modified_to || query.modified_at) {
+        add(
+            'modified_on',
+            'modified_at',
+            'Modified On',
+            formatNavbarFilterValue('modified_from', query) || formatNavbarFilterValue('modified_at', query),
         );
     }
     if (query.budget_from || query.budget_to) {
@@ -1772,6 +1786,11 @@ const dropLinkedQueryKeys = (query, queryKey) => {
     if (queryKey === 'assigned_at') {
         delete query.assigned_from;
         delete query.assigned_to;
+        return;
+    }
+    if (queryKey === 'modified_at') {
+        delete query.modified_from;
+        delete query.modified_to;
         return;
     }
     if (queryKey === 'office_branch') {
