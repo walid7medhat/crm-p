@@ -23,9 +23,11 @@ class CommentMentionNotification extends Notification implements ShouldQueue
     /**
      * Create a new notification instance.
      */
-    public function __construct(LeadComment $comment)
+    /** @param string $actionType 'mentioned' | 'replied' (someone replied on your comment) */
+    public function __construct(LeadComment $comment, string $actionType = 'mentioned')
     {
         $this->comment = $comment;
+        $this->actionType = $actionType;
         $this->mentionedBy = $comment->user;
         $this->lead = $comment->lead;
     }
@@ -123,6 +125,10 @@ class CommentMentionNotification extends Notification implements ShouldQueue
             $attachmentsInfo = " with {$this->comment->attachments->count()} attachment(s)";
         }
         
+        if ($this->actionType === 'replied') {
+            return "{$userName} replied to your comment{$attachmentsInfo} on lead: {$leadName}";
+        }
+
         return "{$userName} mentioned you in a comment{$attachmentsInfo} on lead: {$leadName}";
     }
 
@@ -132,6 +138,9 @@ class CommentMentionNotification extends Notification implements ShouldQueue
     private function getSubject(): string
     {
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
+        if ($this->actionType === 'replied') {
+            return "New reply on your comment - {$leadName}";
+        }
         return "You were mentioned in a comment - {$leadName}";
     }
 }

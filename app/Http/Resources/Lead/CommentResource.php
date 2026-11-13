@@ -12,6 +12,7 @@ class CommentResource extends JsonResource
         return [
             'id' => $this->id,
             'lead_id' => $this->lead_id,
+            'parent_id' => $this->parent_id,
             'user_id' => $this->user_id,
             // display_name ?: short name — same as UserResource.
             'user_name' => User::resolveDisplayName($this->user),
@@ -36,6 +37,9 @@ class CommentResource extends JsonResource
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             // Set only for soft-deleted comments (admins/super admins still see them).
             'deleted_at' => $this->deleted_at?->format('Y-m-d H:i:s'),
+            // Replies (one level). Only top-level comments carry them.
+            'replies' => CommentResource::collection($this->whenLoaded('replies')),
+            'can_reply' => $this->resource->canBeRepliedBy($request->user()),
         ];
     }
 }

@@ -16,6 +16,7 @@ class StoreCommentRequest extends FormRequest
         return [
             'lead_id' => 'required|exists:leads,id',
             'comment' => 'required|string|min:1',
+            'parent_id' => 'sometimes|nullable|integer|exists:lead_comments,id',
             'attachments' => 'sometimes|array|max:5',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,txt',
             'mentioned_users' => 'sometimes|array',

@@ -23,6 +23,48 @@ class LeadComment extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** The top-level comment this one replies to (null = top-level comment). */
+    public function parent()
+    {
+        return $this->belongsTo(LeadComment::class, 'parent_id');
+    }
+
+    /** Replies on this comment, oldest first (conversation order). */
+    public function replies()
+    {
+        return $this->hasMany(LeadComment::class, 'parent_id')->oldest();
+    }
+
+    /**
+     * May $user reply on this (top-level) comment?
+     * Whoever can see the lead (and so its comments) can reply: the author, the lead's
+     * responsible person, their team lead / manager / any parent, branch_admin,
+     * show-branch-leads, admin, super_admin. Accountants are read-only — no replies.
+     */
+    public function canBeRepliedBy(?User $user): bool
+    {
+        if (! $user || $this->parent_id !== null) {
+            return false;
+        }
+
+        if ($user->isAccountant()) {
+            return false;
+        }
+
+        if ((int) $this->user_id === (int) $user->id) {
+            return true;
+        }
+
+        // Same lead for every comment in the list — check visibility once per request.
+        $key = 'lead_comment_can_reply_' . $user->id . '_' . $this->lead_id;
+        $attributes = request()->attributes;
+        if (! $attributes->has($key)) {
+            $attributes->set($key, $this->lead ? $user->canViewLead($this->lead) : false);
+        }
+
+        return (bool) $attributes->get($key);
+    }
+
     public function attachments()
     {
         return $this->hasMany(CommentAttachment::class,'comment_id');

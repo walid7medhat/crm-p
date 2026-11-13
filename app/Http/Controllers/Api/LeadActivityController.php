@@ -253,17 +253,23 @@ class LeadActivityController extends Controller
             return $denied;
         }
 
+        $commentRelations = [
+            'user.roles:id,name',
+            'user.employeeProfile.designation',
+            'user.parent:id,name,display_name,parent_id',
+            'user.parent.parent:id,name,display_name,parent_id',
+            'user.parent.parent.parent:id,name,display_name,parent_id',
+            'attachments',
+            'mentionedUsers',
+            'mentions',
+        ];
+
+        // Top-level comments only — replies come nested under their comment.
         $comments = $lead->comments()
-            ->with([
-                'user.roles:id,name',
-                'user.employeeProfile.designation',
-                'user.parent:id,name,display_name,parent_id',
-                'user.parent.parent:id,name,display_name,parent_id',
-                'user.parent.parent.parent:id,name,display_name,parent_id',
-                'attachments',
-                'mentionedUsers',
-                'mentions',
-            ])
+            ->whereNull('lead_comments.parent_id')
+            ->with(array_merge($commentRelations, [
+                'replies' => fn ($q) => $q->with($commentRelations),
+            ]))
             ->orderBy('created_at', 'desc')
             ->paginate(20);
             
@@ -280,6 +286,22 @@ class LeadActivityController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        // Reply on a comment: manager / any parent of the comment's author (or the author).
+        $parentComment = null;
+        if ($request->filled('parent_id')) {
+            $parentComment = LeadComment::find($request->parent_id);
+            if (! $parentComment || (int) $parentComment->lead_id !== (int) $lead->id) {
+                return response()->json(['success' => false, 'message' => 'Comment not found on this lead'], 422);
+            }
+            // One level of replies: replying to a reply goes on the original comment.
+            if ($parentComment->parent_id) {
+                $parentComment = LeadComment::find($parentComment->parent_id) ?? $parentComment;
+            }
+            if (! $parentComment->canBeRepliedBy(auth()->user())) {
+                return response()->json(['success' => false, 'message' => 'You are not allowed to reply on this comment'], 403);
+            }
+        }
+
         DB::beginTransaction();
 
         try {
@@ -287,6 +309,7 @@ class LeadActivityController extends Controller
             $comment = LeadComment::create([
                 'lead_id' => $request->lead_id,
                 'user_id' => auth()->id(),
+                'parent_id' => $parentComment?->id,
                 'comment' => $request->comment,
             ]);
             
@@ -317,14 +340,25 @@ class LeadActivityController extends Controller
                 // TODO: Send notifications to mentioned users
                 Notification::send($comment->mentionedUsers, new CommentMentionNotification($comment));
             }
+
+            // Tell the comment's author someone replied (unless they replied themselves
+            // or were already notified through a mention).
+            if ($parentComment
+                && (int) $parentComment->user_id !== (int) auth()->id()
+                && $parentComment->user
+                && ! in_array((int) $parentComment->user_id, array_map('intval', (array) $request->mentioned_users), true)
+            ) {
+                $parentComment->user->notify(new CommentMentionNotification($comment, 'replied'));
+            }
             // ========================history===============
             LeadHistoryHelper::log(
                     $comment->lead_id,
-                    [
+                    array_filter([
                         'action' => 'comment_added',
                         'comment_id'=>$comment->id,
+                        'reply_to_comment_id' => $parentComment?->id,
                         'comment' => Str::limit($comment->comment, 50)
-                    ]
+                    ], fn ($v) => $v !== null)
                 );
             DB::commit();
             

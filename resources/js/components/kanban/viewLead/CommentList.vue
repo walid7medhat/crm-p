@@ -169,12 +169,81 @@
                             </div>
                         </div>
 
+                        <!-- Replies -->
+                        <div v-if="comment.replies.length > 0" class="comment-replies">
+                            <div
+                                v-for="reply in comment.replies"
+                                :key="reply.id"
+                                class="comment-reply-item"
+                            >
+                                <div class="comment-reply-head">
+                                    <img
+                                        v-if="reply.userAvatar"
+                                        :src="reply.userAvatar"
+                                        class="comment-reply-avatar"
+                                        alt=""
+                                        @click="openPersonProfile(props.lead, reply.userId, $event)"
+                                    />
+                                    <div
+                                        v-else
+                                        class="comment-reply-avatar comment-user-avatar-placeholder"
+                                        @click="openPersonProfile(props.lead, reply.userId, $event)"
+                                    >
+                                        <iconify-icon icon="lucide:user" class="comment-avatar-icon"></iconify-icon>
+                                    </div>
+                                    <span class="comment-reply-name">{{ reply.userName || '—' }}</span>
+                                    <span v-if="reply.userRole" class="comment-reply-role">{{ reply.userRole }}</span>
+                                    <span class="comment-reply-time">{{ reply.dateLabel === 'TODAY' ? '' : reply.dateLabel + ' · ' }}{{ reply.time }}</span>
+                                    <span v-if="reply.deletedAt" class="comment-deleted-badge">Soft deleted</span>
+                                    <button
+                                        v-if="isSuperAdmin && reply.id && !String(reply.id).startsWith('temp')"
+                                        class="comment-kebab-btn ms-auto"
+                                        title="Delete reply"
+                                        @click="deleteComment(reply)"
+                                    >
+                                        <iconify-icon icon="lucide:trash-2" class="kebab-icon delete-icon"></iconify-icon>
+                                    </button>
+                                </div>
+                                <div
+                                    class="comment-reply-text comment-text bitrix-rich-text"
+                                    v-html="formatCommentHtml(reply.comment)"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <!-- Reply box -->
+                        <div v-if="replyingTo === comment.id" class="comment-reply-box">
+                            <textarea
+                                v-model="replyText"
+                                class="comment-reply-input"
+                                rows="2"
+                                placeholder="Write a reply..."
+                                :disabled="replySubmitting"
+                                @keydown.enter.exact.prevent="submitReply(comment)"
+                                @keydown.esc="cancelReply"
+                            ></textarea>
+                            <div class="comment-reply-actions">
+                                <button class="btn-reply-cancel" :disabled="replySubmitting" @click="cancelReply">Cancel</button>
+                                <button
+                                    class="btn-reply-send"
+                                    :disabled="replySubmitting || !replyText.trim()"
+                                    @click="submitReply(comment)"
+                                >
+                                    {{ replySubmitting ? 'Sending...' : 'Reply' }}
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Comment Footer -->
                         <div class="comment-card-footer">
                             <div class="comment-footer-right">
-                                <button class="icon-btn d-flex align-items-center gap-2">
-                                    <iconify-icon icon="lucide:file-text" class="icon-btn-icon"></iconify-icon>
-                                    <span class="icon-btn-text">Comment</span>
+                                <button
+                                    v-if="comment.canReply && comment.id && !String(comment.id).startsWith('temp')"
+                                    class="icon-btn d-flex align-items-center gap-2"
+                                    @click="startReply(comment)"
+                                >
+                                    <iconify-icon icon="lucide:reply" class="icon-btn-icon"></iconify-icon>
+                                    <span class="icon-btn-text">Reply</span>
                                 </button>
                                 <button
                                     v-if="isSuperAdmin && comment.id && !String(comment.id).startsWith('temp')"
@@ -430,11 +499,15 @@ const deleteComment = async (comment) => {
 
     try {
         await api.delete(`/leads/comments/${comment.id}/admin-delete`, { params: hard ? { force: 1 } : {} })
+        // A reply lives inside its parent's `replies`; a top-level comment in `comments`.
+        const parent = comment.parentId ? comments.value.find(c => c.id === comment.parentId) : null
+        const list = parent ? parent.replies : comments.value
         if (hard) {
-            comments.value = comments.value.filter(c => c.id !== comment.id)
+            const idx = list.findIndex(c => c.id === comment.id)
+            if (idx !== -1) list.splice(idx, 1)
         } else {
             // Admins still see soft-deleted comments (same as after a reload) — just flag it.
-            const target = comments.value.find(c => c.id === comment.id)
+            const target = list.find(c => c.id === comment.id)
             if (target) target.deletedAt = new Date().toISOString()
         }
         emitCommentsLoaded()
@@ -451,10 +524,61 @@ const showCommentMenu = (comment) => {
     // Add menu logic here
 }
 
+// ==================== Replies ====================
+// Manager / any parent of the comment's author (and the author) can reply — the
+// server decides and sends `can_reply` per comment.
+const replyingTo = ref(null)
+const replyText = ref('')
+const replySubmitting = ref(false)
+
+const startReply = (comment) => {
+    if (replyingTo.value !== comment.id) {
+        replyText.value = ''
+    }
+    replyingTo.value = comment.id
+}
+
+const cancelReply = () => {
+    replyingTo.value = null
+    replyText.value = ''
+}
+
+const submitReply = async (comment) => {
+    const body = replyText.value.trim()
+    if (!body || replySubmitting.value) return
+
+    try {
+        replySubmitting.value = true
+        const formData = new FormData()
+        formData.append('lead_id', props.leadId)
+        formData.append('comment', body)
+        formData.append('parent_id', comment.id)
+
+        const response = await api.post('/leads/add/new/comments', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        const saved = response.data?.data
+        if (saved) {
+            const target = comments.value.find(c => c.id === comment.id)
+            if (target) target.replies.push(transformComment(saved))
+        }
+        cancelReply()
+        $showNotification('Reply added', 'success')
+    } catch (error) {
+        console.error('Error saving reply:', error)
+        $showNotification(error.response?.data?.message || 'Failed to add reply. Please try again.', 'error')
+    } finally {
+        replySubmitting.value = false
+    }
+}
+
 // Transform comment data
 const transformComment = (comment) => {
     return {
         id: comment.id,
+        parentId: comment.parent_id || null,
+        canReply: !!comment.can_reply,
+        replies: Array.isArray(comment.replies) ? comment.replies.map(transformComment) : [],
         comment: comment.comment,
         time: formatTime(comment.created_at),
         dateLabel: formatDateLabel(comment.created_at),
@@ -1181,6 +1305,121 @@ defineExpose({
     color: #B91C1C;
     font-size: 11px;
     font-weight: 500;
+}
+
+/* Replies */
+.comment-replies {
+    margin: 0 0 12px 44px;
+    padding-left: 12px;
+    border-left: 2px solid #F1F5F9;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.comment-reply-item {
+    background: #F8FAFC;
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.comment-reply-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.comment-reply-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.comment-reply-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0B0736;
+}
+
+.comment-reply-role {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.comment-reply-time {
+    font-size: 11px;
+    color: #999999;
+}
+
+.comment-reply-text {
+    font-size: 13px;
+    padding-left: 28px;
+}
+
+.comment-reply-box {
+    margin: 0 0 12px 44px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 8px;
+}
+
+.comment-reply-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: vertical;
+    font-size: 13px;
+    color: #333333;
+    font-family: var(--deal-font, 'Montserrat', sans-serif);
+}
+
+.comment-reply-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.btn-reply-cancel,
+.btn-reply-send {
+    border: none;
+    padding: 4px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn-reply-cancel {
+    background: #F4F4F4;
+    color: #0B0736;
+}
+
+.btn-reply-send {
+    background: var(--gradient-primary);
+    color: #ffffff;
+}
+
+.btn-reply-send:disabled,
+.btn-reply-cancel:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.icon-btn:hover {
+    background: #F1F5F9;
 }
 
 .show-older-wrapper {

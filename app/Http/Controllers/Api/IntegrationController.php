@@ -842,8 +842,18 @@ public function store_wordpress(Request $request)
         'payload' => \Illuminate\Support\Arr::except($data, ['secret', 'api_key']),
     ]);
 
-    // Public webhook: never trust client/WordPress assignee ids (including mapped WP ids).
-    // Lead Assignment owns responsible_person_id via ProcessLeadAutoAssignmentJob after create.
+    // WordPress responsible person → CRM BRANCH (never a raw client id — only #59 / #25
+    // can come out of this, so the public webhook can't pick an arbitrary assignee):
+    //   2911 → #59 Dubai, anything else → #25 Abu Dhabi.
+    // This sets lead_branch_source (below) and initial_responsible_person_id, which
+    // ProcessLeadAutoAssignmentJob uses to hand the lead to a sales user of that branch.
+    $crmresponse = match ((int) ($data['responsible_person'] ?? $data['responsible_person_id'] ?? 0)) {
+        2911    => 59,
+        default => 25,
+    };
+    // Shared outside-lead rule (#25 → #1690 when that user exists) — Lead::externalResponsibleId.
+    $crmresponse = Lead::externalResponsibleId($crmresponse);
+
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
 
 $fieldData = [];
@@ -878,8 +888,8 @@ $fieldMappings = [
         'lead_source' => $data['source'] ?? 'Allproperties.ae',
         'ad_id' => null,
         'added_by' => 1,
-        // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => 1,
+        // Mapped branch (#59 / #25) until ProcessLeadAutoAssignmentJob picks a sales user.
+        'responsible_person_id' => $crmresponse,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
