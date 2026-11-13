@@ -4603,15 +4603,24 @@ const revertFromConverted = async () => {
     // Hero image first (big image), then the rest by their saved order.
     // No hero → plain gallery order, so the first ordered image is the big one.
     const orderGalleryWithHero = (images, heroUrl) => {
-      const list = (Array.isArray(images) ? [...images] : [])
-        .sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0));
-      if (!heroUrl) return list;
-
       const storagePath = (url) => {
         const s = String(url || '');
         const i = s.indexOf('/storage/');
         return i >= 0 ? s.slice(i + '/storage/'.length) : s;
       };
+      // Some listings have the same file saved in several gallery rows — show each file once
+      // (otherwise it repeats in the big/small images, the lightbox and the offer gallery).
+      const seen = new Set();
+      const list = (Array.isArray(images) ? [...images] : [])
+        .sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0))
+        .filter((img) => {
+          const key = storagePath(img?.image_url) || `id:${img?.id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      if (!heroUrl) return list;
+
       const heroPath = storagePath(heroUrl);
       const heroIndex = list.findIndex((img) => storagePath(img?.image_url) === heroPath);
 
