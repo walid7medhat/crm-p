@@ -4030,6 +4030,7 @@ public function getActivityLog($listingId)
         'furnished'          => 'Furnished',
         'fully_furnished'    => 'Fully Furnished',
         'semi_furnished'     => 'Semi Furnished',
+        'unfurnished'        => 'Unfurnished',
 
         // Extras
         'private_pool'       => 'Private Pool',

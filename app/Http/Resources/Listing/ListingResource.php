@@ -77,6 +77,7 @@ public const FEATURE_LABELS = [
     'furnished'          => 'Furnished',
     'fully_furnished'    => 'Fully Furnished',
     'semi_furnished'     => 'Semi Furnished',
+    'unfurnished'        => 'Unfurnished',
 
     // Extras
     'private_pool'       => 'Private Pool',

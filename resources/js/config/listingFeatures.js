@@ -72,6 +72,7 @@ export const LISTING_FEATURE_OPTIONS = [
   { key: 'furnished', label: 'Furnished', category: 'furnishing' },
   { key: 'fully_furnished', label: 'Fully Furnished', category: 'furnishing' },
   { key: 'semi_furnished', label: 'Semi Furnished', category: 'furnishing' },
+  { key: 'unfurnished', label: 'Unfurnished', category: 'furnishing' },
 
   // Extras
   { key: 'private_pool', label: 'Private Pool', category: 'extras' },
