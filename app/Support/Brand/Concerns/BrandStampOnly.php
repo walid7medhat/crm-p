@@ -7,8 +7,11 @@ use App\Support\Brand\BrandIsolation;
 
 /**
  * Stamps brand_key on create without a global read scope.
- * Used for User so authentication and shared identity lookups keep working;
- * membership is enforced via BrandCrmScope + BrandIsolation::constrain on lists.
+ *
+ * Used for:
+ * - User: auth / shared identity; membership via BrandCrmScope + constrain lists
+ * - Shared catalog (Project + images): visible on every brand host; brand_key is
+ *   attribution only so each company can still gate writes via permissions
  */
 trait BrandStampOnly
 {

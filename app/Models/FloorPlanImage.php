@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FloorPlanImage extends Model
 {
-    use \App\Support\Brand\Concerns\BrandOwned;
+    // Shared with Project catalog — stamp only, no read isolation.
+    use \App\Support\Brand\Concerns\BrandStampOnly;
 
     protected $fillable = [
         'project_id',

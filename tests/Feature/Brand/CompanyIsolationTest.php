@@ -81,15 +81,27 @@ class CompanyIsolationTest extends TestCase
         $this->assertContains('oia', Listing::query()->getBindings());
     }
 
-    public function test_marketing_and_project_and_suggestion_use_brand_owned(): void
+    public function test_marketing_and_suggestion_use_brand_owned_projects_are_shared_catalog(): void
     {
-        foreach ([MarketingTask::class, Project::class, Suggestion::class] as $model) {
+        foreach ([MarketingTask::class, Suggestion::class] as $model) {
             $this->assertContains(
                 \App\Support\Brand\Concerns\BrandOwned::class,
                 class_uses_recursive($model),
                 $model.' must use BrandOwned'
             );
         }
+
+        // Areas/Developers/Projects are a shared catalog: stamp brand for
+        // attribution + separate write control, but do not hide rows per host.
+        $this->assertContains(
+            \App\Support\Brand\Concerns\BrandStampOnly::class,
+            class_uses_recursive(Project::class),
+            'Project must use BrandStampOnly (shared catalog)'
+        );
+        $this->assertNotContains(
+            \App\Support\Brand\Concerns\BrandOwned::class,
+            class_uses_recursive(Project::class)
+        );
     }
 
     public function test_offer_base_path_is_brand_partitioned(): void

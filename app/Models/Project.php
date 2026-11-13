@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
-use App\Support\Brand\Concerns\BrandOwned;
+use App\Support\Brand\Concerns\BrandStampOnly;
 
 class Project extends Model
 {
    use LogsActivity;
-   use BrandOwned;
+   // Shared catalog with Areas/Developers: visible on OIA + Luxvant.
+   // brand_key is stamped for attribution / separate write control only.
+   use BrandStampOnly;
 
     public function getActivitylogOptions(): LogOptions
     {

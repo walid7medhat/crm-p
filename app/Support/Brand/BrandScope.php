@@ -9,7 +9,10 @@ use Illuminate\Database\Eloquent\Scope;
 /**
  * Server-enforced company isolation.
  *
- * Luxvant: only brand_key = luxvant (NULL/ambiguous never visible).
+ * Luxvant (strict tables, e.g. listings): only brand_key = luxvant.
+ * Luxvant (CRM leads/deals while BrandCrmScope is active): brand_key = luxvant
+ *   OR NULL — legacy Admin Luxvant branch rows were left unclassified by the
+ *   isolation migration; BrandCrmScope then limits them to that branch tree.
  * OIA: brand_key = oia OR NULL (legacy / unclassified remain OIA-visible).
  *
  * Super Admin does not bypass this scope unless an explicit audited exception
@@ -31,6 +34,14 @@ class BrandScope implements Scope
         $key = app(BrandContext::class)->key();
 
         if ($key === 'luxvant') {
+            if (BrandIsolation::luxvantAllowsUnclassifiedCrmRows($model->getTable())) {
+                $builder->where(function (Builder $q) use ($column) {
+                    $q->where($column, 'luxvant')->orWhereNull($column);
+                });
+
+                return;
+            }
+
             $builder->where($column, 'luxvant');
 
             return;
