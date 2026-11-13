@@ -557,6 +557,14 @@ SQL;
             });
         }
     } 
+        // City tabs on All Listings (admin / super admin / branch admin): ?city=abu_dhabi|dubai.
+        // By the listing's own area — the same rule that sends Dubai listings to the Dubai branch admin.
+        $cityNames = ['abu_dhabi' => 'abu dhabi', 'dubai' => 'dubai'];
+        if (isset($cityNames[$request->input('city')])
+            && $user && ($user->hasAnyRole(['super_admin', 'admin', 'branch_admin']))) {
+            $query->whereIn('listings.area_id', Area::cityAreaIds($cityNames[$request->input('city')]) ?: [0]);
+        }
+
         if($request->has('is_archived')) {
             $query->where('is_archived', $request->boolean('is_archived'));
         }

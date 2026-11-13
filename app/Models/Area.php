@@ -377,8 +377,17 @@ class Area extends Model
     /** Every area id inside Dubai (the city row and all its descendants). */
     public static function dubaiAreaIds(): array
     {
+        return static::cityAreaIds('dubai');
+    }
+
+    /**
+     * Every area id inside the city with this name (case-insensitive) — all city rows
+     * with that name and all their descendants.
+     */
+    public static function cityAreaIds(string $cityName): array
+    {
         $ids = [];
-        $cityIds = static::query()->where('type', 'city')->whereRaw('LOWER(TRIM(name)) = ?', ['dubai'])->pluck('id');
+        $cityIds = static::query()->where('type', 'city')->whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($cityName))])->pluck('id');
         foreach ($cityIds as $cityId) {
             $ids = array_merge($ids, static::descendantIdsIncludingSelf((int) $cityId));
         }

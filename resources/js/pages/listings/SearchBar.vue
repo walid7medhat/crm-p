@@ -85,6 +85,20 @@
           </button>
         </div>
 
+        <div v-if="showCityTabs" class="bayut-status-tabs">
+          <button
+            v-for="tab in cityTabs"
+            :key="'m-city-' + tab.value"
+            type="button"
+            class="bayut-status-tab"
+            :class="{ active: activeCity === tab.value }"
+            @click="emitCityChange(tab.value)"
+          >
+            <i :class="tab.icon"></i>
+            <span>{{ tab.label }}</span>
+          </button>
+        </div>
+
         <div class="bayut-results-header">
           <h6 class="listing-headline__title">{{ dynamicHeadline }}</h6>
           <button type="button" class="bayut-sort-btn bayut-sort-btn--icon" aria-label="Sort listings" @click="openMobileSortSheet">
@@ -511,6 +525,19 @@
             <i class="ri-close-circle-line"></i> Rejected
           </button>
           <!--<span class="status-sort-separator" v-if="showStatusTabs"></span>-->
+          <template v-if="showCityTabs">
+            <span class="status-sort-separator" aria-hidden="true"></span>
+            <button
+              v-for="tab in cityTabs"
+              :key="'city-' + tab.value"
+              type="button"
+              class="status-btn"
+              :class="{ active: activeCity === tab.value }"
+              @click="emitCityChange(tab.value)"
+            >
+              <i :class="tab.icon"></i> {{ tab.label }}
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -1099,6 +1126,15 @@ export default {
       default: false
     },
     activeStatus: {
+      type: String,
+      default: "all"
+    },
+    // City tabs (All Cities / Abu Dhabi / Dubai) — admin, super admin, branch admin.
+    showCityTabs: {
+      type: Boolean,
+      default: false
+    },
+    activeCity: {
       type: String,
       default: "all"
     }
@@ -2305,6 +2341,15 @@ const featuresButtonLabel = computed(() => {
       emit('status-changed', status);
     };
 
+    const cityTabs = [
+      { value: 'all', label: 'All Cities', icon: 'ri-map-2-line' },
+      { value: 'abu_dhabi', label: 'Abu Dhabi', icon: 'ri-map-pin-line' },
+      { value: 'dubai', label: 'Dubai', icon: 'ri-map-pin-line' },
+    ];
+    const emitCityChange = (city) => {
+      emit('city-changed', city);
+    };
+
     const setQuickSort = (sortValue) => {
       selectedSort.value = sortValue;
       handleFilterChange();
@@ -2949,6 +2994,8 @@ const featuresButtonLabel = computed(() => {
       Math,
       handleFilterChange,
       emitStatusChange,
+      cityTabs,
+      emitCityChange,
       setQuickSort,
       toggleHotDeal,
       toggleMobileQuickSale,
