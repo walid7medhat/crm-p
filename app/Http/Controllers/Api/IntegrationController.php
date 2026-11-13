@@ -137,30 +137,50 @@ class IntegrationController extends Controller
         $params = [
             'access_token' => $pageAccessToken, // استخدام Page Access Token
             'fields' => 'id,name,status,leads_count,created_time',
-            'limit' => 50,
+            'limit' => 100,
         ];
-        
+
         if ($cursor) {
             $params['after'] = $cursor;
         }
     
         try {
-            $response = Http::timeout(15)->get($url, $params);
-    
-            if (!$response->successful()) {
-                $body = $response->json() ?? [];
-                $metaMessage = $body['error']['message'] ?? $body['error']['error_user_msg'] ?? 'Unknown error';
-                Log::warning('Meta API forms error', ['status' => $response->status(), 'body' => $body]);
-                return ApiResponse::error('Failed to fetch forms from Meta: ' . $metaMessage, 400);
+            // Meta returns forms in pages (often ~20 even when a bigger limit is asked),
+            // so follow the "after" cursor until every form of the page is collected.
+            $forms = [];
+            $nextCursor = null;
+            $hasNext = false;
+            $maxRequests = 50; // safety cap: 50 x up to 100 forms
+
+            for ($i = 0; $i < $maxRequests; $i++) {
+                $response = Http::timeout(15)->get($url, $params);
+
+                if (!$response->successful()) {
+                    $body = $response->json() ?? [];
+                    $metaMessage = $body['error']['message'] ?? $body['error']['error_user_msg'] ?? 'Unknown error';
+                    Log::warning('Meta API forms error', ['status' => $response->status(), 'body' => $body]);
+                    if ($forms !== []) {
+                        break; // keep what we already have
+                    }
+                    return ApiResponse::error('Failed to fetch forms from Meta: ' . $metaMessage, 400);
+                }
+
+                $data = $response->json();
+                $forms = array_merge($forms, $data['data'] ?? []);
+                $paging = $data['paging'] ?? [];
+                $nextCursor = $paging['cursors']['after'] ?? null;
+                $hasNext = isset($paging['next']) && $nextCursor;
+
+                if (!$hasNext) {
+                    break;
+                }
+                $params['after'] = $nextCursor;
             }
-    
-            $data = $response->json();
-            $forms = $data['data'] ?? [];
-            $paging = $data['paging'] ?? [];
-            
-            $nextCursor = $paging['cursors']['after'] ?? null;
-            $hasNext = isset($paging['next']);
-    
+
+            if (!$hasNext) {
+                $nextCursor = null;
+            }
+
             $list = array_map(function ($form) {
                 return [
                     'id' => $form['id'] ?? null,
@@ -174,7 +194,7 @@ class IntegrationController extends Controller
             return ApiResponse::success([
                 'forms' => $list,
                 'next_cursor' => $nextCursor,
-                'has_next' => $hasNext,
+                'has_next' => (bool) $hasNext,
             ], 'Forms retrieved successfully');
         } catch (\Throwable $e) {
             Log::error('Fetch Meta forms error: ' . $e->getMessage());

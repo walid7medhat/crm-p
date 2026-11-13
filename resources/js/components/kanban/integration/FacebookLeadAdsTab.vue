@@ -57,6 +57,7 @@
                     :reduce="form => form"
                     label="name"
                     placeholder="Choose a form..."
+                    :filter-by="filterFormOption"
                     class="custom-select"
                     :loading="loadingForms"
                     :disabled="loadingForms"
@@ -482,6 +483,14 @@ const loadForms = async (pageId, pageAccessToken, cursor = null) => {
     } finally {
         loadingForms.value = false
     }
+}
+
+// Search the form dropdown by name or form ID (across every loaded form)
+const filterFormOption = (option, label, search) => {
+    const q = String(search || '').trim().toLowerCase()
+    if (!q) return true
+    return String(option?.name || label || '').toLowerCase().includes(q)
+        || String(option?.id || '').includes(q)
 }
 
 // Load more forms
