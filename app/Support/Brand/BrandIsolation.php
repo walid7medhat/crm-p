@@ -62,6 +62,19 @@ class BrandIsolation
     }
 
     /**
+     * CRM leads/deals on Luxvant may still be NULL until classified. BrandCrmScope
+     * restricts those rows to the Admin Luxvant branch — do not open listings/etc.
+     */
+    public static function luxvantAllowsUnclassifiedCrmRows(string $table): bool
+    {
+        if (! in_array($table, ['leads', 'deals'], true)) {
+            return false;
+        }
+
+        return BrandCrmScope::active();
+    }
+
+    /**
      * Apply the same visibility rules used by BrandScope to a query builder.
      *
      * @param  Builder|QueryBuilder  $query
@@ -80,6 +93,12 @@ class BrandIsolation
         $key = self::trustedKey();
 
         if ($key === 'luxvant') {
+            if (self::luxvantAllowsUnclassifiedCrmRows($table)) {
+                return $query->where(function ($q) use ($col) {
+                    $q->where($col, 'luxvant')->orWhereNull($col);
+                });
+            }
+
             return $query->where($col, 'luxvant');
         }
 
