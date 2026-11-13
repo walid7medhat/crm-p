@@ -70,38 +70,47 @@ export function bindLiveWatchSirenUnlock() {
   if (typeof window === 'undefined' || unlockBound) return
   unlockBound = true
   const unlock = () => {
-    const ctx = ensureContext()
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {})
-    }
+    unlockLiveWatchSiren()
   }
   window.addEventListener('pointerdown', unlock, { once: true, passive: true })
   window.addEventListener('keydown', unlock, { once: true })
 }
 
-/**
- * Play a short two-tone wailing siren (~3 seconds). No-ops when muted or already playing.
- */
-export async function playLiveWatchSiren(transitionId) {
-  if (isLiveWatchSirenMuted()) return false
-  if (!claimLiveWatchSiren(transitionId)) return false
-  if (playing) return false
-
+/** Resume AudioContext from a user gesture. Returns false if still blocked. */
+export async function unlockLiveWatchSiren() {
   const ctx = ensureContext()
   if (!ctx) return false
-
   try {
     if (ctx.state === 'suspended') await ctx.resume()
+    return ctx.state === 'running'
   } catch {
     return false
   }
+}
+
+/**
+ * Play a short two-tone wailing siren (~3 seconds). No-ops when muted or already playing.
+ * Returns false when muted, already claimed, or browser autoplay still blocks audio.
+ */
+export async function playLiveWatchSiren(transitionId) {
+  if (isLiveWatchSirenMuted()) return false
+  if (playing) return false
+
+  const unlocked = await unlockLiveWatchSiren()
+  if (!unlocked) return false
+
+  // Claim only after audio is allowed so a blocked autoplay can retry later.
+  if (!claimLiveWatchSiren(transitionId)) return false
+
+  const ctx = ensureContext()
+  if (!ctx) return false
 
   playing = true
   const duration = 3.0
   const now = ctx.currentTime
   const master = ctx.createGain()
   master.gain.setValueAtTime(0.0001, now)
-  master.gain.exponentialRampToValueAtTime(0.22, now + 0.08)
+  master.gain.exponentialRampToValueAtTime(0.28, now + 0.08)
   master.gain.exponentialRampToValueAtTime(0.0001, now + duration)
   master.connect(ctx.destination)
 

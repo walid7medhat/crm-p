@@ -2,7 +2,7 @@
   <Teleport to="body">
     <transition name="lwa">
       <aside
-        v-if="visible && presence?.is_online && presence?.monitored_user"
+        v-if="showAlert"
         class="lwa"
         role="status"
         aria-live="polite"
@@ -13,7 +13,7 @@
             <span class="lwa__dot" title="Online" />
             <div class="lwa__text">
               <div class="lwa__kicker">Live Watch</div>
-              <div class="lwa__name">{{ presence.monitored_user.name }}</div>
+              <div class="lwa__name">{{ displayName }}</div>
               <div class="lwa__meta">Online · {{ elapsedLabel }}</div>
             </div>
           </div>
@@ -21,14 +21,18 @@
             <button
               type="button"
               class="lwa__btn"
-              :title="muted ? 'Sound muted — click to enable' : 'Sound enabled — click to mute'"
+              :class="{ 'lwa__btn--warn': muted || soundBlocked }"
+              :title="soundButtonTitle"
               @click="toggleMute"
             >
               <iconify-icon :icon="muted ? 'lucide:volume-x' : 'lucide:volume-2'" width="14" height="14" />
-              {{ muted ? 'Muted' : 'Sound' }}
+              {{ soundButtonLabel }}
             </button>
             <router-link class="lwa__btn lwa__btn--primary" to="/tracking">Timeline</router-link>
           </div>
+          <p v-if="!muted && soundBlocked" class="lwa__hint">
+            Click Sound once to allow the alarm in this browser.
+          </p>
         </div>
       </aside>
     </transition>
@@ -44,27 +48,49 @@ import {
   isLiveWatchSirenMuted,
   playLiveWatchSiren,
   setLiveWatchSirenMuted,
+  unlockLiveWatchSiren,
 } from '@/utils/liveWatchSiren'
+
+const POLL_MS = 12_000
 
 const presence = ref(null)
 const muted = ref(isLiveWatchSirenMuted())
+const soundBlocked = ref(false)
 const nowTick = ref(Date.now())
 let tickTimer = null
+let pollTimer = null
 let channel = null
 let echoOff = null
-let handledTransition = null
+/** Last transition we already alerted for (siren + toast). */
+let alertedTransition = null
+/** Previous online flag for poll-based offline → online detection. */
+let wasOnline = false
 
-const visible = computed(() => {
+const isSuperAdmin = computed(() => {
   try {
     const raw = localStorage.getItem('user')
     if (!raw) return false
     const u = JSON.parse(raw)
     const roles = Array.isArray(u?.roles) ? u.roles : []
-    return roles.includes('super_admin')
+    return roles.some((r) => (typeof r === 'string' ? r : r?.name) === 'super_admin')
+      || String(u?.role_name || '').toLowerCase().includes('super admin')
+      || String(u?.role_name || '').toLowerCase() === 'super_admin'
   } catch {
     return false
   }
 })
+
+const showAlert = computed(() => (
+  isSuperAdmin.value
+  && Boolean(presence.value?.is_online)
+  && Boolean(presence.value?.monitored_user_id || presence.value?.monitored_user)
+))
+
+const displayName = computed(() => (
+  presence.value?.monitored_user?.name
+  || presence.value?.user_name
+  || 'Monitored user'
+))
 
 const elapsedLabel = computed(() => {
   const since = presence.value?.online_since
@@ -78,25 +104,66 @@ const elapsedLabel = computed(() => {
   return `${hr}h ${min % 60}m`
 })
 
-function applyPresence(payload, { playSound = false } = {}) {
+const soundButtonLabel = computed(() => {
+  if (muted.value) return 'Muted'
+  if (soundBlocked.value) return 'Enable sound'
+  return 'Sound on'
+})
+
+const soundButtonTitle = computed(() => {
+  if (muted.value) return 'Sound muted — click to enable'
+  if (soundBlocked.value) return 'Browser blocked autoplay — click to enable the alarm'
+  return 'Sound enabled — click to mute'
+})
+
+function notifyOnline(name) {
+  try {
+    const msg = `${name || 'Monitored user'} is online`
+    if (typeof window.$showNotification === 'function') {
+      window.$showNotification(msg, 'success')
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+async function maybeAlertOnline(transitionId, name, { playSound }) {
+  if (!transitionId || transitionId === alertedTransition) return
+  alertedTransition = transitionId
+  notifyOnline(name)
+  if (!playSound || muted.value) return
+
+  bindLiveWatchSirenUnlock()
+  const played = await playLiveWatchSiren(transitionId)
+  soundBlocked.value = !played && !isLiveWatchSirenMuted()
+}
+
+function applyPresence(payload, { playSound = false, fromHydrate = false } = {}) {
   if (!payload) return
+
   const nextOnline = payload.status === 'online' || payload.is_online === true
   const monitoredId = payload.monitored_user_id ?? payload.user_id ?? presence.value?.monitored_user_id
   const transitionId = payload.transition_id || null
+  const name = payload.user_name
+    || payload.monitored_user?.name
+    || presence.value?.monitored_user?.name
 
   if (!nextOnline) {
+    wasOnline = false
     presence.value = {
       ...(presence.value || {}),
       is_online: false,
       transition_id: null,
       online_since: null,
-      monitored_user_id: monitoredId,
-      monitored_user: presence.value?.monitored_user || (payload.user_name
-        ? { id: payload.user_id, name: payload.user_name }
-        : null),
+      monitored_user_id: monitoredId || null,
+      monitored_user: presence.value?.monitored_user
+        || (name ? { id: payload.user_id || monitoredId, name } : null),
     }
     return
   }
+
+  const becameOnline = !wasOnline
+  wasOnline = true
 
   presence.value = {
     is_online: true,
@@ -107,47 +174,58 @@ function applyPresence(payload, { playSound = false } = {}) {
       ? presence.value.monitored_user
       : {
           id: payload.user_id || monitoredId,
-          name: payload.user_name || presence.value?.monitored_user?.name || 'Monitored user',
+          name: name || 'Monitored user',
         },
   }
 
-  if (playSound && transitionId && transitionId !== handledTransition) {
-    handledTransition = transitionId
-    playLiveWatchSiren(transitionId)
+  // Hydrate while already online: show card, never siren.
+  // Live transition (Echo or poll): siren + toast once per transition_id.
+  if (!fromHydrate && becameOnline) {
+    maybeAlertOnline(transitionId, name, { playSound })
+  } else if (fromHydrate && transitionId) {
+    alertedTransition = transitionId
   }
 }
 
-async function fetchPresence() {
-  if (!visible.value) return
+async function fetchPresence({ fromHydrate = false } = {}) {
+  if (!isSuperAdmin.value) return
   try {
     const { data } = await api.get('/admin/live-watch/presence')
     const snap = data?.data
     if (!snap) return
-    // Initial hydrate must NOT play the siren (refresh / reconnect).
+
     applyPresence({
       status: snap.is_online ? 'online' : 'offline',
-      is_online: snap.is_online,
+      is_online: Boolean(snap.is_online),
       user_id: snap.monitored_user_id,
       monitored_user_id: snap.monitored_user_id,
       transition_id: snap.transition_id,
       online_since: snap.online_since,
       user_name: snap.monitored_user?.name,
-    }, { playSound: false })
+      monitored_user: snap.monitored_user,
+    }, {
+      // Poll detects genuine offline → online even when Echo/Pusher is down.
+      playSound: !fromHydrate,
+      fromHydrate,
+    })
+
     if (snap.monitored_user) {
-      presence.value = { ...presence.value, monitored_user: snap.monitored_user }
-    }
-    if (snap.transition_id) {
-      handledTransition = snap.transition_id
+      presence.value = { ...(presence.value || {}), monitored_user: snap.monitored_user }
     }
   } catch {
-    /* SA-only; ignore 403 for non-SA */
+    /* SA-only; ignore 403 */
   }
 }
 
-function toggleMute() {
+async function toggleMute() {
   muted.value = !muted.value
   setLiveWatchSirenMuted(muted.value)
-  bindLiveWatchSirenUnlock()
+  if (!muted.value) {
+    const ok = await unlockLiveWatchSiren()
+    soundBlocked.value = !ok
+  } else {
+    soundBlocked.value = false
+  }
 }
 
 function subscribe() {
@@ -155,16 +233,20 @@ function subscribe() {
     if (!window.Echo || channel) return
     channel = window.Echo.private('live-watch')
     channel.listen('.presence.changed', (event) => {
-      applyPresence(event, { playSound: event?.status === 'online' })
+      applyPresence(event, { playSound: event?.status === 'online', fromHydrate: false })
     })
   })
 }
 
 onMounted(() => {
-  if (!visible.value) return
+  if (!isSuperAdmin.value) return
   bindLiveWatchSirenUnlock()
-  fetchPresence()
+  fetchPresence({ fromHydrate: true })
   subscribe()
+  pollTimer = window.setInterval(() => {
+    if (document.visibilityState === 'hidden') return
+    fetchPresence({ fromHydrate: false })
+  }, POLL_MS)
   tickTimer = window.setInterval(() => {
     nowTick.value = Date.now()
   }, 1000)
@@ -172,6 +254,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearInterval(tickTimer)
+  clearInterval(pollTimer)
   echoOff?.()
   if (channel && window.Echo) {
     try {
@@ -188,14 +271,14 @@ onBeforeUnmount(() => {
 .lwa {
   position: fixed;
   right: 18px;
-  bottom: 88px;
-  z-index: 1080;
-  width: min(280px, calc(100vw - 24px));
+  bottom: 96px;
+  z-index: 12050;
+  width: min(300px, calc(100vw - 24px));
   border-radius: 16px;
   padding: 12px 12px 10px;
-  background: linear-gradient(160deg, rgba(12, 18, 28, 0.94), rgba(18, 28, 42, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  background: linear-gradient(160deg, rgba(12, 18, 28, 0.96), rgba(18, 28, 42, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
   color: #f5f7fb;
   overflow: hidden;
   backdrop-filter: blur(10px);
@@ -260,6 +343,16 @@ onBeforeUnmount(() => {
   background: rgba(61, 220, 151, 0.18);
   border-color: rgba(61, 220, 151, 0.35);
 }
+.lwa__btn--warn {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+.lwa__hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  opacity: 0.75;
+  line-height: 1.35;
+}
 .lwa-enter-active,
 .lwa-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .lwa-enter-from,
@@ -276,6 +369,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
-  .lwa { right: 12px; left: 12px; width: auto; bottom: 76px; }
+  .lwa { right: 12px; left: 12px; width: auto; bottom: 84px; }
 }
 </style>
