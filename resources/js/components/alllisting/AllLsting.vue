@@ -7,6 +7,9 @@
           ref="searchBarRef"
           @filters-changed="handleFiltersChanged"
           @status-changed="setStatus"
+          @city-changed="setCity"
+          :show-city-tabs="isAdmin"
+          :active-city="activeCity"
           :initial-filters="initialFilters"
           :result-count="pagination?.total || properties.length"
           :show-status-tabs="isAdmin"
@@ -266,7 +269,25 @@ export default {
   
     const setStatus = (status) => {
       activeStatus.value = status;
-      fetchProperties(currentFilters.value, 1); 
+      fetchProperties(currentFilters.value, 1);
+    };
+
+    // City tabs (admin / super admin / branch admin): all | abu_dhabi | dubai.
+    // Remembered per browser so the chosen city stays after a reload.
+    const CITY_TAB_STORAGE_KEY = 'allListingCityTab';
+    const readSavedCity = () => {
+      try {
+        const saved = localStorage.getItem(CITY_TAB_STORAGE_KEY);
+        return ['abu_dhabi', 'dubai'].includes(saved) ? saved : 'all';
+      } catch {
+        return 'all';
+      }
+    };
+    const activeCity = ref(readSavedCity());
+    const setCity = (city) => {
+      activeCity.value = city;
+      try { localStorage.setItem(CITY_TAB_STORAGE_KEY, city); } catch { /* ignore */ }
+      fetchProperties(currentFilters.value, 1);
     };
 
     // Computed property for filtered properties based on status
@@ -452,6 +473,10 @@ export default {
               params.status = 'off_plan';
               break;
           }
+        }
+
+        if (isAdmin.value && activeCity.value !== 'all') {
+          params.city = activeCity.value;
         }
 
         // Remove empty filters
@@ -1007,6 +1032,8 @@ const decodeFiltersFromQuery = async (query) => {
       showingTo,
       displayedPages,
       setStatus,
+      activeCity,
+      setCity,
       handleFiltersChanged,
       changePage,
       getPropertyImage,

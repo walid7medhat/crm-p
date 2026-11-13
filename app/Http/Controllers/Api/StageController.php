@@ -1209,7 +1209,9 @@ public function getTeamsWithLeads(Request $request): JsonResponse
         $query = User::whereHas('children', function($query) {
             // users who have at least one child/subordinate
         })
-        ->whereIn('id', $hasBranchLeads ? $user->getBranchUserIds() : $user->getAllSubordinatesIds())
+        ->when(! $this->seesAllBranches(), function ($q) use ($hasBranchLeads, $user) {
+            $q->whereIn('id', $hasBranchLeads ? $user->getBranchUserIds() : $user->getAllSubordinatesIds());
+        })
         ->where('id', '!=', auth()->user()->id)->whereHas('roles');
         
         // Filter by offices if provided (now supports multiple)
@@ -1253,6 +1255,14 @@ public function getTeamsWithLeads(Request $request): JsonResponse
 }
 
 
+/** Super admin and users #30 / #33 can filter by every branch, not only their own. */
+private function seesAllBranches(): bool
+{
+    $user = auth()->user();
+
+    return $user->hasRole('super_admin') || in_array((int) $user->id, [30, 33], true);
+}
+
 private function getBranchIds()
 {
     $query = User::role('admin')
@@ -1260,7 +1270,7 @@ private function getBranchIds()
             $q->whereNull('parent_id');
         });
 
-    if (!auth()->user()->hasRole('super_admin')) {
+    if (!$this->seesAllBranches()) {
         $query->where('id', auth()->user()->admin_parent?->id);
     }
 
@@ -1273,7 +1283,7 @@ public function getLeadBranchSource()
             $q->whereNull('parent_id');
         });
 
-    if (!auth()->user()->hasRole('super_admin')) {
+    if (!$this->seesAllBranches()) {
         $query->where('id', auth()->user()->admin_parent?->id);
     }
 
