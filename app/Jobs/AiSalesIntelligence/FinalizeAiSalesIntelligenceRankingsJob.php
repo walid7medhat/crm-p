@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
 
 class FinalizeAiSalesIntelligenceRankingsJob implements ShouldQueue, ShouldBeUnique
 {
+    use \App\Support\Brand\Concerns\BrandAwareJob;
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
@@ -23,16 +24,18 @@ class FinalizeAiSalesIntelligenceRankingsJob implements ShouldQueue, ShouldBeUni
 
     public function __construct(public int $expectedAgents = 0)
     {
+        $this->initializeBrandContext();
         $this->onQueue('default');
     }
 
     public function uniqueId(): string
     {
-        return 'ai-sales-intelligence-finalize-rankings';
+        return 'ai-sales-intelligence-finalize-rankings-'.$this->brandKey;
     }
 
     public function handle(AiOrchestrator $orchestrator): void
     {
+        $this->runWithBrandContext(function () use ($orchestrator) {
         $orchestrator->finalizeRankings();
 
         Cache::put('ai_sales_intelligence:bootstrap_status', [
@@ -42,5 +45,6 @@ class FinalizeAiSalesIntelligenceRankingsJob implements ShouldQueue, ShouldBeUni
             'finished_at' => now()->toIso8601String(),
         ], 3600);
         Cache::forget('ai_sales_intelligence:bootstrap_queued');
-    }
+            });
+}
 }

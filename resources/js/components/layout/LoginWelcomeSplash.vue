@@ -3,7 +3,8 @@
     <div
       v-if="open"
       class="login-welcome"
-      :class="{ 'is-leaving': leaving, 'is-reduced': reduced }"
+      :class="{ 'is-leaving': leaving, 'is-reduced': reduced, 'login-welcome--luxvant': isLuxvant }"
+      :style="welcomeBrandStyle"
       role="status"
       aria-live="polite"
       :aria-label="ariaLabel"
@@ -47,6 +48,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { takeLoginWelcome, welcomeCopy } from '@/composables/useLoginWelcome'
+import { useBrand } from '@/composables/useBrand'
 
 defineOptions({ name: 'LoginWelcomeSplash' })
 
@@ -54,13 +56,29 @@ const HOLD_MS = 2600
 const LEAVE_MS = 420
 const REDUCED_HOLD_MS = 1200
 
+const { isLuxvant, colors, companyName } = useBrand()
+const welcomeBrandStyle = computed(() => {
+  if (!isLuxvant) return undefined
+  const primary = colors.primary || '#003c38'
+  const ink = colors.primary_ink || '#002421'
+  const active = colors.primary_active || '#002926'
+  const glow = colors.accent || colors.primary_glow || '#c9a227'
+  return {
+    '--lw-base': ink,
+    '--lw-mid': active,
+    '--lw-peak': primary,
+    '--lw-glow': glow,
+  }
+})
+
 const payload = takeLoginWelcome()
 const open = ref(!!payload)
 const leaving = ref(false)
 const reduced = ref(
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 )
-const copy = welcomeCopy(payload?.name || '')
+// OIA copy stays identical; Luxvant gets company-branded welcome lines.
+const copy = welcomeCopy(payload?.name || '', isLuxvant ? { companyName } : {})
 
 const ariaLabel = computed(() => {
   const who = copy.first ? `${copy.hello}, ${copy.first}.` : `${copy.hello}.`
@@ -142,11 +160,19 @@ onUnmounted(() => {
   color: #fff;
   cursor: pointer;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* OIA defaults preserved exactly */
   background-color: #3f2148;
   background-image:
     radial-gradient(120% 80% at 50% 42%, rgba(143, 90, 163, 0.55) 0%, rgba(63, 33, 72, 0.2) 42%, transparent 70%),
     linear-gradient(160deg, #2a1434 0%, #4a285c 48%, #733e87 100%);
   animation: login-welcome-in 0.28s ease both;
+}
+
+.login-welcome.login-welcome--luxvant {
+  background-color: var(--lw-base, #002421);
+  background-image:
+    radial-gradient(120% 80% at 50% 42%, rgba(0, 107, 99, 0.45) 0%, rgba(0, 36, 33, 0.2) 42%, transparent 70%),
+    linear-gradient(160deg, var(--lw-base, #002421) 0%, var(--lw-mid, #002926) 48%, var(--lw-peak, #003c38) 100%);
 }
 
 .login-welcome.is-leaving {

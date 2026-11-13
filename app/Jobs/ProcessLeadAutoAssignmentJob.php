@@ -16,26 +16,32 @@ class ProcessLeadAutoAssignmentJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use \App\Support\Brand\Concerns\BrandAwareJob;
 
-    public function __construct(public int $leadId) {}
+    public function __construct(public int $leadId)
+    {
+        $this->initializeBrandContext();
+    }
 
     public function handle(LeadAssignmentService $service): void
     {
-        $settings = LeadAssignmentSetting::current();
-        if ($settings->system_disabled || !$settings->auto_assign) {
-            return;
-        }
+        $this->runWithBrandContext(function () use ($service) {
+            $settings = LeadAssignmentSetting::current();
+            if ($settings->system_disabled || ! $settings->auto_assign) {
+                return;
+            }
 
-        if ($settings->simple_mode_enabled) {
-            $service->assignSingleLeadSimple($this->leadId);
+            if ($settings->simple_mode_enabled) {
+                $service->assignSingleLeadSimple($this->leadId);
 
-            return;
-        }
+                return;
+            }
 
-        if ($settings->mode !== 'realtime') {
-            return;
-        }
+            if ($settings->mode !== 'realtime') {
+                return;
+            }
 
-        $service->assignLeadById($this->leadId, 'auto', $settings, null, null, false);
+            $service->assignLeadById($this->leadId, 'auto', $settings, null, null, false);
+        });
     }
 }

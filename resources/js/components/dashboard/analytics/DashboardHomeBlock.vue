@@ -175,6 +175,9 @@
 <script setup>
 import { ref, watch, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import ApexCharts from 'apexcharts'
+import { useBrandChartColors } from '@/composables/useBrandChartColors'
+
+const { primary: brandPrimary, palette: brandPalette } = useBrandChartColors()
 
 const props = defineProps({
   tag: { type: String, default: '' },
@@ -267,7 +270,9 @@ function renderDonut() {
   const raw = props.donutSeries.map((v) => Number(v) || 0)
   const hasData = raw.some((v) => v > 0)
   const series = hasData ? raw : [1, 1, 1]
-  const colors = hasData ? ['#7c5cbf', '#84cc16', '#ff9f43'] : ['#e8e4ef', '#e8e4ef', '#e8e4ef']
+  const colors = hasData
+    ? [brandPrimary, brandPalette[1] || '#84cc16', brandPalette[2] || '#ff9f43']
+    : ['#e8e4ef', '#e8e4ef', '#e8e4ef']
   if (donutChart) donutChart.destroy()
   donutRef.value.innerHTML = ''
   donutChart = new ApexCharts(donutRef.value, {

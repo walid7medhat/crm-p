@@ -459,7 +459,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['eoi_documents']) && is_array($propertyData['eoi_documents'])) {
                 foreach ($propertyData['eoi_documents'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/eoi_documents");
                         $eoiDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -475,7 +475,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['booking_documents']) && is_array($propertyData['booking_documents'])) {
                 foreach ($propertyData['booking_documents'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/booking_documents");
                         $bookingDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -491,7 +491,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['payment_proof']) && is_array($propertyData['payment_proof'])) {
                 foreach ($propertyData['payment_proof'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/payment_proof");
                         $paymentProofPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -507,7 +507,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['spa_document']) && is_array($propertyData['spa_document'])) {
                 foreach ($propertyData['spa_document'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/spa_document");
                         $spaDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -523,7 +523,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['mou_documents']) && is_array($propertyData['mou_documents'])) {
                 foreach ($propertyData['mou_documents'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/mou_documents");
                         $mouDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -539,7 +539,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['noc_documents']) && is_array($propertyData['noc_documents'])) {
                 foreach ($propertyData['noc_documents'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/noc_documents");
                         $nocDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -555,7 +555,7 @@ private function createDealProperties(Deal $deal, $request)
             if (isset($propertyData['title_deed_documents']) && is_array($propertyData['title_deed_documents'])) {
                 foreach ($propertyData['title_deed_documents'] as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/title_deed_documents");
                         $titleDeedDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -628,7 +628,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/eoi_documents");
                         $eoiDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -638,7 +638,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/eoi_documents");
                 $eoiDocumentPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -655,7 +655,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/booking_documents");
                         $bookingDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -665,7 +665,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/booking_documents");
                 $bookingDocumentPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -682,7 +682,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/payment_proof");
                         $paymentProofPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -692,7 +692,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/payment_proof");
                 $paymentProofPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -709,7 +709,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/spa_document");
                         $spaDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -719,7 +719,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/spa_document", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/spa_document");
                 $spaDocumentPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -736,7 +736,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/mou_documents");
                         $mouDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -746,7 +746,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/mou_documents");
                 $mouDocumentPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -763,7 +763,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/noc_documents");
                         $nocDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -773,7 +773,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/noc_documents");
                 $nocDocumentPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -790,7 +790,7 @@ private function createDealProperties(Deal $deal, $request)
             if (is_array($files)) {
                 foreach ($files as $file) {
                     if ($file instanceof \Illuminate\Http\UploadedFile) {
-                        $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/title_deed_documents");
                         $titleDeedDocumentPaths[] = [
                             'original_name' => $file->getClientOriginalName(),
                             'path' => $path,
@@ -800,7 +800,7 @@ private function createDealProperties(Deal $deal, $request)
                     }
                 }
             } elseif ($files instanceof \Illuminate\Http\UploadedFile) {
-                $path = $files->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($files, "deals/{$deal->id}/properties/title_deed_documents");
                 $titleDeedDocumentPaths[] = [
                     'original_name' => $files->getClientOriginalName(),
                     'path' => $path,
@@ -879,7 +879,7 @@ private function createDealProperties(Deal $deal, $request)
                     $filePath = $result['path'];
                     $fileSize = $result['compressed_size'] ?? $file->getSize();
                 } else {
-                    $path = $file->store($storagePath, 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, $storagePath);
                     $filePath = $path;
                     $fileSize = $file->getSize();
                 }

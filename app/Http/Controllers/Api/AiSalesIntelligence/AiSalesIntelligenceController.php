@@ -209,6 +209,10 @@ class AiSalesIntelligenceController extends Controller
 
     public function show(User $user, AiOrchestrator $orchestrator): JsonResponse
     {
+        if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+            return ApiResponse::error('User not found', 404);
+        }
+
         $metric = AiAgentMetric::query()->with('user')->where('user_id', $user->id)->first();
 
         if (!$metric) {
@@ -254,6 +258,7 @@ class AiSalesIntelligenceController extends Controller
 
     public function neglect(User $user): JsonResponse
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $metric = AiAgentMetric::query()->where('user_id', $user->id)->first();
         if (!$metric) {
             return ApiResponse::error('No metrics available', 404);
@@ -267,6 +272,7 @@ class AiSalesIntelligenceController extends Controller
 
     public function drilldown(User $user): JsonResponse
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $metric = AiAgentMetric::query()->where('user_id', $user->id)->first();
         if (!$metric) {
             return ApiResponse::error('No metrics available', 404);

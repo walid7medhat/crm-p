@@ -967,6 +967,7 @@ private function authorizeUserVacationAccess(User $target): bool
 /** Manager (listing_team=1) reads vacation status of a team member. */
 public function getUserVacationMode(User $user)
 {
+    \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
     if (!$this->authorizeUserVacationAccess($user)) {
         return ApiResponse::error('Not allowed to view this user\'s vacation', 403);
     }
@@ -981,6 +982,7 @@ public function getUserVacationMode(User $user)
 /** Manager (listing_team=1) sets vacation for a team member. */
 public function setUserVacationMode(Request $request, User $user)
 {
+    \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
     if (!$this->authorizeUserVacationAccess($user)) {
         return ApiResponse::error('Not allowed to manage this user\'s vacation', 403);
     }

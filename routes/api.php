@@ -140,8 +140,10 @@ Route::get('/save-account-activated-email-html', function () {
 })->middleware('brand.block_luxvant_public');
 
 Route::get('brand', [BrandController::class, 'show']);
-Route::post('auth/register', [AuthController::class, 'register']);
-    Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/register', [AuthController::class, 'register'])
+        ->middleware('throttle:auth-login');
+    Route::post('auth/login', [AuthController::class, 'login'])
+        ->middleware('throttle:auth-login');
     // Real-time Bitrix24 events (outbound webhooks). Public + token-verified inside.
     Route::post('/bitrix24/webhook', [Bitrix24WebhookController::class, 'handle'])
         ->middleware('throttle:600,1');
@@ -150,6 +152,14 @@ Route::post('auth/register', [AuthController::class, 'register']);
         ->middleware('throttle:600,1');
         // ,'block.bots'
 Route::middleware(['throttle:300,1'])->group(function () {
+
+// Private / sensitive company files:
+// - signed: server issued URL (disk/path/resource/resource_id bound)
+// - jwt.auth: current user; record ACL re-checked (signature ≠ permission)
+Route::get('/company-files/serve', [\App\Http\Controllers\Api\CompanyFileController::class, 'serve'])
+    ->middleware(['signed', 'jwt.auth', 'throttle:120,1'])
+    ->name('company-files.serve');
+
 Route::middleware(['jwt.auth'])->prefix('settings')->group(function () {
     Route::get('/deal-costs', [DealCostSettingController::class, 'index']);
     Route::get('/deal-costs/{key}', [DealCostSettingController::class, 'show']);
@@ -166,14 +176,18 @@ Route::get('/get-from-meta-in-day/{id}',[IntegrationController::class,'get_from_
     ->middleware('brand.block_luxvant_public');
 Route::prefix('auth')->group(function () {
 
-    Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword']);
-    Route::post('reset-password', [PasswordResetController::class, 'resetPassword']);
+    Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword'])
+        ->middleware('throttle:auth-forgot-password');
+    Route::post('reset-password', [PasswordResetController::class, 'resetPassword'])
+        ->middleware('throttle:auth-forgot-password');
     // Sign-up supervisor list — required by OIA public register; blocked on Luxvant only.
     Route::get('users/role/{role}', [UserController::class, 'getByRole'])
         ->middleware('brand.block_luxvant_public');
 
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+        ->middleware('throttle:auth-forgot-password');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+        ->middleware('throttle:auth-forgot-password');
     Route::middleware(['jwt.auth'])->group(function () {
         Route::post('location', [AuthController::class, 'updateLocation'])->middleware('throttle:location-tracking');
         Route::get('location-settings', [AuthController::class, 'locationSettings']);

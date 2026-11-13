@@ -1217,7 +1217,10 @@ class LeadController extends Controller
             return ApiResponse::error('You are not authorized to reassign this lead', 403);
         }
 
-        $responsiblePerson = User::find($request->responsible_person_id);
+        $responsiblePerson = \App\Support\Brand\BrandIsolation::findUserInCurrentBrand($request->responsible_person_id);
+        if (! $responsiblePerson) {
+            return ApiResponse::error('User not found', 404);
+        }
 
         // if (!$responsiblePerson->hasRole(['admin', 'manager', 'team_lead'])) {
         //     return ApiResponse::error('The assigned user must be an admin, manager, or team lead', 422);
@@ -1236,7 +1239,7 @@ class LeadController extends Controller
                 return ApiResponse::error('You can only assign responsible person from your team', 403);
             }
         }
-        $oldPerson = User::find($lead->responsible_person_id);
+        $oldPerson = \App\Support\Brand\BrandIsolation::findUserInCurrentBrand($lead->responsible_person_id);
 
         $lead->update([
             'responsible_person_id' => $request->responsible_person_id,

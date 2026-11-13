@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class LeadScoringSetting extends Model
 {
+    use BrandOwned;
+
     protected $guarded = [];
 
     protected $casts = [

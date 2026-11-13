@@ -11,7 +11,8 @@ use Tymon\JWTAuth\Http\Middleware\Authenticate as TymonAuthenticate;
  *
  * Step 1 — Tymon Authenticate: identical to the package middleware that was
  *           already winning the alias race (preserves current OIA auth behavior).
- * Step 2 — EnsureBrandAccess: no-op when brand access.mode is "open" (OIA);
+ * Step 2 — EnsureAccountIsActive: reject inactive / blocked accounts even if JWT is valid.
+ * Step 3 — EnsureBrandAccess: no-op when brand access.mode is "open" (OIA);
  *           enforces Luxvant allowlist + JWT brand_key checks only for Luxvant.
  */
 class JwtAuthMiddleware
@@ -23,7 +24,12 @@ class JwtAuthMiddleware
         return app(TymonAuthenticate::class)->handle(
             $request,
             function (Request $request) use ($next) {
-                return app(EnsureBrandAccess::class)->handle($request, $next);
+                return app(EnsureAccountIsActive::class)->handle(
+                    $request,
+                    function (Request $request) use ($next) {
+                        return app(EnsureBrandAccess::class)->handle($request, $next);
+                    }
+                );
             }
         );
     }

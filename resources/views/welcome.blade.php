@@ -153,7 +153,19 @@
                 z-index: 0;
                 pointer-events: none;
                 background-color: {{ $brandColors['crm_bg_tint'] ?? '#f5eef8' }};
+                @if (($brand['key'] ?? '') === 'luxvant')
+                {{-- Shared wash asset + emerald brand tint (avoids OIA purple cast on Luxvant hosts). --}}
+                background-image:
+                    linear-gradient(
+                        125deg,
+                        rgba(238, 245, 244, 0.9) 0%,
+                        rgba(232, 242, 241, 0.72) 48%,
+                        rgba(243, 245, 245, 0.65) 100%
+                    ),
+                    url("{{ asset('assets/images/crm-bg-light.jpg') }}?v=3");
+                @else
                 background-image: url("{{ asset('assets/images/crm-bg-light.jpg') }}?v=3");
+                @endif
                 background-size: cover;
                 background-position: center center;
                 background-repeat: no-repeat;

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProjectImage extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $fillable = [
         'project_id',
         'image_path',

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Security;
 
 use App\Models\User;
+use App\Support\Brand\BrandContext;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -14,6 +15,25 @@ use Tymon\JWTAuth\Facades\JWTAuth;
  */
 class SyncRolesAuthorizationTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Pin OIA so prior suite mutations of BRAND_FORCE/BrandContext cannot 403 factory users.
+        putenv('BRAND_FORCE=oia');
+        $_ENV['BRAND_FORCE'] = 'oia';
+        $_SERVER['BRAND_FORCE'] = 'oia';
+        app(BrandContext::class)->set(config('brands.brands.oia'));
+    }
+
+    protected function tearDown(): void
+    {
+        putenv('BRAND_FORCE=oia');
+        $_ENV['BRAND_FORCE'] = 'oia';
+        $_SERVER['BRAND_FORCE'] = 'oia';
+        app(BrandContext::class)->set(config('brands.brands.oia'));
+        parent::tearDown();
+    }
+
     public function test_sync_roles_route_requires_assign_role_permission_middleware(): void
     {
         $route = collect(Route::getRoutes())->first(

@@ -61,7 +61,7 @@ class ProfileController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
@@ -116,7 +116,7 @@ class ProfileController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             $validator = Validator::make($request->all(), [
                 'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
@@ -131,12 +131,12 @@ class ProfileController extends Controller
 
             // Delete old avatar if exists
             if ($user->avatar && Storage::disk('public')->exists($user->avatar) &&  $user->avatar !== 'users/user.png' ) {
-                Storage::disk('public')->delete($user->avatar);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
 
             // Store new avatar
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            
+            $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('avatar'), 'avatars');
+
             // Update user avatar
             $user->update([
                 'avatar' => $avatarPath
@@ -240,7 +240,7 @@ class ProfileController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             $validator = Validator::make($request->all(), [
                 'current_password' => ['required', 'current_password'],
                 'new_password' => ['required', 'confirmed', Rules\Password::defaults()],
@@ -418,7 +418,7 @@ class ProfileController extends Controller
             }
 
             $file = $request->file('file');
-            $path = $file->store("employees/{$user->id}/employee_upload", 'public');
+            $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "employees/{$user->id}/employee_upload");
 
             $document = EmployeeDocument::create([
                 'employee_profile_id' => $employeeProfile->id,

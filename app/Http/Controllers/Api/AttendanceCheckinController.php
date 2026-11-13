@@ -294,7 +294,11 @@ class AttendanceCheckinController extends Controller
         $hasPrimary = Schema::hasTable('attendance_settings');
         $hasLegacy = Schema::hasTable('attendance_checkin_settings');
 
-        $primaryRow = $hasPrimary ? DB::table('attendance_settings')->orderBy('id')->first() : null;
+        $primaryQuery = $hasPrimary ? DB::table('attendance_settings')->orderBy('id') : null;
+        if ($primaryQuery) {
+            \App\Support\Brand\BrandIsolation::constrain($primaryQuery, 'attendance_settings', 'attendance_settings.brand_key');
+        }
+        $primaryRow = $primaryQuery ? $primaryQuery->first() : null;
         $legacyRow = $hasLegacy ? DB::table('attendance_checkin_settings')->orderBy('id')->first() : null;
 
         // Prefer non-empty data source. If both have data, prefer primary table.
@@ -334,7 +338,9 @@ class AttendanceCheckinController extends Controller
         $encodedDepartmentIds = json_encode(array_values(array_unique(array_map('intval', $departmentIds))));
 
         if (Schema::hasTable('attendance_settings')) {
-            $existing = DB::table('attendance_settings')->orderBy('id')->first();
+            $existingQuery = DB::table('attendance_settings')->orderBy('id');
+            \App\Support\Brand\BrandIsolation::constrain($existingQuery, 'attendance_settings', 'attendance_settings.brand_key');
+            $existing = $existingQuery->first();
             $payload = [
                 'day_of_week' => $dayOfWeek,
                 'start_time' => $start,
@@ -347,7 +353,10 @@ class AttendanceCheckinController extends Controller
             if ($existing) {
                 DB::table('attendance_settings')->where('id', $existing->id)->update($payload);
             } else {
-                DB::table('attendance_settings')->insert(array_merge($payload, ['created_at' => $now]));
+                DB::table('attendance_settings')->insert(\App\Support\Brand\BrandIsolation::stampAttributes(
+                    array_merge($payload, ['created_at' => $now]),
+                    'attendance_settings'
+                ));
             }
         }
 

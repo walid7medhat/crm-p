@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class MarketingTaskHistory extends Model
 {
+    use BrandOwned;
+
     const UPDATED_AT = null;
 
     protected $guarded = [];

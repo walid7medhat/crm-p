@@ -150,15 +150,15 @@
                 stroke="var(--color-primary-glow)"
                 stroke-dasharray="3 4"
               />
-              <circle v-if="activePoint" :cx="activePoint.x" :cy="activePoint.y" r="5" fill="#fff" stroke="#733E87" stroke-width="2.5" />
+              <circle v-if="activePoint" :cx="activePoint.x" :cy="activePoint.y" r="5" fill="#fff" stroke="var(--color-primary, #733E87)" stroke-width="2.5" />
               <defs>
                 <linearGradient id="lfRevenueStroke" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stop-color="#733E87" />
-                  <stop offset="100%" stop-color="#986969" />
+                  <stop offset="0%" stop-color="var(--color-primary, #733E87)" />
+                  <stop offset="100%" stop-color="var(--color-primary-bright, #986969)" />
                 </linearGradient>
                 <linearGradient id="lfArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#733E87" stop-opacity="0.22" />
-                  <stop offset="100%" stop-color="#733E87" stop-opacity="0" />
+                  <stop offset="0%" stop-color="var(--color-primary, #733E87)" stop-opacity="0.22" />
+                  <stop offset="100%" stop-color="var(--color-primary, #733E87)" stop-opacity="0" />
                 </linearGradient>
               </defs>
             </svg>

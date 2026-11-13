@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class EvaluationSetting extends Model
 {
+    use BrandOwned;
+
     protected $fillable = ['recurrence_mode'];
 
     /**

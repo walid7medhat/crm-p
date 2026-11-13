@@ -95,7 +95,7 @@
                     <span class="suggestion-reply-mark" aria-hidden="true">
                       <iconify-icon icon="lucide:message-circle" />
                     </span>
-                    <span>OIA Properties</span>
+                    <span>{{ reply.sender || companyName }}</span>
                     <span class="suggestion-reply-time">{{ formatDate(reply.created_at) }}</span>
                   </div>
                   <p class="suggestion-reply-text">{{ reply.content }}</p>
@@ -157,6 +157,9 @@
 import { ref, computed, reactive, onMounted } from 'vue';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import api from '@/plugins/axios';
+import { useBrand } from '@/composables/useBrand';
+
+const { companyName } = useBrand();
 
 const formContent = ref('');
 const submitting = ref(false);

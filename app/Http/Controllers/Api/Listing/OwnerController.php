@@ -189,7 +189,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             foreach ($fileFields as $field) {
                 if ($request->hasFile($field)) {
                     $file = $request->file($field);
-                    $path = $file->store("owners/documents", 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "owners/documents");
                     $filePaths[$field . '_path'] = $path;
                 }
             }
@@ -197,7 +197,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("owners/avatars", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "owners/avatars");
                 $data['avatar_path'] = $avatarPath;
             }
             
@@ -213,7 +213,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             if ($request->hasFile('additional_documents') && Schema::hasTable('owner_additional_documents')) {
                 foreach ($request->file('additional_documents') as $index => $file) {
                     if (!$file->isValid()) continue;
-                    $path = $file->store('owners/additional_documents', 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, 'owners/additional_documents');
                     $owner->additionalDocuments()->create([
                         'path' => $path,
                         'original_name' => $file->getClientOriginalName(),
@@ -317,12 +317,12 @@ public function getOwnerProperties(Owner $owner): JsonResponse
                 if ($request->hasFile($field)) {
                     // Delete old file
                     if ($owner->$pathField && Storage::disk('public')->exists($owner->$pathField)) {
-                        Storage::disk('public')->delete($owner->$pathField);
+                        \App\Support\Brand\BrandIsolation::deletePublicPath($owner->$pathField);
                     }
                     
                     // Store new file
                     $file = $request->file($field);
-                    $path = $file->store("owners/documents", 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "owners/documents");
                     $data[$pathField] = $path;
                 }
             }
@@ -331,12 +331,12 @@ public function getOwnerProperties(Owner $owner): JsonResponse
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
                 if ($owner->avatar_path && Storage::disk('public')->exists($owner->avatar_path)) {
-                    Storage::disk('public')->delete($owner->avatar_path);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($owner->avatar_path);
                 }
                 
                 // Store new avatar
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("owners/avatars", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "owners/avatars");
                 $data['avatar_path'] = $avatarPath;
             }
             
@@ -350,7 +350,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
                 $maxOrder = $owner->additionalDocuments()->max('order') ?? -1;
                 foreach ($request->file('additional_documents') as $index => $file) {
                     if (!$file->isValid()) continue;
-                    $path = $file->store('owners/additional_documents', 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, 'owners/additional_documents');
                     $owner->additionalDocuments()->create([
                         'path' => $path,
                         'original_name' => $file->getClientOriginalName(),

@@ -295,7 +295,7 @@ class LeadActivityController extends Controller
                 $attachmentsData = [];
                 
                 foreach ($request->file('attachments') as $file) {
-                    $path = $file->store('comments/attachments', 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, 'comments/attachments');
                     
                     $attachmentsData[] = [
                         'file_name' => $file->getClientOriginalName(),
@@ -428,7 +428,7 @@ class LeadActivityController extends Controller
         try {
             // Delete attachments from storage
             foreach ($comment->attachments as $attachment) {
-                Storage::disk('public')->delete($attachment->file_path);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($attachment->file_path);
             }
                      // ========================history===============
             LeadHistoryHelper::log(
@@ -483,7 +483,7 @@ class LeadActivityController extends Controller
             $attachmentsData = [];
             
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('comments/attachments', 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, 'comments/attachments');
                 
                 $attachmentsData[] = [
                     'file_name' => $file->getClientOriginalName(),
@@ -538,7 +538,7 @@ class LeadActivityController extends Controller
         
         try {
             // Delete file from storage
-            Storage::disk('public')->delete($attachment->file_path);
+            \App\Support\Brand\BrandIsolation::deletePublicPath($attachment->file_path);
             
             $attachment->delete();
             
@@ -615,7 +615,7 @@ public function destroyCommentByAdmin($id)
 
         if ($force) {
             foreach ($comment->attachments as $attachment) {
-                Storage::disk('public')->delete($attachment->file_path);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($attachment->file_path);
             }
             $comment->forceDelete();
         } else {

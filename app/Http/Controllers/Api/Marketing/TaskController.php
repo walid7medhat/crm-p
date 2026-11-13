@@ -411,7 +411,7 @@ class TaskController extends MarketingBaseController
     private function referenceImageChanges(Request $request, array $data): array
     {
         if ($request->hasFile('reference_image')) {
-            $data['reference_image'] = $request->file('reference_image')->store('marketing/references', 'public');
+            $data['reference_image'] = \App\Support\Brand\BrandIsolation::storePublic($request->file('reference_image'), 'marketing', 'references');
         } elseif ($request->boolean('remove_reference_image')) {
             $data['reference_image'] = null;
         }
@@ -421,8 +421,8 @@ class TaskController extends MarketingBaseController
 
     private function forgetReferenceImage(?string $path): void
     {
-        if ($path && !MarketingTask::where('reference_image', $path)->exists()) {
-            Storage::disk('public')->delete($path);
+        if ($path && ! MarketingTask::where('reference_image', $path)->exists()) {
+            \App\Support\Brand\BrandIsolation::deletePublicPath($path);
         }
     }
 

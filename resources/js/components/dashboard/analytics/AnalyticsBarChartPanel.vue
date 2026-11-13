@@ -12,6 +12,7 @@
 <script setup>
 import { ref, watch, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import ApexCharts from 'apexcharts'
+import { useBrandChartColors } from '@/composables/useBrandChartColors'
 
 const props = defineProps({
   title: { type: String, default: 'Chart' },
@@ -19,10 +20,11 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   categories: { type: Array, default: () => [] },
   values: { type: Array, default: () => [] },
-  color: { type: String, default: '#7c5cbf' },
+  color: { type: String, default: undefined },
   horizontal: { type: Boolean, default: false },
 })
 
+const { primary: brandPrimary } = useBrandChartColors()
 const chartRef = ref(null)
 let chart = null
 
@@ -37,7 +39,7 @@ function render() {
       toolbar: { show: false },
       fontFamily: 'Inter, system-ui, sans-serif',
     },
-    colors: [props.color],
+    colors: [props.color || brandPrimary],
     plotOptions: {
       bar: {
         borderRadius: 6,

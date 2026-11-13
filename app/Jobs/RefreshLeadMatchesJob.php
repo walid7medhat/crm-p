@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 class RefreshLeadMatchesJob implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
+    use \App\Support\Brand\Concerns\BrandAwareJob;
 
     public int $uniqueFor = 60;
 
@@ -26,24 +27,27 @@ class RefreshLeadMatchesJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(public int $leadId, public bool $notify = true)
     {
+        $this->initializeBrandContext();
     }
 
     public function uniqueId(): string
     {
-        return (string) $this->leadId;
+        return $this->brandKey.':'.$this->leadId;
     }
 
     public function handle(LeadMatcher $matcher, MatchNotifier $notifier): void
     {
-        $lead = Lead::query()->find($this->leadId);
-        if (! $lead || $lead->archived_at || ! in_array((int) $lead->stage_id, $matcher->workingStageIds(), true)) {
-            return;
-        }
+        $this->runWithBrandContext(function () use ($matcher, $notifier) {
+            $lead = Lead::query()->find($this->leadId);
+            if (! $lead || $lead->archived_at || ! in_array((int) $lead->stage_id, $matcher->workingStageIds(), true)) {
+                return;
+            }
 
-        $rows = $matcher->refreshLead($lead);
-        Cache::put('lead-matches:fresh:'.$this->leadId, true, now()->addMinutes(self::FRESH_MINUTES));
-        if ($this->notify) {
-            $notifier->leadMatches($lead, $rows);
-        }
+            $rows = $matcher->refreshLead($lead);
+            Cache::put('lead-matches:fresh:'.$this->leadId, true, now()->addMinutes(self::FRESH_MINUTES));
+            if ($this->notify) {
+                $notifier->leadMatches($lead, $rows);
+            }
+        });
     }
 }

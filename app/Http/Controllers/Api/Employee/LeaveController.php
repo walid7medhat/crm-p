@@ -350,7 +350,7 @@ class LeaveController extends Controller
             // Upload attachment if any
             $attachmentPath = null;
             if ($request->hasFile('attachment')) {
-                $attachmentPath = $request->file('attachment')->store("leave_attachments/{$user->id}", 'public');
+                $attachmentPath = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('attachment'), "leave_attachments/{$user->id}");
             }
             
             // Get parent (line manager)

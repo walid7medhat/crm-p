@@ -19,14 +19,19 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useBrandChartColors } from '@/composables/useBrandChartColors'
+
+const { primary: brandPrimary } = useBrandChartColors()
 
 const props = defineProps({
   points: { type: Array, default: () => [] },
-  color: { type: String, default: '#7c5cbf' },
+  color: { type: String, default: undefined },
   width: { type: Number, default: 120 },
   height: { type: Number, default: 32 },
   ariaLabel: { type: String, default: 'Trend sparkline' },
 })
+
+const color = computed(() => props.color || brandPrimary)
 
 const gradId = `spark-${Math.random().toString(36).slice(2, 9)}`
 

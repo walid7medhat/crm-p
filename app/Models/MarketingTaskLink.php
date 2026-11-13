@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class MarketingTaskLink extends Model
 {
+    use BrandOwned;
+
     protected $guarded = [];
 
     public function task()

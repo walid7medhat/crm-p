@@ -15,9 +15,21 @@ class RecoverStuckLeadsJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use \App\Support\Brand\Concerns\BrandAwareJob;
+
+    /**
+     * Scheduled/global dispatch defaults to trusted BrandContext at construct time
+     * (typically OIA on CLI). HTTP-dispatched instances capture the host brand.
+     */
+    public function __construct()
+    {
+        $this->initializeBrandContext();
+    }
 
     public function handle(LeadAssignmentService $service): void
     {
-        $service->recoverStuckLeads();
+        $this->runWithBrandContext(function () use ($service) {
+            $service->recoverStuckLeads();
+        });
     }
 }

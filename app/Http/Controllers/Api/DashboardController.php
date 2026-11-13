@@ -1287,7 +1287,8 @@ public function getPropertyTypesWithListings(Request $request)
             $user = Auth::user();
 
             // Per-user short TTL: badges are user/role/hierarchy scoped. 45s is safe for nav counts.
-            $cacheKey = 'sidebar_counts:u'.$user->id;
+            // brand_key segment prevents OIA/Luxvant cache bleed for shared Super Admin sessions.
+            $cacheKey = 'sidebar_counts:'.\App\Support\Brand\BrandIsolation::cacheSegment().':u'.$user->id;
             $counts = Cache::remember($cacheKey, 45, function () use ($user) {
                 $currentUser = $user;
                 // Self, direct reports, and their reports. Two parent_id lookups
@@ -1405,7 +1406,8 @@ public function getPropertyTypesWithListings(Request $request)
                 ? 'company'
                 : 'user' . $currentUser->id;
             $cacheKey = sprintf(
-                'analytics:crm:%s:%s:%s',
+                'analytics:crm:%s:%s:%s:%s',
+                \App\Support\Brand\BrandIsolation::cacheSegment(),
                 $cacheScope,
                 $rangeFrom?->toDateTimeString() ?? '-',
                 $rangeTo?->toDateTimeString() ?? '-'
@@ -1822,7 +1824,7 @@ public function getPropertyTypesWithListings(Request $request)
         $listingsSold = (clone $listingBase)->whereIn('status', ['converted', 'rented'])->count();
         $listingsExpired = (clone $listingBase)->where('is_archived', true)->count();
 
-        $propertyTypeRows = DB::table('listings')
+        $propertyTypeQuery = DB::table('listings')
             ->select('property_type_id', DB::raw('count(*) as total'))
             ->whereNotNull('property_type_id')
             ->when(! $isAdmin, function ($q) use ($userHierarchy) {
@@ -1830,7 +1832,10 @@ public function getPropertyTypesWithListings(Request $request)
                     $sub->whereIn('agent_id', $userHierarchy)
                         ->orWhereIn('added_by', $userHierarchy);
                 });
-            })
+            });
+        // Brand isolation: Super Admin must not bypass company scope on raw SQL.
+        \App\Support\Brand\BrandIsolation::constrain($propertyTypeQuery, 'listings', 'listings.brand_key');
+        $propertyTypeRows = $propertyTypeQuery
             ->groupBy('property_type_id')
             ->orderByDesc('total')
             ->limit(6)
@@ -2177,7 +2182,8 @@ public function getPropertyTypesWithListings(Request $request)
                 $payload = $build();
             } else {
                 $cacheKey = sprintf(
-                    'dashboard:studio:%d:%s:%s',
+                    'dashboard:studio:%s:%d:%s:%s',
+                    \App\Support\Brand\BrandIsolation::cacheSegment(),
                     $user->id,
                     $period,
                     $month->format('Y-m')
@@ -2312,11 +2318,12 @@ public function getPropertyTypesWithListings(Request $request)
             $revenueLast = $revenueSum((clone $revenueLeadBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]));
         } else {
             $revenueTotal = (float) $dealScope(Deal::query())->sum('deal_total_amount');
-            $propertyRevenue = (float) DB::table('deal_properties')
+            $propertyRevenueQuery = DB::table('deal_properties')
                 ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
                 ->whereNull('deals.deleted_at')
-                ->when(! $isSuperAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds))
-                ->sum('deal_properties.purchase_price');
+                ->when(! $isSuperAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds));
+            \App\Support\Brand\BrandIsolation::constrain($propertyRevenueQuery, 'deals', 'deals.brand_key');
+            $propertyRevenue = (float) $propertyRevenueQuery->sum('deal_properties.purchase_price');
             if ($propertyRevenue > $revenueTotal) {
                 $revenueTotal = $propertyRevenue;
             }
@@ -2490,7 +2497,7 @@ public function getPropertyTypesWithListings(Request $request)
 
         if ($branchLeadRevenue) {
             $inactiveStageIds = $this->inactiveLeadStageIds();
-            $revenueMap = DB::table('leads')
+            $leadRevenueQuery = DB::table('leads')
                 ->when(! $isSuperAdmin, fn ($q) =>
                     $q->whereIn('responsible_person_id', $scopeIds)
                 )
@@ -2500,7 +2507,9 @@ public function getPropertyTypesWithListings(Request $request)
                         $q->orWhereNotIn('stage_id', $inactiveStageIds);
                     }
                 })
-                ->where('created_at', '>=', $from)
+                ->where('created_at', '>=', $from);
+            \App\Support\Brand\BrandIsolation::constrain($leadRevenueQuery, 'leads', 'leads.brand_key');
+            $revenueMap = $leadRevenueQuery
                 ->selectRaw(
                     sprintf($bucketSql, 'created_at')
                     .' as bucket, SUM(COALESCE(budget_to, budget_from, 0)) as total'
@@ -2508,13 +2517,15 @@ public function getPropertyTypesWithListings(Request $request)
                 ->groupBy('bucket')
                 ->pluck('total', 'bucket');
         } else {
-            $revenueMap = DB::table('deal_properties')
+            $dealPropRevenueQuery = DB::table('deal_properties')
                 ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
                 ->whereNull('deals.deleted_at')
                 ->when(! $isSuperAdmin, fn ($q) =>
                     $q->whereIn('deals.responsible_person_id', $scopeIds)
                 )
-                ->where('deal_properties.created_at', '>=', $from)
+                ->where('deal_properties.created_at', '>=', $from);
+            \App\Support\Brand\BrandIsolation::constrain($dealPropRevenueQuery, 'deals', 'deals.brand_key');
+            $revenueMap = $dealPropRevenueQuery
                 ->selectRaw(
                     sprintf($bucketSql, 'deal_properties.created_at')
                     .' as bucket, SUM(deal_properties.purchase_price) as total'
@@ -2523,12 +2534,14 @@ public function getPropertyTypesWithListings(Request $request)
                 ->pluck('total', 'bucket');
 
             if ($revenueMap->sum() <= 0) {
-                $revenueMap = DB::table('deals')
+                $dealRevenueQuery = DB::table('deals')
                     ->whereNull('deleted_at')
                     ->when(! $isSuperAdmin, fn ($q) =>
                         $q->whereIn('responsible_person_id', $scopeIds)
                     )
-                    ->where('created_at', '>=', $from)
+                    ->where('created_at', '>=', $from);
+                \App\Support\Brand\BrandIsolation::constrain($dealRevenueQuery, 'deals', 'deals.brand_key');
+                $revenueMap = $dealRevenueQuery
                     ->selectRaw(
                         sprintf($bucketSql, 'created_at')
                         .' as bucket, SUM(deal_total_amount) as total'
@@ -2538,7 +2551,7 @@ public function getPropertyTypesWithListings(Request $request)
             }
         }
 
-        $visitMap = DB::table('listing_access_requests')
+        $visitQuery = DB::table('listing_access_requests')
             ->when(! $isSuperAdmin, function ($q) use ($scopeIds) {
                 $q->where(function ($inner) use ($scopeIds) {
                     $inner->whereIn('requested_by', $scopeIds)
@@ -2546,9 +2559,12 @@ public function getPropertyTypesWithListings(Request $request)
                             $sub->select('id')
                                 ->from('listings')
                                 ->whereIn('agent_id', $scopeIds);
+                            \App\Support\Brand\BrandIsolation::constrain($sub, 'listings', 'listings.brand_key');
                         });
                 });
-            })
+            });
+        \App\Support\Brand\BrandIsolation::constrain($visitQuery, 'listing_access_requests', 'listing_access_requests.brand_key');
+        $visitMap = $visitQuery
             ->where('created_at', '>=', $from)
             ->selectRaw(
                 sprintf($bucketSql, 'created_at').' as bucket, COUNT(*) as total'

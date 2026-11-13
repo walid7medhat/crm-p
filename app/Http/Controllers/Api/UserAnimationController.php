@@ -77,6 +77,7 @@ class UserAnimationController extends Controller
 
     public function show(User $user): JsonResponse
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $state = UserAnimationState::query()->where('user_id', $user->id)->first();
 
         return ApiResponse::success($this->adminView($user, $state));
@@ -84,6 +85,7 @@ class UserAnimationController extends Controller
 
     public function start(Request $request, User $user): JsonResponse
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $validated = $request->validate([
             'animation_id' => ['required', 'string', 'max:64'],
         ]);
@@ -119,6 +121,7 @@ class UserAnimationController extends Controller
 
     public function stop(User $user): JsonResponse
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $state = UserAnimationState::query()->firstOrNew(['user_id' => $user->id]);
 
         if ($state->exists && $state->enabled) {

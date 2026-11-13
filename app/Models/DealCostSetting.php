@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class DealCostSetting extends Model
 {
     use HasFactory;
+    use \App\Support\Brand\Concerns\BrandOwned;
 
     protected $fillable = [
         'key',

@@ -8,16 +8,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use App\Support\Brand\Concerns\BrandOwned;
+
 class Project extends Model
 {
    use LogsActivity;
+   use BrandOwned;
 
     public function getActivitylogOptions(): LogOptions
     {
         // use $listing->activities
         return LogOptions::defaults()
-            ->logOnlyDirty() 
-            ->logAll()       
+            ->logOnlyDirty()
+            ->logAll()
             ->useLogName('project');
     }
     protected $fillable = [
@@ -79,11 +82,11 @@ class Project extends Model
     public function getAllFloorPlanImages()
 {
     $projectImages = $this->floorPlanImages;
-    
+
     $areaImages = FloorPlanImage::whereIn('area_id', $this->area->children->pluck('id'))
                                 ->orWhere('area_id', $this->area_id)
                                 ->get();
-    
+
     return $projectImages->merge($areaImages)->unique('id');
 }
 

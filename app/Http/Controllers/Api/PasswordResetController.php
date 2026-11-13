@@ -21,25 +21,22 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $status = Password::broker('users')->sendResetLink(
-            $request->only('email')
-        );
+        $email = strtolower(trim((string) $request->input('email')));
+        $generic = 'If that email is registered, you will receive a link to reset your password shortly.';
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return ApiResponse::success(
-                null,
-                'If that email is registered, you will receive a link to reset your password shortly.'
-            );
+        $user = \App\Models\User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+        if ($user) {
+            $status = Password::broker('users')->sendResetLink(['email' => $user->email]);
+            if ($status !== Password::RESET_LINK_SENT && $status !== Password::INVALID_USER) {
+                \Illuminate\Support\Facades\Log::warning('forgot-password broker status', [
+                    'status' => $status,
+                    'ip' => $request->ip(),
+                ]);
+            }
         }
 
-        if ($status === Password::INVALID_USER) {
-            return ApiResponse::success(
-                null,
-                'If that email is registered, you will receive a link to reset your password shortly.'
-            );
-        }
-
-        return ApiResponse::error(__($status), 400);
+        // Same public response for known and unknown emails (anti-enumeration).
+        return ApiResponse::success(null, $generic);
     }
 
     /**

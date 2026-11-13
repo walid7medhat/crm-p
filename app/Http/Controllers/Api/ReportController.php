@@ -94,8 +94,11 @@ class ReportController extends Controller
                 return ApiResponse::error('Unauthorized', 403);
             }
 
-            $targetUser = User::findOrFail($userId);
-            
+            $targetUser = User::find($userId);
+            if (!$targetUser || ! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($targetUser)) {
+                return ApiResponse::error('User not found', 404);
+            }
+
             // فلترة حسب التاريخ
             $dateFilter = $this->buildDateFilter($request);
 

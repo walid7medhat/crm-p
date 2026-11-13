@@ -3,6 +3,7 @@
 namespace App\Jobs\AiSalesIntelligence;
 
 use App\Services\AiSalesIntelligence\AiOrchestrator;
+use App\Support\Brand\Concerns\BrandAwareJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class RecalculateAiAgentIntelligenceJob implements ShouldQueue, ShouldBeUnique
 {
+    use BrandAwareJob;
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
@@ -21,20 +23,23 @@ class RecalculateAiAgentIntelligenceJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(public int $userId)
     {
+        $this->initializeBrandContext();
         $this->onQueue('default');
     }
 
     public function uniqueId(): string
     {
-        return 'ai-sales-intel-agent-'.$this->userId;
+        return 'ai-sales-intel-agent-'.$this->brandKey.'-'.$this->userId;
     }
 
     public function handle(AiOrchestrator $orchestrator): void
     {
-        try {
-            $orchestrator->recalculateUser($this->userId);
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        $this->runWithBrandContext(function () use ($orchestrator) {
+            try {
+                $orchestrator->recalculateUser($this->userId);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
     }
 }

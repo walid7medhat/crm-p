@@ -354,8 +354,8 @@ function onReportSelect(id) {
 .om-dock-btn--primary iconify-icon {
   width: 34px; height: 34px; border-radius: 11px;
   display: grid; place-items: center;
-  background: linear-gradient(135deg, #733E87, #9a5fb0); color: #fff;
-  box-shadow: 0 4px 12px rgba(115, 62, 135, 0.28);
+  background: var(--gradient-primary, linear-gradient(135deg, #733E87, #9a5fb0)); color: #fff;
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb, 115, 62, 135), 0.28);
 }
 .om-badge {
   position: absolute; top: 4px; right: calc(50% - 22px);

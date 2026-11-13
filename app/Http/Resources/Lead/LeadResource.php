@@ -529,6 +529,11 @@ protected function resolveOriginalBranch(): ?string
             return null;
         }
 
+        // Never expose another brand's name/avatar/email on this host.
+        if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+            return null;
+        }
+
         // Modal open: identity only — admin_parent / office walks are multi-query each.
         if (static::$fastShow) {
             $user->loadMissing(['roles:id,name']);

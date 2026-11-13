@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\UserInvitationMail;
 use App\Models\UserInvitation;
+use App\Support\Brand\Concerns\BrandAwareJob;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,15 +14,22 @@ use Illuminate\Support\Facades\Mail;
 
 class SendInvitationEmailJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use BrandAwareJob;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public function __construct(public UserInvitation $invitation)
     {
+        $this->initializeBrandContext();
     }
 
     public function handle(): void
     {
-        Mail::to($this->invitation->email)
-            ->send(new UserInvitationMail($this->invitation));
+        $this->runWithBrandContext(function () {
+            Mail::to($this->invitation->email)
+                ->send(new UserInvitationMail($this->invitation));
+        });
     }
 }

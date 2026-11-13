@@ -699,6 +699,8 @@ public function myAttendanceHistory(Request $request)
  */
 public function userAttendanceHistory(Request $request, User $user)
 {
+    \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
+
     $viewer = auth()->user();
     if (!$viewer) {
         return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);

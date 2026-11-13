@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class MarketingBooking extends Model
 {
     use SoftDeletes;
+    use BrandOwned;
 
     /** Types a user can request. */
     public const SHOOT_TYPES = [

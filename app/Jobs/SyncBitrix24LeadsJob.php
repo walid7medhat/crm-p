@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class SyncBitrix24LeadsJob implements ShouldQueue
 {
+    use \App\Support\Brand\Concerns\BrandAwareJob;
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 3600;
@@ -21,10 +22,13 @@ class SyncBitrix24LeadsJob implements ShouldQueue
     public function __construct(
         public int $userId,
         public bool $skipExisting = false,
-    ) {}
+    ) {
+        $this->brandKey = 'oia';
+    }
 
     public function handle(): void
     {
+        $this->runWithBrandContext(function () {
           ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', '3600');
         
@@ -117,7 +121,8 @@ ProcessBitrixLeadJob::dispatch($b24, $this->userId)
         // ~20 min of idle over a full 30k-lead (≈600-page) sync.
         self::dispatch($this->userId, $this->skipExisting);
 
-    }
+            });
+}
 
     public function failed(\Throwable $e): void
     {

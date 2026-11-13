@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class KanbanSetting extends Model
 {
+    use BrandOwned;
+
     protected $table = 'kanban_settings';
     
     protected $fillable = [

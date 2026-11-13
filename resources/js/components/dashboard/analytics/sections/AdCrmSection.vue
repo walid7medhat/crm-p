@@ -75,6 +75,9 @@ import AdLazyChart from '../widgets/AdLazyChart.vue'
 import AdEmptyState from '../widgets/AdEmptyState.vue'
 import AdChartSkeleton from '../widgets/AdChartSkeleton.vue'
 import AdDataTable from '../widgets/AdDataTable.vue'
+import { useBrandChartColors } from '@/composables/useBrandChartColors'
+
+const { primary, palette } = useBrandChartColors()
 
 const props = defineProps({
   crm: { type: Object, default: () => ({}) },
@@ -96,7 +99,7 @@ const agentCols = [
   { key: 'rate', label: 'Rate', format: 'percent' },
 ]
 
-const colors = ['#7c5cbf', '#581c87', '#16a34a', '#f59e0b']
+const colors = palette
 
 const funnelOpts = computed(() => ({
   colors,
@@ -105,7 +108,7 @@ const funnelOpts = computed(() => ({
 }))
 
 const trendOpts = computed(() => ({
-  colors: ['#7c5cbf'],
+  colors: [primary],
   fill: { type: 'gradient', gradient: { opacityFrom: 0.25, opacityTo: 0.02 } },
   xaxis: { categories: (props.crm?.trend || []).map((t) => t.label), labels: { style: { fontSize: '9px' } } },
 }))

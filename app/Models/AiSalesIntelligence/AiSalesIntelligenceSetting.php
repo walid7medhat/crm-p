@@ -2,11 +2,15 @@
 
 namespace App\Models\AiSalesIntelligence;
 
+use App\Support\Brand\BrandIsolation;
+use App\Support\Brand\Concerns\BrandOwned;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class AiSalesIntelligenceSetting extends Model
 {
+    use BrandOwned;
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -19,7 +23,9 @@ class AiSalesIntelligenceSetting extends Model
 
     public static function current(): self
     {
-        return Cache::remember('ai_sales_intelligence:settings', 300, function () {
+        $cacheKey = 'ai_sales_intelligence:settings:'.BrandIsolation::cacheSegment();
+
+        return Cache::remember($cacheKey, 300, function () {
             $row = self::query()->latest('id')->first();
             if ($row) {
                 return $row;
@@ -42,6 +48,8 @@ class AiSalesIntelligenceSetting extends Model
 
     public static function clearCache(): void
     {
+        Cache::forget('ai_sales_intelligence:settings:'.BrandIsolation::cacheSegment());
+        // Legacy key (pre-isolation) — safe to forget on current brand clears.
         Cache::forget('ai_sales_intelligence:settings');
     }
 }

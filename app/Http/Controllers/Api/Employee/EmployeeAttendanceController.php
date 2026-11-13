@@ -138,7 +138,7 @@ class EmployeeAttendanceController extends Controller
 
             // Handle attachment upload
             if ($request->hasFile('attachment')) {
-                $path = $request->file('attachment')->store("attendance/{$request->user_id}", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('attachment'), "attendance/{$request->user_id}");
                 $data['attachment'] = $path;
             }
 
@@ -223,9 +223,9 @@ class EmployeeAttendanceController extends Controller
             if ($request->hasFile('attachment')) {
                 // Delete old attachment if exists
                 if ($attendance->attachment) {
-                    \Storage::disk('public')->delete($attendance->attachment);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($attendance->attachment);
                 }
-                $path = $request->file('attachment')->store("attendance/{$attendance->user_id}", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('attachment'), "attendance/{$attendance->user_id}");
                 $data['attachment'] = $path;
             }
 
@@ -259,7 +259,7 @@ class EmployeeAttendanceController extends Controller
 
             // Delete attachment if exists
             if ($attendance->attachment) {
-                \Storage::disk('public')->delete($attendance->attachment);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($attendance->attachment);
             }
 
             $attendance->delete();

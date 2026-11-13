@@ -505,11 +505,16 @@ import { useAnalyticsDashboard } from '@/composables/useAnalyticsDashboard.js'
 import { useDashboardPermissions } from '@/composables/useDashboardPermissions.js'
 import { parseToDate } from '@/composables/useAdvancedDateModel.js'
 import { fetchDashboardAttendanceSummary } from '@/services/attendancesApi.js'
+import { useBrandChartColors } from '@/composables/useBrandChartColors'
+import { useBrand } from '@/composables/useBrand'
 
-const PURPLE = '#6b21a8'
-const PURPLE_MID = '#7c3aed'
-const PURPLE_DARK = '#5b21b6'
-const GOLD = '#f5c518'
+const brandCharts = useBrandChartColors()
+const { isLuxvant, colors: brandColors } = useBrand()
+// OIA keeps legacy purple constants; Luxvant uses emerald brand palette.
+const PURPLE = isLuxvant ? (brandColors.primary || brandCharts.primary) : '#6b21a8'
+const PURPLE_MID = isLuxvant ? (brandColors.primary_bright || brandCharts.secondary) : '#7c3aed'
+const PURPLE_DARK = isLuxvant ? (brandColors.primary_active || brandCharts.primary) : '#5b21b6'
+const GOLD = isLuxvant ? (brandColors.accent || '#c9a227') : '#f5c518'
 const ORANGE = '#ff9f43'
 const GREEN = '#22c55e'
 const SLATE = '#94a3b8'
@@ -518,7 +523,7 @@ const CHART_AXIS = '#94a3b8'
 const CHART_GRID = '#f1f5f9'
 
 const FUNNEL_COLORS = ['#60a5fa', '#eab308', '#f97316', '#86efac', '#16a34a', '#ea580c']
-const SOURCE_COLORS = [PURPLE_MID, GREEN, GOLD, ORANGE, '#a78bfa', SLATE]
+const SOURCE_COLORS = [PURPLE_MID, GREEN, GOLD, ORANGE, isLuxvant ? PURPLE : '#a78bfa', SLATE]
 
 const { isMobileViewport } = useMobileNavigation()
 const leadDeck = useSwipeDeck(() => phoneLeadCards.value.length)

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Log;
  */
 class ProcessPropertyFinderEventJob implements ShouldQueue
 {
+    use \App\Support\Brand\Concerns\BrandAwareJob;
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
@@ -26,11 +27,13 @@ class ProcessPropertyFinderEventJob implements ShouldQueue
 
     public function __construct(public int $eventRowId)
     {
+        $this->brandKey = 'oia';
         $this->onQueue(config('propertyfinder.queue', 'default'));
     }
 
     public function handle(PropertyFinderLeadImporter $importer): void
     {
+        $this->runWithBrandContext(function () use ($importer) {
         $event = PropertyFinderWebhookEvent::find($this->eventRowId);
         if (! $event || $event->status === 'processed') {
             return;
@@ -62,7 +65,8 @@ class ProcessPropertyFinderEventJob implements ShouldQueue
             'error' => $result['skipped'] ?? null,
             'processed_at' => now(),
         ]);
-    }
+            });
+}
 
     public function failed(\Throwable $e): void
     {

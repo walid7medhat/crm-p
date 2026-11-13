@@ -14,13 +14,14 @@ use App\Services\LeadKanbanHeatCache;
 use App\Services\WebPush\LeadAssignmentTestNotifier;
 use App\Models\LeadScoringSetting;
 use App\Traits\AltCRMLeadTrait;
+use App\Support\Brand\Concerns\BrandOwned;
 use DB;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model
 {
     // 
-    use HasFactory; use AltCRMLeadTrait; use SoftDeletes;
+    use HasFactory; use AltCRMLeadTrait; use SoftDeletes; use BrandOwned;
     protected $guarded=[];
     public const INTELLIGENCE_FIELDS = [
         'score',

@@ -21,7 +21,7 @@
         <span v-if="prefix">{{ prefix }}</span>{{ formattedValue }}<span v-if="suffix">{{ suffix }}</span>
       </p>
       <div v-if="sparkline?.length" class="ex-kpi__spark">
-        <AdSparkline :points="sparkline" :color="sparkColor" :height="22" />
+        <AdSparkline :points="sparkline" :color="resolvedSparkColor" :height="22" />
       </div>
     </template>
   </article>
@@ -30,6 +30,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useAnimatedCounter } from '@/composables/useAnimatedCounter.js'
+import { useBrandChartColors } from '@/composables/useBrandChartColors'
 import AdSparkline from './AdSparkline.vue'
 
 const props = defineProps({
@@ -42,9 +43,12 @@ const props = defineProps({
   suffix: { type: String, default: '' },
   format: { type: String, default: 'number' },
   sparkline: { type: Array, default: () => [] },
-  sparkColor: { type: String, default: '#7c5cbf' },
+  sparkColor: { type: String, default: undefined },
   inline: { type: Boolean, default: false },
 })
+
+const { primary: brandPrimary } = useBrandChartColors()
+const resolvedSparkColor = computed(() => props.sparkColor || brandPrimary)
 
 const animated = useAnimatedCounter(computed(() => Number(props.value) || 0))
 

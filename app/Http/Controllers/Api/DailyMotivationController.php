@@ -235,6 +235,7 @@ class DailyMotivationController extends Controller
 
     public function resetUser(Request $request, User $user)
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         if ($denied = $this->denyUnlessSuperAdmin($request)) {
             return $denied;
         }

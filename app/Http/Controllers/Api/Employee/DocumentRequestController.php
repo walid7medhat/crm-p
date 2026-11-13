@@ -192,7 +192,7 @@ class DocumentRequestController extends Controller
             }
             
             $file = $request->file('file');
-            $path = $file->store("document_requests/{$documentRequest->user_id}", 'public');
+            $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "document_requests/{$documentRequest->user_id}");
             
             $documentRequest->update([
                 'hr_user_id' => Auth::id(),
@@ -323,7 +323,7 @@ class DocumentRequestController extends Controller
             
             if ($user->hasRole('super_admin') || $user->hasRole('hr')) {
                 if ($documentRequest->file_path && Storage::disk('public')->exists($documentRequest->file_path)) {
-                    Storage::disk('public')->delete($documentRequest->file_path);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($documentRequest->file_path);
                 }
                 $documentRequest->delete();
                 return ApiResponse::success(null, 'Document request deleted successfully');

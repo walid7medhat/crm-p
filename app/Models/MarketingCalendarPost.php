@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class MarketingCalendarPost extends Model
 {
     use SoftDeletes;
+    use BrandOwned;
 
     public const PLATFORMS = ['instagram_story', 'instagram', 'sales', 'tiktok', 'linkedin', 'snapchat', 'youtube'];
 

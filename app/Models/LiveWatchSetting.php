@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class LiveWatchSetting extends Model
 {
+    use BrandOwned;
+
     protected $table = 'live_watch_settings';
 
     protected $fillable = [

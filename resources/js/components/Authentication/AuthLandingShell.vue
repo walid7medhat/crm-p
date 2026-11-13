@@ -1,5 +1,9 @@
 <template>
-  <section class="auth-landing" @focusin="onAuthFocusIn">
+  <section
+    class="auth-landing"
+    :class="{ 'auth-landing--luxvant': isLuxvant }"
+    @focusin="onAuthFocusIn"
+  >
     <button type="button" class="auth-mobile-back" aria-label="Back" @click="goBack">
       <iconify-icon icon="lucide:arrow-left"></iconify-icon>
     </button>
@@ -96,9 +100,9 @@ const {
 } = useBrand();
 
 const productLogo = `${logos.product || '/assets/images/auth/altcrm-logo.png'}?v=4`;
-// Auth marketing panel sits on a dark image — use on_dark / white mark for Luxvant.
+// Auth panel uses a light branded wash — Luxvant needs the green mark (white is invisible).
 const companyLogo = isLuxvant
-  ? `${logos.on_dark || logos.primary}?v=1`
+  ? `${logos.primary_png || logos.primary || '/assets/images/brands/luxvant/logo-green.png'}?v=2`
   : `${logos.primary || '/assets/images/auth/oia-properties-logo.svg'}?v=4`;
 const headlineDesktop = copy.auth_headline_desktop;
 const headlineMobile = copy.auth_headline_mobile;

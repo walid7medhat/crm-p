@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class CityInvestmentSetting extends Model
 {
+    use BrandOwned;
+
     protected $guarded = [];
 
     protected function casts(): array

@@ -15,6 +15,7 @@ class ImageHelper
     array $options = []
 ): array {
     try {
+        $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
         $image = Image::make($file->getRealPath());
 
         $quality   = $options['quality'] ?? 80;
@@ -128,40 +129,41 @@ class ImageHelper
     public static function compressImage(UploadedFile $file, string $storagePath, array $options = []): array
     {
         try {
+            $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
             $image = \Intervention\Image\ImageManagerStatic::make($file->getRealPath());
-            
+
             $quality = $options['quality'] ?? 80;
             $maxWidth = $options['max_width'] ?? 1920;
             $maxHeight = $options['max_height'] ?? 1080;
-            
+
             $extension = $file->getClientOriginalExtension();
             $filename = uniqid() . '.' . $extension;
             $fullPath = $storagePath . '/' . $filename;
-            
+
             $originalSize = $file->getSize();
             $originalName = $file->getClientOriginalName();
             $originalWidth = $image->width();
             $originalHeight = $image->height();
-            
+
             if ($image->width() > $maxWidth || $image->height() > $maxHeight) {
                 $image->resize($maxWidth, $maxHeight, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 });
             }
-            
+
             $compressedImage = $image->encode($extension, $quality);
-            
+
             Storage::disk('public')->put($fullPath, $compressedImage->__toString());
-            
+
             $compressedSize = Storage::disk('public')->size($fullPath);
             $compressionRatio = round(($originalSize - $compressedSize) / $originalSize * 100, 2);
-            
+
             $compressedWidth = $image->width();
             $compressedHeight = $image->height();
-            
+
             $image->destroy();
-            
+
             return [
                 'path' => $fullPath,
                 'original_name' => $originalName,
@@ -177,7 +179,7 @@ class ImageHelper
                     'height' => $compressedHeight
                 ]
             ];
-            
+
         } catch (\Exception $e) {
             return self::storeWithoutCompression($file, $storagePath);
         }
@@ -188,7 +190,7 @@ class ImageHelper
         $path = $file->store($storagePath, 'public');
         $originalSize = $file->getSize();
         $compressedSize = Storage::disk('public')->size($path);
-        
+
         return [
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
@@ -211,7 +213,7 @@ class ImageHelper
     public static function processMultipleImages(array $files, string $storagePath, bool $convertToWebP = true): array
     {
         $results = [];
-        
+
         foreach ($files as $file) {
             if ($convertToWebP) {
                 $results[] = self::compressAndConvertToWebP($file, $storagePath);
@@ -219,13 +221,13 @@ class ImageHelper
                 $results[] = self::compressImage($file, $storagePath);
             }
         }
-        
+
         return $results;
     }
    public static function getWatermarkedUrl(string $path, array $options = []): string
 {
     $options['watermark'] = array_merge([
-        'path' => 'Setting/1745128256Oia Watermark.png',
+        'path' => \App\Support\Brand\BrandIsolation::watermarkStorageRelativePath(),
         'opacity' => 80,
         'position' => 'center',
         'margin' => 20,

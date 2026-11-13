@@ -16,20 +16,24 @@ class SendLeadAssignmentWebPush implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use \App\Support\Brand\Concerns\BrandAwareJob;
 
     public function __construct(public int $userId, public int $leadId)
     {
+        $this->initializeBrandContext();
     }
 
     public function handle(LeadAssignmentWebPushSender $sender): void
     {
-        try {
-            $sender->sendToUser($this->userId, $this->leadId);
-        } catch (\Throwable $e) {
-            Log::warning('lead_assignment.test_web_push_failed', [
-                'user_id' => $this->userId,
-                'error' => $e::class,
-            ]);
-        }
+        $this->runWithBrandContext(function () use ($sender) {
+            try {
+                $sender->sendToUser($this->userId, $this->leadId);
+            } catch (\Throwable $e) {
+                Log::warning('lead_assignment.test_web_push_failed', [
+                    'user_id' => $this->userId,
+                    'error' => $e::class,
+                ]);
+            }
+        });
     }
 }

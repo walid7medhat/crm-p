@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\Brand\BrandIsolation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,26 +19,32 @@ class DocumentExpirySettingsController extends Controller
 
     private function isHr($user): bool
     {
-        if (!$user) return false;
+        if (! $user) {
+            return false;
+        }
+
         return $user->hasRole(['super_admin', 'admin', 'hr']);
     }
 
     private function resolveRow()
     {
-        $row = DB::table('document_expiry_settings')->orderBy('id')->first();
-        if (!$row) {
-            $id = DB::table('document_expiry_settings')->insertGetId(array_merge($this->defaults, [
+        $query = DB::table('document_expiry_settings')->orderBy('id');
+        BrandIsolation::constrain($query, 'document_expiry_settings', 'document_expiry_settings.brand_key');
+        $row = $query->first();
+        if (! $row) {
+            $id = DB::table('document_expiry_settings')->insertGetId(BrandIsolation::stampAttributes(array_merge($this->defaults, [
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]));
+            ]), 'document_expiry_settings'));
             $row = DB::table('document_expiry_settings')->find($id);
         }
+
         return $row;
     }
 
     public function show(Request $request): JsonResponse
     {
-        if (!$this->isHr($request->user())) {
+        if (! $this->isHr($request->user())) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -53,7 +60,7 @@ class DocumentExpirySettingsController extends Controller
 
     public function update(Request $request): JsonResponse
     {
-        if (!$this->isHr($request->user())) {
+        if (! $this->isHr($request->user())) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 

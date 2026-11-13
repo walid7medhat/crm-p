@@ -19,6 +19,7 @@ use Throwable;
 
 class RecalculateAllAiSalesIntelligenceJob implements ShouldQueue, ShouldBeUnique
 {
+    use \App\Support\Brand\Concerns\BrandAwareJob;
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
@@ -30,16 +31,18 @@ class RecalculateAllAiSalesIntelligenceJob implements ShouldQueue, ShouldBeUniqu
 
     public function __construct()
     {
+        $this->initializeBrandContext();
         $this->onQueue('default');
     }
 
     public function uniqueId(): string
     {
-        return 'ai-sales-intelligence-recalculate-all';
+        return 'ai-sales-intelligence-recalculate-all-'.$this->brandKey;
     }
 
     public function handle(AiAgentUserResolver $resolver, AiOrchestrator $orchestrator): void
     {
+        $this->runWithBrandContext(function () use ($resolver, $orchestrator) {
         $ids = $resolver->scoredUserIds();
 
         Cache::put('ai_sales_intelligence:bootstrap_status', [
@@ -105,7 +108,8 @@ class RecalculateAllAiSalesIntelligenceJob implements ShouldQueue, ShouldBeUniqu
         $delayMinutes = max(2, (int) ceil(count($ids) / 8));
         FinalizeAiSalesIntelligenceRankingsJob::dispatch(count($ids))
             ->delay(now()->addMinutes($delayMinutes));
-    }
+            });
+}
 
     protected function markReady(int $count): void
     {

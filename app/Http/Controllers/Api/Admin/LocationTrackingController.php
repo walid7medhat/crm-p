@@ -40,6 +40,7 @@ class LocationTrackingController extends Controller
 
     public function history(Request $request, User $user): JsonResponse
     {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $request->validate([
             'from' => 'nullable|date',
             'to' => 'nullable|date|after_or_equal:from',

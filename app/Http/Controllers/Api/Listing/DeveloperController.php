@@ -94,7 +94,7 @@ class DeveloperController extends Controller
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("developers/avatars", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "developers/avatars");
                 $data['avatar_path'] = $avatarPath;
             }
 
@@ -165,12 +165,12 @@ class DeveloperController extends Controller
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
                 if ($developer->avatar_path && Storage::disk('public')->exists($developer->avatar_path)) {
-                    Storage::disk('public')->delete($developer->avatar_path);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($developer->avatar_path);
                 }
 
                 // Store new avatar
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("developers/avatars", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "developers/avatars");
                 $data['avatar_path'] = $avatarPath;
             }
 
@@ -201,7 +201,7 @@ class DeveloperController extends Controller
         try {
             // Delete avatar if exists
             if ($developer->avatar_path && Storage::disk('public')->exists($developer->avatar_path)) {
-                Storage::disk('public')->delete($developer->avatar_path);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($developer->avatar_path);
             }
 
             $developerId = $developer->id;

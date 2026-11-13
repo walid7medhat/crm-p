@@ -45,7 +45,11 @@
     <div
       v-if="!isMobileViewport"
       class="sidebar-brand"
-      :class="{ 'sidebar-brand--collapsed': isSidebarActive, 'sidebar-brand--opens': isSidebarActive }"
+      :class="{
+        'sidebar-brand--collapsed': isSidebarActive,
+        'sidebar-brand--opens': isSidebarActive,
+        'sidebar-brand--luxvant': isLuxvantBrand,
+      }"
       :style="{ '--sidebar-collapsed-logo': `url('${collapsedBrandLogo}')` }"
       :role="isSidebarActive ? 'button' : undefined"
       :tabindex="isSidebarActive ? 0 : undefined"
@@ -2422,7 +2426,15 @@ aside.sidebar {
   width: 86px;
   overflow: hidden;
   display: flex;
+  align-items: center;
   justify-content: center;
+}
+
+.sidebar-brand--luxvant .sidebar-brand__mark {
+  /* Wide wordmark (≈3.25:1) — do not clip inside the 86px OIA mark box. */
+  width: 100%;
+  max-width: 168px;
+  overflow: visible;
 }
 
 .sidebar-brand__logo {
@@ -2433,8 +2445,12 @@ aside.sidebar {
 }
 
 .sidebar-brand__logo--luxvant {
-  width: 118px;
-  max-width: 118px;
+  width: auto;
+  max-width: 168px;
+  height: auto;
+  max-height: 44px;
+  object-fit: contain;
+  object-position: center center;
 }
 
 .sidebar-brand--collapsed {
@@ -2448,6 +2464,13 @@ aside.sidebar {
   flex: 0 0 28px;
   overflow: hidden;
   background: var(--sidebar-collapsed-logo, url('/assets/images/auth/oia-properties-logo.svg')) center top / 49px auto no-repeat;
+}
+
+.sidebar-brand--luxvant.sidebar-brand--collapsed .sidebar-brand__mark {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  background: var(--sidebar-collapsed-logo, url('/assets/images/brands/luxvant/logo-mark.svg')) center / contain no-repeat;
 }
 
 .sidebar-brand--collapsed .sidebar-brand__logo {

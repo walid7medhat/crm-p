@@ -176,6 +176,7 @@ class ListingController extends Controller
 public function permissions(User $user): JsonResponse
 {
     try {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $permissions = $user->getAllPermissions(); 
 
         return ApiResponse::success(
@@ -606,25 +607,7 @@ SQL;
         }
         
         if ($request->has('additional_features')) {
-            $features = $request->additional_features;
-            
-            if (is_string($features)) {
-                $features = explode(',', $features);
-            }
-            
-            $features = array_values(array_filter($features, fn($v) => $v !== null && $v !== ''));
-            
-            if (!empty($features)) {
-                $query->where(function ($q) use ($features) {
-                    foreach ($features as $feature) {
-                        $feature = trim($feature);
-                        
-                        $q->orWhereRaw("JSON_EXTRACT(additional_features, '$.\"{$feature}\"') = true");
-                        
-                        $q->orWhereRaw("JSON_CONTAINS(additional_features, '\"{$feature}\"')");
-                    }
-                });
-            }
+            $this->applyAdditionalFeaturesFilter($query, $request->additional_features);
         }
            if($request->has('agent_id')) {
                 $query->where('agent_id', $request->agent_id);
@@ -1191,7 +1174,7 @@ public function getMatchingListings(Request $request)
                     if ($request->hasFile($field)) {
                         \Log::info('Processing document', ['field' => $field]);
                         $file = $request->file($field);
-                        $path = $file->store("listings/documents", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storePublic($file, 'listings', 'documents');
                         $data[$pathField] = $path;
                     }
                     unset($data[$field]);
@@ -1316,7 +1299,7 @@ public function getMatchingListings(Request $request)
             if ($request->hasFile('additional_documents') && Schema::hasTable('listing_additional_documents')) {
                 foreach ($request->file('additional_documents') as $index => $file) {
                     if (!$file->isValid()) continue;
-                    $path = $file->store('listings/additional_documents', 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storePublic($file, 'listings', 'additional_documents');
                     $listing->additionalDocuments()->create([
                         'path' => $path,
                         'original_name' => $file->getClientOriginalName(),
@@ -1560,11 +1543,11 @@ public function getMatchingListings(Request $request)
 
 //                 // Delete old document if exists
 //                 if ($listing->$pathField) {
-//                     Storage::disk('public')->delete($listing->$pathField);
+//                     \App\Support\Brand\BrandIsolation::deletePublicPath($listing->$pathField);
 //                 }
                 
 //                 $file = $request->file($field);
-//                 $path = $file->store("listings/documents", 'public');
+//                 $path = \App\Support\Brand\BrandIsolation::storePublic($file, 'listings', 'documents');
 //                 $data[$pathField] = $path;
 //             }
 //             unset($data[$field]);
@@ -1707,7 +1690,7 @@ public function getMatchingListings(Request $request)
 //             $maxOrder = $listing->additionalDocuments()->max('order') ?? -1;
 //             foreach ($request->file('additional_documents') as $index => $file) {
 //                 if (!$file->isValid()) continue;
-//                 $path = $file->store('listings/additional_documents', 'public');
+//                 $path = \App\Support\Brand\BrandIsolation::storePublic($file, 'listings', 'additional_documents');
 //                 $listing->additionalDocuments()->create([
 //                     'path' => $path,
 //                     'original_name' => $file->getClientOriginalName(),
@@ -1862,11 +1845,11 @@ public function update(ListingRequest $request, $listingId): JsonResponse
         foreach ($documentFields as $field => $pathField) {
             if ($request->hasFile($field)) {
                 if ($listing->$pathField) {
-                    Storage::disk('public')->delete($listing->$pathField);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($listing->$pathField);
                 }
                 
                 $file = $request->file($field);
-                $path = $file->store("listings/documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storePublic($file, 'listings', 'documents');
                 $data[$pathField] = $path;
             }
             unset($data[$field]);
@@ -2038,7 +2021,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
             $maxOrder = $listing->additionalDocuments()->max('order') ?? -1;
             foreach ($request->file('additional_documents') as $index => $file) {
                 if (!$file->isValid()) continue;
-                $path = $file->store('listings/additional_documents', 'public');
+                $path = \App\Support\Brand\BrandIsolation::storePublic($file, 'listings', 'additional_documents');
                 $listing->additionalDocuments()->create([
                     'path' => $path,
                     'original_name' => $file->getClientOriginalName(),
@@ -3291,7 +3274,7 @@ public function validateUnitNumber(Request $request)
                 return ApiResponse::error('Access denied', 403);
             }
             if ($doc->path && Storage::disk('public')->exists($doc->path)) {
-                Storage::disk('public')->delete($doc->path);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($doc->path);
             }
             $doc->delete();
             $this->clearCache();
@@ -3497,7 +3480,9 @@ public function validateUnitNumber(Request $request)
      */
     private function offerBasePath(int $listingId, string $key): string
     {
-        return "offer-bases/{$listingId}/{$key}.pdf";
+        $brand = \App\Support\Brand\BrandIsolation::trustedKey();
+
+        return "offer-bases/{$brand}/{$listingId}/{$key}.pdf";
     }
 
     public function offerBase(Request $request, $id)
@@ -3879,26 +3864,21 @@ public function batchApprove(Request $request): JsonResponse
 }
 public function watermark(Request $request)
 {
-    $path = $request->get('path');
-
-    if (!$path) {
+    $path = \App\Support\Security\WatermarkMediaGate::normalize($request->get('path'));
+    if ($path === null) {
         abort(404);
     }
 
-    // Prevent path traversal outside storage/app/public
-    $path = ltrim(str_replace('\\', '/', $path), '/');
-    if (str_contains($path, '..')) {
-        abort(404);
-    }
+    \App\Support\Security\WatermarkMediaGate::authorizeOrAbort($path);
 
-    $fullPath = storage_path('app/public/' . $path);
-    $placeholderCandidates = [
-        public_path('assets/images/a.jpeg'),
-        public_path('assets/images/a.jpg'),
-        public_path('assets/images/placeholder.jpg'),
-    ];
-
-    if (!is_file($fullPath)) {
+    $fullPath = \App\Support\Security\WatermarkMediaGate::absolutePublicPath($path);
+    if ($fullPath === null || ! is_file($fullPath)) {
+        // Missing public marketing asset: placeholder only (never a private file).
+        $placeholderCandidates = [
+            public_path('assets/images/a.jpeg'),
+            public_path('assets/images/a.jpg'),
+            public_path('assets/images/placeholder.jpg'),
+        ];
         foreach ($placeholderCandidates as $placeholder) {
             if (is_file($placeholder)) {
                 return response()->file($placeholder, [
@@ -3909,23 +3889,71 @@ public function watermark(Request $request)
         abort(404);
     }
 
-    $image = Image::make($fullPath);
+    try {
+        $image = Image::make($fullPath);
+    } catch (\Throwable $e) {
+        Log::warning('watermark decode failed', ['path' => $path, 'error' => $e->getMessage()]);
+        abort(404);
+    }
 
-    $watermarkPath = storage_path('app/public/Setting/1745128256Oia Watermark.png');
+    $watermarkRelative = \App\Support\Brand\BrandIsolation::watermarkStorageRelativePath();
+    $watermarkPath = storage_path('app/public/'.$watermarkRelative);
 
-    if (file_exists($watermarkPath)) {
-
-        $watermark = Image::make($watermarkPath);
-
-        $watermark->opacity(70);
-
-        // center default
-        $image->insert($watermark, 'center');
+    if (is_file($watermarkPath) && \App\Support\Brand\BrandIsolation::pathAllowedForCurrentBrand($watermarkRelative)) {
+        try {
+            $watermark = Image::make($watermarkPath);
+            $watermark->opacity(70);
+            $image->insert($watermark, 'center');
+        } catch (\Throwable $e) {
+            Log::debug('watermark overlay skipped', ['error' => $e->getMessage()]);
+        }
     }
 
     return $image->response('webp', 80, [
-        'Cache-Control' => 'public, max-age=86400'
+        'Cache-Control' => 'public, max-age=86400',
     ]);
+}
+
+/**
+ * Allowlisted + parameterized additional_features filter (PT-02).
+ *
+ * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+ * @param  mixed  $features
+ */
+private function applyAdditionalFeaturesFilter($query, $features): void
+{
+    if (is_string($features)) {
+        $features = explode(',', $features);
+    }
+
+    if (! is_array($features)) {
+        return;
+    }
+
+    $allowed = array_keys(ListingResource::FEATURE_LABELS);
+    $safe = [];
+    foreach ($features as $feature) {
+        if ($feature === null || $feature === '') {
+            continue;
+        }
+        $key = trim((string) $feature);
+        if (in_array($key, $allowed, true)) {
+            $safe[] = $key;
+        }
+    }
+    $safe = array_values(array_unique($safe));
+
+    if ($safe === []) {
+        return;
+    }
+
+    $query->where(function ($q) use ($safe) {
+        foreach ($safe as $feature) {
+            $jsonPath = '$."'.$feature.'"';
+            $q->orWhereRaw('JSON_EXTRACT(additional_features, ?) = true', [$jsonPath])
+                ->orWhereRaw('JSON_CONTAINS(additional_features, ?)', [json_encode($feature)]);
+        }
+    });
 }
 
 

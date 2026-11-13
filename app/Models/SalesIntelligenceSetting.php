@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class SalesIntelligenceSetting extends Model
 {
+    use BrandOwned;
+
     protected $fillable = [
         'max_leads_per_agent_per_day',
         'distribution_mode',

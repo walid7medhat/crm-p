@@ -23,6 +23,7 @@ class UserRoleController extends Controller
     public function assignRole(AssignRoleRequest $request, User $user): JsonResponse
     {
         try {
+            \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
             $user->assignRole($request->role);
 
             return ApiResponse::success(
@@ -40,8 +41,9 @@ class UserRoleController extends Controller
   public function removeRole(User $user, string $roleName): JsonResponse
 {
     try {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $role = Role::where('name', $roleName)->first();
-        
+
         if (!$role) {
             return ApiResponse::error('Role not found', 404);
         }
@@ -63,6 +65,7 @@ class UserRoleController extends Controller
     public function syncRoles(AssignRoleRequest $request, User $user): JsonResponse
     {
         try {
+            \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
             $user->syncRoles($request->roles);
 
             return ApiResponse::success(
@@ -80,8 +83,9 @@ class UserRoleController extends Controller
     public function getUserRoles(User $user): JsonResponse
     {
         try {
+            \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
             $user->load('roles', 'permissions');
-            
+
             return ApiResponse::success(
                 new UserResource($user),
                 'User roles retrieved successfully'
@@ -93,8 +97,9 @@ class UserRoleController extends Controller
     public function permissions(User $user)
 {
     try {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $permissions = $user->getAllPermissions();
-        
+
         return ApiResponse::success(
             PermissionResource::collection($permissions),
             'User permissions retrieved successfully'

@@ -58,8 +58,14 @@ class SystemCampaignController extends Controller
         $mobilePath = null;
 
         try {
-            $desktopPath = $request->file('desktop_image')->store('system-campaigns', 'public');
-            $mobilePath = $request->file('mobile_image')->store('system-campaigns', 'public');
+            $desktopPath = \App\Support\Brand\BrandIsolation::storePublic(
+                $request->file('desktop_image'),
+                'system-campaigns'
+            );
+            $mobilePath = \App\Support\Brand\BrandIsolation::storePublic(
+                $request->file('mobile_image'),
+                'system-campaigns'
+            );
 
             $campaign = SystemCampaign::create([
                 'title' => trim((string) $request->input('title')),
@@ -97,10 +103,16 @@ class SystemCampaignController extends Controller
 
         try {
             if ($request->hasFile('desktop_image')) {
-                $desktopPath = $request->file('desktop_image')->store('system-campaigns', 'public');
+                $desktopPath = \App\Support\Brand\BrandIsolation::storePublic(
+                    $request->file('desktop_image'),
+                    'system-campaigns'
+                );
             }
             if ($request->hasFile('mobile_image')) {
-                $mobilePath = $request->file('mobile_image')->store('system-campaigns', 'public');
+                $mobilePath = \App\Support\Brand\BrandIsolation::storePublic(
+                    $request->file('mobile_image'),
+                    'system-campaigns'
+                );
             }
 
             $campaign->update([
@@ -303,10 +315,9 @@ class SystemCampaignController extends Controller
 
     private function deletePaths(array $paths): void
     {
-        $disk = Storage::disk('public');
         foreach ($paths as $path) {
-            if ($path && $disk->exists($path)) {
-                $disk->delete($path);
+            if ($path) {
+                \App\Support\Brand\BrandIsolation::deletePublicPath($path);
             }
         }
     }

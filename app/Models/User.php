@@ -12,11 +12,14 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use App\Support\Brand\Concerns\BrandStampOnly;
+
 class User extends Authenticatable implements JWTSubject, CanResetPasswordContract
 {
 
  use HasFactory;
    use LogsActivity;
+   use BrandStampOnly;
 
     public function getActivitylogOptions(): LogOptions
     {

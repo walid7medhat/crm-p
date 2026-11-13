@@ -160,7 +160,7 @@ class RecruitmentController extends Controller
             // Upload resume
             $resumePath = null;
             if ($request->hasFile('resume')) {
-                $resumePath = $request->file('resume')->store("applicants/resumes/{$jobId}", 'public');
+                $resumePath = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('resume'), "applicants/resumes/{$jobId}");
             }
             
             $answersWithQuestions = [];

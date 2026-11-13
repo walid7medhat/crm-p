@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cache;
 class MatchListingToLeadsJob implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
+    use \App\Support\Brand\Concerns\BrandAwareJob;
 
     public int $uniqueFor = 120;
 
@@ -21,25 +22,28 @@ class MatchListingToLeadsJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(public int $listingId, public bool $priceDropped = false)
     {
+        $this->initializeBrandContext();
     }
 
     public function uniqueId(): string
     {
-        return $this->listingId.':'.(int) $this->priceDropped;
+        return $this->brandKey.':'.$this->listingId.':'.(int) $this->priceDropped;
     }
 
     public function handle(LeadMatcher $matcher, MatchNotifier $notifier): void
     {
-        $listing = Listing::query()->find($this->listingId);
-        if (! $listing) {
-            return;
-        }
+        $this->runWithBrandContext(function () use ($matcher, $notifier) {
+            $listing = Listing::query()->find($this->listingId);
+            if (! $listing) {
+                return;
+            }
 
-        $rows = $matcher->matchListing($listing, $this->priceDropped);
-        // Let the next lead-view match load pick up this listing immediately.
-        foreach ($rows->pluck('lead_id')->unique()->filter() as $leadId) {
-            Cache::forget('lead-matches:fresh:'.(int) $leadId);
-        }
-        $notifier->listingMatches($listing, $rows, $this->priceDropped);
+            $rows = $matcher->matchListing($listing, $this->priceDropped);
+            // Let the next lead-view match load pick up this listing immediately.
+            foreach ($rows->pluck('lead_id')->unique()->filter() as $leadId) {
+                Cache::forget('lead-matches:fresh:'.(int) $leadId);
+            }
+            $notifier->listingMatches($listing, $rows, $this->priceDropped);
+        });
     }
 }

@@ -279,7 +279,7 @@ class DealController extends Controller
                         $filePath = $result['path'];
                         $fileSize = $result['compressed_size'] ?? $file->getSize();
                     } else {
-                        $path = $file->store($storagePath, 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, $storagePath);
                         $filePath = $path;
                         $fileSize = $file->getSize();
                     }
@@ -545,7 +545,10 @@ class DealController extends Controller
                 return ApiResponse::error('You are not authorized to reassign this deal', 403);
             }
 
-            $responsiblePerson = User::find($request->responsible_person_id);
+            $responsiblePerson = \App\Support\Brand\BrandIsolation::findUserInCurrentBrand($request->responsible_person_id);
+            if (! $responsiblePerson) {
+                return ApiResponse::error('User not found', 404);
+            }
 
             if (!($user->hasRole('admin') || $user->hasRole('super_admin'))) {
                 $subordinatesIds = $user->hasRole('branch_admin')
@@ -556,7 +559,7 @@ class DealController extends Controller
                 }
             }
 
-            $oldPerson = User::find($deal->responsible_person_id);
+            $oldPerson = \App\Support\Brand\BrandIsolation::findUserInCurrentBrand($deal->responsible_person_id);
 
             $deal->update([
                 'responsible_person_id' => $request->responsible_person_id,
@@ -1342,7 +1345,7 @@ class DealController extends Controller
                     }
 
                     $storagePath = "deals/{$deal->id}/{$category}";
-                    $path = $file->store($storagePath, 'public');
+                    $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, $storagePath);
 
                     DealDocument::create([
                         'deal_id' => $deal->id,
@@ -1611,7 +1614,7 @@ class DealController extends Controller
             }
 
             if (\Storage::disk('public')->exists($document->file_path)) {
-                \Storage::disk('public')->delete($document->file_path);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($document->file_path);
             }
 
             $document->delete();
@@ -1810,10 +1813,7 @@ class DealController extends Controller
 
             foreach ($paymentFiles as $file) {
 
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/payment_proof",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/payment_proof");
 
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
@@ -1838,10 +1838,7 @@ class DealController extends Controller
 
             foreach ($spaFiles as $file) {
 
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/spa_document",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/spa_document");
 
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
@@ -1861,10 +1858,7 @@ class DealController extends Controller
         if (!empty($eoiFiles)) {
             $existing = is_array($property->eoi_documents) ? $property->eoi_documents : [];
             foreach ($eoiFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/eoi_documents",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/eoi_documents");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1882,10 +1876,7 @@ class DealController extends Controller
         if (!empty($bookingFiles)) {
             $existing = is_array($property->booking_documents) ? $property->booking_documents : [];
             foreach ($bookingFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/booking_documents",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/booking_documents");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1903,10 +1894,7 @@ class DealController extends Controller
         if (!empty($mouFiles)) {
             $existing = is_array($property->mou_documents) ? $property->mou_documents : [];
             foreach ($mouFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/mou_documents",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/mou_documents");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1924,10 +1912,7 @@ class DealController extends Controller
         if (!empty($nocFiles)) {
             $existing = is_array($property->noc_documents) ? $property->noc_documents : [];
             foreach ($nocFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/noc_documents",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/noc_documents");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1945,10 +1930,7 @@ class DealController extends Controller
         if (!empty($titleDeedFiles)) {
             $existing = is_array($property->title_deed_documents) ? $property->title_deed_documents : [];
             foreach ($titleDeedFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/title_deed_documents",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/title_deed_documents");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1966,10 +1948,7 @@ class DealController extends Controller
         if (!empty($contractFiles)) {
             $existing = is_array($property->contract_document) ? $property->contract_document : [];
             foreach ($contractFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/contract_document",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/contract_document");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -1987,10 +1966,7 @@ class DealController extends Controller
         if (!empty($ejariFiles)) {
             $existing = is_array($property->ejari_document) ? $property->ejari_document : [];
             foreach ($ejariFiles as $file) {
-                $path = $file->store(
-                    "deals/{$deal->id}/properties/{$property->id}/ejari_document",
-                    'public'
-                );
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/{$property->id}/ejari_document");
                 $existing[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2128,7 +2104,7 @@ class DealController extends Controller
             $existing = is_array($property->eoi_documents) ? $property->eoi_documents : [];
             $newEoiDocs = [];
             foreach ($request->file('eoi_documents') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/eoi_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/eoi_documents");
                 $newEoiDocs[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2144,7 +2120,7 @@ class DealController extends Controller
             $existing = is_array($property->booking_documents) ? $property->booking_documents : [];
             $newBookingDocs = [];
             foreach ($request->file('booking_documents') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/booking_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/booking_documents");
                 $newBookingDocs[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2160,7 +2136,7 @@ class DealController extends Controller
             $existing = is_array($property->payment_proof) ? $property->payment_proof : [];
             $newProof = [];
             foreach ($request->file('payment_proof') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/payment_proof");
                 $newProof[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2176,7 +2152,7 @@ class DealController extends Controller
             $existing = is_array($property->spa_document) ? $property->spa_document : [];
             $newSpa = [];
             foreach ($request->file('spa_document') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/spa_document", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/spa_document");
                 $newSpa[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2192,7 +2168,7 @@ class DealController extends Controller
             $existing = is_array($property->mou_documents) ? $property->mou_documents : [];
             $newMou = [];
             foreach ($request->file('mou_documents') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/mou_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/mou_documents");
                 $newMou[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2208,7 +2184,7 @@ class DealController extends Controller
             $existing = is_array($property->noc_documents) ? $property->noc_documents : [];
             $newNoc = [];
             foreach ($request->file('noc_documents') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/noc_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/noc_documents");
                 $newNoc[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2224,7 +2200,7 @@ class DealController extends Controller
             $existing = is_array($property->title_deed_documents) ? $property->title_deed_documents : [];
             $newTitleDeed = [];
             foreach ($request->file('title_deed_documents') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/title_deed_documents");
                 $newTitleDeed[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2307,12 +2283,7 @@ public function deletePropertyDocument(Request $request)
         $filePath = (string) $request->file_path;
         $normalizedInputPath = ltrim(parse_url($filePath, PHP_URL_PATH) ?: $filePath, '/');
         $inputBasename = $normalizedInputPath ? basename($normalizedInputPath) : null;
-        
-        // حذف الملف من التخزين
-        if ($normalizedInputPath !== '' && \Storage::disk('public')->exists($normalizedInputPath)) {
-            \Storage::disk('public')->delete($normalizedInputPath);
-        }
-        
+
         // DealProperty casts payment_proof/spa_document to array
         $currentDocs = $property->{$documentType};
         if (!is_array($currentDocs)) {
@@ -2324,7 +2295,11 @@ public function deletePropertyDocument(Request $request)
             }
         }
 
-        $filteredDocs = array_values(array_filter($currentDocs, function ($doc) use ($normalizedInputPath, $inputBasename) {
+        // Never delete from a client-supplied path alone — only remove storage for a
+        // path that is actually associated with this property document field.
+        $matchedStoragePath = null;
+        $filteredDocs = [];
+        foreach ($currentDocs as $doc) {
             $docPath = (string) ($doc['path'] ?? $doc['file_path'] ?? '');
             $docUrl = (string) ($doc['url'] ?? $doc['file_url'] ?? '');
             $docOriginalName = (string) ($doc['original_name'] ?? $doc['file_name'] ?? $doc['name'] ?? '');
@@ -2340,11 +2315,20 @@ public function deletePropertyDocument(Request $request)
             $matchesByBasename = $inputBasename && $docBasename && $inputBasename === $docBasename;
             $matchesByOriginalName = $inputBasename && $docOriginalName !== '' && $docOriginalName === $inputBasename;
 
-            // Keep only docs that DO NOT match the delete target.
-            return !($matchesByPath || $matchesByBasename || $matchesByOriginalName);
-        }));
-        
-        $property->{$documentType} = !empty($filteredDocs) ? $filteredDocs : null;
+            if ($matchesByPath || $matchesByBasename || $matchesByOriginalName) {
+                if ($normalizedDocPath !== '') {
+                    $matchedStoragePath = $normalizedDocPath;
+                }
+                continue;
+            }
+            $filteredDocs[] = $doc;
+        }
+
+        if ($matchedStoragePath !== null) {
+            \App\Support\Brand\BrandIsolation::deletePublicPath($matchedStoragePath);
+        }
+
+        $property->{$documentType} = !empty($filteredDocs) ? array_values($filteredDocs) : null;
         $property->save();
         
         return response()->json([
@@ -2412,7 +2396,7 @@ public function addProperty(Request $request, Deal $deal)
         if ($request->hasFile('title_deed_documents')) {
             $newTitleDeed = [];
             foreach ($request->file('title_deed_documents') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/title_deed_documents", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/title_deed_documents");
                 $newTitleDeed[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,
@@ -2426,7 +2410,7 @@ public function addProperty(Request $request, Deal $deal)
         if ($request->hasFile('payment_proof')) {
             $newProof = [];
             foreach ($request->file('payment_proof') as $file) {
-                $path = $file->store("deals/{$deal->id}/properties/payment_proof", 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "deals/{$deal->id}/properties/payment_proof");
                 $newProof[] = [
                     'original_name' => $file->getClientOriginalName(),
                     'path' => $path,

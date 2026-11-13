@@ -33,11 +33,11 @@ class FeatureController extends Controller
     {
         try {
             $cacheKey = self::CACHE_PREFIX . 'index';
-            
+
             $features = Cache::remember($cacheKey, self::CACHE_TTL, function () {
                 return Feature::orderBy('name')->get();
             });
-            
+
             return ApiResponse::success(
                 FeatureResource::collection($features),
                 'Features retrieved successfully'
@@ -61,10 +61,10 @@ class FeatureController extends Controller
              // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("images/features", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "images/features");
                 $data['img'] = $avatarPath;
             }
-            
+
             // Remove avatar from data array as we're using avatar_path
             unset($data['avatar']);
             $feature = Feature::create($data + [
@@ -73,10 +73,10 @@ class FeatureController extends Controller
 
             // مسح الكاش المتعلق بالـ Features
             $this->clearCache();
-             
+
             return ApiResponse::success(
                 new FeatureResource($feature),
-                'Feature created successfully', 
+                'Feature created successfully',
                 201
             );
         } catch (\Exception $e) {
@@ -85,17 +85,17 @@ class FeatureController extends Controller
     }
 
     /**
-     * Get a single Feature - 
+     * Get a single Feature -
      */
     public function show(Feature $feature): JsonResponse
     {
         try {
             $cacheKey = self::CACHE_PREFIX . 'show_' . $feature->id;
-            
+
             $cachedFeature = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($feature) {
                 return $feature;
             });
-            
+
             return ApiResponse::success(
                 new FeatureResource($cachedFeature),
                 'Feature retrieved successfully'
@@ -110,29 +110,29 @@ class FeatureController extends Controller
     }
 
     /**
-     * Update a Feature - 
+     * Update a Feature -
      */
     public function update(FeatureRequest $request, Feature $feature): JsonResponse
     {
         try {
               $data = $request->validated();
-            
+
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
                 if ($feature->img && Storage::disk('public')->exists($feature->img)) {
-                    Storage::disk('public')->delete($feature->img);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($feature->img);
                 }
-                
+
                 // Store new avatar
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("images/features", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "images/features");
                 $data['img'] = $avatarPath;
             }
-            
+
             // Remove avatar from data array
             unset($data['avatar']);
-            
+
             $feature->update($data);
 
             // مسح الكاش المتعلق بهذا الـ Feature والـ Features عامة
@@ -149,15 +149,15 @@ class FeatureController extends Controller
     }
 
     /**
-     * Delete a Feature - 
+     * Delete a Feature -
      */
     public function destroy(Feature $feature): JsonResponse
     {
         try {
              if ($feature->img && Storage::disk('public')->exists($feature->img)) {
-                Storage::disk('public')->delete($feature->img);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($feature->img);
             }
-            
+
             $featureId = $feature->id;
             $feature->delete();
 
@@ -170,7 +170,7 @@ class FeatureController extends Controller
         }
     }
 
-   
+
     private function clearCache(): void
     {
         try {
@@ -181,7 +181,7 @@ class FeatureController extends Controller
         }
     }
 
-    
+
     private function clearSpecificCache(int $featureId): void
     {
         try {
@@ -191,7 +191,7 @@ class FeatureController extends Controller
         }
     }
 
-   
+
     private function clearCacheByPattern(string $pattern): void
     {
         try {
@@ -204,7 +204,7 @@ class FeatureController extends Controller
         }
     }
 
-  
+
     public function clearCacheManual(): JsonResponse
     {
         try {

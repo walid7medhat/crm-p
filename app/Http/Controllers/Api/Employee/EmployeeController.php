@@ -185,7 +185,7 @@ class EmployeeController extends Controller
             ];
             
             if ($request->hasFile('avatar')) {
-                $userData['avatar'] = $request->file('avatar')->store('users/avatars', 'public');
+                $userData['avatar'] = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('avatar'), 'users/avatars');
             }
             
             $user = User::create($userData);
@@ -268,7 +268,7 @@ class EmployeeController extends Controller
                     if (!is_array($files)) $files = [$files];
                     
                     foreach ($files as $index => $file) {
-                        $path = $file->store("employees/{$user->id}/{$documentType}", 'public');
+                        $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, "employees/{$user->id}/{$documentType}");
                         
                         EmployeeDocument::create([
                             'employee_profile_id' => $employeeProfile->id,
@@ -346,9 +346,9 @@ class EmployeeController extends Controller
         
         if ($request->hasFile('avatar')) {
             if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
-            $userData['avatar'] = $request->file('avatar')->store('users/avatars', 'public');
+            $userData['avatar'] = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('avatar'), 'users/avatars');
         }
         
         $user->update($userData);
@@ -463,14 +463,14 @@ class EmployeeController extends Controller
             if ($user->employeeProfile && $user->employeeProfile->documents) {
                 foreach ($user->employeeProfile->documents as $doc) {
                     if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
-                        Storage::disk('public')->delete($doc->file_path);
+                        \App\Support\Brand\BrandIsolation::deletePublicPath($doc->file_path);
                     }
                 }
             }
             
             // Delete avatar
             if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
             
             $user->delete(); // Soft delete
@@ -567,7 +567,7 @@ class EmployeeController extends Controller
             
             // Delete file from storage
             if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
-                Storage::disk('public')->delete($document->file_path);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($document->file_path);
             }
             
             $document->delete();

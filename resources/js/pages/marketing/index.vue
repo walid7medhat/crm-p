@@ -258,7 +258,7 @@ const highlightBookingId = ref(null)
 const stagesCache = {}
 
 const HERO = {
-  bookings: { title: 'Photoshoot Bookings', hint: 'Requests from the public booking page — call, confirm, turn into a card', icon: 'lucide:calendar-check-2', color: '#733E87' },
+  bookings: { title: 'Photoshoot Bookings', hint: 'Requests from the public booking page — call, confirm, turn into a card', icon: 'lucide:calendar-check-2', color: 'var(--color-primary, #733E87)' },
   calendar: { title: 'Content Calendar', hint: 'What goes out, where and when — tick posts as they go live', icon: 'lucide:calendar-days', color: '#9333ea' },
   analytics: { title: 'Marketing Analytics', hint: 'Throughput, workload, revisions and posting', icon: 'lucide:bar-chart-3', color: '#2563eb' },
 }

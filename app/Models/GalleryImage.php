@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Storage;
+use App\Support\Brand\Concerns\BrandOwned;
+
 class GalleryImage extends Model
 {
-    //
+    use BrandOwned;
+
     protected $guarded =[];
     
     protected $casts = [

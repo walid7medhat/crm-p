@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class MarketingStage extends Model
 {
     use SoftDeletes;
+    use BrandOwned;
 
     public const CATEGORIES = ['production', 'design', 'content'];
 

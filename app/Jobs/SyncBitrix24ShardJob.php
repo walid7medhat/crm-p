@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
  */
 class SyncBitrix24ShardJob implements ShouldQueue
 {
+    use \App\Support\Brand\Concerns\BrandAwareJob;
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, RetriesBitrix24Sync, SerializesModels;
 
     public int $timeout = 900;
@@ -37,11 +38,13 @@ class SyncBitrix24ShardJob implements ShouldQueue
         public bool $skipExisting,
         public int $shardId,
     ) {
+        $this->brandKey = 'oia';
         $this->onQueue(config('bitrix24.queue', 'default'));
     }
 
     public function handle(): void
     {
+        $this->runWithBrandContext(function () {
         try {
             if ($this->batch()?->cancelled() || Bitrix24SyncProgress::isCancelled()) {
                 return;
@@ -159,7 +162,8 @@ class SyncBitrix24ShardJob implements ShouldQueue
         } finally {
             Bitrix24SyncThrottler::reset();
         }
-    }
+            });
+}
 
     public function failed(\Throwable $exception): void
     {

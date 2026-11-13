@@ -12,12 +12,21 @@ use Illuminate\Support\Facades\Schema;
 class ProcessLeadIntelligenceJob implements ShouldQueue
 {
     use Queueable;
+    use \App\Support\Brand\Concerns\BrandAwareJob;
 
     public function __construct(public int $leadId)
     {
+        $this->initializeBrandContext();
     }
 
     public function handle(LeadIntelligenceService $service): void
+    {
+        $this->runWithBrandContext(function () use ($service) {
+            $this->handleWithBrand($service);
+        });
+    }
+
+    private function handleWithBrand(LeadIntelligenceService $service): void
     {
         // Runs on every lead save: check the columns once an hour, not 6 schema queries per job.
         $columnsReady = \Illuminate\Support\Facades\Cache::remember('lead_intelligence_columns_ready_v1', 3600, function () {

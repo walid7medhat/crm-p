@@ -31,6 +31,10 @@ trait FormatsResponsiblePersonForDisplay
             return null;
         }
 
+        if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+            return null;
+        }
+
         $user->loadMissing([
             'roles:id,name',
             'parent:id,name,display_name,avatar,parent_id',

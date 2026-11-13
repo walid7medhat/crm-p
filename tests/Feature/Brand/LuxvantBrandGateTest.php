@@ -21,6 +21,17 @@ use Tymon\JWTAuth\Http\Middleware\Authenticate as TymonAuthenticate;
  */
 class LuxvantBrandGateTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        // Host-resolution cases clear BRAND_FORCE; restore OIA so later Security
+        // tests (SyncRoles) are not left on a Luxvant-forced process env.
+        putenv('BRAND_FORCE=oia');
+        $_ENV['BRAND_FORCE'] = 'oia';
+        $_SERVER['BRAND_FORCE'] = 'oia';
+        app(BrandContext::class)->set(config('brands.brands.oia'));
+        parent::tearDown();
+    }
+
     public function test_jwt_auth_alias_resolves_to_custom_wrapper_not_bare_tymon(): void
     {
         $router = app('router');

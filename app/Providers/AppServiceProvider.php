@@ -90,6 +90,26 @@ class AppServiceProvider extends ServiceProvider
                 ->by('live-watch-nav:' . ($request->user()?->id ?? $request->ip()));
         });
 
+        // Auth login: IP + normalized email buckets (casing/format resistant). Soft limits avoid lockouts.
+        \Illuminate\Support\Facades\RateLimiter::for('auth-login', function (\Illuminate\Http\Request $request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinute(20)->by('auth-login-ip:'.$request->ip()),
+                \Illuminate\Cache\RateLimiting\Limit::perMinute(8)->by('auth-login-email:'.$request->ip().'|'.$email),
+            ];
+        });
+
+        // Forgot-password: stricter — email sending cost + enumeration resistance.
+        \Illuminate\Support\Facades\RateLimiter::for('auth-forgot-password', function (\Illuminate\Http\Request $request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinute(10)->by('auth-forgot-ip:'.$request->ip()),
+                \Illuminate\Cache\RateLimiting\Limit::perMinute(5)->by('auth-forgot-email:'.$request->ip().'|'.$email),
+            ];
+        });
+
     //       Event::listen(MessageSending::class, function ($event) {
     //     \Log::info('📤 Sending Email', [
     //         'to' => $event->message->getTo(),

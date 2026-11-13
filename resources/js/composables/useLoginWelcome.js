@@ -31,24 +31,33 @@ export function takeLoginWelcome() {
   }
 }
 
-export function welcomeCopy(name) {
+export function welcomeCopy(name, options = {}) {
   const hour = new Date().getHours()
   const first = String(name || '').trim().split(/\s+/)[0] || ''
+  const company = String(options.companyName || '').trim()
   let hello = 'Welcome'
   let line = 'Have a great day and good work.'
 
   if (hour >= 5 && hour < 12) {
     hello = 'Good morning'
-    line = 'Have a great day. Your workspace is ready.'
+    line = company
+      ? `Have a great day at ${company}. Your workspace is ready.`
+      : 'Have a great day. Your workspace is ready.'
   } else if (hour >= 12 && hour < 17) {
     hello = 'Good afternoon'
-    line = 'Wishing you a smooth day and good work.'
+    line = company
+      ? `Wishing you a smooth day with ${company}.`
+      : 'Wishing you a smooth day and good work.'
   } else if (hour >= 17 && hour < 22) {
     hello = 'Good evening'
-    line = 'Welcome back. Here\'s to a strong finish.'
+    line = company
+      ? `Welcome back to ${company}. Here's to a strong finish.`
+      : 'Welcome back. Here\'s to a strong finish.'
   } else {
     hello = 'Welcome back'
-    line = 'Your workspace is ready whenever you are.'
+    line = company
+      ? `${company} is ready whenever you are.`
+      : 'Your workspace is ready whenever you are.'
   }
 
   return { hello, first, line }

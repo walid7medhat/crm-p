@@ -15,6 +15,12 @@ return [
     'default' => env('BRAND_DEFAULT', 'oia'),
 
     /*
+    | Explicit Super Admin cross-company data access. Default OFF.
+    | Never infer from role alone — enabling this is an auditable exception.
+    */
+    'super_admin_cross_brand' => (bool) env('BRAND_SUPER_ADMIN_CROSS_BRAND', false),
+
+    /*
     | Reject hosts that are not mapped to any brand when true (production).
     | Local / MAMP hosts should stay in the map or leave this false in .env.
     */

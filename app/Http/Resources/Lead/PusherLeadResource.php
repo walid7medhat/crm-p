@@ -114,7 +114,8 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             // so omitting this here previously wiped the responsible person off the card the
             // instant a live update arrived, even though it was already loaded correctly on
             // the initial page fetch.
-            'responsible_person' => $this->responsiblePerson ? [
+            'responsible_person' => ($this->responsiblePerson
+                && \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($this->responsiblePerson)) ? [
                 'id' => $this->responsiblePerson->id,
                 'name' => \App\Models\User::resolveDisplayName($this->responsiblePerson),
                 'display_name' => $this->responsiblePerson->display_name,

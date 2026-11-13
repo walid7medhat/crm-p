@@ -35,7 +35,7 @@ class UserController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $isPaginated = $request->has('page') || $request->has('per_page');
 
             // UserResource reads $user->admin_parent / $user->office, which walk the
@@ -68,7 +68,7 @@ class UserController extends Controller
                 $query->where('status', $request->status);
             });
             if(!$request->has('agents') && !$request->has('chat')){
-            
+
                     // Apply hierarchical filtering based on user role
                  // users-code holders (biometric code managers) need the full list.
                  if (!$user->hasAnyRole(['super_admin','hr']) && $user->id != 30 && !$user->can('users-code')) {
@@ -102,7 +102,7 @@ class UserController extends Controller
                 }
             }
             // Super Admin can see all users automatically
-            
+
             // Search filter
             if ($request->has('search') && $request->search) {
                 $search = $request->search;
@@ -130,7 +130,7 @@ class UserController extends Controller
                       });
                 });
             }
-            
+
             // Filter by status
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
@@ -140,7 +140,7 @@ class UserController extends Controller
                 $query->whereNotNull('last_login_at')
                     ->where('last_login_at', '>=', now()->subMinutes(15));
             }
-            
+
             // Filter by role
             if ($request->has('role')) {
                 $query->whereHas('roles', function($q) use ($request) {
@@ -199,6 +199,7 @@ class UserController extends Controller
     public function permissions(User $user): JsonResponse
 {
     try {
+        \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
         $permissions = $user->getAllPermissions(); // من spatie/permission
 
         // is_direct: granted to this user directly (revocable) rather than through a role.
@@ -223,6 +224,7 @@ class UserController extends Controller
     public function assignPermissions(Request $request, User $user): JsonResponse
     {
         try {
+            \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
             if (! Auth::user()?->hasRole('super_admin') && Auth::id() != 33) {
                 return ApiResponse::error('Only super admins can assign permissions directly to a user', 403);
             }
@@ -250,6 +252,7 @@ class UserController extends Controller
     public function revokePermission(User $user, string $permission): JsonResponse
     {
         try {
+            \App\Support\Brand\BrandIsolation::ensureUserBelongsOrNotFound($user);
             if (! Auth::user()?->hasRole('super_admin')) {
                 return ApiResponse::error('Only super admins can remove permissions from a user', 403);
             }
@@ -404,7 +407,7 @@ class UserController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Users with Children Error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve users with children'
@@ -423,25 +426,25 @@ class UserController extends Controller
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("users/avatars", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "users/avatars");
                 $data['avatar'] = $avatarPath;
             }
-            
+
             // Hash password
             if (isset($data['password'])) {
                 $data['password'] = Hash::make($data['password']);
             }
-            
+
             // Set parent_id and created_by
             $data['parent_id'] = $data['parent_id'] ?? Auth::id();
             $data['added_by'] = Auth::id();
-            
+
             // إزالة role_id من البيانات علشان مايتحطش في الداتابيز
             unset($data['role_id']);
-            
+
             // Create user
             $user = User::create($data);
-            
+
             // Assign role if provided
             if ($request->has('role_id')) {
                 $role = Role::find($request->role_id);
@@ -488,6 +491,12 @@ public function show(User $user): JsonResponse
     try {
         if (! Auth::check()) {
             return ApiResponse::error('Unauthenticated', 401);
+        }
+
+        // Company membership: Luxvant must not load OIA-only user metadata by ID.
+        // Auth itself is unaffected (User has no global BrandOwned read scope).
+        if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+            return ApiResponse::error('User not found', 404);
         }
 
         // getOfficeAttribute()/getAdminParentAttribute() (used by UserResource) walk the
@@ -552,13 +561,17 @@ public function show(User $user): JsonResponse
     public function update(UserRequest $request, User $user): JsonResponse
     {
         try {
+            if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+                return ApiResponse::error('User not found', 404);
+            }
+
             $currentUser = Auth::user();
-            
+
             // Check hierarchical access
             if (!$this->canAccessUser($currentUser, $user)) {
                 return ApiResponse::error('Access denied', 403);
             }
-            
+
             $data = $request->validated();
                 if (!$currentUser->hasRole(['super_admin', 'admin'])) {
                         unset($data['status']);
@@ -575,22 +588,22 @@ public function show(User $user): JsonResponse
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
                 if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     Storage::disk('public')->exists($user->avatar)) {
-                    Storage::disk('public')->delete($user->avatar);
+                    \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
                 }
-                
+
                 // Store new avatar
                 $avatar = $request->file('avatar');
-                $avatarPath = $avatar->store("users/avatars", 'public');
+                $avatarPath = \App\Support\Brand\BrandIsolation::storeInDirectory($avatar, "users/avatars");
                 $data['avatar'] = $avatarPath;
             }
-            
+
             // Hash password if provided
             if (isset($data['password']) && $data['password']) {
                 $data['password'] = Hash::make($data['password']);
             } else {
                 unset($data['password']);
             }
-            
+
             unset($data['role_id']);
 
             // Update role if provided and user has permission
@@ -600,7 +613,7 @@ public function show(User $user): JsonResponse
 
                     // استبدال الدور القديم بالجديد (هذا ما يبدو أنك تريده)
                     $user->syncRoles([$role->name]);
-                    
+
                     // أو إذا كنت تريد الاحتفاظ بالأدوار القديمة وإضافة الجديد
                     // $user->assignRole($role->name);
                 }
@@ -623,28 +636,32 @@ public function show(User $user): JsonResponse
     public function destroy(User $user): JsonResponse
     {
         try {
+            if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+                return ApiResponse::error('User not found', 404);
+            }
+
             $currentUser = Auth::user();
-            
+
             // Check hierarchical access
             if (!$this->canAccessUser($currentUser, $user)) {
                 return ApiResponse::error('Access denied', 403);
             }
-            
+
             // Prevent users from deleting themselves
             if ($user->id === $currentUser->id) {
                 return ApiResponse::error('You cannot delete your own account', 422);
             }
-            
+
             // Prevent deletion of users with team members
             if ($user->children()->exists()) {
                 return ApiResponse::error('Cannot delete user with team members. Please reassign team members first.', 422);
             }
-            
+
             // Delete avatar if exists
             if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
+                \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
-            
+
             $user->delete();
 
             return ApiResponse::success(null, 'User deleted successfully');
@@ -660,11 +677,11 @@ public function show(User $user): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             $query = User::whereHas('roles', function($q) {
                 $q->whereIn('name', ['super_admin','admin', 'manager', 'team_lead', 'hr','branch_admin']);
             })->where('status', 'active');
-            
+
             // Apply hierarchical filtering
             if ($user->hasRole('manager')) {
                 $query->where(function($q) use ($user) {
@@ -675,9 +692,9 @@ public function show(User $user): JsonResponse
                 $query->where('id', $user->id);
             }
             // Super Admin can see all managers
-            
+
             $managers = $query->get(['id', 'name', 'email']);
-            
+
             return ApiResponse::success(
                 $managers,
                 'Available managers retrieved successfully'
@@ -694,9 +711,9 @@ public function show(User $user): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             $query = User::query();
-            
+
             // Apply hierarchical filtering
             if ($user->hasRole('sales')) {
                 $query->where('id', $user->id);
@@ -714,7 +731,7 @@ public function show(User $user): JsonResponse
                       });
                 });
             }
-            
+
             $totalUsers = $query->count();
             $activeUsers = $query->where('status', 'active')->count();
             $inactiveUsers = $query->where('status', 'in_active')->count();
@@ -743,13 +760,17 @@ public function show(User $user): JsonResponse
     public function getTeamMembers(User $user): JsonResponse
     {
         try {
+            if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+                return ApiResponse::error('User not found', 404);
+            }
+
             $currentUser = Auth::user();
-            
+
             // Check hierarchical access
             if (!$this->canAccessUser($currentUser, $user)) {
                 return ApiResponse::error('Access denied', 403);
             }
-            
+
             $teamMembers = $user->children()
                 ->with([
                     'roles',
@@ -761,7 +782,7 @@ public function show(User $user): JsonResponse
                 ])
                 ->orderBy('created_at', 'desc')
                 ->get();
-            
+
             return ApiResponse::success(
                 UserResource::collection($teamMembers),
                 'Team members retrieved successfully'
@@ -778,6 +799,10 @@ public function show(User $user): JsonResponse
     public function getTeamMembersRecursive(Request $request, User $user): JsonResponse
     {
         try {
+            if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+                return ApiResponse::error('User not found', 404);
+            }
+
             $currentUser = Auth::user();
 
             if (!$this->canAccessUser($currentUser, $user)) {
@@ -875,16 +900,21 @@ public function show(User $user): JsonResponse
      */
     private function canAccessUser(User $currentUser, User $targetUser): bool
     {
+        // Cross-brand: never treat another company's user as accessible (no existence leak via 403).
+        if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($targetUser)) {
+            return false;
+        }
+
         // Super Admin can access all users
         if ($currentUser->hasRole('hr') || $currentUser->hasRole('admin') || $currentUser->hasRole('super_admin') ||$currentUser->hasRole('branch_admin')) {
             return true;
         }
-        
+
         // Users can always access themselves
         if ($currentUser->id === $targetUser->id) {
             return true;
         }
-        
+
         // Check hierarchical access based on roles
         if ($currentUser->hasRole('manager')) {
             // Sales Manager can access their direct reports and their reports
@@ -896,7 +926,7 @@ public function show(User $user): JsonResponse
             // Sales agents can only access themselves
             return false;
         }
-        
+
         return false;
     }
 
@@ -917,13 +947,13 @@ public function show(User $user): JsonResponse
     {
         try {
             $user = Auth::user();
-            
+
             // Start the query
             $query = User::with(['roles', 'parent'])
                 ->where('status', 'active')
                 ->whereNotNull('last_login_at')
                 ->where('last_login_at', '>=', Carbon::now()->subMinutes(15));
-            
+
             // Apply hierarchical filtering based on user role
             if ($user->hasRole('sales')) {
                 $query->where('id', $user->id);
@@ -942,9 +972,9 @@ public function show(User $user): JsonResponse
                 });
             }
             // Super Admin can see all online users
-            
+
             $onlineUsers = $query->orderBy('last_login_at', 'desc')->get();
-            
+
             return ApiResponse::success(
                 UserResource::collection($onlineUsers),
                 'Online users retrieved successfully'
@@ -962,18 +992,18 @@ public function show(User $user): JsonResponse
         try {
             $user = Auth::user();
             $timeRange = $request->get('range', '24h'); // 24h, 7d, 30d
-            
+
             $startDate = match($timeRange) {
                 '7d' => Carbon::now()->subDays(7),
                 '30d' => Carbon::now()->subDays(30),
                 default => Carbon::now()->subHours(24),
             };
-            
+
             $query = User::with(['roles', 'parent'])
                 ->where('status', 'active')
                 ->whereNotNull('last_login_at')
                 ->where('last_login_at', '>=', $startDate);
-            
+
             // Apply hierarchical filtering
             if ($user->hasRole('sales')) {
                 $query->where('id', $user->id);
@@ -991,9 +1021,9 @@ public function show(User $user): JsonResponse
                       });
                 });
             }
-            
+
             $loginActivity = $query->orderBy('last_login_at', 'desc')->get();
-            
+
             $stats = [
                 'total_logins' => $loginActivity->count(),
                 'time_range' => $timeRange,
@@ -1019,7 +1049,7 @@ public function show(User $user): JsonResponse
 
             $user = User::find($id);
 
-            if (!$user) {
+            if (!$user || ! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found',
@@ -1108,7 +1138,7 @@ public function show(User $user): JsonResponse
 {
     try {
         $validRoles = ['manager', 'team_lead', 'sales'];
-        
+
         if (!in_array($role, $validRoles)) {
             return response()->json([
                 'success' => false,
@@ -1162,7 +1192,10 @@ public function updateBiometricCode(Request $request, $id)
         ]
     ]);
 
-    $user = User::findOrFail($id);
+    $user = User::find($id);
+    if (!$user || ! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+        return response()->json(['message' => 'User not found'], 404);
+    }
 
     if (!auth()->user()->can('users-code')) {
         return response()->json(['message' => 'Unauthorized'], 403);
@@ -1283,7 +1316,10 @@ public function updateAbsentEmail(Request $request, $id): JsonResponse
         'receive_absent_email' => 'required|boolean',
     ]);
 
-    $user = User::findOrFail($id);
+    $user = User::find($id);
+    if (!$user || ! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+        return response()->json(['success' => false, 'message' => 'User not found'], 404);
+    }
     $user->receive_absent_email = $validated['receive_absent_email'];
     $user->save();
 

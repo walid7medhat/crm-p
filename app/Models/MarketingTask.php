@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class MarketingTask extends Model
 {
     use SoftDeletes;
+    use BrandOwned;
 
     public const TYPES = ['video', 'photo', 'reel', 'event','unit_shoot'];
     public const DELIVERABLES = ['campaign', 'post', 'story', 'linkedin', 'cover', 'sales_story', 'landing_page', 'media_coverage', 'other'];

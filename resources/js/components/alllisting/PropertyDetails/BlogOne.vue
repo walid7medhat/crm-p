@@ -945,8 +945,8 @@
           <div class="option-card" @click="selectSoldBy('oia')">
             <div class="option-icon"><i class="ri-building-line"></i></div>
             <div class="option-content">
-              <h6>Sold by OIA</h6>
-              <p>Sold by OIA Properties</p>
+              <h6>Sold by {{ brandCompanyShort }}</h6>
+              <p>Sold by {{ brandCompanyFull }}</p>
             </div>
             <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
@@ -968,8 +968,8 @@
           <div class="option-card" @click="openOIAgentSelection">
             <div class="option-icon"><i class="ri-user-star-line"></i></div>
             <div class="option-content">
-              <h6>OIA Agent</h6>
-              <p>Sold by an OIA agent (you or another)</p>
+              <h6>{{ brandCompanyShort }} Agent</h6>
+              <p>Sold by a {{ brandCompanyShort }} agent (you or another)</p>
             </div>
             <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
@@ -994,7 +994,7 @@
       <!-- اختيار الـ OIA Agent -->
       <template v-else-if="showOIAgentSelection">
         <div class="sold-out-add-owner-step">
-          <p class="sold-out-step-text">Select the OIA agent who sold this property</p>
+          <p class="sold-out-step-text">Select the {{ brandCompanyShort }} agent who sold this property</p>
           
           <div class="form-group mb-3">
             <label class="form-label">Select Agent *</label>
@@ -1076,8 +1076,8 @@
           <div class="option-card" @click="selectRentedBy('oia')">
             <div class="option-icon"><i class="ri-building-line"></i></div>
             <div class="option-content">
-              <h6>Rented by OIA</h6>
-              <p>Rented by OIA Properties</p>
+              <h6>Rented by {{ brandCompanyShort }}</h6>
+              <p>Rented by {{ brandCompanyFull }}</p>
             </div>
             <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
@@ -1099,8 +1099,8 @@
           <div class="option-card" @click="openOIAgentSelectionRent">
             <div class="option-icon"><i class="ri-user-star-line"></i></div>
             <div class="option-content">
-              <h6>OIA Agent</h6>
-              <p>Rented by an OIA agent (you or another)</p>
+              <h6>{{ brandCompanyShort }} Agent</h6>
+              <p>Rented by a {{ brandCompanyShort }} agent (you or another)</p>
             </div>
             <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
@@ -1124,7 +1124,7 @@
       <!-- اختيار الـ OIA Agent للإيجار -->
       <template v-else-if="showOIAgentSelectionRent">
         <div class="sold-out-add-owner-step">
-          <p class="sold-out-step-text">Select the OIA agent who rented this property</p>
+          <p class="sold-out-step-text">Select the {{ brandCompanyShort }} agent who rented this property</p>
           
           <div class="form-group mb-3">
             <label class="form-label">Rented Date *</label>
@@ -1987,6 +1987,7 @@ import "vue-select/dist/vue-select.css";
 import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
 import { LISTING_FEATURE_LABELS } from '@/config/listingFeatures';
 import { isBuildingType } from '@/composables/listingBuilding';
+import { useBrand } from '@/composables/useBrand';
 
   const starIcon = '/assets/images/star.png';
 
@@ -2022,13 +2023,35 @@ export default {
   const bedIcon = '/assets/icons/bedroom-icon.svg';
   const bathIcon = '/assets/icons/bathroom-icon.svg';
   const sqftIcon = '/assets/icons/area-size.svg';
-      
-const logo  =  '/assets/images/oiaLogo.jpg';
-const pnglogo  =  '/assets/images/pngLogo.png';
-const locationIcon  =  '/assets/images/Location.png';
-const OiaLogo = '/assets/images/LogoWhite.png';
 
-const LastSlide_bg = '/assets/images/lastslide-bg.png';
+// Offer PDF assets: OIA keeps exact legacy paths; Luxvant uses GM logos from brand config.
+const offerBrand = useBrand();
+const logo = offerBrand.isLuxvant
+  ? (offerBrand.logos.primary_png || offerBrand.logos.primary)
+  : '/assets/images/oiaLogo.jpg';
+const pnglogo = offerBrand.isLuxvant
+  ? (offerBrand.logos.primary_png || offerBrand.logos.primary)
+  : '/assets/images/pngLogo.png';
+const locationIcon  =  '/assets/images/Location.png';
+const OiaLogo = offerBrand.isLuxvant
+  ? (offerBrand.logos.on_dark || offerBrand.logos.primary_png)
+  : '/assets/images/LogoWhite.png';
+const offerCompanyName = offerBrand.isLuxvant
+  ? (offerBrand.companyName || 'Luxvant Properties')
+  : 'Oia Properties';
+const brandCompanyShort = offerBrand.isLuxvant
+  ? (offerBrand.companyNameShort || 'LUXVANT')
+  : 'OIA';
+const brandCompanyFull = offerBrand.isLuxvant
+  ? (offerBrand.companyName || 'Luxvant Properties')
+  : 'OIA Properties';
+
+// OIA keeps the existing last-slide art; Luxvant uses a solid emerald panel (no OIA artwork).
+const LastSlide_bg = offerBrand.isLuxvant
+  ? ('data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect fill="#003c38" width="16" height="16"/></svg>'
+    ))
+  : '/assets/images/lastslide-bg.png';
 
     const { isMobileViewport } = useMobileNavigation();
 
@@ -5873,7 +5896,7 @@ const drawOfferFooter = (pdf) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
   pdf.setTextColor(255, 255, 255);
-  pdf.text('Oia Properties', 11.5, footerTop + footerH / 2, { baseline: 'middle' });
+  pdf.text(offerCompanyName, 11.5, footerTop + footerH / 2, { baseline: 'middle' });
   pdf.text('Powered by Altcrm', 202, footerTop + footerH / 2, { align: 'right', baseline: 'middle' });
 };
 
@@ -7301,7 +7324,7 @@ const createGallerySlide = (imagesChunk) => {
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; box-sizing:border-box !important; padding:8mm 8mm 5mm 8mm !important; display:flex !important; flex-direction:column !important;">
       <div style="display:flex !important; align-items:flex-start !important; justify-content:space-between !important; flex-shrink:0 !important; margin:0 0 5mm 0 !important;">
         <div>${heading}</div>
-        <img src="${pnglogo}" alt="Oia Properties" style="width:16mm !important; height:auto !important; display:block !important;" />
+        <img src="${pnglogo}" alt="${offerCompanyName}" style="width:16mm !important; height:auto !important; display:block !important;" />
       </div>
       <div style="flex:1 !important; min-height:0 !important; display:flex !important; flex-direction:row !important; gap:3mm !important; overflow:hidden !important;">
         ${panels}
@@ -7457,7 +7480,7 @@ const makeOfferFooterImg = () => {
   ctx.fillStyle = '#ffffff';
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
-  ctx.fillText('Oia Properties', accentX + accentW + Math.round(2.6 * px), h / 2);
+  ctx.fillText(offerCompanyName, accentX + accentW + Math.round(2.6 * px), h / 2);
   ctx.textAlign = 'right';
   ctx.fillText('Powered by Altcrm', w - Math.round(8 * px), h / 2);
   const src = canvas.toDataURL('image/png');
@@ -7527,8 +7550,9 @@ const createSlide1 = (currentUser) => {
 };
 
 // ---- Property Details slide (offer) — light layout: photo header + white detail panel ----
-const OFFER_NAVY = '#0B0736';
-const OFFER_PURPLE = '#733E87';
+// OIA keeps exact legacy navy/purple; Luxvant uses brand tokens (never hardcode OIA purple).
+const OFFER_NAVY = offerBrand.colors?.secondary || '#0B0736';
+const OFFER_PURPLE = offerBrand.colors?.primary || '#733E87';
 
 /** Line icon (lucide-style paths) as an <img> data URI — html2canvas draws it like any image. */
 /**
@@ -7979,7 +8003,7 @@ const createSlide3 = () => {
       <div style="flex:1 !important; height:100% !important; background:#ffffff !important; box-sizing:border-box !important; padding:10mm 8mm 8mm 9mm !important; display:flex !important; flex-direction:column !important;">
         <div style="display:flex !important; align-items:flex-start !important; justify-content:space-between !important; margin:0 0 8mm 0 !important; flex-shrink:0 !important;">
           <div>${heading}</div>
-          <img src="${pnglogo}" alt="Oia Properties" style="width:15mm !important; height:auto !important; display:block !important;" />
+          <img src="${pnglogo}" alt="${offerCompanyName}" style="width:15mm !important; height:auto !important; display:block !important;" />
         </div>
         <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important; table-layout:fixed !important;">
           ${rows.join('')}
@@ -8434,7 +8458,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7.5);
     pdf.setTextColor(255, 255, 255);
-    pdf.text('Oia Properties', margin + 3.5, contentBottom + footerH / 2 + 0.6, { baseline: 'middle' });
+    pdf.text(offerCompanyName, margin + 3.5, contentBottom + footerH / 2 + 0.6, { baseline: 'middle' });
     pdf.text('Powered by Altcrm', 210 - margin, contentBottom + footerH / 2 + 0.6, {
       align: 'right',
       baseline: 'middle',
@@ -9747,6 +9771,8 @@ const getHistoryIcon = (event) => {
       //pdf
       generatePDF,
       buildOfferPdf,
+      brandCompanyShort,
+      brandCompanyFull,
       showOfferHistory,
         // Dropdown and Modal
         showActionsDropdown,

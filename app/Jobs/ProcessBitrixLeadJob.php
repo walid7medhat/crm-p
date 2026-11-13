@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessBitrixLeadJob implements ShouldQueue
 {
+    use \App\Support\Brand\Concerns\BrandAwareJob;
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 300;
@@ -23,10 +24,13 @@ class ProcessBitrixLeadJob implements ShouldQueue
     public function __construct(
         public array $b24,
         public int $userId
-    ) {}
+    ) {
+        $this->brandKey = 'oia';
+    }
 
     public function handle(): void
     {
+        $this->runWithBrandContext(function () {
         // The worker stays alive across thousands of leads. Without disabling the
         // query log, every statement importOne runs (timeline dedup checks, user
         // lookups, inserts) is retained in memory for the worker's whole lifetime
@@ -63,7 +67,8 @@ class ProcessBitrixLeadJob implements ShouldQueue
             // payload + per-instance caches) so it's freed before the next job.
             unset($importer, $client);
         }
-    }
+            });
+}
 
     /**
      * Runs once after all retries are exhausted — count the lead as a hard error

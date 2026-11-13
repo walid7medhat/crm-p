@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class PropertyOffer extends Model
 {
     use HasFactory;
+    use BrandOwned;
 
     protected $table = 'property_offers';
 

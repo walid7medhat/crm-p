@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\SystemCampaignCatalog;
 use Carbon\CarbonInterface;
+use App\Support\Brand\Concerns\BrandOwned;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class SystemCampaign extends Model
 {
+    use BrandOwned;
+
     protected $fillable = [
         'title',
         'audiences',

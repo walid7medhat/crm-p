@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 class ListingAccessRequest extends Model
 {
     use HasFactory;
+    use \App\Support\Brand\Concerns\BrandOwned;
 
     protected $guarded = [];
 

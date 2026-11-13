@@ -74,7 +74,7 @@ class BackgroundController extends Controller
             $sharedName = trim((string) $request->input('name', '')) ?: null;
 
             foreach (array_values($request->file('images')) as $index => $file) {
-                $path = $file->store('backgrounds', 'public');
+                $path = \App\Support\Brand\BrandIsolation::storeInDirectory($file, 'backgrounds');
                 $perFileName = isset($customNames[$index]) ? trim((string) $customNames[$index]) : '';
                 $fallbackName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
                 $name = $perFileName !== ''
@@ -141,7 +141,7 @@ class BackgroundController extends Controller
     public function destroy(Background $background)
     {
         if ($background->path && Storage::disk('public')->exists($background->path)) {
-            Storage::disk('public')->delete($background->path);
+            \App\Support\Brand\BrandIsolation::deletePublicPath($background->path);
         }
 
         $background->delete();

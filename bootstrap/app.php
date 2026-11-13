@@ -61,7 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($e instanceof AuthenticationException) {
-                
                 return ApiResponse::error('Unauthorized', 401);
             }
 
@@ -72,166 +71,104 @@ return Application::configure(basePath: dirname(__DIR__))
                 return ApiResponse::error('This record no longer exists. Please refresh the page and try again.', 404);
             }
 
-            return ApiResponse::error(
-                $e->getMessage(),
-                method_exists($e,'getStatusCode') ? $e->getStatusCode() : 500
-            );
+            $status = method_exists($e, 'getStatusCode') ? (int) $e->getStatusCode() : 500;
+            if ($status < 400 || $status > 599) {
+                $status = 500;
+            }
+
+            // Always log internals server-side; never leak SQL/paths/stack to API clients in production.
+            if ($status >= 500) {
+                \Illuminate\Support\Facades\Log::error('Unhandled API exception', [
+                    'message' => $e->getMessage(),
+                    'exception' => $e::class,
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'path' => $request->path(),
+                ]);
+            }
+
+            if (config('app.debug')) {
+                return ApiResponse::error($e->getMessage() !== '' ? $e->getMessage() : 'Something went wrong.', $status);
+            }
+
+            $safe = match (true) {
+                $status === 404 => 'Not found.',
+                $status === 403 => 'Forbidden.',
+                $status === 401 => 'Unauthorized',
+                $status === 429 => 'Too many attempts. Please try again later.',
+                default => 'Something went wrong.',
+            };
+
+            return ApiResponse::error($safe, $status);
         });
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
-            // $schedule->command('leads:check-revert')
-            //         ->everyMinute()
-            //         ->withoutOverlapping()
-            //         ->appendOutputTo(storage_path('logs/lead-revert.log'));
-                    
-    //             $schedule->command('comments:sync-authors')
-    // ->hourly()
-    // ->withoutOverlapping()
-    // ->appendOutputTo(storage_path('logs/comments_sync.log')); 
-        $schedule->command('live-watch:cleanup')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground();
-        $schedule->command('activities:send-reminders')->everyMinute();
-        // Marketing: due tomorrow / today / overdue cards + today's unposted calendar posts.
-        // Morning run plus an afternoon nudge for posts; each reminder is sent once per day.
-        $schedule->command('marketing:send-reminders')
-            ->twiceDaily(9, 15)
-            ->timezone('Asia/Dubai')
-            ->withoutOverlapping();
-        $schedule->command('birthdays:celebrate')->dailyAt('08:00');
-        // Match Studio: quiet clients (90+ days) get re-matched; one digest per agent.
-        $schedule->command('matches:scan-quiet')
-            ->dailyAt('07:45')
-            ->timezone('Asia/Dubai')
-            ->withoutOverlapping()
-            ->runInBackground();
-        $schedule->command('evaluations:check-due')->dailyAt('08:15');
-        $schedule->command('leads:score')
-                ->everyTenMinutes()
-                ->withoutOverlapping()
-                ->runInBackground();
-         $schedule->command('meta:refresh-app-token')
-                 ->cron('0 0 */60 * *') 
-                 ->withoutOverlapping()
-                 ->runInBackground();
-            $schedule->command('attendance:sync')->everyFiveMinutes();
-        $schedule->command('attendance:notify-absent')
-            ->dailyAt('11:00')
-            ->timezone('Asia/Dubai');
-        $schedule->command('leads:auto-assign --scheduled-tick')
-            ->everyMinute()
-            ->withoutOverlapping()
+        // brand:run applies BrandJobPolicy (per_brand / oia_only / global_shared).
+        $schedule->command('brand:run', ['live-watch:cleanup'])
+            ->everyMinute()->name('brand:live-watch:cleanup')->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['activities:send-reminders'])
+            ->everyMinute()->name('brand:activities:send-reminders');
+        $schedule->command('brand:run', ['marketing:send-reminders'])
+            ->twiceDaily(9, 15)->timezone('Asia/Dubai')->name('brand:marketing:send-reminders')->withoutOverlapping();
+        $schedule->command('brand:run', ['birthdays:celebrate'])
+            ->dailyAt('08:00')->name('brand:birthdays:celebrate');
+        $schedule->command('brand:run', ['matches:scan-quiet'])
+            ->dailyAt('07:45')->timezone('Asia/Dubai')->name('brand:matches:scan-quiet')->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['evaluations:check-due'])
+            ->dailyAt('08:15')->name('brand:evaluations:check-due');
+        $schedule->command('brand:run', ['leads:score'])
+            ->everyTenMinutes()->name('brand:leads:score')->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['meta:refresh-app-token'])
+            ->cron('0 0 */60 * *')->name('brand:meta:refresh-app-token')->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['attendance:sync'])
+            ->everyFiveMinutes()->name('brand:attendance:sync');
+        $schedule->command('brand:run', ['attendance:notify-absent'])
+            ->dailyAt('11:00')->timezone('Asia/Dubai')->name('brand:attendance:notify-absent');
+        $schedule->command('brand:run', ['leads:auto-assign', '--option=scheduled-tick=1'])
+            ->everyMinute()->name('brand:leads:auto-assign')->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/lead-auto-assign.log'));
-        $schedule->command('leads:realtime-assign')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground()
+        $schedule->command('brand:run', ['leads:realtime-assign'])
+            ->everyMinute()->name('brand:leads:realtime-assign')->withoutOverlapping()->runInBackground()
             ->appendOutputTo(storage_path('logs/lead-realtime-assign.log'));
-        $schedule->command('leads:merge-pool-duplicates')->everyThirtyMinutes()->timezone('Asia/Dubai')->withoutOverlapping(25)->onOneServer();
-        // Property Finder: catch leads whose webhook never arrived (no-op until PF_API_KEY is set).
-        // $schedule->command('propertyfinder:sync-leads --minutes=60')
-        //     ->everyTenMinutes()
-        //     ->withoutOverlapping()
-        //     ->runInBackground()
-        //     ->appendOutputTo(storage_path('logs/propertyfinder-sync.log'));
-        $schedule->command('leads:recover-stuck --sync')
-            ->everyFiveMinutes()
-            ->withoutOverlapping();
-        $schedule->command('leads:sla-escalation')
-            ->everyFiveMinutes()
-            ->withoutOverlapping();
-        $schedule->command('lead-assignment:refresh-performance')
-            ->hourly()
-            ->withoutOverlapping()
-            ->runInBackground();
-        $schedule->command('sales-intelligence:recalculate-scores')
-            ->dailyAt('02:15')
-            ->withoutOverlapping()
-            ->runInBackground();
-        $schedule->command('ai-sales-intelligence:recalculate')
-            ->dailyAt('02:30')
-            ->timezone('Asia/Dubai')
-            ->withoutOverlapping()
-            ->runInBackground();
-      $schedule->command('announcements:send-notifications')
-         ->dailyAt('08:00')
-         ->timezone('Asia/Dubai');
-       
-    $schedule->command('passport:check-expiry --days=30')
-            ->dailyAt('09:30')
-            ->timezone('Asia/Dubai')
-            ->withoutOverlapping()
+        $schedule->command('brand:run', ['leads:merge-pool-duplicates'])
+            ->everyThirtyMinutes()->timezone('Asia/Dubai')->name('brand:leads:merge-pool-duplicates')
+            ->withoutOverlapping(25)->onOneServer();
+        // Property Finder: OIA-only when enabled (BrandJobPolicy).
+        // $schedule->command('brand:run', ['propertyfinder:sync-leads', '--option=minutes=60'])->everyTenMinutes()...
+        $schedule->command('brand:run', ['leads:recover-stuck', '--option=sync=1'])
+            ->everyFiveMinutes()->name('brand:leads:recover-stuck')->withoutOverlapping();
+        $schedule->command('brand:run', ['leads:sla-escalation'])
+            ->everyFiveMinutes()->name('brand:leads:sla-escalation')->withoutOverlapping();
+        $schedule->command('brand:run', ['lead-assignment:refresh-performance'])
+            ->hourly()->name('brand:lead-assignment:refresh-performance')->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['sales-intelligence:recalculate-scores'])
+            ->dailyAt('02:15')->name('brand:sales-intelligence:recalculate-scores')->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['ai-sales-intelligence:recalculate'])
+            ->dailyAt('02:30')->timezone('Asia/Dubai')->name('brand:ai-sales-intelligence:recalculate')
+            ->withoutOverlapping()->runInBackground();
+        $schedule->command('brand:run', ['announcements:send-notifications'])
+            ->dailyAt('08:00')->timezone('Asia/Dubai')->name('brand:announcements:send-notifications');
+        $schedule->command('brand:run', ['passport:check-expiry', '--option=days=30'])
+            ->dailyAt('09:30')->timezone('Asia/Dubai')->name('brand:passport:check-expiry-30')->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/passport-expiry.log'));
-    
-    $schedule->command('passport:check-expiry --days=7')
-            ->everySixHours()
-            ->timezone('Asia/Dubai')
-            ->withoutOverlapping()
+        $schedule->command('brand:run', ['passport:check-expiry', '--option=days=7'])
+            ->everySixHours()->timezone('Asia/Dubai')->name('brand:passport:check-expiry-7')->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/passport-expiry-urgent.log'));
-    $schedule->command('interviews:send-reminders --hours=24')
-    ->dailyAt('09:00')
-    ->timezone('Asia/Dubai');
-
-    $schedule->command('motivation:send')
-        ->dailyAt(config('daily_motivation.send_time', '09:00'))
-        ->timezone(config('daily_motivation.timezone', 'Asia/Dubai'))
-        ->withoutOverlapping()
-        ->appendOutputTo(storage_path('logs/daily-motivation.log'));
-
-    $schedule->command('interviews:send-reminders --hours=1')
-        ->everyMinute()
-        ->timezone('Asia/Dubai');
-
-    $schedule->command('leave:accrue-annual')
-        ->dailyAt('01:00')
-        ->timezone('Asia/Dubai')
-        ->withoutOverlapping()
-        ->appendOutputTo(storage_path('logs/leave-accrue-annual.log'));
-
-    $schedule->command('employees:check-document-expiry')
-        ->dailyAt('09:15')
-        ->timezone('Asia/Dubai')
-        ->withoutOverlapping()
-        ->appendOutputTo(storage_path('logs/document-expiry.log'));
-
-    // Catch any Bitrix24 leads that never made it into the local DB (e.g. a failed
-    // webhook) and import them. withoutOverlapping (no expiry given = 24h lock) means
-    // if a run is still walking Bitrix's lead list when the next hourly tick fires,
-    // that tick is skipped instead of starting a second overlapping pass — the
-    // current run always gets to finish before the next one can start.
-    // $schedule->command('bitrix:compare-leads --import')
-    //     ->hourly()
-    //     ->timezone('Asia/Dubai')
-    //     ->withoutOverlapping()
-    //     ->appendOutputTo(storage_path('logs/bitrix-compare-leads.log'));
-
-
-            // $schedule->command('bitrix:sync-leads')
-            //     ->everyFifteenMinutes();
-                // ->withoutOverlapping();
-                // ->withoutOverlapping()
-                // ->runInBackground();
-
-        // Bitrix24 → CRM lead sync (fast: stage/source/activity + new comments/activities,
-        // no heavy timeline). withoutOverlapping so a long pass isn't stacked on the next tick.
-        // $schedule->command('bitrix24:sync-leads-fast')
-        //     ->everyFifteenMinutes()
-        //     // ->withoutOverlapping(10)
-        //     // ->runInBackground()
-        //     ->appendOutputTo(storage_path('logs/bitrix-sync-leads.log'));
-
-        // ==================== TEST COMMANDS ====================
-        // $schedule->command('activities:send-reminders --timeframe=today --test')
-        //     ->dailyAt('10:00')
-        //     ->description('Test activity reminders at 10:00 AM (UAE Time)');
-            
-        // // Test leads command
-        // $schedule->command('leads:check-revert --test')
-        //     ->dailyAt('11:00')
-        //     ->description('Test leads revert at 11:00 AM (UAE Time)');
-
-
+        $schedule->command('brand:run', ['interviews:send-reminders', '--option=hours=24'])
+            ->dailyAt('09:00')->timezone('Asia/Dubai')->name('brand:interviews:send-reminders-24');
+        $schedule->command('brand:run', ['motivation:send'])
+            ->dailyAt(config('daily_motivation.send_time', '09:00'))
+            ->timezone(config('daily_motivation.timezone', 'Asia/Dubai'))
+            ->name('brand:motivation:send')->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/daily-motivation.log'));
+        $schedule->command('brand:run', ['interviews:send-reminders', '--option=hours=1'])
+            ->everyMinute()->timezone('Asia/Dubai')->name('brand:interviews:send-reminders-1');
+        $schedule->command('brand:run', ['leave:accrue-annual'])
+            ->dailyAt('01:00')->timezone('Asia/Dubai')->name('brand:leave:accrue-annual')->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/leave-accrue-annual.log'));
+        $schedule->command('brand:run', ['employees:check-document-expiry'])
+            ->dailyAt('09:15')->timezone('Asia/Dubai')->name('brand:employees:check-document-expiry')->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/document-expiry.log'));
         })
       
     ->create();

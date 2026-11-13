@@ -458,6 +458,10 @@ class KanbanLeadCardResource extends JsonResource
             return null;
         }
 
+        if (! \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($user)) {
+            return null;
+        }
+
         $payload = [
             'id' => $user->id,
             'name' => \App\Models\User::resolveDisplayName($user),

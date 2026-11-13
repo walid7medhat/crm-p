@@ -57,21 +57,21 @@ class AuthController extends Controller
 
             $user->assignRole('sales');
 
-            $token = JWTAuth::fromUser($user);
-
+            // Never mint a JWT for in_active registrations — account must be activated first.
             return response()->json([
                 'success' => true,
-                'message' => 'Sales agent registered successfully',
+                'message' => 'Sales agent registered successfully. An administrator must activate your account before you can sign in.',
                 'data' => [
                     'user' => $user,
-                    'token' => $token
                 ]
             ], 201);
 
         } catch (\Exception $e) {
+            Log::error('Registration failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Registration failed: ' . $e->getMessage()
+                'message' => 'Registration failed.',
             ], 500);
         }
     }
@@ -79,14 +79,24 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
 {
     $request->validate([
-        'email' => 'required|email|exists:users,email',
+        'email' => 'required|email',
     ]);
 
-    $status = Password::sendResetLink($request->only('email'));
+    $email = strtolower(trim((string) $request->input('email')));
+    $generic = 'If that email is registered, you will receive a link to reset your password shortly.';
 
-    return $status === Password::RESET_LINK_SENT
-        ? ApiResponse::success(null, 'Reset link sent to your email')
-        : ApiResponse::error('Unable to send reset link');
+    // Avoid user enumeration: same success response whether or not the email exists.
+    $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+    if ($user) {
+        Password::sendResetLink(['email' => $user->email]);
+    } else {
+        Log::info('forgot-password requested for unknown email', [
+            'email_hash' => hash('sha256', $email),
+            'ip' => $request->ip(),
+        ]);
+    }
+
+    return ApiResponse::success(null, $generic);
 }
 
 public function resetPassword(Request $request): JsonResponse
@@ -134,33 +144,34 @@ public function resetPassword(Request $request): JsonResponse
 {
     try {
         $credentials = $request->validated();
+        $email = strtolower(trim((string) $credentials['email']));
 
-        // Check if user exists
-        $user = User::where('email', $credentials['email'])->first();
+        // Bound lookup; compare against a real bcrypt dummy when missing to reduce timing skew.
+        $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+        static $dummyHash = null;
+        $dummyHash ??= Hash::make('invalid-dummy-password');
+        $hash = $user?->password ?: $dummyHash;
+        $passwordOk = Hash::check($credentials['password'], $hash);
 
-        if (!$user) {
-            return ApiResponse::error('Email address is not registered.', 404);
+        // Uniform response for unknown email and wrong password (anti-enumeration).
+        if (! $user || ! $passwordOk) {
+            return ApiResponse::error('Invalid email or password.', 401);
         }
 
-        // Check password
-        if (!Hash::check($credentials['password'], $user->password)) {
-            return ApiResponse::error('The password you entered is incorrect.', 401);
-        }
-
-        // Check user status
         if ($user->status !== 'active') {
-            $statusMessage = match($user->status) {
+            $statusMessage = match ($user->status) {
                 'in_active' => 'Your account is inactive. Please contact administrator.',
                 'blocked' => 'Your account has been blocked. Please contact administrator.',
                 default => 'Your account is not active.',
             };
+
             return ApiResponse::error($statusMessage, 403);
         }
 
         // Host-based brand gate (Luxvant allowlist). Same Super Admin user id/email/password.
         $brand = app(BrandContext::class)->get();
         $brandResolver = app(BrandResolver::class);
-        if (!$brandResolver->userMayAccess($brand, $user)) {
+        if (! $brandResolver->userMayAccess($brand, $user)) {
             Log::warning('brand login denied', [
                 'brand' => $brand['key'] ?? null,
                 'user_id' => $user->id,
@@ -169,7 +180,7 @@ public function resetPassword(Request $request): JsonResponse
             ]);
 
             return ApiResponse::error(
-                'Your account is not authorized for ' . ($brand['company_name'] ?? 'this workspace') . '.',
+                'Your account is not authorized for '.($brand['company_name'] ?? 'this workspace').'.',
                 403
             );
         }
@@ -220,7 +231,9 @@ public function resetPassword(Request $request): JsonResponse
         return ApiResponse::success($payload, 'Login successful');
 
     } catch (\Exception $e) {
-        return ApiResponse::error('Login failed: ' . $e->getMessage());
+        Log::error('Login failed', ['error' => $e->getMessage()]);
+
+        return ApiResponse::error('Login failed.');
     }
 }
 public function updateLocation(Request $request, LocationTrackingService $tracking): JsonResponse

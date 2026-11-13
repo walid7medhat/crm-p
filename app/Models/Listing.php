@@ -9,11 +9,13 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use App\Support\Brand\Concerns\BrandOwned;
 
 class Listing extends Model
 {
     use HasFactory;
    use LogsActivity;
+    use BrandOwned;
 
     public function getActivitylogOptions(): LogOptions
     {

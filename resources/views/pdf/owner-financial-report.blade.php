@@ -1,3 +1,13 @@
+@php
+    $pdfBrand = app(\App\Support\Brand\BrandContext::class);
+    $pdfColors = $pdfBrand->colors();
+    $pdfPrimary = $pdfColors['primary'] ?? '#733E87';
+    $pdfInk = $pdfColors['primary_ink'] ?? '#3f2148';
+    $pdfSoft = $pdfColors['primary_soft'] ?? '#f7f2f8';
+    $pdfBorder = $pdfColors['primary_border'] ?? '#e7dcec';
+    $pdfMuted = $pdfColors['primary_muted'] ?? '#d4c0de';
+    $pdfCompany = $pdfBrand->get()['company_name'] ?? 'OIA Properties';
+@endphp
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,23 +18,23 @@
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; color: #1f1a2e; font-size: 10px; line-height: 1.4; margin: 0; }
 
-        .head-wrap { border-bottom: 3px solid #733E87; margin-bottom: 12px; }
+        .head-wrap { border-bottom: 3px solid {{ $pdfPrimary }}; margin-bottom: 12px; }
         .head { width: 100%; border-collapse: collapse; }
         .head td { vertical-align: bottom; padding: 0 0 8px; }
-        .eyebrow { font-size: 8.5px; letter-spacing: 1.4px; text-transform: uppercase; color: #733E87; font-weight: bold; }
-        .title { font-size: 16px; font-weight: bold; margin-top: 2px; color: #3f2148; }
+        .eyebrow { font-size: 8.5px; letter-spacing: 1.4px; text-transform: uppercase; color: {{ $pdfPrimary }}; font-weight: bold; }
+        .title { font-size: 16px; font-weight: bold; margin-top: 2px; color: {{ $pdfInk }}; }
         .meta { text-align: right; font-size: 8.5px; color: #6b6580; }
 
         .kpis { width: 100%; border-collapse: separate; border-spacing: 5px 0; margin: 0 -5px 12px; }
-        .kpis td { width: 20%; padding: 8px 9px; border: 1px solid #e7dcec; border-radius: 6px; background: #f7f2f8; vertical-align: top; }
-        .kpis .num { font-size: 13px; font-weight: bold; color: #3f2148; line-height: 1.15; white-space: nowrap; }
+        .kpis td { width: 20%; padding: 8px 9px; border: 1px solid {{ $pdfBorder }}; border-radius: 6px; background: {{ $pdfSoft }}; vertical-align: top; }
+        .kpis .num { font-size: 13px; font-weight: bold; color: {{ $pdfInk }}; line-height: 1.15; white-space: nowrap; }
         .kpis .lbl { font-size: 8px; color: #6b6580; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
-        .kpis td.hero { background: #efe6f3; border-color: #d4c0de; }
-        .kpis td.hero .num { color: #733E87; }
+        .kpis td.hero { background: {{ $pdfSoft }}; border-color: {{ $pdfMuted }}; }
+        .kpis td.hero .num { color: {{ $pdfPrimary }}; }
         .kpis td.warn { background: #fdf0f2; border-color: #f5c6cd; }
         .kpis td.warn .num { color: #c2283a; }
 
-        h2 { font-size: 11px; margin: 12px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #e7dcec; color: #733E87; }
+        h2 { font-size: 11px; margin: 12px 0 6px; padding-bottom: 3px; border-bottom: 1px solid {{ $pdfBorder }}; color: {{ $pdfPrimary }}; }
         h2 .count { float: right; font-size: 8.5px; font-weight: normal; color: #6b6580; }
 
         .filters { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
@@ -34,8 +44,8 @@
 
         table.data { width: 100%; border-collapse: collapse; }
         table.data th {
-            font-size: 7.5px; text-transform: uppercase; letter-spacing: .35px; color: #3f2148;
-            text-align: left; padding: 5px 4px; background: #f7f2f8; border-bottom: 1px solid #e7dcec;
+            font-size: 7.5px; text-transform: uppercase; letter-spacing: .35px; color: {{ $pdfInk }};
+            text-align: left; padding: 5px 4px; background: {{ $pdfSoft }}; border-bottom: 1px solid {{ $pdfBorder }};
         }
         table.data th.n, table.data td.n { text-align: right; white-space: nowrap; }
         table.data td { padding: 4px; border-bottom: 1px solid #efeaf3; vertical-align: top; font-size: 8px; }
@@ -55,7 +65,7 @@
 </head>
 <body>
     <div class="foot">
-        OIA Properties · Owner Financial Intelligence · {{ $generated_at }}
+        {{ $pdfCompany }} · Owner Financial Intelligence · {{ $generated_at }}
         · Page <span class="page-num"></span>
     </div>
 
@@ -63,7 +73,7 @@
         <table class="head">
             <tr>
                 <td>
-                    <div class="eyebrow">OIA Properties</div>
+                    <div class="eyebrow">{{ $pdfCompany }}</div>
                     <div class="title">Owner Financial Intelligence</div>
                 </td>
                 <td class="meta">

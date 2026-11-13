@@ -47,6 +47,20 @@ return [
             'report' => false,
         ],
 
+        /*
+        | Private company-sensitive files (deals, employee docs, etc.).
+        | Not web-accessible via /storage. Served only through authenticated
+        | company-files routes with brand + path checks.
+        | Existing OIA public files are NOT moved here.
+        */
+        'company' => [
+            'driver' => 'local',
+            'root' => storage_path('app/company'),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

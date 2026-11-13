@@ -138,7 +138,7 @@ class SuggestionController extends Controller
             'id' => $reply->id,
             'content' => $reply->content,
             'created_at' => optional($reply->created_at)->toIso8601String(),
-            'sender' => 'OIA Properties',
+            'sender' => app(\App\Support\Brand\BrandContext::class)->companyName(),
         ];
 
         if ($includeReplierId) {
