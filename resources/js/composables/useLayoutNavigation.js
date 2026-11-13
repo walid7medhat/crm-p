@@ -118,6 +118,7 @@ const LISTINGS_PREFIXES = [
 
 const SETTINGS_PREFIXES = [
   '/logs',
+  '/settings/maintenance',
   '/system-overview',
   '/system-explorer',
   '/attendance-monthly-reports',

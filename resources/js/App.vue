@@ -1,5 +1,7 @@
 <template>
   <div id="app">
+    <MaintenanceScreen v-if="shouldBlockUi" />
+    <template v-if="!shouldBlockUi">
     <button
       v-if="impersonatorUser"
       type="button"
@@ -68,6 +70,7 @@
     <PropertyDetailsModal v-if="showLayout" />
     <ProjectDetailsModal v-if="showLayout" />
     <SmartSearchDialog v-if="showLayout && isDashboardHome" />
+    </template>
   </div>
 </template>
 
@@ -111,6 +114,8 @@ import { canUseNextActions } from './composables/useSalesActionCenter.js'
 import { chatPanelOpen, claimShortcutPanel } from './composables/useShortcutPanels.js'
 import { useLeadViewModal, initLeadViewModal, checkUrlForLead, preloadLeadViewModal } from './composables/useLeadViewModal.js'
 import { useImpersonation } from './composables/useImpersonation.js'
+import MaintenanceScreen from './components/maintenance/MaintenanceScreen.vue'
+import { useMaintenanceMode } from './composables/useMaintenanceMode.js'
 
 export default {
   name: 'App',
@@ -119,6 +124,7 @@ export default {
     NavProgressBar,
     LoginWelcomeSplash,
     BirthdayCelebrationLayer,
+    MaintenanceScreen,
     SystemCampaignPopup,
     DailyEdgeLayer,
     SalesActionCenter,
@@ -159,6 +165,7 @@ export default {
       notifyLeadViewUpdated,
     } = useLeadViewModal()
     const { impersonatorUser, returnToSuperAdmin } = useImpersonation()
+    const { shouldBlockUi } = useMaintenanceMode()
     const showLayout = computed(() => route.meta.layout !== false)
     const isDashboardHome = computed(() => !!route.meta?.dashboardHome)
     const chatOpen = chatPanelOpen
@@ -288,6 +295,7 @@ export default {
       notifyLeadViewUpdated,
       impersonatorUser,
       returnToSuperAdmin,
+      shouldBlockUi,
       offerPdfJobs,
     }
   }

@@ -175,6 +175,13 @@ function attachAuthInterceptor(client) {
         return Promise.reject(error)
       }
 
+      // Global maintenance — block CRM UI immediately for non–super_admin sessions.
+      if (status === 503 && (error?.response?.data?.maintenance === true || error?.response?.data?.data?.enabled === true)) {
+        import('../composables/useMaintenanceMode.js')
+          .then((mod) => mod.applyFromApiError?.(error))
+          .catch(() => {})
+      }
+
       if (status === 401 && !isAuthEndpoint(url) && !isPublicAuthPage()) {
         const sentToken = requestHadAuthHeader(error.config)
         const storedToken = resolveAuthToken()
