@@ -84,8 +84,10 @@ class WebsiteLeadPublicApiTest extends TestCase
         $this->assertNotNull($lead);
         // Client assignee ignored; DB requires NOT NULL so system placeholder (id 1) is used until assignment job runs.
         $this->assertSame(1, (int) $lead->responsible_person_id);
+        $this->assertSame(1, (int) $lead->initial_responsible_person_id);
         $this->assertNotSame($attackerAssigneeId, (int) $lead->responsible_person_id);
         $this->assertSame('Oiaproperties.com', $lead->lead_source);
+        $this->assertStringNotContainsString((string) $attackerAssigneeId, (string) $lead->field_mappings_data);
 
         Bus::assertDispatched(ProcessLeadAutoAssignmentJob::class, function ($job) use ($lead) {
             return (int) $job->leadId === (int) $lead->id;
@@ -97,6 +99,7 @@ class WebsiteLeadPublicApiTest extends TestCase
     public function test_wordpress_lead_ignores_client_assignee_and_queues_assignment(): void
     {
         $attackerAssigneeId = 2911;
+        $mappedCrmUserId = 59;
 
         $response = $this->withHeader('X-Website-Lead-Secret', self::SECRET)
             ->postJson('/api/website-lead/wordpress', [
@@ -105,7 +108,7 @@ class WebsiteLeadPublicApiTest extends TestCase
                 'No_Label_email' => 'wordpress-lead-assignee-guard@example.com',
                 'No_Label_phone' => '0500000002',
                 'responsible_person' => $attackerAssigneeId,
-                'responsible_person_id' => 59,
+                'responsible_person_id' => $mappedCrmUserId,
             ]);
 
         $response->assertOk()->assertJsonPath('status', 'success');
@@ -117,9 +120,12 @@ class WebsiteLeadPublicApiTest extends TestCase
 
         $this->assertNotNull($lead);
         $this->assertSame(1, (int) $lead->responsible_person_id);
+        $this->assertSame(1, (int) $lead->initial_responsible_person_id);
         $this->assertNotSame($attackerAssigneeId, (int) $lead->responsible_person_id);
-        $this->assertNotSame(59, (int) $lead->responsible_person_id);
+        $this->assertNotSame($mappedCrmUserId, (int) $lead->responsible_person_id);
         $this->assertSame('Allproperties.ae', $lead->lead_source);
+        $this->assertStringNotContainsString((string) $attackerAssigneeId, (string) $lead->field_mappings_data);
+        $this->assertStringNotContainsString((string) $mappedCrmUserId, (string) $lead->field_mappings_data);
 
         Bus::assertDispatched(ProcessLeadAutoAssignmentJob::class, function ($job) use ($lead) {
             return (int) $job->leadId === (int) $lead->id;

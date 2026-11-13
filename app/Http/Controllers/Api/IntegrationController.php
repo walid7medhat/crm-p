@@ -753,11 +753,9 @@ public function store_website(Request $request)
         return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
     $data = $request->all();
-    // Optional — a form that doesn't send it used to fail with "Undefined array key".
-    // #25 → #1690 (Lead::externalResponsibleId).
-    $response = Lead::externalResponsibleId($data['responsible_person_id'] ?? null);
 
-    // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
+    // Public webhook: never trust client assignee fields. Lead Assignment owns
+    // responsible_person_id via ProcessLeadAutoAssignmentJob after create.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
 
 $fieldData = [];
@@ -794,7 +792,7 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' =>$response?? 1,
+        'responsible_person_id' => 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
@@ -824,21 +822,8 @@ public function store_wordpress(Request $request)
         'payload' => \Illuminate\Support\Arr::except($data, ['secret', 'api_key']),
     ]);
 
-    // WordPress sends its own ids for the responsible person (responsible_person_id or
-    // responsible_person) — map them to CRM users first, then the shared outside-lead
-    // rule (#25 → #1690, Lead::externalResponsibleId). An id that isn't a CRM user falls
-    // back to #1 (auto-assign takes over) so the lead is never lost.
-    $wordpressResponsibleMap = [
-        2911 => 59,
-        2909 => 1690,
-    ];
-    $incoming = (int) ($data['responsible_person_id'] ?? $data['responsible_person'] ?? 0);
-    $response = Lead::externalResponsibleId($wordpressResponsibleMap[$incoming] ?? ($incoming ?: null));
-    if (! \App\Models\User::whereKey($response)->exists()) {
-        $response = 1;
-    }
-
-    // Client must not choose CRM assignee — Lead Assignment owns responsible_person_id.
+    // Public webhook: never trust client/WordPress assignee ids (including mapped WP ids).
+    // Lead Assignment owns responsible_person_id via ProcessLeadAutoAssignmentJob after create.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
 
 $fieldData = [];
@@ -874,7 +859,7 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => $response ?? 1,
+        'responsible_person_id' => 1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
