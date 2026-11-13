@@ -3,7 +3,8 @@
     <header class="mm__header">
       <div>
         <p class="mm__eyebrow">System</p>
-        <h1 class="mm__title">Maintenance Mode</h1>
+        <!-- Not <h1>: global CRM CSS forces h1 { font-size: var(--h1) !important } -->
+        <p class="mm__title" role="heading" aria-level="1">Maintenance Mode</p>
         <p class="mm__sub">Lock all branches or only the ones you select.</p>
       </div>
       <div class="mm__status" :class="enabled ? 'is-on' : 'is-off'">
@@ -140,8 +141,22 @@
         <button type="button" class="mm__btn mm__btn--primary" :disabled="busy" @click="saveAnnouncement">
           Save
         </button>
+        <button type="button" class="mm__btn" :disabled="busy" @click="previewOpen = true">
+          Test preview
+        </button>
       </div>
     </section>
+
+    <Teleport to="body">
+      <MaintenanceScreen
+        v-if="previewOpen"
+        preview
+        :preview-title="form.title"
+        :preview-message="form.message"
+        :preview-estimated-return="form.estimated_return"
+        @close="previewOpen = false"
+      />
+    </Teleport>
 
     <Teleport to="body">
       <div v-if="confirmOpen" class="mm__modal" @click.self="confirmOpen = false">
@@ -167,6 +182,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import api from '@/plugins/axios'
 import { useMaintenanceMode } from '@/composables/useMaintenanceMode'
+import MaintenanceScreen from '@/components/maintenance/MaintenanceScreen.vue'
 
 const { applyPayload } = useMaintenanceMode()
 
@@ -175,6 +191,7 @@ const busy = ref(false)
 const notice = ref('')
 const noticeError = ref(false)
 const confirmOpen = ref(false)
+const previewOpen = ref(false)
 const loadingBranches = ref(false)
 const branches = ref([])
 const form = reactive({
@@ -341,16 +358,19 @@ onMounted(load)
 
 .mm__title {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  padding: 0;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  color: #1e293b !important;
 }
 
 .mm__sub {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: #64748b;
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: 11px !important;
+  line-height: 1.35;
 }
 
 .mm__status {
@@ -416,8 +436,9 @@ onMounted(load)
 
 .mm__label {
   margin: 0;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
 }
 
 .mm__help {
@@ -504,13 +525,15 @@ onMounted(load)
 
 .mm__radio strong {
   display: block;
-  font-size: 11px;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  color: #1e293b !important;
 }
 
 .mm__radio small {
   display: block;
-  color: #94a3b8;
-  font-size: 10px;
+  color: #94a3b8 !important;
+  font-size: 10px !important;
   margin-top: 1px;
 }
 
