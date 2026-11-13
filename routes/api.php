@@ -140,6 +140,14 @@ Route::get('/save-account-activated-email-html', function () {
 })->middleware('brand.block_luxvant_public');
 
 Route::get('brand', [BrandController::class, 'show']);
+
+// Global maintenance — status is public (SPA poll / login page); manage is super_admin only.
+Route::get('maintenance/status', [\App\Http\Controllers\Api\MaintenanceController::class, 'status']);
+Route::middleware(['jwt.auth', 'role:super_admin'])->prefix('maintenance')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\MaintenanceController::class, 'show']);
+    Route::put('/', [\App\Http\Controllers\Api\MaintenanceController::class, 'update']);
+});
+
 Route::post('auth/register', [AuthController::class, 'register'])
         ->middleware('throttle:auth-login');
     Route::post('auth/login', [AuthController::class, 'login'])

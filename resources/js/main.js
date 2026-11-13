@@ -6,6 +6,7 @@ import 'vue-select/dist/vue-select.css'
 import { Icon, addCollection } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import api, { getAppOrigin, getApiBaseUrl, resolveAuthToken, forceInactiveLogout } from './plugins/axios.js'
+import { startMaintenanceWatch } from './composables/useMaintenanceMode.js'
 
 // Load lucide/heroicons as a separate chunk (not in main) so the CRM stops
 // calling api.iconify.design for those packs without bloating first paint.
@@ -440,6 +441,22 @@ function scheduleEchoInit() {
         },
       })
 
+      try {
+        window.Echo.private('crm-campaigns')
+          .listen('.maintenance.updated', (e) => {
+            import('./composables/useMaintenanceMode.js').then((mod) => {
+              mod.applyPayload?.({
+                enabled: !!e?.enabled,
+                title: e?.title,
+                message: e?.message,
+                estimated_return: e?.estimated_return,
+              })
+            })
+          })
+      } catch (e) {
+        console.warn('Maintenance Echo channel failed', e)
+      }
+
       const currentUserId = getStoredUserId()
       if (currentUserId) {
         window.Echo.private(`user.${currentUserId}`)
@@ -672,6 +689,9 @@ window.addEventListener('unhandledrejection', (event) => {
     reloadOnceForStaleChunk()
   }
 })
+// Global maintenance: poll + Echo so logged-in users are blocked immediately.
+startMaintenanceWatch()
+
 // Mount app
 app.mount('#app')
 const bootSplash = document.getElementById('boot-splash')

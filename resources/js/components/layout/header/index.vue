@@ -1413,6 +1413,7 @@ const settingsSidebarSections = computed(() => {
   if (isSuperAdmin.value) {
     system.push({ path: '/system-explorer', label: 'System Explorer', icon: 'lucide:map' });
     system.push({ path: '/logs', label: 'Logs', icon: 'lucide:scroll-text' });
+    system.push({ path: '/settings/maintenance', label: 'Maintenance Mode', icon: 'lucide:construction' });
     system.push({ path: '/agent-performance', label: 'Agent Performance', iconSrc: agentsIcon.value });
     system.push({ path: '/import-pitrix', label: 'Import Leads', iconSrc: leadsIcon.value });
     system.push({ path: '/sync-bitrix-leads', label: 'Sync Leads', iconSrc: leadsIcon.value });

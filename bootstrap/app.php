@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         'brand.resolve' => ResolveBrandFromHost::class,
         'brand.access' => EnsureBrandAccess::class,
         'brand.block_luxvant_public' => BlockRiskyPublicOnLuxvant::class,
+        'maintenance' => \App\Http\Middleware\EnsureNotInMaintenance::class,
 
     ]);
        // Exclude broadcasting/auth from CSRF since we use JWT auth
@@ -48,6 +49,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Host → brand context for every web + API request (before controllers).
         $middleware->append(ResolveBrandFromHost::class);
+
+        // Global maintenance (after brand resolve). HTTP-only; queues keep running.
+        $middleware->append(\App\Http\Middleware\EnsureNotInMaintenance::class);
 
         $middleware->api(append: [
             \App\Http\Middleware\RequireTrustedReferer::class,
