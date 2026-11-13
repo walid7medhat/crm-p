@@ -281,6 +281,11 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('resize', updateScrollUi)
     window.clearTimeout(highlightScrollTimer)
+    clearSoftRefreshTimer()
+    if (matchWatchTimer != null) {
+        window.clearTimeout(matchWatchTimer)
+        matchWatchTimer = null
+    }
 })
 
 const props = defineProps({
@@ -298,6 +303,15 @@ const resolvingIntegration = ref(false)
 /** True when cards come from /leads/{id}/matches (scored Match Studio rows). */
 const scoredMode = ref(false)
 let highlightScrollTimer = null
+let softRefreshTimer = null
+let matchWatchTimer = null
+
+function clearSoftRefreshTimer() {
+    if (softRefreshTimer != null) {
+        window.clearTimeout(softRefreshTimer)
+        softRefreshTimer = null
+    }
+}
 
 function isHighlighted(item) {
     const id = Number(leadViewHighlightListingId.value)
@@ -511,19 +525,35 @@ function mapScoredMatch(row) {
     return mapped
 }
 
-async function fetchScoredMatchRows() {
-    if (!props.lead?.id) return []
+async function fetchScoredMatchPayload() {
+    if (!props.lead?.id) return { rows: [], refreshing: false }
     try {
         const res = await api.get(`/leads/${props.lead.id}/matches`)
-        const rows = res.data?.data?.matches
-        if (!Array.isArray(rows) || !rows.length) return []
-        return rows.map(mapScoredMatch).filter((item) => item.id)
+        const data = res.data?.data || {}
+        const rows = Array.isArray(data.matches) ? data.matches : []
+        return {
+            rows: rows.map(mapScoredMatch).filter((item) => item.id),
+            refreshing: !!data.refreshing,
+        }
     } catch (e) {
         if (e.response?.status !== 403 && e.response?.status !== 404) {
             console.error('Lead scored matches', e)
         }
-        return []
+        return { rows: [], refreshing: false }
     }
+}
+
+function scheduleSoftScoredRefresh(leadId) {
+    clearSoftRefreshTimer()
+    softRefreshTimer = window.setTimeout(async () => {
+        softRefreshTimer = null
+        if (Number(props.lead?.id) !== Number(leadId)) return
+        const scored = await fetchScoredMatchPayload()
+        if (Number(props.lead?.id) !== Number(leadId)) return
+        if (!scored.rows.length) return
+        listings.value = mergeMatchingRows(scored.rows, listings.value)
+        scoredMode.value = true
+    }, 2500)
 }
 
 async function fetchSearchMatchRows() {
@@ -568,21 +598,32 @@ function mergeMatchingRows(scored, searched) {
 
 async function fetchMatches() {
     if (!props.lead?.id) {
+        clearSoftRefreshTimer()
         listings.value = []
         scoredMode.value = false
         return
     }
+    const leadId = Number(props.lead.id)
     loading.value = true
     error.value = ''
     try {
-        const [scored, searched] = await Promise.all([
-            fetchScoredMatchRows(),
-            fetchSearchMatchRows(),
-        ])
-        listings.value = mergeMatchingRows(scored, searched)
-        scoredMode.value = scored.length > 0
+        // Cached scored rows first (never blocked by cold refreshLead). Then fill from search.
+        const scored = await fetchScoredMatchPayload()
+        if (Number(props.lead?.id) !== leadId) return
+        listings.value = mergeMatchingRows(scored.rows, [])
+        scoredMode.value = scored.rows.length > 0
+        loading.value = false
+        bindScrollResize()
+
+        const searched = await fetchSearchMatchRows()
+        if (Number(props.lead?.id) !== leadId) return
+        listings.value = mergeMatchingRows(scored.rows, searched)
+        scoredMode.value = scored.rows.length > 0 || listings.value.some((row) => row.match_score != null)
         if (!listings.value.length && !hasSearchCriteria.value) {
             error.value = ''
+        }
+        if (scored.refreshing) {
+            scheduleSoftScoredRefresh(leadId)
         }
     } catch (e) {
         console.error('Matching properties', e)
@@ -628,8 +669,15 @@ watch(
         props.lead?.integration_id,
         props.lead?.lead_type,
     ],
-    () => fetchMatches(),
-    { immediate: true, deep: true }
+    () => {
+        // Seed → show merge can tick several fields; batch into one fetch.
+        if (matchWatchTimer != null) window.clearTimeout(matchWatchTimer)
+        matchWatchTimer = window.setTimeout(() => {
+            matchWatchTimer = null
+            fetchMatches()
+        }, 320)
+    },
+    { immediate: true }
 )
 
 watch(listings, () => bindScrollResize(), { deep: true })

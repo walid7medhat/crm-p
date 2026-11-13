@@ -19,10 +19,14 @@ class ProcessLeadIntelligenceJob implements ShouldQueue
 
     public function handle(LeadIntelligenceService $service): void
     {
-        foreach (['score', 'priority', 'intent', 'next_action', 'last_scored_at', 'score_breakdown'] as $column) {
-            if (!Schema::hasColumn('leads', $column)) {
-                return;
-            }
+        // Runs on every lead save: check the columns once an hour, not 6 schema queries per job.
+        $columnsReady = \Illuminate\Support\Facades\Cache::remember('lead_intelligence_columns_ready_v1', 3600, function () {
+            $required = ['score', 'priority', 'intent', 'next_action', 'last_scored_at', 'score_breakdown'];
+
+            return empty(array_diff($required, Schema::getColumnListing('leads')));
+        });
+        if (!$columnsReady) {
+            return;
         }
 
         $lead = Lead::find($this->leadId);

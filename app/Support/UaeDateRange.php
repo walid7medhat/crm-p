@@ -58,13 +58,18 @@ class UaeDateRange
      * (lead_histories) on those UAE days — an update, stage change, assignment,
      * comment, activity… — not just a view or its creation entry.
      *
-     * leads.updated_at can't be used: leads:score re-saves every lead every 10
-     * minutes (last_scored_at), so updated_at is always "now".
+     * leads.updated_at isn't used: it also moves on system writes (sync, auto-assign…),
+     * while the history only holds real changes.
      *
      * $userIds ("Modified By") limits it to changes made by those users. With both
      * dates and users, the same history entry must match both (changed by X on day D).
      *
-     * $query must be an Eloquent Lead query (uses the `histories` relation).
+     * Written as `leads.id IN (select lead_id from lead_histories where …)` rather than
+     * a per-lead EXISTS: MySQL first picks the matching history rows through the
+     * (created_at, lead_id) / (user_id, created_at) indexes, instead of walking every
+     * lead's whole history on each kanban query.
+     *
+     * $query must be a Lead query on the `leads` table.
      */
     public static function applyModified($query, $from = null, $to = null, $exact = null, array $userIds = [])
     {
@@ -72,15 +77,22 @@ class UaeDateRange
             return $query;
         }
 
-        return $query->whereHas('histories', function ($history) use ($from, $to, $exact, $userIds) {
-            self::apply($history, 'lead_histories.created_at', $from, $to, $exact);
-            if (! empty($userIds)) {
-                $history->whereIn('lead_histories.user_id', $userIds);
-            }
-            $history->where(function ($q) {
-                $q->whereNull('changes->action')
-                    ->orWhereNotIn('changes->action', self::NON_MODIFYING_HISTORY_ACTIONS);
+        // Same visibility as Lead::histories(): admins also see soft-deleted entries.
+        $history = \App\Models\LeadHistory::query();
+        if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'super_admin', 'branch_admin'])) {
+            $history->withTrashed();
+        }
+
+        self::apply($history, 'lead_histories.created_at', $from, $to, $exact);
+        if (! empty($userIds)) {
+            $history->whereIn('lead_histories.user_id', $userIds);
+        }
+        $history->whereNotNull('lead_histories.lead_id')
+            ->where(function ($q) {
+                $q->whereNull('lead_histories.changes->action')
+                    ->orWhereNotIn('lead_histories.changes->action', self::NON_MODIFYING_HISTORY_ACTIONS);
             });
-        });
+
+        return $query->whereIn('leads.id', $history->select('lead_histories.lead_id'));
     }
 }

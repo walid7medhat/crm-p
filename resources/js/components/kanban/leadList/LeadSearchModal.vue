@@ -7068,6 +7068,11 @@ function applyDateRange() {
 
     showDateModal.value = false
 
+    // Apply once after the date modal Confirm — not while picking days.
+    if (!hydratingFromQuery.value && (show.value || props.modelValue)) {
+        applySearch({ keepOpen: true })
+    }
+
 }
 
 
@@ -7275,8 +7280,8 @@ watch(() => form.value.assignedOn, (newVal, oldVal) => {
 })
 
 // Live-apply core text fields as the user types (no Enter / Search click required).
-// Sole text debounce for the modal path (~350ms). Board fetch is immediate afterward.
-const LIVE_TEXT_SEARCH_MS = 350
+// Sole text debounce for the modal path (300–400ms). Board fetch is immediate afterward.
+const LIVE_TEXT_SEARCH_MS = 400
 let liveTextSearchTimer = null
 watch(
     () => [

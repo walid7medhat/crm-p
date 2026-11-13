@@ -192,7 +192,34 @@ private function applyLogLevel($query, string $level): void
     };
 }
 
+/**
+ * Cache a dashboard JSON response for a short time, per user and filters.
+ * Dashboard widgets run many COUNT queries and are reloaded often; a minute-old
+ * number is fine there. Only successful responses are cached.
+ */
+private function cachedDashboardJson(string $name, Request $request, int $seconds, \Closure $build)
+{
+    $key = 'dashboard:' . $name . ':' . auth()->id() . ':' . md5(json_encode($request->query()));
+
+    $cached = Cache::get($key);
+    if (is_array($cached)) {
+        return response()->json($cached);
+    }
+
+    $response = $build();
+    if ($response instanceof \Illuminate\Http\JsonResponse && $response->getStatusCode() === 200) {
+        Cache::put($key, $response->getData(true), $seconds);
+    }
+
+    return $response;
+}
+
 public function getStats(Request $request)
+{
+    return $this->cachedDashboardJson('stats', $request, 60, fn () => $this->buildStats($request));
+}
+
+private function buildStats(Request $request)
 {
     [$rangeFrom, $rangeTo] = $this->resolveDashboardDateRange($request);
 
@@ -636,6 +663,11 @@ public function getActiveAgents()
 }
 
 public function getLeadsOverview(Request $request)
+{
+    return $this->cachedDashboardJson('leads-overview', $request, 60, fn () => $this->buildLeadsOverview($request));
+}
+
+private function buildLeadsOverview(Request $request)
 {
     $timeframe = $request->get('timeframe', 'today');
     $currentUser = auth()->user();

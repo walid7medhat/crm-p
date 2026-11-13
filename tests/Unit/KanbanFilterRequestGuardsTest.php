@@ -14,7 +14,7 @@ class KanbanFilterRequestGuardsTest extends TestCase
         $source = file_get_contents(base_path('resources/js/components/layout/navbar/index.vue'));
         $this->assertStringContainsString('v-if="searchModalMounted && isMobileViewport"', $source);
         $this->assertStringContainsString('v-if="searchModalMounted && !isMobileViewport"', $source);
-        $this->assertStringContainsString('const SEARCH_DEBOUNCE_MS = 350', $source);
+        $this->assertStringContainsString('const SEARCH_DEBOUNCE_MS = 400', $source);
     }
 
     public function test_lead_search_modal_owns_single_text_debounce(): void
@@ -23,7 +23,7 @@ class KanbanFilterRequestGuardsTest extends TestCase
         $deal = file_get_contents(base_path('resources/js/components/kanban/kanban_deal.vue'));
         $leads = file_get_contents(base_path('resources/js/components/kanban/leadList/leads.vue'));
 
-        $this->assertStringContainsString('const LIVE_TEXT_SEARCH_MS = 350', $modal);
+        $this->assertStringContainsString('const LIVE_TEXT_SEARCH_MS = 400', $modal);
         // Explicit Search may re-apply; live keepOpen still skips identical query.
         $this->assertStringContainsString('force: !keepOpen', $modal);
         $this->assertStringContainsString('keepOpen', $modal);

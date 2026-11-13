@@ -44,6 +44,41 @@ class LeadIntelligenceService
         return 'medium';
     }
 
+    /**
+     * Latest comment per lead, preloaded for a batch (leads:score) so scoring
+     * doesn't run one comment query per lead. Null = not preloaded.
+     *
+     * @var array<int, string|null>|null
+     */
+    private ?array $latestComments = null;
+
+    /** Preload the latest comment of each lead in one query (for batch scoring). */
+    public function primeLatestComments(array $leadIds): void
+    {
+        $this->latestComments = array_fill_keys($leadIds, null);
+        if (empty($leadIds)) {
+            return;
+        }
+
+        $latest = LeadComment::query()
+            ->selectRaw('lead_id, comment, ROW_NUMBER() OVER (PARTITION BY lead_id ORDER BY created_at DESC, id DESC) AS rn')
+            ->whereIn('lead_id', $leadIds);
+
+        $rows = \Illuminate\Support\Facades\DB::query()
+            ->fromSub($latest, 'c')
+            ->where('rn', 1)
+            ->get(['lead_id', 'comment']);
+
+        foreach ($rows as $row) {
+            $this->latestComments[(int) $row->lead_id] = $row->comment;
+        }
+    }
+
+    public function forgetLatestComments(): void
+    {
+        $this->latestComments = null;
+    }
+
     public function generateRecommendation(Lead $lead, ?array $settings = null): array
     {
         $resolved = $this->resolveSettings($settings);
@@ -255,9 +290,11 @@ class LeadIntelligenceService
 
     private function buildLeadTextContext(Lead $lead): string
     {
-        $latestComment = LeadComment::where('lead_id', $lead->id)
-            ->latest()
-            ->value('comment');
+        $latestComment = $this->latestComments !== null && array_key_exists((int) $lead->id, $this->latestComments)
+            ? $this->latestComments[(int) $lead->id]
+            : LeadComment::where('lead_id', $lead->id)
+                ->latest()
+                ->value('comment');
 
         $rawMeta = is_array($lead->raw_meta_data)
             ? json_encode($lead->raw_meta_data)

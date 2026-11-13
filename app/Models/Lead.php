@@ -171,7 +171,6 @@ protected const NON_ENGAGEMENT_FIELDS = [
 
                     $lead->setAttribute('last_engagement_at', now());
                 }
-                    \Log::info('HOOK_FIRED', ['id' => $lead->id, 'changes' => array_keys($lead->getChanges())]);
 
                 if ($lead->wasChanged('responsible_person_id')) {
                     app(LeadAssignmentTestNotifier::class)->notifyIfChanged(

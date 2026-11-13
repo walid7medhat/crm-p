@@ -1221,8 +1221,8 @@ const searchDropdownPanelRef = ref(null);
 const searchDropdownStyle = ref({});
 const searchDebounceTimer = ref(null);
 // Live client filter runs immediately; this only gates the board API refetch.
-// Sole text debounce for the navbar free-text path (~350ms). Board fetch is immediate after.
-const SEARCH_DEBOUNCE_MS = 350;
+// Sole text debounce for the navbar free-text path (300–400ms). Board fetch is immediate after.
+const SEARCH_DEBOUNCE_MS = 400;
 const suppressSearchWatcher = ref(false);
 const isSearchLoading = ref(false);
 const leadsRef = ref(null);

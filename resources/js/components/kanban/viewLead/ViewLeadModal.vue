@@ -1337,6 +1337,41 @@ const clearPendingStageChange = () => {
 let fetchLeadInFlight = null
 let fetchLeadInFlightId = null
 let fetchLeadGeneration = 0
+let portalLinksIdleId = null
+let portalLinksTimer = null
+
+function clearScheduledPortalLinks() {
+    if (portalLinksTimer != null) {
+        clearTimeout(portalLinksTimer)
+        portalLinksTimer = null
+    }
+    if (portalLinksIdleId != null && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(portalLinksIdleId)
+        portalLinksIdleId = null
+    }
+}
+
+function scheduleCommentPortalLinks(leadIdNum, requestGeneration) {
+    clearScheduledPortalLinks()
+    const run = () => {
+        portalLinksIdleId = null
+        portalLinksTimer = null
+        if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) return
+        api.get(`/leads/${leadIdNum}/comment-portal-links`)
+            .then((portalRes) => {
+                if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) return
+                const links = portalRes?.data?.data
+                if (!Array.isArray(links) || !lead.value || Number(lead.value.id) !== leadIdNum) return
+                lead.value = { ...lead.value, comment_portal_links: links }
+            })
+            .catch(() => {})
+    }
+    if (typeof requestIdleCallback === 'function') {
+        portalLinksIdleId = requestIdleCallback(run, { timeout: 1800 })
+    } else {
+        portalLinksTimer = setTimeout(run, 400)
+    }
+}
 
 const fetchLead = async ({ silent = false } = {}) => {
     console.log('[ViewLeadModal] fetchLead called', { propsLeadId: props.leadId })
@@ -1392,15 +1427,8 @@ const fetchLead = async ({ silent = false } = {}) => {
                 if (fresh.stage_id) leadStageId.value = fresh.stage_id
                 await nextTick()
                 applyOpenSection()
-                // Portal links were pulled out of show() (slow LIKE on comments).
-                api.get(`/leads/${leadIdNum}/comment-portal-links`)
-                    .then((portalRes) => {
-                        if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) return
-                        const links = portalRes?.data?.data
-                        if (!Array.isArray(links) || !lead.value || Number(lead.value.id) !== leadIdNum) return
-                        lead.value = { ...lead.value, comment_portal_links: links }
-                    })
-                    .catch(() => {})
+                // Portal LIKE scan is expensive — never compete with first paint of lead essentials.
+                scheduleCommentPortalLinks(leadIdNum, requestGeneration)
             }
         } catch (error) {
             if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
@@ -1514,6 +1542,7 @@ const handleLeadUpdateFromTab = (updatedLeadData) => {
 }
 
 const cleanup = () => {
+    clearScheduledPortalLinks()
     if (echoListener.value) {
         if (typeof echoListener.value.stopListening === 'function') {
             echoListener.value.stopListening('.lead.updated')

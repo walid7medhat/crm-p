@@ -135,31 +135,38 @@
 
                 <!-- Activity View -->
                 <ActivitySection
-                    v-if="canViewCommentsAndActivities && activeViewTab === 'activity'"
+                    v-if="canViewCommentsAndActivities && showCommentsRail && activeViewTab === 'activity'"
                     :lead-id="lead?.id"
                     @activity-created="handleActivityCreated"
                 />
 
                 <!-- Comments View -->
                 <CommentsSection
-                    v-if="canViewCommentsAndActivities && activeViewTab === 'comments'"
+                    v-if="canViewCommentsAndActivities && showCommentsRail && activeViewTab === 'comments'"
                     :lead-id="lead?.id"
                     @comment-created="handleCommentCreated"
                 />
 
             </div>
 
-
+            <div
+                v-if="canViewCommentsAndActivities && lead?.id && !showCommentsRail"
+                class="lead-feed-deferred"
+                aria-busy="true"
+                aria-live="polite"
+            >
+                Loading conversation…
+            </div>
 
             <!-- Lead Activity List -->
             <ActivityList
-                v-if="canViewCommentsAndActivities && activeViewTab === 'activity'"
+                v-if="canViewCommentsAndActivities && showCommentsRail && activeViewTab === 'activity'"
                 ref="activityListRef"
                 :lead-id="lead?.id"
                  :key-delete="activityListKey"
             />
             <CommentList
-                v-if="canViewCommentsAndActivities && activeViewTab === 'comments'"
+                v-if="canViewCommentsAndActivities && showCommentsRail && activeViewTab === 'comments'"
                 ref="commentListRef"
                 :lead-id="lead?.id"
                  :key="commentListKey"
@@ -168,7 +175,7 @@
 
             <!-- Defer timeline until after first paint so lead details appear sooner. -->
             <LeadActivityTimeline
-                v-if="canViewCommentsAndActivities && activeViewTab === 'comments' && lead?.id && showActivityTimeline"
+                v-if="canViewCommentsAndActivities && showCommentsRail && activeViewTab === 'comments' && lead?.id && showActivityTimeline"
                 :key="`timeline-${lead?.id}-${lead?.stage_id}`"
                 :lead-id="lead?.id"
 
@@ -263,18 +270,54 @@ function clearSecondarySchedule() {
     }
 }
 
+const showCommentsRail = ref(false)
+let commentsRailIdleId = null
+let commentsRailTimer = null
+
+function clearCommentsRailSchedule() {
+    if (commentsRailTimer != null) {
+        clearTimeout(commentsRailTimer)
+        commentsRailTimer = null
+    }
+    if (commentsRailIdleId != null && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(commentsRailIdleId)
+        commentsRailIdleId = null
+    }
+}
+
+/** Comments/activities use heavy engagement SQL — mount after lead essentials paint. */
+function scheduleCommentsRail(leadId) {
+    clearCommentsRailSchedule()
+    showCommentsRail.value = false
+    if (!leadId) return
+    const reveal = () => {
+        commentsRailIdleId = null
+        commentsRailTimer = null
+        if (Number(props.lead?.id) !== Number(leadId)) return
+        showCommentsRail.value = true
+    }
+    if (typeof requestIdleCallback === 'function') {
+        commentsRailIdleId = requestIdleCallback(reveal, { timeout: 500 })
+    } else {
+        commentsRailTimer = setTimeout(reveal, 120)
+    }
+}
+
 /** Schedule non-critical right-rail sections after the lead shell paints. */
 function scheduleSecondarySections(leadId) {
     clearSecondarySchedule()
+    clearCommentsRailSchedule()
     showActivityTimeline.value = false
     showMergedLeads.value = false
+    showCommentsRail.value = false
     if (!leadId) return
+    scheduleCommentsRail(leadId)
     const reveal = () => {
         secondaryIdleId = null
         secondaryLoadTimer = null
         if (Number(props.lead?.id) !== Number(leadId)) return
         showMergedLeads.value = true
-        if (activeViewTab.value === 'comments') {
+        if (activeViewTab.value === 'comments' && showCommentsRail.value) {
             showActivityTimeline.value = true
         }
     }
@@ -291,11 +334,17 @@ watch(() => props.focusSection, (section) => {
 watch(activeViewTab, (section) => {
     if (section === 'comments' || section === 'activity') emit('section-change', section)
     // Timeline only applies to the comments rail — mount it when that tab is chosen.
-    if (section === 'comments' && props.lead?.id && showMergedLeads.value) {
+    if (section === 'comments' && props.lead?.id && showMergedLeads.value && showCommentsRail.value) {
         showActivityTimeline.value = true
     }
     if (section === 'activity') {
         showActivityTimeline.value = false
+    }
+})
+
+watch(showCommentsRail, (ready) => {
+    if (ready && activeViewTab.value === 'comments' && props.lead?.id && showMergedLeads.value) {
+        showActivityTimeline.value = true
     }
 })
 
@@ -711,17 +760,29 @@ watch(
     (id, prevId) => {
         if (!id) {
             clearSecondarySchedule()
+            clearCommentsRailSchedule()
             showActivityTimeline.value = false
             showMergedLeads.value = false
+            showCommentsRail.value = false
             return
         }
         // Keep secondary sections mounted when refreshing the same lead.
-        if (id === prevId && (showActivityTimeline.value || showMergedLeads.value)) return
+        if (id === prevId && (showCommentsRail.value || showActivityTimeline.value || showMergedLeads.value)) return
         scheduleSecondarySections(id)
     },
     { immediate: true }
 )
 </script><style scoped>
+.lead-feed-deferred {
+    margin: 8px 0 12px;
+    padding: 14px 12px;
+    border-radius: 10px;
+    background: rgba(27, 36, 56, 0.04);
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 550;
+}
+
 /* GeneralTab Wrapper Styles */
 .lead-view-grid {
     display: grid;
