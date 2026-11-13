@@ -4617,8 +4617,11 @@ const revertFromConverted = async () => {
 
       if (heroIndex > 0) {
         list.unshift(list.splice(heroIndex, 1)[0]);
-      } else if (heroIndex === -1) {
-        // Hero uploaded separately (not one of the gallery images).
+      } else if (heroIndex === -1 && !list.length) {
+        // Hero is not a gallery file. Listings created before the fix stored a second copy
+        // of the first gallery photo as the hero (different path, same photo), so with
+        // gallery photos we skip it — otherwise it shows big and again as a small image
+        // (and twice in the offer). Only a listing with no gallery shows the hero alone.
         list.unshift({
           id: 'hero',
           name: 'hero',
