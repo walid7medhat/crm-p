@@ -8,7 +8,7 @@
           @filters-changed="handleFiltersChanged"
           @status-changed="setStatus"
           @city-changed="setCity"
-          :show-city-tabs="isAdmin"
+          :show-city-tabs="canFilterByCity"
           :active-city="activeCity"
           :initial-filters="initialFilters"
           :result-count="pagination?.total || properties.length"
@@ -183,6 +183,19 @@ export default {
       return userRole.value === 'super_admin' || userRole.value === 'admin';
     });
     const isSuperAdmin = computed(() => userRole.value === 'super_admin');
+
+    // City tabs (All Cities / Abu Dhabi / Dubai): super_admin, admin and branch_admin.
+    const canFilterByCity = computed(() => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const roles = Array.isArray(user.roles) ? user.roles : [];
+        return ['super_admin', 'admin', 'branch_admin'].some(
+          (role) => roles.includes(role) || user.role_name === role
+        );
+      } catch {
+        return isAdmin.value;
+      }
+    });
 
     const defaultImages = [property1, property2, property3, property4];
 
@@ -475,7 +488,7 @@ export default {
           }
         }
 
-        if (isAdmin.value && activeCity.value !== 'all') {
+        if (canFilterByCity.value && activeCity.value !== 'all') {
           params.city = activeCity.value;
         }
 
@@ -1034,6 +1047,7 @@ const decodeFiltersFromQuery = async (query) => {
       setStatus,
       activeCity,
       setCity,
+      canFilterByCity,
       handleFiltersChanged,
       changePage,
       getPropertyImage,
