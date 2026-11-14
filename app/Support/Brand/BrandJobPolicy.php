@@ -29,6 +29,7 @@ class BrandJobPolicy
         \App\Jobs\CheckSearchAlerts::class => 'per_brand',
         \App\Jobs\RecalculateSalesAgentScoreJob::class => 'per_brand',
         \App\Jobs\SendInvitationEmailJob::class => 'per_brand',
+        \App\Jobs\EvaluateForeignAccessJob::class => 'per_brand',
         \App\Jobs\AiSalesIntelligence\RecalculateAllAiSalesIntelligenceJob::class => 'per_brand',
         \App\Jobs\AiSalesIntelligence\RecalculateAiAgentIntelligenceJob::class => 'per_brand',
         \App\Jobs\AiSalesIntelligence\FinalizeAiSalesIntelligenceRankingsJob::class => 'per_brand',
@@ -47,6 +48,7 @@ class BrandJobPolicy
      */
     public const COMMANDS = [
         'live-watch:cleanup' => 'global_shared', // TTL cleanup of ephemeral watch rows
+        'cloudflare:refresh-ips' => 'global_shared', // Platform trusted-proxy CIDR refresh
         // Safety net: leads/deals of Admin Luxvant agents that came in via OIA
         // integrations or bulk updates (no model events) → brand_key luxvant.
         'brand:classify-luxvant-crm' => 'global_shared',

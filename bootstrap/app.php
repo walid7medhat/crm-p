@@ -14,6 +14,8 @@ use App\Http\Middleware\BlockBots;
 use App\Http\Middleware\BlockRiskyPublicOnLuxvant;
 use App\Http\Middleware\EnsureBrandAccess;
 use App\Http\Middleware\ResolveBrandFromHost;
+use App\Support\Security\CloudflareTrustedProxies;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -37,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         'brand.access' => EnsureBrandAccess::class,
         'brand.block_luxvant_public' => BlockRiskyPublicOnLuxvant::class,
         'maintenance' => \App\Http\Middleware\EnsureNotInMaintenance::class,
+        'foreign.access.probe' => \App\Http\Middleware\ProbeForeignAccess::class,
 
     ]);
        // Exclude broadcasting/auth from CSRF since we use JWT auth
@@ -45,7 +48,16 @@ return Application::configure(basePath: dirname(__DIR__))
            'api/webhook/facebook', 
        ]);
 
-       $middleware->trustProxies(at: '*');
+       // Trust ONLY Cloudflare edge CIDRs (IPv4 + IPv6). Forwarded headers are
+       // honored solely when REMOTE_ADDR is in those ranges — never trustProxies('*').
+       $middleware->trustProxies(
+           at: CloudflareTrustedProxies::cidrs(),
+           headers: Request::HEADER_X_FORWARDED_FOR
+               | Request::HEADER_X_FORWARDED_HOST
+               | Request::HEADER_X_FORWARDED_PORT
+               | Request::HEADER_X_FORWARDED_PROTO
+               | Request::HEADER_X_FORWARDED_PREFIX
+       );
 
         // Host → brand context for every web + API request (before controllers).
         $middleware->append(ResolveBrandFromHost::class);
@@ -110,6 +122,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // brand:run applies BrandJobPolicy (per_brand / oia_only / global_shared).
         $schedule->command('brand:run', ['live-watch:cleanup'])
             ->everyMinute()->name('brand:live-watch:cleanup')->withoutOverlapping()->runInBackground();
+        // Refresh Cloudflare trusted-proxy CIDRs from official lists (global infra).
+        $schedule->command('brand:run', ['cloudflare:refresh-ips'])
+            ->dailyAt('03:40')->timezone('Asia/Dubai')->name('brand:cloudflare:refresh-ips')
+            ->withoutOverlapping()->runInBackground();
         $schedule->command('brand:run', ['activities:send-reminders'])
             ->everyMinute()->name('brand:activities:send-reminders');
         $schedule->command('brand:run', ['marketing:send-reminders'])
