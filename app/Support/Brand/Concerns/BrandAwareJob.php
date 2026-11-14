@@ -23,6 +23,27 @@ trait BrandAwareJob
         $this->brandKey = BrandIsolation::trustedKey();
     }
 
+    /**
+     * Lead jobs run in the LEAD's company, not the dispatcher's. A Property Finder /
+     * Meta lead is created in OIA context but belongs to Luxvant when its responsible
+     * person is a Luxvant agent — in OIA context the job could not even find it, so
+     * auto-assignment never moved it out of New Lead.
+     */
+    public function initializeBrandContextForLead(int $leadId): void
+    {
+        $this->initializeBrandContext();
+
+        try {
+            $brand = \Illuminate\Support\Facades\DB::table('leads')->where('id', $leadId)->value('brand_key');
+        } catch (\Throwable) {
+            $brand = null;
+        }
+
+        if (is_string($brand) && $brand !== '' && is_array(config('brands.brands.'.$brand))) {
+            $this->brandKey = $brand;
+        }
+    }
+
     public function restoreBrandContext(): void
     {
         BrandCrmScope::reset();

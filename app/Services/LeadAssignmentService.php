@@ -136,7 +136,7 @@ class LeadAssignmentService
             ];
         });
 
-        $salesIds = User::query()->whereHas('roles', fn ($q) => $q->where('name', 'sales'))->pluck('id')->all();
+        $salesIds = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->whereHas('roles', fn ($q) => $q->where('name', 'sales'))->pluck('id')->all();
         $terminal = $this->terminalStageIds();
         $loadQ = Lead::query()
             ->selectRaw('responsible_person_id as uid, COUNT(*) as c')
@@ -168,7 +168,7 @@ class LeadAssignmentService
 
     public function refreshSalesPerformanceSnapshot(): void
     {
-        $salesIds = User::query()
+        $salesIds = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())
             ->whereHas('roles', fn ($q) => $q->where('name', 'sales'))
             ->pluck('id');
 
@@ -1932,7 +1932,8 @@ class LeadAssignmentService
 
     protected function baseSalesQuery()
     {
-        $query = User::query()
+        // Same company only: an OIA lead never goes to a Luxvant agent and vice versa.
+        $query = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())
             ->whereHas('roles', fn ($q) => $q->where('name', 'sales'));
 
         if (\Spatie\Permission\Models\Permission::where('name', 'show-leads')->exists()) {
@@ -2040,7 +2041,7 @@ class LeadAssignmentService
         }
 
         /** @var User|null $agent */
-        $agent = User::query()
+        $agent = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())
             ->whereKey((int) $fid)
             ->where('on_vacation', false)
             ->whereHas('roles', fn ($q) => $q->where('name', 'sales'))
@@ -2202,7 +2203,7 @@ class LeadAssignmentService
                 return null;
             }
 
-            $agent = User::query()
+            $agent = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())
                 ->whereKey($salesUserId)
                 ->whereHas('roles', fn ($q) => $q->where('name', 'sales'))
                 ->first();

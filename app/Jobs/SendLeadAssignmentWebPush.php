@@ -20,7 +20,7 @@ class SendLeadAssignmentWebPush implements ShouldQueue
 
     public function __construct(public int $userId, public int $leadId)
     {
-        $this->initializeBrandContext();
+        $this->initializeBrandContextForLead($leadId);
     }
 
     public function handle(LeadAssignmentWebPushSender $sender): void
