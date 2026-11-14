@@ -154,7 +154,7 @@ return [
                 'on_dark' => '/assets/images/brands/luxvant/logo-white.png',
                 'product' => '/assets/images/brands/luxvant/logo-white.png',
                 'favicon' => '/assets/images/brands/luxvant/favicon.svg',
-                'watermark' => '/assets/images/brands/luxvant/logo-green.png',
+                'watermark' => '/assets/images/brands/luxvant/logo-white.png',
                 'collapsed' => '/assets/images/brands/luxvant/logo-mark.svg',
             ],
             'colors' => [
