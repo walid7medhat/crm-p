@@ -41,6 +41,7 @@ class BrandCrmScope
         self::$branchRoot = null;
         self::$rootResolved = false;
         self::$configuredIds = null;
+        self::$memberMemo = [];
     }
 
     /**
@@ -116,6 +117,35 @@ class BrandCrmScope
 
         return in_array($userId, self::resolveConfiguredBranchUserIds(), true);
     }
+
+    /**
+     * Is this user a Luxvant member (Admin Luxvant tree, or stamped brand_key = luxvant)?
+     * Host-independent — used to give leads / deals the company of their responsible person.
+     */
+    public static function isLuxvantMember(?int $userId): bool
+    {
+        if (! $userId || $userId <= 0) {
+            return false;
+        }
+
+        if (self::userInConfiguredCrmBranch($userId)) {
+            return true;
+        }
+
+        if (! array_key_exists($userId, self::$memberMemo)) {
+            try {
+                self::$memberMemo[$userId] = BrandIsolation::columnReady('users')
+                    && User::query()->whereKey($userId)->value('brand_key') === 'luxvant';
+            } catch (\Throwable) {
+                self::$memberMemo[$userId] = false;
+            }
+        }
+
+        return self::$memberMemo[$userId];
+    }
+
+    /** @var array<int, bool> */
+    private static array $memberMemo = [];
 
     public static function branchRoot(): ?User
     {

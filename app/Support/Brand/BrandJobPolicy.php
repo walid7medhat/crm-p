@@ -47,6 +47,9 @@ class BrandJobPolicy
      */
     public const COMMANDS = [
         'live-watch:cleanup' => 'global_shared', // TTL cleanup of ephemeral watch rows
+        // Safety net: leads/deals of Admin Luxvant agents that came in via OIA
+        // integrations or bulk updates (no model events) → brand_key luxvant.
+        'brand:classify-luxvant-crm' => 'global_shared',
         'activities:send-reminders' => 'per_brand',
         'marketing:send-reminders' => 'per_brand',
         'birthdays:celebrate' => 'per_brand',
