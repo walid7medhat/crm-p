@@ -33,7 +33,7 @@ class UserHistoryController extends Controller
     private const VIEW_ACTIONS = ['view', 'open_lead', 'open_deal', 'open_listing'];
 
     /** Columns that change on every save and say nothing to the reader. */
-    private const NOISE_FIELDS = ['updated_at', 'created_at', 'deleted_at', 'from_lead_pool', 'brand_key', 'remember_token', 'password', 'last_login_at', 'last_seen_at'];
+    private const NOISE_FIELDS = ['updated_at', 'created_at', 'deleted_at', 'from_lead_pool', 'brand_key', 'remember_token', 'password', 'last_login_at', 'last_seen_at', 'bitrix24_last_activity_at'];
 
     /** *_id fields shown as a name instead of a number. */
     private const USER_FIELDS = ['responsible_person_id', 'added_by', 'created_by', 'updated_by', 'assigned_to', 'agent_id', 'merged_by', 'approved_by', 'rejected_by', 'deleted_by'];
@@ -136,7 +136,7 @@ class UserHistoryController extends Controller
                 : $this->formatActivity($activities->get($row->id));
         })->filter()->values()->all();
 
-        $items = $this->resolveIdNames($items);
+        $items = $this->mergeSameAction($this->resolveIdNames($items));
 
         return response()->json([
             'user' => ['id' => $user->id, 'name' => $user->name],
@@ -237,7 +237,86 @@ class UserHistoryController extends Controller
             'action_key' => $action,
             'changes' => $this->historyChanges($changes),
             'created_at' => $h->created_at?->toIso8601String(),
+            'from_lead_pool' => ! empty($changes['from_lead_pool']),
         ];
+    }
+
+    /**
+     * One click can save several lead_histories rows — taking a lead from the pool saves
+     * "assigned", "stage_changed" and "updated" separately. Show them as one entry when
+     * they are next to each other, on the same record, within 2 seconds.
+     */
+    private function mergeSameAction(array $items): array
+    {
+        $mergeable = ['assigned', 'stage_changed', 'updated'];
+        $out = [];
+
+        foreach ($items as $item) {
+            $prev = $out ? $out[count($out) - 1] : null;
+            $canMerge = $prev
+                && in_array($item['type'], ['lead', 'deal'], true)
+                && $prev['type'] === $item['type']
+                && $prev['record_id'] === $item['record_id']
+                && in_array($item['action_key'], $mergeable, true)
+                && ! array_diff($prev['merged_keys'] ?? [$prev['action_key']], $mergeable)
+                && abs(strtotime($prev['created_at']) - strtotime($item['created_at'])) <= 2;
+
+            if (! $canMerge) {
+                $out[] = $item;
+                continue;
+            }
+
+            $merged = $prev;
+            $merged['merged_keys'] = array_values(array_unique([...($prev['merged_keys'] ?? [$prev['action_key']]), $item['action_key']]));
+            $merged['from_lead_pool'] = $prev['from_lead_pool'] || $item['from_lead_pool'];
+            $merged['changes'] = [...$prev['changes'], ...$item['changes']];
+            $out[count($out) - 1] = $merged;
+        }
+
+        foreach ($out as &$item) {
+            // Rows often store one change twice (old_stage + old_stage_id → both "Stage").
+            $item['changes'] = $this->dedupeChanges($item['changes']);
+            $keys = $item['merged_keys'] ?? null;
+            if ($keys) {
+                $item['action'] = $item['from_lead_pool'] && in_array('assigned', $keys, true)
+                    ? 'Took from Lead Pool'
+                    : implode(' & ', array_map(fn ($k) => $this->actionLabel($k), $this->orderActions($keys)));
+                $item['action_key'] = implode('+', $keys);
+            }
+            unset($item['merged_keys'], $item['from_lead_pool']);
+        }
+        unset($item);
+
+        return $out;
+    }
+
+    /** Stage first, then person, then other edits — reads like what happened. */
+    private function orderActions(array $keys): array
+    {
+        $rank = ['stage_changed' => 0, 'assigned' => 1, 'updated' => 2];
+        usort($keys, fn ($a, $b) => ($rank[$a] ?? 9) <=> ($rank[$b] ?? 9));
+
+        return $keys;
+    }
+
+    /**
+     * Drop repeats within one entry. Ids are already names by now, so "Stage id 4 → 10"
+     * and "Stage Assigned → Lead Pool" match; two different moves both stay.
+     */
+    private function dedupeChanges(array $changes): array
+    {
+        $seen = [];
+        $out = [];
+        foreach ($changes as $c) {
+            $key = mb_strtolower($c['label']) . '|' . json_encode($c['old']) . '|' . json_encode($c['new']);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $c;
+        }
+
+        return $out;
     }
 
     /**
@@ -284,7 +363,8 @@ class UserHistoryController extends Controller
             if (! array_key_exists('new_' . $base, $rest)) {
                 continue;
             }
-            if (str_ends_with($base, '_id') && array_key_exists('old_' . substr($base, 0, -3), $rest)) {
+            // Check $changes, not $rest: the readable twin may already be paired and removed.
+            if (str_ends_with($base, '_id') && array_key_exists('old_' . substr($base, 0, -3), $changes)) {
                 unset($rest[$key], $rest['new_' . $base]);
                 continue;
             }
@@ -448,6 +528,9 @@ class UserHistoryController extends Controller
 
     private function fieldLabel(string $field): string
     {
+        if (in_array($field, ['person', 'responsible_person_id'], true)) {
+            return 'Responsible person';
+        }
         $f = preg_replace('/_id$/', '', $field);
 
         return Str::of($f)->replace(['_', '.'], ' ')->squish()->ucfirst()->toString();
@@ -477,7 +560,8 @@ class UserHistoryController extends Controller
         }
         if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $value)) {
             try {
-                return Carbon::parse($value)->format('Y-m-d H:i');
+                // ISO strings are often UTC ("…Z"); show them in the app's own time zone.
+                return Carbon::parse($value)->setTimezone(config('app.timezone'))->format('Y-m-d H:i');
             } catch (\Throwable) {
                 return $value;
             }

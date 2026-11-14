@@ -1205,12 +1205,15 @@ class DealController extends Controller
         $this->updateStageDate($deal, $newStageId);
         $this->syncLeadStageOnDealLost($deal, $newStageId);
 
-            DealHistoryHelper::log($deal->id, [
-                'action' => 'stage_changed',
-                'old_stage' => $oldStageId,
-                'new_stage' => $newStageId,
-                'user_id' => auth()->id()
-            ]);
+            // Dropping a card back on its own column is not a stage change.
+            if ((int) $oldStageId !== $newStageId) {
+                DealHistoryHelper::log($deal->id, [
+                    'action' => 'stage_changed',
+                    'old_stage' => $oldStageId,
+                    'new_stage' => $newStageId,
+                    'user_id' => auth()->id()
+                ]);
+            }
 
             DB::commit();
 
@@ -1285,7 +1288,16 @@ class DealController extends Controller
                     $updateData[$field] = $request->$field;
                 }
             }
-            
+
+            // Kept for the history entry below: what the stage and fields were before this save.
+            $oldStageId = (int) $deal->stage_id;
+            $fieldChanges = [];
+            foreach ($updateData as $field => $value) {
+                if ((string) $deal->getOriginal($field) !== (string) $value) {
+                    $fieldChanges[$field] = ['old' => $deal->getOriginal($field), 'new' => $value];
+                }
+            }
+
             if (!empty($updateData)) {
                 $deal->update($updateData);
             }
@@ -1403,10 +1415,24 @@ class DealController extends Controller
             }
 
             // 6. تسجيل التاريخ
-            DealHistoryHelper::log($deal->id, [
-                'action' => 'stage_changed',
-                'user_id' => auth()->id()
-            ]);
+            // This endpoint also saves plain edits (deal modal, mobile assign) with the
+            // current stage_id, so only log a stage change when the stage really moved.
+            $newStageId = (int) $deal->stage_id;
+            if ($newStageId !== $oldStageId) {
+                DealHistoryHelper::log($deal->id, [
+                    'action' => 'stage_changed',
+                    'old_stage' => $oldStageId ?: null,
+                    'new_stage' => $newStageId,
+                    'user_id' => auth()->id()
+                ]);
+            }
+            if ($fieldChanges || $newStageId === $oldStageId) {
+                DealHistoryHelper::log($deal->id, [
+                    'action' => 'updated',
+                    'changes' => $fieldChanges,
+                    'user_id' => auth()->id()
+                ]);
+            }
 
             DB::commit();
 

@@ -6,7 +6,18 @@
           <h6 class="uh-title mb-0">User History</h6>
           <p class="uh-sub mb-0">Pick a user to see what they changed and when.</p>
         </div>
-        <router-link to="/logs" class="uh-link">All system logs →</router-link>
+        <div class="uh-head-actions">
+          <button
+            type="button"
+            class="uh-export"
+            :disabled="!filters.user_id || !total || exporting"
+            @click="exportCsv"
+          >
+            <iconify-icon icon="lucide:download" />
+            {{ exporting ? `Exporting… ${exportProgress}` : 'Export CSV' }}
+          </button>
+          <router-link to="/logs" class="uh-link">All system logs →</router-link>
+        </div>
       </div>
 
       <div class="uh-row">
@@ -136,6 +147,8 @@ export default {
       page: 1,
       lastPage: 1,
       loading: false,
+      exporting: false,
+      exportProgress: '',
       error: '',
       fetchToken: 0,
       maxChanges: 6,
@@ -224,11 +237,7 @@ export default {
       this.loading = true
       this.error = ''
       try {
-        const params = { user_id: this.filters.user_id, type: this.filters.type, page: this.page, per_page: 25 }
-        if (this.filters.date_from) params.date_from = this.filters.date_from
-        if (this.filters.date_to) params.date_to = this.filters.date_to
-        if (this.filters.include_views) params.include_views = 1
-        const res = await api.get('/user-history', { params })
+        const res = await api.get('/user-history', { params: this.params(this.page, 25) })
         if (token !== this.fetchToken) return
         this.items = res.data.data || []
         this.total = res.data.total || 0
@@ -241,6 +250,56 @@ export default {
         this.error = e?.response?.status === 403 ? 'Only super admins can view user history.' : 'Could not load history. Please try again.'
       } finally {
         if (token === this.fetchToken) this.loading = false
+      }
+    },
+    params(page, perPage) {
+      const params = { user_id: this.filters.user_id, type: this.filters.type, page, per_page: perPage }
+      if (this.filters.date_from) params.date_from = this.filters.date_from
+      if (this.filters.date_to) params.date_to = this.filters.date_to
+      if (this.filters.include_views) params.include_views = 1
+      return params
+    },
+    // Exports every entry matching the filters, not just the page on screen.
+    async exportCsv() {
+      if (!this.filters.user_id || this.exporting) return
+      this.exporting = true
+      try {
+        const all = []
+        let page = 1
+        let last = 1
+        do {
+          this.exportProgress = last > 1 ? `${page}/${last}` : ''
+          const res = await api.get('/user-history', { params: this.params(page, 200) })
+          all.push(...(res.data.data || []))
+          last = res.data.last_page || 1
+          page += 1
+        } while (page <= last)
+
+        const header = ['Date', 'Time', 'User', 'Type', 'Action', 'Record', 'Changes']
+        const rows = all.map((item) => {
+          const d = item.created_at ? new Date(item.created_at) : null
+          const changes = item.changes
+            .map((c) => (c.detail || c.old === null ? `${c.label}: ${this.shown(c.new)}` : `${c.label}: ${this.shown(c.old)} → ${this.shown(c.new)}`))
+            .join('\n')
+          return [d ? ymd(d) : '', d ? this.timeOf(item.created_at) : '', this.userName, this.typeLabel(item), item.action, item.record_name, changes]
+        })
+        const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+        const csv = [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n')
+
+        // BOM so Excel reads UTF-8 (Arabic names) correctly.
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        const safeName = this.userName.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'user'
+        a.href = url
+        a.download = `history-${safeName}-${this.filters.date_from || 'start'}-to-${this.filters.date_to || ymd(new Date())}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch {
+        this.error = 'Export failed. Please try again.'
+      } finally {
+        this.exporting = false
+        this.exportProgress = ''
       }
     },
     syncQuery() {
@@ -292,6 +351,13 @@ export default {
 .uh-title { font-size: 14px; font-weight: 700; color: #0f172a; }
 .uh-sub { font-size: 12px; color: #475569; }
 .uh-link { font-size: 12px; color: #2563eb; text-decoration: none; }
+.uh-head-actions { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.uh-export {
+  height: 32px; border: 1px solid #d5dbe6; border-radius: 8px; background: #fff; color: #0f172a;
+  font-size: 12px; font-weight: 600; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;
+}
+.uh-export:hover:not(:disabled) { border-color: #94a3b8; }
+.uh-export:disabled { opacity: .5; cursor: not-allowed; }
 
 .uh-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .uh-user { min-width: 240px; flex: 1 1 240px; max-width: 360px; }
