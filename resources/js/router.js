@@ -26,6 +26,7 @@ const baseRoutes = [
     { path: '/sync-responsible', component: () => import('./components/kanban/leadList/SyncResponsible.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/area-coordinates', component: () => import('./pages/areas/BulkAreaCoordinates.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
       { path: '/logs', component: () => import('./pages/logs/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+      { path: '/logs/user-history', component: () => import('./pages/logs/UserHistory.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: '/system-announcements', component: () => import('./pages/system-announcements/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser33: true } },
       { path: '/daily-motivation', component: () => import('./pages/daily-motivation/DailyMotivationAdmin.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
       { path: '/next-action-tour', component: () => import('./pages/next-action-tour/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },

@@ -650,6 +650,9 @@ Route::middleware(['jwt.auth'])->group(function () {
       Route::get('/my-clients', [LeadController::class, 'getMyClients']);
     Route::get('/logs', [DashboardController::class, 'index'])->name('logs');
     Route::get('/logs/filters', [DashboardController::class, 'logFilters']);
+    // User History page (super_admin only, checked in the controller).
+    Route::get('/user-history', [\App\Http\Controllers\Api\UserHistoryController::class, 'index']);
+    Route::get('/user-history/filters', [\App\Http\Controllers\Api\UserHistoryController::class, 'filters']);
     // أو يمكنك استخدام هذا الاسم
     Route::get('/leads/clients', [LeadController::class, 'getClientsList']);
     
