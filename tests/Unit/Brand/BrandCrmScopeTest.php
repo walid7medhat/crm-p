@@ -71,6 +71,7 @@ class BrandCrmScopeTest extends TestCase
         $scopedSql = strtolower($scoped->toSql());
         $this->assertTrue(
             str_contains($scopedSql, 'responsible_person_id')
+                || str_contains($scopedSql, 'brand_key')
                 || str_contains($scopedSql, '1 = 0')
                 || str_contains($scopedSql, '0 = 1'),
             'Luxvant scope should constrain the HasMany query: '.$scopedSql

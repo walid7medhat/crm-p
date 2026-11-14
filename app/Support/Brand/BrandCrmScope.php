@@ -41,6 +41,7 @@ class BrandCrmScope
         self::$branchRoot = null;
         self::$rootResolved = false;
         self::$configuredIds = null;
+        self::$memberIds = null;
     }
 
     /**
@@ -146,9 +147,38 @@ class BrandCrmScope
             return self::$allowedUserIds;
         }
 
-        self::$allowedUserIds = self::resolveConfiguredBranchUserIds();
+        self::$allowedUserIds = self::luxvantMemberIds();
 
         return self::$allowedUserIds;
+    }
+
+    /** @var list<int>|null */
+    private static ?array $memberIds = null;
+
+    /**
+     * Every Luxvant user, host-independent: the Admin Luxvant tree plus any
+     * user stamped brand_key = luxvant. Leads / deals whose responsible person
+     * is one of these belong to Luxvant.
+     *
+     * @return list<int>
+     */
+    public static function luxvantMemberIds(): array
+    {
+        if (self::$memberIds !== null) {
+            return self::$memberIds;
+        }
+
+        $ids = self::resolveConfiguredBranchUserIds();
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'brand_key')) {
+                $ids = array_merge($ids, User::query()->where('brand_key', 'luxvant')->pluck('id')->map(fn ($id) => (int) $id)->all());
+            }
+        } catch (\Throwable) {
+            // users table not ready (fresh install / tests) — tree only.
+        }
+
+        return self::$memberIds = array_values(array_unique(array_map('intval', $ids)));
     }
 
     public static function userAllowed(?int $userId): bool
@@ -167,6 +197,10 @@ class BrandCrmScope
     public static function leadAllowed(Lead $lead): bool
     {
         if (! self::active()) {
+            return true;
+        }
+
+        if ((string) ($lead->brand_key ?? '') === 'luxvant') {
             return true;
         }
 
@@ -228,16 +262,22 @@ class BrandCrmScope
         $ids = self::allowedUserIds();
         $root = self::branchRoot();
         $branchName = $root?->name;
+        $stamped = BrandIsolation::columnReady('leads');
 
-        if ($ids === []) {
+        if ($ids === [] && ! $stamped) {
             $query->whereRaw('1 = 0');
 
             return;
         }
 
-        $query->where(function ($q) use ($ids, $branchName) {
-            $q->whereIn('responsible_person_id', $ids)
-                ->orWhereIn('added_by', $ids);
+        $query->where(function ($q) use ($ids, $branchName, $stamped) {
+            if ($stamped) {
+                $q->orWhere('brand_key', 'luxvant');
+            }
+            if ($ids !== []) {
+                $q->orWhereIn('responsible_person_id', $ids)
+                    ->orWhereIn('added_by', $ids);
+            }
 
             if ($branchName) {
                 $q->orWhere('lead_branch_source', $branchName);
@@ -255,12 +295,20 @@ class BrandCrmScope
         }
 
         $ids = self::allowedUserIds();
-        if ($ids === []) {
+        $stamped = BrandIsolation::columnReady('deals');
+        if ($ids === [] && ! $stamped) {
             $query->whereRaw('1 = 0');
 
             return;
         }
 
-        $query->whereIn('responsible_person_id', $ids);
+        $query->where(function ($q) use ($ids, $stamped) {
+            if ($stamped) {
+                $q->orWhere('brand_key', 'luxvant');
+            }
+            if ($ids !== []) {
+                $q->orWhereIn('responsible_person_id', $ids);
+            }
+        });
     }
 }

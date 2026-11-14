@@ -65,6 +65,46 @@ class BrandIsolation
      * CRM leads/deals on Luxvant may still be NULL until classified. BrandCrmScope
      * restricts those rows to the Admin Luxvant branch — do not open listings/etc.
      */
+    /** Leads / deals: brand follows the responsible person (Luxvant member → Luxvant). */
+    public const CRM_TABLES = ['leads', 'deals'];
+
+    /**
+     * Brand rule for leads / deals.
+     *  Luxvant host: brand_key = luxvant OR responsible person is a Luxvant member.
+     *  OIA host:     brand_key oia/NULL AND responsible person is not a Luxvant member.
+     * So a lead shows on the company of the user it is assigned to, even before
+     * brand:backfill-legacy has stamped it.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applyCrmBrandRule($query, string $table, string $brandColumn, ?string $key = null)
+    {
+        $key ??= self::trustedKey();
+        $members = BrandCrmScope::luxvantMemberIds();
+        $responsible = $table.'.responsible_person_id';
+
+        if ($key === 'luxvant') {
+            return $query->where(function ($q) use ($brandColumn, $members, $responsible) {
+                $q->where($brandColumn, 'luxvant');
+                if ($members !== []) {
+                    $q->orWhereIn($responsible, $members);
+                }
+            });
+        }
+
+        $query->where(function ($q) use ($brandColumn) {
+            $q->where($brandColumn, 'oia')->orWhereNull($brandColumn);
+        });
+
+        if ($members !== []) {
+            $query->where(function ($q) use ($responsible, $members) {
+                $q->whereNull($responsible)->orWhereNotIn($responsible, $members);
+            });
+        }
+
+        return $query;
+    }
+
     public static function luxvantAllowsUnclassifiedCrmRows(string $table): bool
     {
         // Strict since brand:backfill-legacy classifies every legacy row
@@ -99,6 +139,10 @@ class BrandIsolation
 
         $col = $column ?? ($table.'.brand_key');
         $key = self::trustedKey();
+
+        if (in_array($table, self::CRM_TABLES, true) && $column === null) {
+            return self::applyCrmBrandRule($query, $table, $col, $key);
+        }
 
         if ($key === 'luxvant') {
             if (self::luxvantAllowsUnclassifiedCrmRows($table)) {

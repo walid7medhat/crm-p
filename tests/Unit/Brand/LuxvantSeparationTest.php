@@ -216,6 +216,26 @@ class LuxvantSeparationTest extends TestCase
         $this->assertFalse(BrandIsolation::luxvantAllowsUnclassifiedCrmRows('deals'));
     }
 
+    public function test_leads_follow_responsible_luxvant_member(): void
+    {
+        $members = \Closure::bind(function ($ids) { self::$memberIds = $ids; }, null, BrandCrmScope::class);
+        $members([501, 502]);
+
+        app(BrandContext::class)->set(config('brands.brands.luxvant'));
+        $lux = \Illuminate\Support\Facades\DB::table('leads');
+        BrandIsolation::constrain($lux, 'leads');
+        $this->assertStringContainsString('`leads`.`brand_key` = ?', $lux->toSql());
+        $this->assertStringContainsString('or `leads`.`responsible_person_id` in (?, ?)', $lux->toSql());
+
+        app(BrandContext::class)->set(config('brands.brands.oia'));
+        $oia = \Illuminate\Support\Facades\DB::table('deals');
+        BrandIsolation::constrain($oia, 'deals');
+        $this->assertStringContainsString('`deals`.`brand_key` is null', $oia->toSql());
+        $this->assertStringContainsString('`deals`.`responsible_person_id` not in (?, ?)', $oia->toSql());
+
+        BrandCrmScope::reset();
+    }
+
     public function test_dashboard_and_heat_cache_keys_are_brand_segmented(): void
     {
         $dash = file_get_contents(app_path('Http/Controllers/Api/DashboardController.php'));
