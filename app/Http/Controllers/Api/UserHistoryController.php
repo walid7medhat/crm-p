@@ -33,7 +33,9 @@ class UserHistoryController extends Controller
     private const VIEW_ACTIONS = ['view', 'open_lead', 'open_deal', 'open_listing'];
 
     /** Columns that change on every save and say nothing to the reader. */
-    private const NOISE_FIELDS = ['updated_at', 'created_at', 'deleted_at', 'from_lead_pool', 'brand_key', 'remember_token', 'password', 'last_login_at', 'last_seen_at', 'bitrix24_last_activity_at'];
+    private const NOISE_FIELDS = ['updated_at', 'created_at', 'deleted_at', 'from_lead_pool', 'brand_key', 'remember_token', 'password', 'last_login_at', 'last_seen_at',
+        // Bumped automatically on every touch — not something the user changed.
+        'bitrix24_last_activity_at', 'bitrix24_last_activity_by_id', 'last_engagement_at'];
 
     /** *_id fields shown as a name instead of a number. */
     private const USER_FIELDS = ['responsible_person_id', 'added_by', 'created_by', 'updated_by', 'assigned_to', 'agent_id', 'merged_by', 'approved_by', 'rejected_by', 'deleted_by'];
@@ -225,6 +227,12 @@ class UserHistoryController extends Controller
         $changes = is_array($h->changes) ? $h->changes : [];
         $action = (string) ($changes['action'] ?? 'updated');
         $isDeal = (bool) $h->deal_id;
+        $visibleChanges = $this->historyChanges($changes);
+
+        // An edit that only touched hidden fields (e.g. last engagement time) says nothing.
+        if ($action === 'updated' && ! empty($changes['fields']) && ! $visibleChanges) {
+            return null;
+        }
 
         return [
             'key' => 'h-' . $h->id,
@@ -235,7 +243,7 @@ class UserHistoryController extends Controller
                 : ($leadNames[$h->lead_id] ?? 'Lead #' . $h->lead_id),
             'action' => $this->actionLabel($action),
             'action_key' => $action,
-            'changes' => $this->historyChanges($changes),
+            'changes' => $visibleChanges,
             'created_at' => $h->created_at?->toIso8601String(),
             'from_lead_pool' => ! empty($changes['from_lead_pool']),
         ];
@@ -410,6 +418,11 @@ class UserHistoryController extends Controller
 
         $event = (string) ($a->event ?: $a->description ?: 'updated');
 
+        // Same for model updates whose only changes are hidden fields.
+        if ($event === 'updated' && ($new || $old) && ! $changes) {
+            return null;
+        }
+
         return [
             'key' => 'a-' . $a->id,
             'type' => $isListing ? 'listing' : 'other',
@@ -455,17 +468,21 @@ class UserHistoryController extends Controller
 
         return Lead::withoutGlobalScopes()
             ->whereIn('id', $ids)
-            ->get(['id', 'first_name', 'second_name', 'last_name', 'lead_name', 'company_name', 'lead_number'])
+            ->get(['id', 'first_name', 'second_name', 'last_name', 'lead_name', 'company_name'])
             ->mapWithKeys(function ($l) {
-                // Bitrix imports often only fill lead_name; placeholders like "-" count as empty.
+                // lead_name first; the person's name only when it is empty. "-" counts as empty.
                 $clean = fn ($v) => trim((string) $v, " \t\n\r\0\x0B-.");
-                $name = trim(preg_replace('/\s+/', ' ', implode(' ', array_filter([
-                    $clean($l->first_name), $clean($l->second_name), $clean($l->last_name),
-                ]))));
-                $name = $name !== '' ? $name : ($clean($l->lead_name) ?: $clean($l->company_name));
-                $label = $name !== '' ? $name : 'Lead #' . $l->id;
+                $name = $clean($l->lead_name);
+                if ($name === '') {
+                    $name = trim(preg_replace('/\s+/', ' ', implode(' ', array_filter([
+                        $clean($l->first_name), $clean($l->second_name), $clean($l->last_name),
+                    ]))));
+                }
+                if ($name === '') {
+                    $name = $clean($l->company_name);
+                }
 
-                return [$l->id => $l->lead_number ? "{$label} ({$l->lead_number})" : $label];
+                return [$l->id => $name !== '' ? "{$name} (#{$l->id})" : 'Lead #' . $l->id];
             });
     }
 
