@@ -34,6 +34,8 @@ function storeSessionUser(userData) {
       is_listing_team: userData.is_listing_team,
       is_dubai_listing_approver: userData.is_dubai_listing_approver,
       admin_parent_name: userData.admin_parent_name,
+      lead_pool_enabled: userData.lead_pool_enabled,
+      can_manage_lead_pool: userData.can_manage_lead_pool,
     })
   )
 }

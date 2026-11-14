@@ -71,6 +71,8 @@ const baseRoutes = [
   { path: '/lead-reports', component: () => import('./pages/lead-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
+  // Lead Pool Settings: super_admin + user 30 (all agents), manage-lead-pool-settings permission (own branch).
+  { path: '/lead-pool-settings', component: () => import('./pages/lead-pool-settings.vue'), meta: { requiresAuth: true, requiresLeadPoolManager: true } },
   // Owner Financial Intelligence: super admins + user #30 (OwnerFinancialReport::canView).
   { path: '/owner-financial-intelligence', component: () => import('./pages/owner-financial-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
   { path: '/lead-export', component: () => import('./pages/lead-export.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
@@ -340,6 +342,22 @@ const isAdminFromStorage = () => {
     return false
   }
 }
+/** Lead Pool Settings page (LeadPoolAssignmentService::canManageSettings). */
+const isLeadPoolManagerFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    if (typeof u?.can_manage_lead_pool === 'boolean') return u.can_manage_lead_pool
+    // Signed in before this field existed: super_admin, user #30, or the permission.
+    const roles = Array.isArray(u?.roles) ? u.roles : []
+    const permissions = Array.isArray(u?.permissions) ? u.permissions : []
+    return Number(u?.id) === 30 || roles.includes('super_admin') || permissions.includes('manage-lead-pool-settings')
+  } catch {
+    return false
+  }
+}
+
 const isBranchAdminFromStorage = () => {
   try {
     const raw = localStorage.getItem('user')
@@ -420,6 +438,11 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.requiresAuth && !isValidToken) {
     next('/sign-in')
+    return
+  }
+
+  if (to.matched.some((r) => r.meta.requiresLeadPoolManager) && !isLeadPoolManagerFromStorage()) {
+    next('/')
     return
   }
 

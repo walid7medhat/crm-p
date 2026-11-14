@@ -1078,6 +1078,12 @@ const {
 const { proxy } = getCurrentInstance();
 const user = ref(null);
 
+// kanban_deal.vue re-checked Lead Pool access (Lead Pool Settings page) → refresh the tabs.
+function onLeadPoolAccessChanged(event) {
+  if (!user.value || typeof event?.detail !== 'boolean') return;
+  user.value = { ...user.value, lead_pool_enabled: event.detail };
+}
+
 const isAdmin = computed(() => {
   if (!user.value) return false;
   return (
@@ -2888,6 +2894,7 @@ onMounted(() => {
   window.removeEventListener('kanban-url-filter-applied', onKanbanUrlFilterApplied)
   window.removeEventListener('kanban-open-search', onKanbanOpenSearchEvent)
   window.addEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
+  window.addEventListener('lead-pool-access-changed', onLeadPoolAccessChanged)
   window.addEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.addEventListener('kanban-deals-board-view', onDealsBoardViewFromPage)
   window.addEventListener('marketing-tab-change', onMarketingTabChangeFromPage)
@@ -2973,6 +2980,7 @@ onUnmounted(() => {
   window.removeEventListener('kanban-lead-search-update', onKanbanSearchUpdate)
   window.removeEventListener('kanban-deal-search-update', onKanbanSearchUpdate)
   window.removeEventListener('kanban-tab-change', onKanbanTabChangeFromPage)
+  window.removeEventListener('lead-pool-access-changed', onLeadPoolAccessChanged)
   window.removeEventListener('kanban-deal-type-change', onDealTypeChangeFromPage)
   window.removeEventListener('kanban-deals-board-view', onDealsBoardViewFromPage)
   window.removeEventListener('marketing-tab-change', onMarketingTabChangeFromPage)

@@ -504,6 +504,8 @@ export default {
                                     role_name: this.currentUser.role_name || this.currentUser.roles?.[0]?.name || 'User',
                                     is_listing_team: this.currentUser.is_listing_team,
                                     is_dubai_listing_approver: this.currentUser.is_dubai_listing_approver,
+                                    lead_pool_enabled: this.currentUser.lead_pool_enabled,
+                                    can_manage_lead_pool: this.currentUser.can_manage_lead_pool,
                                 };
                                 
                                 localStorage.setItem('user', JSON.stringify(userToStore));

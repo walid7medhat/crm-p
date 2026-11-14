@@ -1,5 +1,9 @@
 <template>
     <div class="lead-pool-wrapper" :class="{ 'lead-pool-wrapper--searching': searching }">
+        <!-- Lead Pool turned off for this agent (Lead Pool Settings page). -->
+        <div v-if="assignmentStatus.enabled === false" class="lead-pool-disabled-notice" role="status">
+            Lead Pool is not enabled for your account. Please contact your branch admin.
+        </div>
         <div class="lead-pool-filterbar">
             <span class="lead-pool-filterbar__label">TYPE</span>
             <button
@@ -493,6 +497,7 @@ const orderedLeadIds = computed(() => leads.value.map((l) => l.id))
 const selection = useLeadPoolSelection(() => orderedLeadIds.value)
 const { isAssigning, assignToMe, assignTo } = useLeadPoolBulkActions()
 const assignmentStatus = ref({
+    enabled: true,
     today_count: 0,
     daily_limit: 40,
     remaining_today: 40,
@@ -1146,6 +1151,16 @@ defineExpose({
 </script>
 
 <style scoped>
+.lead-pool-disabled-notice {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border: 1px solid #f5c2c0;
+    border-radius: 10px;
+    background: #fdecec;
+    color: #b3261e;
+    font-size: 13px;
+    font-weight: 600;
+}
 .merged-flag {
     display: inline-flex;
     align-items: center;

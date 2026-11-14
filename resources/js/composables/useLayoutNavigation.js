@@ -127,6 +127,7 @@ const SETTINGS_PREFIXES = [
   '/lead-reports',
   '/lead-source-report',
   '/lead-pool-report',
+  '/lead-pool-settings',
   '/owner-financial-intelligence',
   '/lead-export',
   '/daily-leads-report',
@@ -378,6 +379,7 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       '/lead-reports',
       '/lead-source-report',
       '/lead-pool-report',
+      '/lead-pool-settings',
       '/owner-financial-intelligence',
       '/lead-export',
       '/daily-leads-report',
@@ -429,7 +431,8 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
 
   if (section === CRM_SECTIONS.LEAD) {
     // accountant: Converted-stage leads only — no Lead Pool.
-    if (user?.roles?.includes('accountant')) {
+    // …nor for an agent whose Lead Pool was turned off (Lead Pool Settings page).
+    if (user?.roles?.includes('accountant') || user?.lead_pool_enabled === false) {
       return [{ id: 'leads', label: 'Lead', type: 'event' }];
     }
     return [

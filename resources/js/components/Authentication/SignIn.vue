@@ -369,6 +369,9 @@ export default {
             // Dubai branch admin → "Need Approval Listings" menu (approves Dubai listings).
             is_dubai_listing_approver: userData.is_dubai_listing_approver,
             admin_parent_name: userData.admin_parent_name,
+            // Lead Pool Settings: hide the Lead Pool tab / show the settings page.
+            lead_pool_enabled: userData.lead_pool_enabled,
+            can_manage_lead_pool: userData.can_manage_lead_pool,
           })
         );
 

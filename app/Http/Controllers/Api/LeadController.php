@@ -305,6 +305,10 @@ class LeadController extends Controller
                 } elseif ($user->isAccountant()) {
                     // accountant: converted leads of their branch only — never the Lead Pool.
                     $user->applyLeadResponsibleScope($leadsQuery, $user->getBranchUserIds());
+                } elseif ((int) $request->stage_id === 10
+                    && ! app(LeadPoolAssignmentService::class)->isEnabledFor($user)) {
+                    // Lead Pool turned off for this agent (Lead Pool Settings page).
+                    $leadsQuery->whereRaw('1 = 0');
                 } elseif ((int) $request->stage_id === 10) {
 
                         // Lead Pool:

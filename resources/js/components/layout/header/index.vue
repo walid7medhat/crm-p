@@ -1388,6 +1388,21 @@ const mainMenuItems = computed(() => {
     items.push({ path: '/owner-financial-intelligence', label: 'Owner Financial Intelligence', iconSrc: dealsIcon.value });
   }
 
+  // Lead Pool Settings (who sees the pool + per-day / per-hour limits): super_admin and
+  // user #30 (every agent), or the `manage-lead-pool-settings` permission (own branch) —
+  // LeadPoolAssignmentService::canManageSettings.
+  {
+    const u = user.value || {};
+    const r = u.roles || [];
+    const p = u.permissions || [];
+    const canManageLeadPool = typeof u.can_manage_lead_pool === 'boolean'
+      ? u.can_manage_lead_pool
+      : Number(u.id) === 30 || r.includes('super_admin') || p.includes('manage-lead-pool-settings');
+    if (canManageLeadPool) {
+      items.push({ path: '/lead-pool-settings', label: 'Lead Pool Settings', iconSrc: leadsIcon.value });
+    }
+  }
+
   if (isAdmin.value) {
     items.push({ path: '/lead-source-report', label: 'Leads by Source', iconSrc: insightsIcon.value });
     items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', iconSrc: leadsIcon.value });

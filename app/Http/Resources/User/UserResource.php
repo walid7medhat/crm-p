@@ -78,6 +78,29 @@ class UserResource extends JsonResource
                 ?: User::resolveDisplayName($this->office),
             'joining_date' => $this->employeeProfile?->joining_date,
             'receive_absent_email' => (bool) $this->receive_absent_email,
+            ...$this->leadPoolFieldsForSelf(),
+        ];
+    }
+
+    /**
+     * Lead Pool Settings flags (may this user see the Lead Pool / manage others' access).
+     * Only for the user's own record (login, /me) — skipped in user lists, so they don't
+     * run a permission check per row. The frontend treats null as "unknown".
+     *
+     * @return array<string, bool|null>
+     */
+    private function leadPoolFieldsForSelf(): array
+    {
+        $viewerId = auth()->id();
+        if ($viewerId !== null && (int) $viewerId !== (int) $this->id) {
+            return ['lead_pool_enabled' => null, 'can_manage_lead_pool' => null];
+        }
+
+        $service = app(\App\Services\LeadPoolAssignmentService::class);
+
+        return [
+            'lead_pool_enabled' => $service->isEnabledFor($this->resource),
+            'can_manage_lead_pool' => $service->canManageSettings($this->resource),
         ];
     }
 

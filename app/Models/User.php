@@ -71,7 +71,10 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             'last_login_lng' => 'float',
             'last_login_accuracy' => 'integer',
             'last_login_location_at' => 'datetime',
-            'receive_absent_email' => 'boolean'
+            'receive_absent_email' => 'boolean',
+            'lead_pool_enabled' => 'boolean',
+            'lead_pool_daily_limit' => 'integer',
+            'lead_pool_hourly_limit' => 'integer',
         ];
     }
     /**

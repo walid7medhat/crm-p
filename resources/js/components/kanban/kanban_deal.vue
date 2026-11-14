@@ -115,11 +115,20 @@ function storedUserIsAccountant() {
     }
 }
 
+// Lead Pool turned off for this agent (Lead Pool Settings page) → no Lead Pool tab.
+function storedUserHasNoLeadPool() {
+    try {
+        return JSON.parse(localStorage.getItem('user') || 'null')?.lead_pool_enabled === false
+    } catch {
+        return false
+    }
+}
+
 function readStoredKanbanTab() {
     try {
         const v = localStorage.getItem(KANBAN_ACTIVE_TAB_KEY)
         if (v === 'integration') return 'leads'
-        if (v === 'lead-pool' && storedUserIsAccountant()) return 'leads'
+        if (v === 'lead-pool' && (storedUserIsAccountant() || storedUserHasNoLeadPool())) return 'leads'
         if (['deals', 'leads', 'lead-pool'].includes(v)) return v
     } catch {
         /* ignore */
@@ -422,7 +431,7 @@ const tabs = computed(() => {
         // { id: 'analytics', name: 'Analytics', hasChevron: false }
     ]
 
-    if (user.value?.roles?.includes('accountant')) {
+    if (user.value?.roles?.includes('accountant') || user.value?.lead_pool_enabled === false) {
         return baseTabs.filter((t) => t.id !== 'lead-pool')
     }
     return baseTabs
@@ -560,8 +569,37 @@ const setupKanbanListeners = () => {
 }
 
 
+// The stored user is written at login only — re-check Lead Pool access (Lead Pool Settings
+// page) so turning it on/off for an agent takes effect on the next page load.
+async function syncLeadPoolAccess() {
+    try {
+        const res = await api.get('/lead-pool/assignment-status')
+        const enabled = res?.data?.data?.enabled
+        if (typeof enabled !== 'boolean' || !user.value) return
+        if (user.value.lead_pool_enabled === enabled) return
+
+        user.value = { ...user.value, lead_pool_enabled: enabled }
+        try {
+            const stored = JSON.parse(localStorage.getItem('user') || 'null')
+            if (stored) {
+                stored.lead_pool_enabled = enabled
+                localStorage.setItem('user', JSON.stringify(stored))
+            }
+        } catch {
+            /* ignore */
+        }
+        if (!enabled && activeTab.value === 'lead-pool') {
+            activeTab.value = 'leads'
+        }
+        window.dispatchEvent(new CustomEvent('lead-pool-access-changed', { detail: enabled }))
+    } catch {
+        /* ignore — the server still enforces access */
+    }
+}
+
 onMounted(() => {
        setupKanbanListeners()
+    syncLeadPoolAccess()
     if (activeTab.value === 'integration') {
         activeTab.value = 'leads'
     }

@@ -9,17 +9,60 @@ use Illuminate\Support\Str;
 
 class LeadPoolAssignmentService
 {
+    /** Default "Assign To Me" leads per day (users.lead_pool_daily_limit = null). */
     public const DAILY_LIMIT = 40;
 
+    /** Default "Assign To Me" leads per hour round (users.lead_pool_hourly_limit = null). */
     public const BATCH_LIMIT = 10;
 
     public const COOLDOWN_MINUTES = 60;
 
+    /** Bounds a manager may set on the Lead Pool Settings page. */
+    public const MAX_DAILY_LIMIT = 500;
+
+    public const MAX_HOURLY_LIMIT = 100;
+
     /** Admins (by user id) who may assign Lead Pool leads to any agent, like super_admin. */
     public const ALL_AGENTS_ADMIN_IDS = [30, 33];
 
+    /** Besides super_admin, these users manage every agent's Lead Pool settings. */
+    public const ALL_SETTINGS_MANAGER_IDS = [30];
+
+    /** Permission to manage the Lead Pool settings of one's own branch (given per user / role). */
+    public const SETTINGS_PERMISSION = 'manage-lead-pool-settings';
+
     /** Roles that can receive Lead Pool leads from an admin. */
     public const AGENT_ROLES = ['sales', 'team_lead', 'manager'];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Per-agent settings
+    |--------------------------------------------------------------------------
+    */
+
+    public function dailyLimitFor(User $user): int
+    {
+        $limit = (int) ($user->lead_pool_daily_limit ?? 0);
+
+        return $limit > 0 ? $limit : self::DAILY_LIMIT;
+    }
+
+    public function hourlyLimitFor(User $user): int
+    {
+        $limit = (int) ($user->lead_pool_hourly_limit ?? 0);
+
+        return $limit > 0 ? $limit : self::BATCH_LIMIT;
+    }
+
+    /** Managers always see the Lead Pool; agents unless a manager turned it off. */
+    public function isEnabledFor(User $user): bool
+    {
+        if ($this->canManageSettings($user)) {
+            return true;
+        }
+
+        return $user->lead_pool_enabled === null || (bool) $user->lead_pool_enabled;
+    }
 
     public function getTodayCount(int $userId): int
     {
@@ -44,15 +87,21 @@ class LeadPoolAssignmentService
         int $count,
         ?string $batchId = null
     ): void {
-        /*
-        |--------------------------------------------------------------------------
-        | Maximum BATCH_LIMIT per batch
-        |--------------------------------------------------------------------------
-        */
+        $user = User::find($userId);
+        if (! $user) {
+            throw new \RuntimeException('User not found.');
+        }
 
-        if ($count > self::BATCH_LIMIT) {
+        if (! $this->isEnabledFor($user)) {
+            throw new \RuntimeException('Lead Pool is disabled for your account.');
+        }
+
+        $dailyLimit = $this->dailyLimitFor($user);
+        $batchLimit = $this->hourlyLimitFor($user);
+
+        if ($count > $batchLimit) {
             throw new \RuntimeException(
-                'You can assign a maximum of ' . self::BATCH_LIMIT . ' leads at a time.'
+                'You can assign a maximum of ' . $batchLimit . ' leads at a time.'
             );
         }
 
@@ -62,16 +111,11 @@ class LeadPoolAssignmentService
         |--------------------------------------------------------------------------
         */
 
-        $todayCount = $this->getTodayCount($userId);
-
-        $remaining = max(
-            0,
-            self::DAILY_LIMIT - $todayCount
-        );
+        $remaining = max(0, $dailyLimit - $this->getTodayCount($userId));
 
         if ($remaining <= 0) {
             throw new \RuntimeException(
-                'You have reached your daily limit of ' . self::DAILY_LIMIT . ' leads. You cannot assign more leads today. Please come back tomorrow.'
+                'You have reached your daily limit of ' . $dailyLimit . ' leads. You cannot assign more leads today. Please come back tomorrow.'
             );
         }
 
@@ -83,13 +127,16 @@ class LeadPoolAssignmentService
 
         /*
         |--------------------------------------------------------------------------
-        | Rounds of BATCH_LIMIT — leads can be taken one by one (or together) until
-        | the round is full, then the receiver is stopped for COOLDOWN_MINUTES
+        | Rounds of the hourly limit — leads can be taken one by one (or together)
+        | until the round is full, then the receiver is stopped for COOLDOWN_MINUTES
         | counted from the last lead of the round.
         |--------------------------------------------------------------------------
         */
 
-        $round = $this->getRoundState($userId);
+        $round = $this->roundStateFromTimes(
+            $this->todayTimes([$userId])->get($userId, collect()),
+            $batchLimit
+        );
 
         if ($round['locked_until']) {
             $nextAvailableAt = $round['locked_until'];
@@ -100,7 +147,7 @@ class LeadPoolAssignmentService
             $time = $nextAvailableAt->format('g:i A');
 
             throw new \RuntimeException(
-                'You have assigned ' . self::BATCH_LIMIT . " leads. You can assign more leads at {$time} (in {$minutes} minutes)."
+                'You have assigned ' . $batchLimit . " leads. You can assign more leads at {$time} (in {$minutes} minutes)."
             );
         }
 
@@ -112,19 +159,23 @@ class LeadPoolAssignmentService
     }
 
     /**
-     * Walks today's assignments in order: every BATCH_LIMIT-th one starts a COOLDOWN_MINUTES
+     * Walks today's assignments in order: every hourly-limit-th one starts a COOLDOWN_MINUTES
      * lock; assignments after a lock ends start a new round.
      *
      * @return array{remaining: int, locked_until: ?\Illuminate\Support\Carbon}
      */
     public function getRoundState(int $userId): array
     {
-        return $this->roundStateFromTimes($this->todayTimes([$userId])->get($userId, collect()));
+        $user = User::find($userId);
+        $batchLimit = $user ? $this->hourlyLimitFor($user) : self::BATCH_LIMIT;
+
+        return $this->roundStateFromTimes($this->todayTimes([$userId])->get($userId, collect()), $batchLimit);
     }
 
     /** @param Collection<int, \Illuminate\Support\Carbon> $times today's assigned_at, oldest first */
-    private function roundStateFromTimes(Collection $times): array
+    private function roundStateFromTimes(Collection $times, int $batchLimit): array
     {
+        $batchLimit = max(1, $batchLimit);
         $inRound = 0;
         $lockedUntil = null;
 
@@ -133,7 +184,7 @@ class LeadPoolAssignmentService
                 $lockedUntil = null;
             }
             $inRound++;
-            if ($inRound >= self::BATCH_LIMIT) {
+            if ($inRound >= $batchLimit) {
                 $lockedUntil = $at->copy()->addMinutes(self::COOLDOWN_MINUTES);
                 $inRound = 0;
             }
@@ -144,7 +195,7 @@ class LeadPoolAssignmentService
         }
 
         return [
-            'remaining' => $lockedUntil ? 0 : self::BATCH_LIMIT - $inRound,
+            'remaining' => $lockedUntil ? 0 : $batchLimit - $inRound,
             'locked_until' => $lockedUntil,
         ];
     }
@@ -179,50 +230,94 @@ class LeadPoolAssignmentService
     }
 
     /**
-     * getStatus() for many users with one query (the admin's agent picker).
+     * getStatus() for many users with one query per table.
      *
      * @return array<int, array>
      */
     public function getStatuses(array $userIds): array
     {
+        $userIds = array_values(array_unique(array_map('intval', $userIds)));
         $timesByUser = $this->todayTimes($userIds);
+        $users = User::with('roles')->whereIn('id', $userIds)->get()->keyBy('id');
         $statuses = [];
 
         foreach ($userIds as $userId) {
+            $user = $users->get($userId);
+            $enabled = $user ? $this->isEnabledFor($user) : false;
+            $dailyLimit = $user ? $this->dailyLimitFor($user) : self::DAILY_LIMIT;
+            $batchLimit = $user ? $this->hourlyLimitFor($user) : self::BATCH_LIMIT;
+
             $times = $timesByUser->get($userId, collect());
             $todayCount = $times->count();
+            $remaining = max(0, $dailyLimit - $todayCount);
 
-            $remaining = max(
-                0,
-                self::DAILY_LIMIT - $todayCount
-            );
-
-            $round = $this->roundStateFromTimes($times);
+            $round = $this->roundStateFromTimes($times, $batchLimit);
             $cooldownActive = $round['locked_until'] !== null;
-            $nextAvailableAt = $round['locked_until'];
 
             $statuses[$userId] = [
+                'enabled' => $enabled,
+
                 // Leads left in the current round (0 while the one-hour break runs).
                 'remaining_in_hour' => $round['remaining'],
 
                 'today_count' => $todayCount,
-                'daily_limit' => self::DAILY_LIMIT,
+                'daily_limit' => $dailyLimit,
 
                 'remaining_today' => $remaining,
 
-                'batch_limit' => self::BATCH_LIMIT,
+                'batch_limit' => $batchLimit,
 
                 'cooldown_active' => $cooldownActive,
 
-                'next_available_at' => $nextAvailableAt?->toISOString(),
+                'next_available_at' => $round['locked_until']?->toISOString(),
 
-                'can_assign' =>
-                    $remaining > 0 &&
-                    ! $cooldownActive,
+                'can_assign' => $enabled && $remaining > 0 && ! $cooldownActive,
             ];
         }
 
         return $statuses;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lead Pool Settings page (who sees the pool, per-day / per-hour limits)
+    |--------------------------------------------------------------------------
+    | super_admin and ALL_SETTINGS_MANAGER_IDS (user 30) → every agent;
+    | anyone with the SETTINGS_PERMISSION permission → agents of their own branch only.
+    */
+
+    public function managesAllSettings(User $user): bool
+    {
+        return $user->hasRole('super_admin')
+            || in_array((int) $user->id, self::ALL_SETTINGS_MANAGER_IDS, true);
+    }
+
+    public function canManageSettings(User $user): bool
+    {
+        // checkPermissionTo (not hasPermissionTo): false instead of throwing when the
+        // permission row doesn't exist yet.
+        return $this->managesAllSettings($user)
+            || $user->checkPermissionTo(self::SETTINGS_PERMISSION);
+    }
+
+    public function manageableAgentsQuery(User $user)
+    {
+        $query = User::query()
+            ->where('status', 'active')
+            ->where('id', '!=', $user->id)
+            ->role(self::AGENT_ROLES);
+
+        if (! $this->managesAllSettings($user)) {
+            $query->whereIn('id', $user->getBranchUserIds());
+        }
+
+        return $query;
+    }
+
+    public function canManageAgent(User $user, int $agentId): bool
+    {
+        return $this->canManageSettings($user)
+            && $this->manageableAgentsQuery($user)->whereKey($agentId)->exists();
     }
 
     /*
