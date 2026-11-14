@@ -13,7 +13,7 @@ class CommentAttachmentResource extends JsonResource
             'comment_id' => $this->comment_id,
             'file_name' => $this->file_name,
             'file_path' => $this->file_path,
-            'file_url' => asset('storage/' . $this->file_path),
+            'file_url' => app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($this->file_path, 'deal_comment_attachment', (int) $this->id),
             'file_type' => $this->file_type,
             'file_size' => $this->file_size,
             'file_size_formatted' => $this->formatFileSize($this->file_size),

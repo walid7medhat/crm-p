@@ -22,6 +22,7 @@ class UserRequest extends FormRequest
                 'required',
                 'email',
                 Rule::unique('users')->ignore($userId),
+                new \App\Rules\BrandEmailDomain($this->route('user')?->email),
             ],
             'phone' => 'nullable|string|max:20',
             'password' => $userId ? 'nullable|string|min:6' : 'required|string|min:6',

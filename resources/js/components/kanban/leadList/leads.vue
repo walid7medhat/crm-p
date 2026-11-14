@@ -5423,7 +5423,7 @@ function stageTextOn(hex) {
 // Mobile stage tab: border in the stage colour; filled with it when active.
 // Light colours (e.g. yellow) use dark text so the label stays readable.
 function mobileStagePillStyle(col) {
-    const color = col?.color || '#733E87'
+    const color = col?.color || getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#733E87'
     return {
         '--pill-color': color,
         '--pill-text': stageIsLight(color) ? '#1c1730' : color,
@@ -7978,7 +7978,7 @@ const fetchRevertNotifications = async () => {
 .kanban-card.ghost:not(.dragging) {
     opacity: 0.8;
     background:
-        linear-gradient(165deg, rgba(250, 163, 0, 0.16), rgba(115, 62, 135, 0.08) 58%, rgba(1, 6, 45, 0.04)) !important;
+        linear-gradient(165deg, rgba(250, 163, 0, 0.16), rgba(var(--color-primary-rgb, 115, 62, 135), 0.08) 58%, rgba(1, 6, 45, 0.04)) !important;
     border: 1.5px dashed rgba(250, 163, 0, 0.95) !important;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.7),
@@ -7998,8 +7998,8 @@ const fetchRevertNotifications = async () => {
 .kanban-card.dragging.lead-pack-drag {
     box-shadow:
         0 22px 34px -12px rgba(1, 6, 45, 0.32),
-        10px 12px 0 rgba(115, 62, 135, 0.28),
-        18px 22px 0 rgba(115, 62, 135, 0.16),
+        10px 12px 0 rgba(var(--color-primary-rgb, 115, 62, 135), 0.28),
+        18px 22px 0 rgba(var(--color-primary-rgb, 115, 62, 135), 0.16),
         0 0 0 1px rgba(250, 163, 0, 0.4) !important;
 }
 
@@ -8039,8 +8039,8 @@ const fetchRevertNotifications = async () => {
 .lead-pack-drag {
     box-shadow:
         0 16px 30px rgba(76, 29, 110, 0.22),
-        10px 12px 0 rgba(115, 62, 135, 0.28),
-        18px 22px 0 rgba(115, 62, 135, 0.16) !important;
+        10px 12px 0 rgba(var(--color-primary-rgb, 115, 62, 135), 0.28),
+        18px 22px 0 rgba(var(--color-primary-rgb, 115, 62, 135), 0.16) !important;
 }
 
 .lead-pack-drag::after {
@@ -8064,8 +8064,8 @@ const fetchRevertNotifications = async () => {
 
 .tasks-list.lead-pack-target {
     border-radius: 14px;
-    background: rgba(115, 62, 135, 0.08);
-    box-shadow: inset 0 0 0 2px rgba(115, 62, 135, 0.45);
+    background: rgba(var(--color-primary-rgb, 115, 62, 135), 0.08);
+    box-shadow: inset 0 0 0 2px rgba(var(--color-primary-rgb, 115, 62, 135), 0.45);
 }
 
 .tasks-list.lead-pack-blocked {
@@ -8489,7 +8489,7 @@ const fetchRevertNotifications = async () => {
     );
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.04),
-        0 14px 30px -18px var(--column-color, rgba(115, 62, 135, 0.45));
+        0 14px 30px -18px var(--column-color, rgba(var(--color-primary-rgb, 115, 62, 135), 0.45));
     height: auto !important;
     min-height: 0 !important;
     max-height: none;

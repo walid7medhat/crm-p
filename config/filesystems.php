@@ -61,6 +61,28 @@ return [
             'report' => false,
         ],
 
+        /*
+        | Separate Luxvant storage (leads, listings, deals, users) — new uploads only.
+        | Paths keep the "luxvant/..." prefix; public files are served at
+        | /storage/luxvant/... by the fallback route in routes/web.php.
+        */
+        'luxvant_public' => [
+            'driver' => 'local',
+            'root' => rtrim(env('LUXVANT_STORAGE_ROOT', storage_path('app/luxvant_storage')), '/\\').'/public',
+            'url' => env('APP_URL').'/storage',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'luxvant_company' => [
+            'driver' => 'local',
+            'root' => rtrim(env('LUXVANT_STORAGE_ROOT', storage_path('app/luxvant_storage')), '/\\').'/company',
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

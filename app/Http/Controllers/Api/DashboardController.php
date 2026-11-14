@@ -72,6 +72,7 @@ public function index(Request $request)
                 Listing::class => ['area:id,name'],
             ]);
         }]);
+    $this->constrainActivityToBrand($query);
 
     // Filter by log_name
     if ($request->model) {
@@ -146,7 +147,7 @@ public function logFilters()
 
     return response()->json([
         'modules' => Activity::query()->whereNotNull('subject_type')->distinct()->orderBy('subject_type')->pluck('subject_type'),
-        'users' => User::whereIn('id', Activity::query()->where('causer_type', $userMorph)->select('causer_id'))
+        'users' => \App\Support\Brand\BrandIsolation::constrainUsers(User::whereIn('id', Activity::query()->where('causer_type', $userMorph)->select('causer_id')))
             ->orderBy('name')
             ->get(['id', 'name']),
         'roles' => DB::table('roles')->orderBy('name')->pluck('name'),
@@ -193,13 +194,39 @@ private function applyLogLevel($query, string $level): void
 }
 
 /**
+ * Sub-query of user ids that belong to the current host brand
+ * (super admin sees only the brand of the host they are on).
+ */
+private function brandUserIdsQuery()
+{
+    return \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->select('users.id');
+}
+
+/**
+ * Activity log rows caused by current-brand users. Causer-less system rows
+ * are kept on OIA only.
+ */
+private function constrainActivityToBrand($query): void
+{
+    $isLuxvant = \App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant';
+    $userIds = $this->brandUserIdsQuery();
+
+    $query->where(function ($q) use ($userIds, $isLuxvant) {
+        $q->whereIn('causer_id', $userIds);
+        if (! $isLuxvant) {
+            $q->orWhereNull('causer_id');
+        }
+    });
+}
+
+/**
  * Cache a dashboard JSON response for a short time, per user and filters.
  * Dashboard widgets run many COUNT queries and are reloaded often; a minute-old
  * number is fine there. Only successful responses are cached.
  */
 private function cachedDashboardJson(string $name, Request $request, int $seconds, \Closure $build)
 {
-    $key = 'dashboard:' . $name . ':' . auth()->id() . ':' . md5(json_encode($request->query()));
+    $key = 'dashboard:' . \App\Support\Brand\BrandIsolation::cacheSegment() . ':' . $name . ':' . auth()->id() . ':' . md5(json_encode($request->query()));
 
     $cached = Cache::get($key);
     if (is_array($cached)) {
@@ -239,7 +266,7 @@ private function buildStats(Request $request)
     })->pluck('id')->toArray();
 
     // ================= Agents =================
-    $agentsBase = User::when(
+    $agentsBase = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->when(
         !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
         fn($q) => $q->whereIn('parent_id', $user_herarchy)
     );
@@ -302,7 +329,7 @@ private function buildStats(Request $request)
         ->count();
 
     // ================= Owners =================
-    $ownersBase = Owner::when(
+    $ownersBase = Owner::query()->when(
         !($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')),
         fn($q) => $q->where('added_by', auth()->id())
     );
@@ -415,7 +442,7 @@ private function getTopListingPerformanceChart($currentUser, $user_hierarchy, ?C
         }
     };
 
-    $agents = User::query()
+    $agents = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())
         ->when(! ($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function ($q) use ($user_hierarchy) {
             $q->whereIn('id', $user_hierarchy);
         })
@@ -602,7 +629,7 @@ public function getActiveAgents()
     })->pluck('id')->toArray();
 
     // إجمالي الوكلاء
-    $totalAgents = User::
+    $totalAgents = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->
     // whereHas('roles', function($query) {
     //     $query->whereIn('name', ['sales','team_lead']);
     // })->
@@ -611,7 +638,7 @@ public function getActiveAgents()
     })->count();
 
     // النسبة المئوية للتغير
-    $lastMonthAgents = User::
+    $lastMonthAgents = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->
     // whereHas('roles', function($query) {
     //     $query->whereIn('name', ['sales','team_lead']);
     // })->
@@ -624,7 +651,7 @@ public function getActiveAgents()
         (($totalAgents - $lastMonthAgents) / $lastMonthAgents) * 100 : 0;
 
     // التغير اليومي (الوكلاء المضافين اليوم)
-    $dailyChange = User::
+    $dailyChange = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->
     // whereHas('roles', function($query) {
     //     $query->whereIn('name', ['sales','team_lead']);
     // })->
@@ -635,7 +662,7 @@ public function getActiveAgents()
     // Last 7 days (one GROUP BY instead of 7 COUNT queries). Labels stay chronological.
     $weekFrom = now()->subDays(6)->startOfDay();
     $weekTo = now()->endOfDay();
-    $agentWeekBase = User::query()
+    $agentWeekBase = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())
         ->when(! ($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')), function ($q) use ($user_hierarchy) {
             $q->whereIn('parent_id', $user_hierarchy);
         });
@@ -922,7 +949,7 @@ public function getTopAgentPerformance(Request $request)
     
     // if ($currentUser->hasRole('super_admin') || $currentUser->hasRole('admin')) {
         // Admin يشوف كل users
-        $user_hierarchy = User::pluck('id')->toArray();
+        $user_hierarchy = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->pluck('id')->toArray();
     // } else {
     //     // نجيب أعلى مدير في السلسلة
     //     $topManagerId = $this->getTopManagerId($currentUser);
@@ -1320,7 +1347,7 @@ public function getPropertyTypesWithListings(Request $request)
                     ->orderBy('created_at', 'desc')
                     ->count();
 
-                $hot_deals = HotDealRequest::when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function ($q) use ($user_hierarchy) {
+                $hot_deals = HotDealRequest::query()->when(!($user->hasRole('admin') || $user->hasRole('super_admin')), function ($q) use ($user_hierarchy) {
                     $q->whereIn('requested_by', $user_hierarchy);
                 })->where('status', 'pending')->orderBy('created_at', 'desc')
                     ->count();
@@ -1890,7 +1917,7 @@ public function getPropertyTypesWithListings(Request $request)
     private function buildHrAnalytics(array $userHierarchy, bool $isAdmin): array
     {
         // ── HR (summary from users; attendance approximated) ──
-        $employeesBase = User::query()->where('status', 'active');
+        $employeesBase = \App\Support\Brand\BrandIsolation::constrainUsers(User::query())->where('status', 'active');
         if (! $isAdmin) {
             $employeesBase->whereIn('id', $userHierarchy);
         }

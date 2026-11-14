@@ -18,7 +18,7 @@ class StoreEmployeeRequest extends FormRequest
             // ========== USER BASIC INFO ==========
             'name' => 'required|string|max:255',
             'employee_name'=>'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => ['required', 'email', 'unique:users,email', new \App\Rules\BrandEmailDomain()],
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
             'role_id' => 'nullable|exists:roles,id',

@@ -345,7 +345,7 @@ class EmployeeController extends Controller
         }
         
         if ($request->hasFile('avatar')) {
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            if ($user->avatar && \App\Support\Brand\BrandStorage::diskHolding($user->avatar) !== null) {
                 \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
             $userData['avatar'] = \App\Support\Brand\BrandIsolation::storeInDirectory($request->file('avatar'), 'users/avatars');
@@ -469,7 +469,7 @@ class EmployeeController extends Controller
             }
             
             // Delete avatar
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            if ($user->avatar && \App\Support\Brand\BrandStorage::diskHolding($user->avatar) !== null) {
                 \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
             

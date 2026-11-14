@@ -14,8 +14,12 @@ class ImageHelper
     string $storagePath,
     array $options = []
 ): array {
+    // Brand-aware disk: Luxvant leads/listings/deals/users → separate Luxvant storage;
+    // sensitive folders (deals/…) → private disk, never public.
+    $disk = \App\Support\Brand\BrandStorage::diskForNewUpload($storagePath);
+    $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
+
     try {
-        $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
         $image = Image::make($file->getRealPath());
 
         $quality   = $options['quality'] ?? 80;
@@ -86,9 +90,9 @@ class ImageHelper
         // Encode to WebP
         $compressedImage = $image->encode('webp', $quality);
 
-        Storage::disk('public')->put($fullPath, (string) $compressedImage);
+        Storage::disk($disk)->put($fullPath, (string) $compressedImage);
 
-        $compressedSize = Storage::disk('public')->size($fullPath);
+        $compressedSize = Storage::disk($disk)->size($fullPath);
         $compressionRatio = round(
             ($originalSize - $compressedSize) / $originalSize * 100,
             2
@@ -101,6 +105,7 @@ class ImageHelper
 
         return [
             'path' => $fullPath,
+            'disk' => $disk,
             'original_name' => $originalName,
             'original_size' => $originalSize,
             'compressed_size' => $compressedSize,
@@ -117,10 +122,11 @@ class ImageHelper
 
     } catch (\Exception $e) {
         \Log::warning("Compression failed, storing original file: ".$file->getClientOriginalName());
-        $path = $file->store($storagePath, 'public');
+        $path = $file->store($storagePath, $disk);
 
         return [
             'path' => $path,
+            'disk' => $disk,
             'original_name' => $file->getClientOriginalName()
         ];
     }
@@ -128,8 +134,10 @@ class ImageHelper
 
     public static function compressImage(UploadedFile $file, string $storagePath, array $options = []): array
     {
+        $disk = \App\Support\Brand\BrandStorage::diskForNewUpload($storagePath);
+        $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
+
         try {
-            $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
             $image = \Intervention\Image\ImageManagerStatic::make($file->getRealPath());
 
             $quality = $options['quality'] ?? 80;
@@ -154,9 +162,9 @@ class ImageHelper
 
             $compressedImage = $image->encode($extension, $quality);
 
-            Storage::disk('public')->put($fullPath, $compressedImage->__toString());
+            Storage::disk($disk)->put($fullPath, $compressedImage->__toString());
 
-            $compressedSize = Storage::disk('public')->size($fullPath);
+            $compressedSize = Storage::disk($disk)->size($fullPath);
             $compressionRatio = round(($originalSize - $compressedSize) / $originalSize * 100, 2);
 
             $compressedWidth = $image->width();
@@ -166,6 +174,7 @@ class ImageHelper
 
             return [
                 'path' => $fullPath,
+                'disk' => $disk,
                 'original_name' => $originalName,
                 'original_size' => $originalSize,
                 'compressed_size' => $compressedSize,
@@ -181,18 +190,19 @@ class ImageHelper
             ];
 
         } catch (\Exception $e) {
-            return self::storeWithoutCompression($file, $storagePath);
+            return self::storeWithoutCompression($file, $storagePath, $disk);
         }
     }
 
-    private static function storeWithoutCompression(UploadedFile $file, string $storagePath): array
+    private static function storeWithoutCompression(UploadedFile $file, string $storagePath, string $disk = 'public'): array
     {
-        $path = $file->store($storagePath, 'public');
+        $path = $file->store($storagePath, $disk);
         $originalSize = $file->getSize();
-        $compressedSize = Storage::disk('public')->size($path);
+        $compressedSize = Storage::disk($disk)->size($path);
 
         return [
             'path' => $path,
+            'disk' => $disk,
             'original_name' => $file->getClientOriginalName(),
             'original_size' => $originalSize,
             'compressed_size' => $compressedSize,
@@ -202,12 +212,30 @@ class ImageHelper
         ];
     }
 
+    /**
+     * Delete a stored file from whichever disk holds it (Luxvant separate
+     * storage, private company disk or main public disk). Refuses paths that
+     * belong to the other company.
+     */
     public static function deleteImage(string $path): bool
     {
-        if ($path && Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->delete($path);
+        if (! $path) {
+            return false;
         }
-        return false;
+
+        if (! \App\Support\Brand\BrandIsolation::pathAllowedForCurrentBrand($path)) {
+            return false;
+        }
+
+        $deleted = false;
+        foreach (\App\Support\Brand\BrandStorage::allDisks() as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                $deleted = Storage::disk($disk)->delete($path) || $deleted;
+            }
+        }
+        \App\Support\Brand\BrandStorage::forgetExists($path);
+
+        return $deleted;
     }
 
     public static function processMultipleImages(array $files, string $storagePath, bool $convertToWebP = true): array

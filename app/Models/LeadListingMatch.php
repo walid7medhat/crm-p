@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LeadListingMatch extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     public const STATUS_NEW = 'new';
     public const STATUS_SHORTLISTED = 'shortlisted';
     public const STATUS_SKIPPED = 'skipped';

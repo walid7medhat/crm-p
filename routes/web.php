@@ -87,6 +87,30 @@ Route::get('/fb/from/{id}/leads', [IntegrationController::class, 'fetchMetaLeads
 // inside the CRM). Answer a real 404 instead of loading the app shell.
 Route::get('book-photoshoot', fn () => abort(404));
 
+// Separate Luxvant storage: /storage/luxvant/... files that are not in main
+// storage (new uploads) are served from the luxvant_public disk. Public
+// allowlisted images only — private files always go through company-files.
+Route::get('storage/luxvant/{path}', function (string $path) {
+    $path = \App\Support\Brand\CompanyFilePolicy::normalize('luxvant/'.$path);
+    if (! str_starts_with($path, 'luxvant/')
+        || ! \App\Support\Brand\CompanyFilePolicy::isPublicAllowlisted($path)) {
+        abort(404);
+    }
+
+    $disk = \Illuminate\Support\Facades\Storage::disk(\App\Support\Brand\BrandStorage::DISK_LUXVANT_PUBLIC);
+    if (! $disk->exists($path)) {
+        abort(404);
+    }
+
+    $root = realpath($disk->path('')) ?: $disk->path('');
+    $full = realpath($disk->path($path));
+    if ($full === false || ! str_starts_with(str_replace('\\', '/', $full), rtrim(str_replace('\\', '/', $root), '/').'/')) {
+        abort(404);
+    }
+
+    return response()->file($full, ['Cache-Control' => 'public, max-age=604800']);
+})->where('path', '.+')->name('storage.luxvant');
+
 Route::get('{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api).*$');

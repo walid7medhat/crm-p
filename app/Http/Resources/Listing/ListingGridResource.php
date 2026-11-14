@@ -101,7 +101,7 @@ class ListingGridResource extends JsonResource
     protected function resolveMainImagePath(): ?string
     {
         if ($this->hero_image_path
-            && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->hero_image_path)) {
+            && \App\Support\Brand\BrandStorage::publicExists($this->hero_image_path)) {
             return $this->hero_image_path;
         }
 

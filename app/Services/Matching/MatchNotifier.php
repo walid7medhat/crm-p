@@ -7,6 +7,7 @@ use App\Models\LeadListingMatch;
 use App\Models\Listing;
 use App\Models\User;
 use App\Notifications\LeadMatchesNotification;
+use App\Support\Brand\BrandIsolation;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
@@ -64,7 +65,8 @@ class MatchNotifier
                 continue;
             }
             $agent = $agentId !== self::UNASSIGNED_USER_ID ? User::query()->find($agentId) : null;
-            if (! $agent) {
+            // Never tell another company's agent about this company's listing.
+            if (! $agent || ! BrandIsolation::userBelongsToCurrentBrand($agent)) {
                 continue;
             }
 
@@ -104,8 +106,10 @@ class MatchNotifier
     private function agentFor(Lead $lead): ?User
     {
         $id = (int) $lead->responsible_person_id;
+        $agent = $id && $id !== self::UNASSIGNED_USER_ID ? User::query()->find($id) : null;
 
-        return $id && $id !== self::UNASSIGNED_USER_ID ? User::query()->find($id) : null;
+        // Matches run in the listing's brand context: skip other-company agents.
+        return $agent && BrandIsolation::userBelongsToCurrentBrand($agent) ? $agent : null;
     }
 
     private function place(LeadListingMatch $row): string

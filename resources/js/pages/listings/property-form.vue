@@ -6525,8 +6525,8 @@ body.swal2-toast-shown  {
   font-weight: 700 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
-  color: #733E87 !important;
-  -webkit-text-fill-color: #733E87 !important;
+  color: var(--color-primary, #733E87) !important;
+  -webkit-text-fill-color: var(--color-primary, #733E87) !important;
 }
 
 .property-form-page .card-header h6.listing-section-title span {

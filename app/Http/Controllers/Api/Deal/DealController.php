@@ -1639,7 +1639,7 @@ class DealController extends Controller
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
-            if (\Storage::disk('public')->exists($document->file_path)) {
+            if (\App\Support\Brand\BrandStorage::diskHolding($document->file_path) !== null) {
                 \App\Support\Brand\BrandIsolation::deletePublicPath($document->file_path);
             }
 

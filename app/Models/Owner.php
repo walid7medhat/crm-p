@@ -8,6 +8,8 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 class Owner extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
      use HasFactory;
    use LogsActivity;
 

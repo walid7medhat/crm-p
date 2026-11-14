@@ -14,7 +14,7 @@ class RegisterRequest extends FormRequest
     {
         return [
            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => ['required', 'email', 'unique:users,email', new \App\Rules\BrandEmailDomain()],
             'password' => 'required|string|min:8',
             // 'parent_id' => 'required|exists:users,id',
         ];

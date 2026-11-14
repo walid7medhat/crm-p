@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Applicant extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $table = 'applicants';
     
     protected $fillable = [

@@ -7956,8 +7956,8 @@ onBeforeUnmount(() => {
     padding: 10px 12px;
     border-bottom: 1px solid var(--color-primary-border);
     background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
-    color: #733E87 !important;
-    -webkit-text-fill-color: #733E87 !important;
+    color: var(--color-primary, #733E87) !important;
+    -webkit-text-fill-color: var(--color-primary, #733E87) !important;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -9436,8 +9436,8 @@ onBeforeUnmount(() => {
         background: linear-gradient(90deg, var(--color-primary-soft) 0%, #ffffff 72%);
         -webkit-background-clip: border-box;
         background-clip: border-box;
-        color: #733E87 !important;
-        -webkit-text-fill-color: #733E87 !important;
+        color: var(--color-primary, #733E87) !important;
+        -webkit-text-fill-color: var(--color-primary, #733E87) !important;
     }
 
     .lead-search--desk .search-section-card .row {

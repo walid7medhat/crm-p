@@ -253,13 +253,13 @@ $allowedAgentIds = [];
             'occupancy_status' => $this->occupancy_status,
             'occupancy_comment' => $this->occupancy_comment,
             'hero_image' => $this->hero_image_path ? asset('storage/' . $this->hero_image_path) : null,
-            'spa_document' => $this->spa_document_path ? asset('storage/' . $this->spa_document_path) : null,
-            'desk_document' => $this->desk_document_path ? asset('storage/' . $this->desk_document_path) : null,
-            'other_document' => $this->other_document_path ? asset('storage/' . $this->other_document_path) : null,
+            'spa_document' => $this->spa_document_path ? app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($this->spa_document_path, 'listing', (int) $this->id) : null,
+            'desk_document' => $this->desk_document_path ? app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($this->desk_document_path, 'listing', (int) $this->id) : null,
+            'other_document' => $this->other_document_path ? app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($this->other_document_path, 'listing', (int) $this->id) : null,
             'additional_documents' => $this->whenLoaded('additionalDocuments', function () {
                 return $this->additionalDocuments->map(fn ($doc) => [
                     'id' => $doc->id,
-                    'url' => asset('storage/' . $doc->path),
+                    'url' => app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($doc->path, 'listing_additional_document', (int) $doc->id),
                     'name' => $doc->original_name ?? basename($doc->path),
                 ]);
             }, []),

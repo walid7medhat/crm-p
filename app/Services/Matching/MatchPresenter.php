@@ -249,7 +249,7 @@ class MatchPresenter
     /** Path on the public disk of the listing's main photo (hero, else first gallery image). */
     public function imagePath(Listing $listing): ?string
     {
-        if ($listing->hero_image_path && Storage::disk('public')->exists($listing->hero_image_path)) {
+        if ($listing->hero_image_path && \App\Support\Brand\BrandStorage::publicExists($listing->hero_image_path)) {
             return $listing->hero_image_path;
         }
         $first = $listing->relationLoaded('firstGalleryImage') ? $listing->firstGalleryImage : $listing->firstGalleryImage()->first();

@@ -404,7 +404,7 @@ class DealResource extends JsonResource
 
         $path = null;
         if (! empty($listing->hero_image_path)
-            && \Illuminate\Support\Facades\Storage::disk('public')->exists($listing->hero_image_path)) {
+            && \App\Support\Brand\BrandStorage::publicExists($listing->hero_image_path)) {
             $path = $listing->hero_image_path;
         } elseif ($listing->relationLoaded('firstGalleryImage') && $listing->firstGalleryImage) {
             $path = $listing->firstGalleryImage->image_path;

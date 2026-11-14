@@ -64,7 +64,7 @@ class ProfileController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id, new \App\Rules\BrandEmailDomain($user->email)],
                 'phone' => 'nullable|string|max:20',
             ]);
 
@@ -130,7 +130,7 @@ class ProfileController extends Controller
             }
 
             // Delete old avatar if exists
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar) &&  $user->avatar !== 'users/user.png' ) {
+            if ($user->avatar && \App\Support\Brand\BrandStorage::diskHolding($user->avatar) !== null &&  $user->avatar !== 'users/user.png' ) {
                 \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
 

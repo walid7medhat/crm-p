@@ -47,6 +47,16 @@ export function getBrand() {
   return readBrand()
 }
 
+/** Company email domain for the active host (oiaproperties.com / luxvant.com). */
+export function brandEmailDomain() {
+  return readBrand().email_domain || OIA_FALLBACK.email_domain
+}
+
+/** '@' + domain, e.g. '@luxvant.com'. */
+export function brandEmailSuffix() {
+  return '@' + brandEmailDomain()
+}
+
 export function isLuxvantBrand() {
   return readBrand().key === 'luxvant'
 }

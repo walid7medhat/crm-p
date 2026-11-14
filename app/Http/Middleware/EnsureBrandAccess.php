@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * Enforces brand allowlists after authentication.
  *
- * OIA (access.mode = open): immediate pass — no authorization change.
- * Luxvant (allowlist): Super Admin / env allowlist only; ordinary OIA JWTs → 403.
+ * Company accounts are exclusive: OIA members cannot use the Luxvant host and
+ * Luxvant members cannot use the OIA host. Super Admin is shared on both.
+ * Tokens whose brand_key claim differs from the host brand → 403 (non super admin).
  */
 class EnsureBrandAccess
 {
@@ -26,12 +27,6 @@ class EnsureBrandAccess
     public function handle(Request $request, Closure $next)
     {
         $brand = $this->brand->get();
-        $access = $brand['access'] ?? ['mode' => 'open'];
-
-        // OIA and any open brand: preserve existing authenticated API behavior exactly.
-        if (($access['mode'] ?? 'open') === 'open') {
-            return $next($request);
-        }
 
         $user = $request->user('api') ?? $request->user() ?? auth('api')->user() ?? auth()->user();
         if (!$user) {
@@ -40,9 +35,11 @@ class EnsureBrandAccess
 
         $hostBrandKey = (string) ($brand['key'] ?? 'oia');
 
+        // A token minted on one company's host is never valid on the other's,
+        // except for the shared Platform Super Admin.
         $tokenBrandKey = $this->tokenBrandKey();
         if ($tokenBrandKey !== null && $tokenBrandKey !== $hostBrandKey) {
-            if (!$this->resolver->userMayAccess($brand, $user)) {
+            if (!BrandResolver::isSuperAdmin($user)) {
                 Log::warning('brand jwt mismatch rejected', [
                     'token_brand' => $tokenBrandKey,
                     'host_brand' => $hostBrandKey,

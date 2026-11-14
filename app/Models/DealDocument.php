@@ -39,7 +39,7 @@ class DealDocument extends Model
     // Accessors
     public function getFileUrlAttribute()
     {
-        return asset('storage/' . $this->file_path);
+        return app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($this->file_path, 'deal_document', (int) $this->id);
     }
 
     public function getFileSizeFormattedAttribute()

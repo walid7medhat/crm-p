@@ -16,7 +16,7 @@ class UserInvitationController extends Controller
     {
         $request->validate([
             'emails' => 'required|array',
-            'emails.*' => 'required|email|unique:users,email|unique:user_invitations,email',
+            'emails.*' => ['required', 'email', 'unique:users,email', 'unique:user_invitations,email', new \App\Rules\BrandEmailDomain()],
         ]);
 
         $invitations = [];

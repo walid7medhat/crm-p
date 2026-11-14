@@ -1052,8 +1052,8 @@ function onImgError(e) {
 }
 
 .matching-badge--new {
-    background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%);
-    box-shadow: 0 0 0 2px rgba(143, 90, 163, 0.35);
+    background: linear-gradient(135deg, var(--color-primary-bright, #8f5aa3) 0%, var(--color-primary, #733e87) 100%);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-bright, #8f5aa3) 35%, transparent);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -1063,8 +1063,8 @@ function onImgError(e) {
 }
 
 .matching-card--highlight {
-    border-color: #8f5aa3 !important;
-    box-shadow: 0 0 0 2px rgba(143, 90, 163, 0.45), 0 10px 24px rgba(115, 62, 135, 0.18);
+    border-color: var(--color-primary-bright, #8f5aa3) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-bright, #8f5aa3) 45%, transparent), 0 10px 24px rgba(var(--color-primary-rgb, 115, 62, 135), 0.18);
 }
 
 .matching-card--new .matching-card-media::after {
@@ -1072,7 +1072,7 @@ function onImgError(e) {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    box-shadow: inset 0 0 0 2px rgba(143, 90, 163, 0.55);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-primary-bright, #8f5aa3) 55%, transparent);
 }
 
 .matching-card-body {

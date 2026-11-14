@@ -110,7 +110,8 @@ class ListingApprovalPolicy
     /** Active Dubai-branch branch_admins. */
     public function dubaiApprovers(): Collection
     {
-        return User::role('branch_admin')
+        // Only the current company's admins (OIA Dubai admin never gets Luxvant listings).
+        return \App\Support\Brand\BrandIsolation::constrainUsers(User::role('branch_admin'))
             ->where('status', 'active')
             ->get()
             ->filter(fn (User $user) => $this->isDubaiApprover($user))
@@ -123,16 +124,22 @@ class ListingApprovalPolicy
      */
     public function notifyApprovers(Listing $listing): array
     {
-        if ($listing->isInDubai()) {
+        if ($listing->isInDubai() && \App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant') {
+            // Luxvant has no Dubai branch admin: its Dubai listings are approved by
+            // Luxvant admins (or super_admin) only, so they get the notification.
+            $recipients = \App\Support\Brand\BrandIsolation::constrainUsers(User::role('admin'))
+                ->where('status', 'active')
+                ->get();
+        } elseif ($listing->isInDubai()) {
             $recipients = $this->dubaiApprovers();
         } else {
-            $recipients = User::role('manager')
+            $recipients = \App\Support\Brand\BrandIsolation::constrainUsers(User::role('manager'))
                 ->where('listing_team', 1)
                 ->where('status', 'active')
                 ->get();
 
             $teamLead = $listing->agent?->parent;
-            if ($teamLead && $teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
+            if ($teamLead && \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($teamLead) && $teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
                 $recipients->push($teamLead);
             }
         }

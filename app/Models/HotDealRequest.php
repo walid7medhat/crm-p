@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class HotDealRequest extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     use HasFactory;
 
     protected $fillable = [

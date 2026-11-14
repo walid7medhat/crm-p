@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 class SearchAlert extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     use HasFactory;
 
     protected $fillable = [

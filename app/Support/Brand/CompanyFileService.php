@@ -30,7 +30,7 @@ class CompanyFileService
     public function storeInDirectory(UploadedFile $file, string $directory, ?string $resource = null, ?int $resourceId = null): array
     {
         $directory = CompanyFilePolicy::normalize($directory);
-        $disk = CompanyFilePolicy::diskForNewUpload($directory);
+        $disk = BrandStorage::diskForNewUpload($directory);
         $dir = BrandIsolation::ensureCompanyStoragePath($directory);
 
         $path = $file->store($dir, $disk);
@@ -54,11 +54,13 @@ class CompanyFileService
 
         $path = CompanyFilePolicy::normalize($path);
 
-        if ($disk === self::DISK_PUBLIC && CompanyFilePolicy::isPublicAllowlisted($path)) {
+        // Public files on either public disk share the /storage URL
+        // (luxvant_public is served by the storage/luxvant fallback route).
+        if (! BrandStorage::isPrivateDisk($disk) && CompanyFilePolicy::isPublicAllowlisted($path)) {
             return asset('storage/'.$path);
         }
 
-        if (CompanyFilePolicy::isSensitive($path) || $disk === self::DISK_COMPANY) {
+        if (CompanyFilePolicy::isSensitive($path) || BrandStorage::isPrivateDisk($disk)) {
             if ($resource === null || $resourceId === null) {
                 $binding = $this->authorizer->resolveBindingFromPath($path);
                 if ($binding) {
@@ -98,6 +100,16 @@ class CompanyFileService
 
         $path = CompanyFilePolicy::normalize($path);
 
+        // New Luxvant uploads on the separate storage.
+        if (str_starts_with($path, 'luxvant/')) {
+            if (BrandStorage::exists(BrandStorage::DISK_LUXVANT_COMPANY, $path)) {
+                return $this->urlFor(BrandStorage::DISK_LUXVANT_COMPANY, $path, $resource, $resourceId);
+            }
+            if (BrandStorage::exists(BrandStorage::DISK_LUXVANT_PUBLIC, $path)) {
+                return $this->urlFor(BrandStorage::DISK_LUXVANT_PUBLIC, $path, $resource, $resourceId);
+            }
+        }
+
         if (Storage::disk(self::DISK_COMPANY)->exists($path)) {
             return $this->urlFor(self::DISK_COMPANY, $path, $resource, $resourceId);
         }
@@ -129,8 +141,13 @@ class CompanyFileService
             abort(403, 'Invalid file path.');
         }
 
-        if (! in_array($disk, [self::DISK_PUBLIC, self::DISK_COMPANY], true)) {
+        if (! in_array($disk, BrandStorage::allDisks(), true)) {
             abort(403, 'Invalid disk.');
+        }
+
+        // Luxvant disks only ever hold luxvant/... paths.
+        if (BrandStorage::isLuxvantDisk($disk) && ! str_starts_with($path, 'luxvant/')) {
+            abort(404);
         }
 
         // Cross-brand paths → 404 (no existence leak).
@@ -180,7 +197,7 @@ class CompanyFileService
     public function stream(string $disk, string $path): StreamedResponse
     {
         $path = CompanyFilePolicy::normalize($path);
-        if (CompanyFilePolicy::isSensitive($path) || $disk === self::DISK_COMPANY) {
+        if (CompanyFilePolicy::isSensitive($path) || BrandStorage::isPrivateDisk($disk)) {
             abort(403, 'Resource binding required.');
         }
 
@@ -207,13 +224,17 @@ class CompanyFileService
         BrandIsolation::assertPathAllowedForCurrentBrand($path);
 
         $deleted = false;
-        foreach ([self::DISK_COMPANY, self::DISK_PUBLIC] as $disk) {
+        foreach (BrandStorage::allDisks() as $disk) {
+            if (BrandStorage::isLuxvantDisk($disk) && ! str_starts_with($path, 'luxvant/')) {
+                continue;
+            }
             if (Storage::disk($disk)->exists($path)) {
                 $this->assertCanAccess($disk, $path);
                 Storage::disk($disk)->delete($path);
                 $deleted = true;
             }
         }
+        BrandStorage::forgetExists($path);
 
         return $deleted;
     }

@@ -99,6 +99,7 @@
 <script setup>
 import { reactive, ref, watch, nextTick } from 'vue'
 import api from '@/plugins/axios'
+import { isLuxvantBrand } from '@/composables/useBrand'
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -116,7 +117,8 @@ const brokenAvatars = reactive({})
 let searchTimer = null
 let requestSeq = 0
 
-const AVATAR_PALETTE = [
+// Avatar initials backgrounds in the company's own colour family.
+const OIA_AVATAR_PALETTE = [
     '#733E87',
     '#5c3270',
     '#3f2148',
@@ -126,6 +128,17 @@ const AVATAR_PALETTE = [
     '#9a6aad',
     '#553066',
 ]
+const LUXVANT_AVATAR_PALETTE = [
+    '#003c38',
+    '#004f49',
+    '#002421',
+    '#0a6b63',
+    '#00332f',
+    '#2f6f68',
+    '#3d8a82',
+    '#1c4f4a',
+]
+const AVATAR_PALETTE = isLuxvantBrand() ? LUXVANT_AVATAR_PALETTE : OIA_AVATAR_PALETTE
 
 function initials(name) {
     const parts = String(name || '')

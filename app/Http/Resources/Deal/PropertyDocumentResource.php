@@ -34,7 +34,7 @@ class PropertyDocumentResource extends JsonResource
                 'original_name' => $doc['original_name'] ?? 'Document',
                 'file_name' => $doc['original_name'] ?? 'Document',
                 'path' => $doc['path'] ? $doc['path'] : null,
-                'url' => $doc['path'] ? Storage::disk('public')->url($doc['path']) : null,
+                'url' => $doc['path'] ? app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath($doc['path']) : null,
                 'file_url' => $doc['path'] ?? null,
                 'mime_type' => $doc['mime_type'] ?? 'application/octet-stream',
                 'size' => $doc['size'] ?? 0,

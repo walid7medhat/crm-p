@@ -104,6 +104,7 @@ class LeadKanbanHeatCache
         $roles = $user->roles->pluck('name')->sort()->values()->all();
         $seesBranch = self::seesBranchLeads($user);
         $scope = [
+            'brand' => \App\Support\Brand\BrandIsolation::cacheSegment(),
             'user' => (int) $user->id,
             'roles' => $roles,
             'parent_id' => $user->parent_id ? (int) $user->parent_id : null,

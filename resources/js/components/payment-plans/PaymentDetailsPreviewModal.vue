@@ -10,7 +10,7 @@
         @click.self="close"
       >
         <div class="pd-modal-shell">
-          <div class="pd-modal-card">
+          <div class="pd-modal-card" :style="watermarkStyle">
             <div class="pd-modal-head">
               <div>
                 <div id="pd-modal-title" class="pd-modal-title">Payment details
@@ -166,6 +166,12 @@
 <script setup>
 import { computed } from 'vue';
 import { nocVatAmount } from '@/utils/dealCostRules';
+import { useBrand } from '@/composables/useBrand';
+
+const { logos: brandLogos } = useBrand();
+const watermarkStyle = brandLogos?.watermark
+  ? { '--pd-watermark': `url('${brandLogos.watermark}')` }
+  : {};
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -431,14 +437,14 @@ const nocPercentageOfOp = computed(() => {
   overflow: hidden;
 }
 
-/* Oia Properties logo — very light watermark (public/oia-properties-logo-watermark.svg) */
+/* Brand logo — very light watermark (--pd-watermark set from useBrand().logos.watermark) */
 .pd-modal-card::before {
   content: '';
   position: absolute;
   inset: -8%;
   z-index: 0;
   pointer-events: none;
-  background-image: url('/oia-properties-logo-watermark.svg');
+  background-image: var(--pd-watermark, url('/oia-properties-logo-watermark.svg'));
   background-repeat: no-repeat;
   background-position: center 45%;
   background-size: min(92%, 720px) auto;

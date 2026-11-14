@@ -21,6 +21,9 @@ class BrandCrmScope
 
     private static bool $rootResolved = false;
 
+    /** @var list<int>|null host-independent memo of the configured branch tree */
+    private static ?array $configuredIds = null;
+
     public static function active(): bool
     {
         if (! app(BrandContext::class)->isLuxvant()) {
@@ -37,6 +40,7 @@ class BrandCrmScope
         self::$allowedUserIds = null;
         self::$branchRoot = null;
         self::$rootResolved = false;
+        self::$configuredIds = null;
     }
 
     /**
@@ -72,6 +76,18 @@ class BrandCrmScope
      * @return list<int>
      */
     public static function resolveConfiguredBranchUserIds(): array
+    {
+        if (self::$configuredIds !== null) {
+            return self::$configuredIds;
+        }
+
+        return self::$configuredIds = self::loadConfiguredBranchUserIds();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function loadConfiguredBranchUserIds(): array
     {
         $root = self::resolveConfiguredBranchRoot();
         if (! $root) {

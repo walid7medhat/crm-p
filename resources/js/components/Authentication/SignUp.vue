@@ -130,7 +130,7 @@ import api from '@/plugins/axios';
 import { useRouter } from 'vue-router';
 import AuthLandingShell from './AuthLandingShell.vue';
 import AuthMobileStack from './AuthMobileStack.vue';
-import { useBrand } from '@/composables/useBrand';
+import { useBrand, brandEmailSuffix } from '@/composables/useBrand';
 
 export default {
   name: 'SignUp',
@@ -299,11 +299,11 @@ export default {
     },
 
     validateEmailDomain() {
-      if (this.email && !this.email.endsWith('@oiaproperties.com')) {
-        this.errors.email = ['Email must be from @oiaproperties.com domain'];
+      if (this.email && !this.email.endsWith(brandEmailSuffix())) {
+        this.errors.email = [`Email must be from ${brandEmailSuffix()} domain`];
         return false;
       }
-      if (this.errors.email && this.email.endsWith('@oiaproperties.com')) {
+      if (this.errors.email && this.email.endsWith(brandEmailSuffix())) {
         const { email, ...rest } = this.errors;
         this.errors = rest;
       }
@@ -342,9 +342,9 @@ export default {
         this.errors.email = ['Email is required'];
         this.$showNotification('Email is required', 'warning');
         isValid = false;
-      } else if (!this.email.endsWith('@oiaproperties.com')) {
-        this.errors.email = ['Email must be from @oiaproperties.com domain'];
-        this.$showNotification('Email must be from @oiaproperties.com domain', 'warning');
+      } else if (!this.email.endsWith(brandEmailSuffix())) {
+        this.errors.email = [`Email must be from ${brandEmailSuffix()} domain`];
+        this.$showNotification(`Email must be from ${brandEmailSuffix()} domain`, 'warning');
         isValid = false;
       } else if (!this.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
         this.errors.email = ['Please enter a valid email address'];
@@ -364,9 +364,9 @@ export default {
     async register() {
       this.loading = true;
 
-      if (this.email && !this.email.endsWith('@oiaproperties.com')) {
-        this.$showNotification('Email must be from @oiaproperties.com domain', 'warning');
-        this.errors.email = ['Email must be from @oiaproperties.com domain'];
+      if (this.email && !this.email.endsWith(brandEmailSuffix())) {
+        this.$showNotification(`Email must be from ${brandEmailSuffix()} domain`, 'warning');
+        this.errors.email = [`Email must be from ${brandEmailSuffix()} domain`];
         this.loading = false;
         return;
       }

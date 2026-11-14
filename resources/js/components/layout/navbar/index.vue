@@ -983,7 +983,7 @@ import {
 } from '@/composables/useLayoutNavigation.js';
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
-import { useBrand } from '@/composables/useBrand.js';
+import { useBrand, brandEmailSuffix } from '@/composables/useBrand.js';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
@@ -2432,13 +2432,13 @@ async function savePersonalInfoEdit() {
       return;
     }
 
-    // Email domain validation - must be @oiaproperties.com
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@oiaproperties\.com$/;
-    if (!emailPattern.test(email)) {
+    // Email domain validation - must match the active company domain
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[^\s@]+$/;
+    if (!emailPattern.test(email) || !String(email).toLowerCase().endsWith(brandEmailSuffix())) {
       Swal.fire({
         icon: 'error',
         title: 'Invalid Email',
-        text: 'Email must be from @oiaproperties.com domain',
+        text: `Email must be from ${brandEmailSuffix()} domain`,
         confirmButtonColor: '#3085d6'
       });
       return;

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ListingAdditionalDocument extends Model
 {
+    use \App\Support\Brand\Concerns\BrandStampOnly;
+
     protected $guarded = [];
 
     public function listing(): BelongsTo

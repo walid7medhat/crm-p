@@ -81,6 +81,16 @@ class WatermarkMediaGate
      */
     public static function absolutePublicPath(string $relative): ?string
     {
+        // New Luxvant uploads live on the separate luxvant_public disk.
+        if (str_starts_with($relative, 'luxvant/')) {
+            $disk = \Illuminate\Support\Facades\Storage::disk(\App\Support\Brand\BrandStorage::DISK_LUXVANT_PUBLIC);
+            $lxRoot = realpath($disk->path(''));
+            $lxFull = $lxRoot !== false ? realpath($disk->path($relative)) : false;
+            if ($lxFull !== false && str_starts_with($lxFull, $lxRoot.DIRECTORY_SEPARATOR)) {
+                return $lxFull;
+            }
+        }
+
         $root = realpath(storage_path('app/public'));
         if ($root === false) {
             return null;

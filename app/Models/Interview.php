@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Interview extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $table = 'interviews';
     
     protected $fillable = [

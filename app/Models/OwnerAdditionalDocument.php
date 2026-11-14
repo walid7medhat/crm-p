@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OwnerAdditionalDocument extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $guarded = [];
 
     public function owner(): BelongsTo

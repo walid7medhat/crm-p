@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Investment extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $guarded = [];
 
     protected function casts(): array

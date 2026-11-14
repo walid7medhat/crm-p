@@ -587,7 +587,7 @@ public function show(User $user): JsonResponse
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
                 // Delete old avatar
-                if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     Storage::disk('public')->exists($user->avatar)) {
+                if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     \App\Support\Brand\BrandStorage::diskHolding($user->avatar) !== null) {
                     \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
                 }
 
@@ -658,7 +658,7 @@ public function show(User $user): JsonResponse
             }
 
             // Delete avatar if exists
-            if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     Storage::disk('public')->exists($user->avatar)) {
+            if ( $user->getRawOriginal('avatar') &&     $user->getRawOriginal('avatar') !== 'users/user.png' &&     \App\Support\Brand\BrandStorage::diskHolding($user->avatar) !== null) {
                 \App\Support\Brand\BrandIsolation::deletePublicPath($user->avatar);
             }
 
@@ -1279,7 +1279,7 @@ public function nonOiaDuplicateReport(Request $request): JsonResponse
     $rows = [];
     foreach ($users as $user) {
         $email = mb_strtolower($user->email ?? '');
-        if ($email === '' || str_ends_with($email, '@oiaproperties.com')) {
+        if ($email === '' || str_ends_with($email, '@'.(\App\Rules\BrandEmailDomain::domain() ?? 'oiaproperties.com'))) {
             continue;
         }
 

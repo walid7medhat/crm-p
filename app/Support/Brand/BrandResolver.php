@@ -107,13 +107,25 @@ class BrandResolver
 
         $access = $brand['access'] ?? ['mode' => 'open'];
         $mode = $access['mode'] ?? 'open';
+        $brandKey = (string) ($brand['key'] ?? 'oia');
+
+        // Platform Super Admin is the one identity shared by both companies.
+        if (self::isSuperAdmin($user)) {
+            return true;
+        }
 
         if ($mode === 'open') {
-            return true;
+            // OIA host: members of another company (Luxvant) may not sign in here.
+            return ! self::userIsMemberOfOtherBrand($user, $brandKey);
         }
 
         $roles = $access['roles'] ?? [];
         if (!empty($roles) && method_exists($user, 'hasAnyRole') && $user->hasAnyRole($roles)) {
+            return true;
+        }
+
+        // Stamped members of this brand.
+        if ((string) ($user->brand_key ?? '') === $brandKey) {
             return true;
         }
 
@@ -131,6 +143,29 @@ class BrandResolver
         // Luxvant host: members of the configured CRM branch (Admin Luxvant tree) may enter.
         if (($brand['key'] ?? '') === 'luxvant') {
             return BrandCrmScope::userInConfiguredCrmBranch((int) $user->id);
+        }
+
+        return false;
+    }
+
+    public static function isSuperAdmin($user): bool
+    {
+        return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
+    }
+
+    /**
+     * True when the user belongs to a brand other than $brandKey
+     * (stamped brand_key, or — for Luxvant — the configured CRM branch tree).
+     */
+    public static function userIsMemberOfOtherBrand($user, string $brandKey): bool
+    {
+        $userBrand = (string) ($user->brand_key ?? '');
+        if ($userBrand !== '' && $userBrand !== $brandKey) {
+            return true;
+        }
+
+        if ($brandKey !== 'luxvant' && BrandCrmScope::userInConfiguredCrmBranch((int) $user->id)) {
+            return true;
         }
 
         return false;

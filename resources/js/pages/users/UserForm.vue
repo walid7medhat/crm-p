@@ -304,6 +304,7 @@ import { useRoute, useRouter } from "vue-router";
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import Swal from "sweetalert2";
+import { brandEmailSuffix } from '@/composables/useBrand';
 import Breadcrumb from '@/components/breadcrumb/Breadcrumb.vue';
 import userPlaceholder from '@/assets/images/avatar/avatar1.png';
 
@@ -432,13 +433,13 @@ export default {
         };
         const validateEmailDomain = (email) => {
             if (!email) return true;
-            return email.endsWith('@oiaproperties.com');
+            return email.endsWith(brandEmailSuffix());
         };
         
         const getEmailValidationMessage = (email) => {
             if (!email) return '';
             if (!email.includes('@')) return 'Please enter a valid email address';
-            if (!email.endsWith('@oiaproperties.com')) return 'Email must be from @oiaproperties.com domain';
+            if (!email.endsWith(brandEmailSuffix())) return `Email must be from ${brandEmailSuffix()} domain`;
             return '';
         };
         // User Form Data - Updated to match backend
@@ -766,7 +767,7 @@ watch(roles, (newRoles) => {
                     };
 
                    if (userForm.value.email && !validateEmailDomain(userForm.value.email)) {
-                        showNotification("⚠️ Warning: This user has an email not from @oiaproperties.com domain", "warning");
+                        showNotification(`⚠️ Warning: This user has an email not from ${brandEmailSuffix()} domain`, "warning");
                     }
 
                     // Set avatar preview if exists
@@ -824,8 +825,8 @@ watch(roles, (newRoles) => {
         
                 // Email domain validation
                 if (!validateEmailDomain(userForm.value.email)) {
-                    errors.value.email = ['Email must be from @oiaproperties.com domain'];
-                    showNotification("❌ Email must be from @oiaproperties.com domain", "error");
+                    errors.value.email = [`Email must be from ${brandEmailSuffix()} domain`];
+                    showNotification(`❌ Email must be from ${brandEmailSuffix()} domain`, "error");
                     loading.value = false;
                     return;
                 }
@@ -930,7 +931,7 @@ watch(roles, (newRoles) => {
         };
         const validateEmailOnBlur = () => {
             if (userForm.value.email && !validateEmailDomain(userForm.value.email)) {
-                errors.value.email = ['Email must be from @oiaproperties.com domain'];
+                errors.value.email = [`Email must be from ${brandEmailSuffix()} domain`];
             } else if (errors.value.email) {
                 delete errors.value.email;
             }

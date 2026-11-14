@@ -67,7 +67,15 @@ class BrandIsolation
      */
     public static function luxvantAllowsUnclassifiedCrmRows(string $table): bool
     {
+        // Strict since brand:backfill-legacy classifies every legacy row
+        // (Admin Luxvant tree → luxvant, rest → oia). Allowing NULL here leaked
+        // unclassified OIA leads/deals into the Luxvant dashboard and matching.
+        // Escape hatch only for a not-yet-backfilled environment.
         if (! in_array($table, ['leads', 'deals'], true)) {
+            return false;
+        }
+
+        if (! (bool) config('brands.luxvant_allow_unclassified_crm', false)) {
             return false;
         }
 
@@ -149,6 +157,11 @@ class BrandIsolation
             return $path;
         }
 
+        // Projects / developers are a shared catalog — same path on both brands.
+        if (BrandStorage::isShared($path)) {
+            return $path;
+        }
+
         if (str_starts_with($path, $prefix.'/')) {
             return $path;
         }
@@ -170,6 +183,53 @@ class BrandIsolation
     }
 
     /**
+     * Absolute path of the active brand's watermark image, or null if none exists.
+     * Luxvant: uploaded luxvant/Setting/watermark.png if present, else the brand
+     * logo from config('brands.brands.luxvant.logos.watermark'). Never the OIA mark.
+     */
+    public static function watermarkAbsolutePath(): ?string
+    {
+        $stored = storage_path('app/public/'.self::watermarkStorageRelativePath());
+        if (is_file($stored)) {
+            return $stored;
+        }
+
+        if (self::trustedKey() === 'luxvant') {
+            $logo = (string) (app(BrandContext::class)->logos()['watermark'] ?? '');
+            $candidate = $logo !== '' ? public_path(ltrim($logo, '/')) : null;
+
+            return $candidate && is_file($candidate) ? $candidate : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Same watermark as a public_path()-relative path (used by ImageHelper options).
+     */
+    public static function watermarkPublicRelativePath(): ?string
+    {
+        $abs = self::watermarkAbsolutePath();
+        if ($abs === null) {
+            return null;
+        }
+
+        $public = rtrim(str_replace('\\', '/', public_path()), '/').'/';
+        $abs = str_replace('\\', '/', $abs);
+        if (str_starts_with($abs, $public)) {
+            return substr($abs, strlen($public));
+        }
+
+        // storage/app/public/* is served through the public/storage symlink.
+        $storage = rtrim(str_replace('\\', '/', storage_path('app/public')), '/').'/';
+        if (str_starts_with($abs, $storage)) {
+            return 'storage/'.substr($abs, strlen($storage));
+        }
+
+        return null;
+    }
+
+    /**
      * Whether a stored relative path is allowed for the current brand.
      * Luxvant may only access luxvant/… (and never raw OIA legacy paths).
      * OIA may access non-luxvant paths (legacy) and optional oia/ paths.
@@ -188,6 +248,11 @@ class BrandIsolation
         }
         $path = ltrim($path, '/');
         $key = self::trustedKey();
+
+        // Shared catalog (projects / developers) is readable by both companies.
+        if (! str_starts_with($path, 'luxvant/') && BrandStorage::isShared($path)) {
+            return true;
+        }
 
         if ($key === 'luxvant') {
             return str_starts_with($path, 'luxvant/');
@@ -283,7 +348,71 @@ class BrandIsolation
             return BrandCrmScope::userAllowed((int) $user->id);
         }
 
-        return $userBrand === null || $userBrand === '' || $userBrand === 'oia';
+        if (! ($userBrand === null || $userBrand === '' || $userBrand === 'oia')) {
+            return false;
+        }
+
+        // Unclassified Admin Luxvant tree members are Luxvant, not OIA.
+        return ! BrandCrmScope::userInConfiguredCrmBranch((int) $user->id);
+    }
+
+    /**
+     * Limit a users query (Eloquent or query builder) to members of the current brand.
+     * Luxvant: brand_key=luxvant or in the Admin Luxvant tree.
+     * OIA: brand_key oia/NULL and not in the Admin Luxvant tree.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Relations\Relation  $query
+     */
+    public static function constrainUsers($query, string $table = 'users')
+    {
+        if (self::superAdminCrossBrandEnabled()) {
+            return $query;
+        }
+
+        $tree = BrandCrmScope::resolveConfiguredBranchUserIds();
+        $hasColumn = self::columnReady('users');
+
+        if (self::trustedKey() === 'luxvant') {
+            return $query->where(function ($q) use ($table, $tree, $hasColumn) {
+                if ($hasColumn) {
+                    $q->where($table.'.brand_key', 'luxvant');
+                }
+                if ($tree !== []) {
+                    $q->orWhereIn($table.'.id', $tree);
+                }
+                if (! $hasColumn && $tree === []) {
+                    $q->whereRaw('1 = 0');
+                }
+            });
+        }
+
+        if ($hasColumn) {
+            $query->where(function ($q) use ($table) {
+                $q->where($table.'.brand_key', 'oia')->orWhereNull($table.'.brand_key');
+            });
+        }
+        if ($tree !== []) {
+            $query->whereNotIn($table.'.id', $tree);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Brand key the user belongs to (for login / storage decisions).
+     */
+    public static function brandKeyOfUser(?\App\Models\User $user): string
+    {
+        if (! $user) {
+            return 'oia';
+        }
+
+        $b = (string) ($user->brand_key ?? '');
+        if ($b !== '') {
+            return $b;
+        }
+
+        return BrandCrmScope::userInConfiguredCrmBranch((int) $user->id) ? 'luxvant' : 'oia';
     }
 
     /**

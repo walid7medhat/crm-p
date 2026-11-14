@@ -83,8 +83,8 @@ class ListingController extends Controller
 
         // Cache resolved grid JSON (not raw models) so cache hits skip resource N+1 work.
         $cacheKey = $request->boolean('my_listings')
-            ? self::CACHE_PREFIX . 'my_json_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash
-            : self::CACHE_PREFIX . 'index_json_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash;
+            ? self::CACHE_PREFIX . 'my_json_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash
+            : self::CACHE_PREFIX . 'index_json_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash;
 
         $resolver = function () use ($request) {
             ListingGridResource::resetRequestCaches();
@@ -1160,7 +1160,7 @@ public function getMatchingListings(Request $request)
                                 'max_width' => 1920,
                                 'watermark' => [
                                     'enabled'  => false,
-                                    'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                                    'path'     => \App\Support\Brand\BrandIsolation::watermarkPublicRelativePath(),
                                     'position' => 'center',
                                     'opacity'  => 90
                                 ]
@@ -1236,7 +1236,7 @@ public function getMatchingListings(Request $request)
                                     'max_width' => 1600,
                                     'watermark' => [
                                         'enabled'  => false,
-                                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                                        'path'     => \App\Support\Brand\BrandIsolation::watermarkPublicRelativePath(),
                                         'position' => 'center',
                                         'opacity'  => 90
                                     ]
@@ -1288,7 +1288,7 @@ public function getMatchingListings(Request $request)
                                     'max_width' => 1920,
                                     'watermark' => [
                                         'enabled'  => false,
-                                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                                        'path'     => \App\Support\Brand\BrandIsolation::watermarkPublicRelativePath(),
                                         'position' => 'center',
                                         'opacity'  => 90
                                     ]
@@ -1833,7 +1833,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                     'max_width' => 1920,
                     'watermark' => [
                         'enabled'  => false,
-                        'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                        'path'     => \App\Support\Brand\BrandIsolation::watermarkPublicRelativePath(),
                         'position' => 'center',
                         'opacity'  => 90
                     ]
@@ -1912,7 +1912,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                         'max_width' => 1600,
                         'watermark' => [
                             'enabled'  => false,
-                            'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                            'path'     => \App\Support\Brand\BrandIsolation::watermarkPublicRelativePath(),
                             'position' => 'center',
                             'opacity'  => 90
                         ]
@@ -1962,7 +1962,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                         'max_width' => 1920,
                         'watermark' => [
                             'enabled'  => false,
-                            'path'     => 'storage/Setting/1745128256Oia Watermark.png',
+                            'path'     => \App\Support\Brand\BrandIsolation::watermarkPublicRelativePath(),
                             'position' => 'center',
                             'opacity'  => 90
                         ]
@@ -2001,7 +2001,7 @@ public function update(ListingRequest $request, $listingId): JsonResponse
                 $hero = $listing->hero_image_path;
 
                 $heroInvalid = !$hero
-                    || !Storage::disk('public')->exists($hero)
+                    || !\App\Support\Brand\BrandStorage::publicExists($hero)
                     || ($galleryPaths->isNotEmpty() && !$galleryPaths->contains($hero));
 
                 if ($heroInvalid) {
@@ -2335,7 +2335,7 @@ private function sendResubmissionNotification($listing, $user)
     {
         $uid = $userId !== null && $userId !== '' ? (int) $userId : 0;
 
-        return self::CACHE_PREFIX . 'show_' . $listingId . '_u' . $uid . '_e' . self::getShowCacheEpoch();
+        return self::CACHE_PREFIX . 'show_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $listingId . '_u' . $uid . '_e' . self::getShowCacheEpoch();
     }
 
     public static function listingStatsCacheKey(Request $request): string
@@ -2346,7 +2346,7 @@ private function sendResubmissionNotification($listing, $user)
         $userScoped = $user && ($user->hasRole('sales') || $myListings);
         $scope = $userScoped ? ('u' . (int) $user->id) : 'global';
 
-        return self::CACHE_PREFIX . 'stats_' . $scope . '_e' . self::getStatsCacheEpoch() . '_' . md5(serialize($request->all()));
+        return self::CACHE_PREFIX . 'stats_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $scope . '_e' . self::getStatsCacheEpoch() . '_' . md5(serialize($request->all()));
     }
 
     /**
@@ -2468,7 +2468,7 @@ private function sendResubmissionNotification($listing, $user)
             // Invalidate all user-scoped show entries for this listing (and others) via epoch.
             self::bumpShowCacheEpoch();
             // Legacy unscoped key (pre-6A) + current caller's key if still warm.
-            Cache::forget(self::CACHE_PREFIX . 'show_' . $listingId);
+            Cache::forget(self::CACHE_PREFIX . 'show_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $listingId);
             Cache::forget(self::listingShowCacheKey($listingId, Auth::id()));
             \Log::info('Cleared specific cache for listing: ' . $listingId);
         } catch (\Exception $e) {
@@ -3281,7 +3281,7 @@ public function validateUnitNumber(Request $request)
             if ($user->hasRole('sales') && $listing->agent_id !== $user->id) {
                 return ApiResponse::error('Access denied', 403);
             }
-            if ($doc->path && Storage::disk('public')->exists($doc->path)) {
+            if ($doc->path && \App\Support\Brand\BrandStorage::diskHolding($doc->path) !== null) {
                 \App\Support\Brand\BrandIsolation::deletePublicPath($doc->path);
             }
             $doc->delete();
@@ -3904,12 +3904,20 @@ public function watermark(Request $request)
         abort(404);
     }
 
-    $watermarkRelative = \App\Support\Brand\BrandIsolation::watermarkStorageRelativePath();
-    $watermarkPath = storage_path('app/public/'.$watermarkRelative);
+    // Brand watermark: OIA mark on OIA host, Luxvant logo on Luxvant host.
+    $watermarkPath = \App\Support\Brand\BrandIsolation::watermarkAbsolutePath();
 
-    if (is_file($watermarkPath) && \App\Support\Brand\BrandIsolation::pathAllowedForCurrentBrand($watermarkRelative)) {
+    if ($watermarkPath !== null) {
         try {
             $watermark = Image::make($watermarkPath);
+            // Luxvant logo is 1024px wide — scale it to ~35% of the photo width.
+            // OIA keeps its original watermark size (unchanged behaviour).
+            $maxW = (int) round($image->width() * 0.35);
+            if (\App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant' && $maxW > 0 && $watermark->width() > $maxW) {
+                $watermark->resize($maxW, null, function ($c) {
+                    $c->aspectRatio();
+                });
+            }
             $watermark->opacity(70);
             $image->insert($watermark, 'center');
         } catch (\Throwable $e) {

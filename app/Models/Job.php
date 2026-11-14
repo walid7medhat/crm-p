@@ -7,6 +7,8 @@ use Illuminate\Support\Str;
 
 class Job extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $table = 'job_openings';
     
     protected $fillable = [

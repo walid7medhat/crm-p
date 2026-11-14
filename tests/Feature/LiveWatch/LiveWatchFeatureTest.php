@@ -41,9 +41,10 @@ class LiveWatchFeatureTest extends TestCase
 
     public function test_luxvant_brand_still_blocks_non_allowlisted_roles_on_live_watch(): void
     {
-        app(BrandContext::class)->set(config('brands.brands.luxvant'));
-
+        // An OIA account (created on the OIA host) is not a Luxvant member.
         $sales = $this->makeUser('sales');
+
+        app(BrandContext::class)->set(config('brands.brands.luxvant'));
         $this->asUser($sales)->postJson('/api/auth/live-watch/heartbeat', [
             'session_id' => 'luxvant-block-tabxx',
         ])->assertForbidden();

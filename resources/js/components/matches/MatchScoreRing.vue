@@ -64,7 +64,7 @@ watch(() => props.score, fill)
 
 .match-ring__track { stroke: var(--match-ring-track, rgba(255, 255, 255, 0.14)); }
 .match-ring__fill {
-    stroke: #8f5aa3;
+    stroke: var(--match-ring-fill, var(--color-primary-bright, #8f5aa3));
     stroke-linecap: round;
     transition: stroke-dashoffset 0.9s ease-out;
 }

@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
     border-radius: 20px;
     background: var(--color-surface);
     border: 1px solid var(--color-primary-border);
-    box-shadow: 0 18px 40px rgba(63, 33, 72, 0.18);
+    box-shadow: 0 18px 40px rgba(var(--color-primary-rgb, 115, 62, 135), 0.18);
     --match-ring-track: var(--color-primary-soft);
     --match-ring-text: var(--color-primary);
 }
@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
 
 .mat__x { position: absolute; top: 10px; right: 10px; border: 0; background: transparent; padding: 4px; border-radius: 8px; color: var(--color-text-muted); }
 .mat__top { display: flex; align-items: center; gap: 14px; padding-right: 18px; }
-.mat__icon { width: 50px; height: 50px; flex: none; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%); color: #fff; }
+.mat__icon { width: 50px; height: 50px; flex: none; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, var(--color-primary-bright, #8f5aa3) 0%, var(--color-primary, #733e87) 100%); color: var(--color-on-primary, #fff); }
 .mat__kicker {
     display: flex;
     align-items: center;
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #733e87;
+    color: var(--color-primary, #733e87);
 }
 .mat__msg { margin: 3px 0 0; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--color-text-primary); }
 .mat__actions { display: flex; gap: 8px; }
@@ -174,11 +174,11 @@ onBeforeUnmount(() => {
 .mat__btn--primary {
     flex: 1;
     border-color: transparent;
-    background: linear-gradient(135deg, #8f5aa3 0%, #733e87 100%);
+    background: linear-gradient(135deg, var(--color-primary-bright, #8f5aa3) 0%, var(--color-primary, #733e87) 100%);
     color: var(--color-on-primary);
     box-shadow: 0 8px 18px rgba(var(--color-primary-rgb), 0.28);
 }
-.mat__btn--primary:hover { background: linear-gradient(135deg, #7d4a91 0%, #5c3270 100%); }
+.mat__btn--primary:hover { background: linear-gradient(135deg, var(--color-primary, #7d4a91) 0%, var(--color-primary-hover, #5c3270) 100%); }
 
 .mat-share {
     position: fixed;

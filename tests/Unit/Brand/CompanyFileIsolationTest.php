@@ -18,6 +18,8 @@ class CompanyFileIsolationTest extends TestCase
         BrandIsolation::clearColumnCache();
         Storage::fake('public');
         Storage::fake('company');
+        Storage::fake('luxvant_public');
+        Storage::fake('luxvant_company');
     }
 
     public function test_public_allowlist_and_sensitive_classification(): void
@@ -47,9 +49,11 @@ class CompanyFileIsolationTest extends TestCase
             9
         );
 
-        $this->assertSame('company', $result['disk']);
+        // Luxvant deal files live on the separate Luxvant private storage.
+        $this->assertSame('luxvant_company', $result['disk']);
         $this->assertStringStartsWith('luxvant/deals/9/docs/', $result['path']);
-        Storage::disk('company')->assertExists($result['path']);
+        Storage::disk('luxvant_company')->assertExists($result['path']);
+        Storage::disk('company')->assertMissing($result['path']);
         $this->assertNotNull($result['url']);
         $this->assertStringContainsString('company-files/serve', (string) $result['url']);
         $this->assertStringContainsString('resource=deal', (string) $result['url']);
@@ -61,7 +65,7 @@ class CompanyFileIsolationTest extends TestCase
         app(BrandContext::class)->set(config('brands.brands.luxvant'));
         $file = UploadedFile::fake()->create('secret.pdf', 20, 'application/pdf');
         $result = app(CompanyFileService::class)->storeInDirectory($file, 'comments/attachments');
-        $this->assertSame('company', $result['disk']);
+        $this->assertSame('luxvant_company', $result['disk']);
         $this->assertNull($result['url']);
     }
 

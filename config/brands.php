@@ -26,6 +26,12 @@ return [
     */
     'reject_unknown_hosts' => (bool) env('BRAND_REJECT_UNKNOWN_HOSTS', false),
 
+    /*
+    | Legacy: let Luxvant see brand_key=NULL leads/deals (narrowed by BrandCrmScope).
+    | Default OFF — run `php artisan brand:backfill-legacy` instead.
+    */
+    'luxvant_allow_unclassified_crm' => (bool) env('BRAND_LUXVANT_ALLOW_UNCLASSIFIED_CRM', false),
+
     'brands' => [
 
         'oia' => [

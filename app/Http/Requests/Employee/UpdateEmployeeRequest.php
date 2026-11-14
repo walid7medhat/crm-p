@@ -19,7 +19,7 @@ class UpdateEmployeeRequest extends FormRequest
         return [
             'name' => 'sometimes|string|max:255',
             'employee_name'=>'sometimes|string|max:255',
-            'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($userId)],
+            'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($userId), new \App\Rules\BrandEmailDomain($userId ? \App\Models\User::query()->whereKey($userId)->value('email') : null)],
             'phone' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:8',
             'role_id' => 'sometimes|exists:roles,id',

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InvestmentOverride extends Model
 {
+    use \App\Support\Brand\Concerns\BrandOwned;
+
     protected $guarded = [];
 
     protected function casts(): array
