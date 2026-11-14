@@ -26,7 +26,9 @@ return new class extends Migration
             $table->string('status', 32)->default('new')->index(); // new | reviewed
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
-            $table->timestamp('occurred_at')->index();
+            // Required event time: explicit CURRENT_TIMESTAMP avoids MySQL 1067
+            // (Invalid default value) under NO_ZERO_DATE / STRICT_TRANS_TABLES.
+            $table->timestamp('occurred_at')->useCurrent()->index();
             $table->json('meta')->nullable();
             $table->timestamps();
 

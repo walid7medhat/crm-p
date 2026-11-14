@@ -89,7 +89,33 @@ class ForeignAccessMonitorTest extends TestCase
         $this->assertSame('new', $event->status);
         $this->assertSame('Chrome', $event->browser);
         $this->assertSame('Windows', $event->operating_system);
+        $this->assertNotNull($event->occurred_at);
+        $this->assertTrue($event->occurred_at->between(now()->subMinute(), now()->addMinute()));
         Event::assertDispatched(ForeignAccessDetected::class);
+    }
+
+    public function test_occurred_at_uses_application_provided_timestamp(): void
+    {
+        Event::fake([ForeignAccessDetected::class]);
+        $this->fakeGeoIp('FR', 'France', 'Paris');
+        $user = $this->makeUser('sales');
+        $when = now()->subMinutes(7)->startOfSecond();
+
+        $event = ForeignAccessEvent::query()->create([
+            'user_id' => $user->id,
+            'brand_key' => 'oia',
+            'ip' => '90.1.2.3',
+            'country' => 'France',
+            'country_code' => 'FR',
+            'city' => 'Paris',
+            'detection_reason' => ForeignAccessMonitorService::REASON_FOREIGN_LOGIN,
+            'status' => 'new',
+            'session_key' => 'session-ts-1',
+            'occurred_at' => $when,
+        ]);
+
+        $event->refresh();
+        $this->assertTrue($event->occurred_at->equalTo($when));
     }
 
     public function test_country_change_during_session_is_detected(): void
