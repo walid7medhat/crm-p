@@ -115,8 +115,20 @@ class UserHistoryController extends Controller
         $histories = LeadHistory::whereIn('id', $historyIds)->get()->keyBy('id');
         $activities = Activity::whereIn('id', $activityIds)->with('subject')->get()->keyBy('id');
 
-        $leadNames = $this->leadNames($histories->pluck('lead_id')->filter()->unique()->all());
-        $dealNames = Deal::whereIn('id', $histories->pluck('deal_id')->filter()->unique())->pluck('deal_name', 'id');
+        // Deal rows also carry the deal's lead_id, so the client's name loads in the same query.
+        $deals = Deal::withoutGlobalScopes()
+            ->whereIn('id', $histories->pluck('deal_id')->filter()->unique())
+            ->get(['id', 'deal_name', 'lead_id'])
+            ->keyBy('id');
+        $leadNames = $this->leadNames(
+            $histories->pluck('lead_id')->merge($deals->pluck('lead_id'))->filter()->unique()->values()->all()
+        );
+        $dealNames = $deals->map(function ($d) use ($leadNames) {
+            $deal = trim((string) $d->deal_name) !== '' ? $d->deal_name : 'Deal #' . $d->id;
+            $client = $d->lead_id ? ($leadNames[$d->lead_id] ?? null) : null;
+
+            return $client ? "{$deal} — {$client}" : $deal;
+        });
 
         $items = $rows->map(function ($row) use ($histories, $activities, $leadNames, $dealNames) {
             return $row->src === 'h'
@@ -363,9 +375,14 @@ class UserHistoryController extends Controller
 
         return Lead::withoutGlobalScopes()
             ->whereIn('id', $ids)
-            ->get(['id', 'first_name', 'last_name', 'lead_number'])
+            ->get(['id', 'first_name', 'second_name', 'last_name', 'lead_name', 'company_name', 'lead_number'])
             ->mapWithKeys(function ($l) {
-                $name = trim(($l->first_name ?? '') . ' ' . ($l->last_name ?? ''));
+                // Bitrix imports often only fill lead_name; placeholders like "-" count as empty.
+                $clean = fn ($v) => trim((string) $v, " \t\n\r\0\x0B-.");
+                $name = trim(preg_replace('/\s+/', ' ', implode(' ', array_filter([
+                    $clean($l->first_name), $clean($l->second_name), $clean($l->last_name),
+                ]))));
+                $name = $name !== '' ? $name : ($clean($l->lead_name) ?: $clean($l->company_name));
                 $label = $name !== '' ? $name : 'Lead #' . $l->id;
 
                 return [$l->id => $l->lead_number ? "{$label} ({$l->lead_number})" : $label];
