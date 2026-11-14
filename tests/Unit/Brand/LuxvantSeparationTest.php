@@ -281,6 +281,39 @@ class LuxvantSeparationTest extends TestCase
         }
     }
 
+    public function test_lead_brand_follows_responsible_person(): void
+    {
+        $memo = \Closure::bind(function (array $map) { self::$memberMemo = $map; }, null, BrandCrmScope::class);
+        $memo([701 => true, 702 => false]);
+
+        $apply = \Closure::bind(fn ($m, $r) => static::applyResponsibleBrand($m, $r), null, \App\Models\Lead::class);
+
+        // OIA webhook creates a lead assigned to a Luxvant agent → Luxvant lead.
+        $lead = new \App\Models\Lead;
+        $lead->forceFill(['brand_key' => 'oia', 'responsible_person_id' => 701]);
+        $apply($lead, false);
+        $this->assertSame('luxvant', $lead->brand_key);
+
+        // Reassigned to an OIA agent → back to OIA.
+        $lead->forceFill(['responsible_person_id' => 702]);
+        $apply($lead, true);
+        $this->assertSame('oia', $lead->brand_key);
+
+        // OIA agent on create keeps the host brand.
+        $oia = new \App\Models\Lead;
+        $oia->forceFill(['brand_key' => 'oia', 'responsible_person_id' => 702]);
+        $apply($oia, false);
+        $this->assertSame('oia', $oia->brand_key);
+
+        // Listings are not affected.
+        $listing = new \App\Models\Listing;
+        $listing->forceFill(['brand_key' => 'oia', 'responsible_person_id' => 701]);
+        \Closure::bind(fn ($m) => static::applyResponsibleBrand($m, false), null, \App\Models\Listing::class)($listing);
+        $this->assertSame('oia', $listing->brand_key);
+
+        BrandCrmScope::reset();
+    }
+
     public function test_matches_and_search_alerts_are_brand_owned(): void
     {
         $this->assertContains(\App\Support\Brand\Concerns\BrandOwned::class, class_uses_recursive(\App\Models\LeadListingMatch::class));
