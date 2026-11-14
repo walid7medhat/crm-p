@@ -70,6 +70,61 @@ class BrandDiagnoseUserLeadsCommand extends Command
             : null;
         $this->line('Stage visibility for role "'.($roleName ?? '-').'": '.($visibility ?: 'all lead stages'));
 
+        $this->explainBoard($user, $base, $visibility, $inTree);
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Same rules as StageController::getStagesWithLeads for a sales-level user:
+     * each lead is counted under the FIRST rule that hides it.
+     */
+    private function explainBoard(User $user, $base, ?string $visibility, bool $inTree): void
+    {
+        $isAdminLevel = $user->hasAnyRole(['super_admin', 'admin', 'branch_admin', 'manager', 'team_lead']);
+        if ($isAdminLevel) {
+            $this->line('This user is admin level — the board uses their team, not only their own leads.');
+
+            return;
+        }
+
+        $visibleIds = array_map('intval', array_filter((array) json_decode((string) $visibility, true)));
+        if ($visibleIds === []) {
+            $visibleIds = DB::table('stages')->where('stage_type', 'lead')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+        $newLeadId = (int) DB::table('stages')->where('stage_type', 'lead')->orderBy('order')->value('id');
+        if ($user->hasAnyRole(['manager', 'sales']) && $user->is_listing_team && $newLeadId && ! in_array($newLeadId, $visibleIds, true)) {
+            $visibleIds[] = $newLeadId;
+        }
+        $poolIds = DB::table('stages')->where('stage_type', 'lead')->whereRaw('LOWER(name) = ?', ['lead pool'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $isLuxvantUser = $user->brand_key === 'luxvant' || $inTree;
+
+        $reasons = [];
+        $shown = 0;
+        foreach ((clone $base)->get(['stage_id', 'revert', 'brand_key']) as $lead) {
+            $stageId = (int) $lead->stage_id;
+            $reason = match (true) {
+                $isLuxvantUser && $lead->brand_key !== 'luxvant' => 'Not marked luxvant (hidden on Luxvant host)',
+                ! $isLuxvantUser && $lead->brand_key === 'luxvant' => 'Marked luxvant (hidden on OIA host)',
+                in_array($stageId, $poolIds, true) => 'In Lead Pool (shown in the Lead Pool tab, not the board)',
+                ! in_array($stageId, $visibleIds, true) => 'Stage hidden for role "'.($user->getRoleNames()->first() ?? '-').'"'
+                    .($stageId === $newLeadId ? ' (New Lead)' : ''),
+                $lead->revert !== null => 'Reverted (revert set — hidden from sales)',
+                default => null,
+            };
+
+            if ($reason === null) {
+                $shown++;
+            } else {
+                $reasons[$reason] = ($reasons[$reason] ?? 0) + 1;
+            }
+        }
+
+        $this->newLine();
+        $this->info("On their own Leads board this user sees: {$shown} lead(s)");
+        if ($reasons !== []) {
+            arsort($reasons);
+            $this->table(['Why the rest are hidden', 'Leads'], collect($reasons)->map(fn ($n, $r) => [$r, $n])->values()->all());
+        }
     }
 }
