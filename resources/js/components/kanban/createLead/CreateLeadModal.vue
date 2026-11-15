@@ -108,6 +108,7 @@
                                                 placeholder="Enter Phone Number" 
                                                 :invalid="!!validationErrors.work_phone"
                                                 :show-errors="showPhoneFieldErrors"
+                                                auto-detect-country
                                             />
                                             <div v-if="validationErrors.work_phone" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone[0] }}
@@ -149,7 +150,7 @@
                                                 placeholder="Enter Phone Number" 
                                                 :invalid="!!validationErrors.work_phone_2"
                                                 :show-errors="showPhoneFieldErrors"
-                                               
+                                                auto-detect-country
                                             />
                                             <div v-if="validationErrors.work_phone_2" class="invalid-feedback d-block">
                                                 {{ validationErrors.work_phone_2[0] }}
@@ -460,6 +461,7 @@
                                                                 placeholder="Phone number"
                                                                 :invalid="!!validationErrors.source_client_phone"
                                                                 :show-errors="showPhoneFieldErrors"
+                                                                auto-detect-country
                                                             />
                                                             <div v-if="validationErrors.source_client_phone" class="invalid-feedback d-block">
                                                                 {{ validationErrors.source_client_phone[0] }}

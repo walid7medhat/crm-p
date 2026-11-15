@@ -38,7 +38,12 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { VueTelInput } from 'vue-tel-input'
 import 'vue-tel-input/vue-tel-input.css'
-import { parsePhoneNumberFromString } from 'libphonenumber-js'
+import {
+  parsePhoneNumberFromString,
+  AsYouType,
+  getCountries,
+  getCountryCallingCode,
+} from 'libphonenumber-js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -50,6 +55,9 @@ const props = defineProps({
   inferCountryFromIp: { type: Boolean, default: false },
   autoFormat: { type: Boolean, default: false },
   collapseCountryWhenEmpty: { type: Boolean, default: false },
+  // When true, typing +52 / 0052 / +971… updates the flag from the dial code.
+  // Opt-in so other CRM phone fields keep their existing behavior.
+  autoDetectCountry: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue', 'country-changed'])
@@ -65,6 +73,16 @@ const localNumber = ref('') // Store only the local number (without dial code)
 // Drives the flag shown by vue-tel-input so reopening the modal restores the saved country
 // instead of falling back to the default UAE.
 const detectedCountryIso = ref('')
+// While the user is mid-typing an international prefix (+9, +97…), keep the raw draft
+// in the input so we don't prepend the current flag's dial code or drop the "+".
+const internationalDraft = ref('')
+
+// Shared calling codes where AsYouType may not pick a single ISO yet (NANP, UK, etc.).
+const PREFERRED_ISO_BY_CALLING_CODE = {
+  1: 'us',
+  7: 'ru',
+  44: 'gb',
+}
 
 const normalizedModelValue = computed(() => (props.modelValue == null ? '' : String(props.modelValue)))
 
@@ -84,12 +102,82 @@ const extractLocalNumber = (fullNumber) => {
   return fullNumber.replace(/\s/g, '')
 }
 
-// What the user sees (only local number, no dial code)
+// What the user sees (only local number, no dial code) — except during an
+// unresolved "+…" draft, where we keep the international prefix visible.
 const displayValue = computed(() => {
+  if (internationalDraft.value) return internationalDraft.value
   if (!localNumber.value && !normalizedModelValue.value) return ''
   if (localNumber.value) return localNumber.value
   return extractLocalNumber(normalizedModelValue.value)
 })
+
+function toInternationalRaw(raw) {
+  const trimmed = String(raw ?? '').trim()
+  if (trimmed.startsWith('+')) return trimmed
+  if (/^00\d/.test(trimmed)) return `+${trimmed.slice(2)}`
+  return null
+}
+
+function isoForCallingCode(callingCode, hintIso) {
+  if (hintIso && typeof hintIso === 'string') return hintIso.toLowerCase()
+  const preferred = PREFERRED_ISO_BY_CALLING_CODE[String(callingCode)]
+  if (preferred) return preferred
+  const match = getCountries().find((c) => String(getCountryCallingCode(c)) === String(callingCode))
+  return match ? match.toLowerCase() : ''
+}
+
+/**
+ * Parse a "+…" / "00…" draft with AsYouType.
+ * - partial: dial code not complete yet (e.g. "+9", "+97") — do not change flag
+ * - detected: calling code resolved — update flag and national digits
+ */
+function detectInternationalDial(raw) {
+  const normalized = toInternationalRaw(raw)
+  if (!normalized) return null
+  if (normalized === '+') return { status: 'partial', draft: '+' }
+
+  const typer = new AsYouType()
+  typer.input(normalized)
+  const callingCode = typer.getCallingCode()
+  if (!callingCode) {
+    return { status: 'partial', draft: normalized }
+  }
+
+  const iso = isoForCallingCode(callingCode, typer.getCountry())
+  const parsed = typeof typer.getNumber === 'function' ? typer.getNumber() : null
+  let national = parsed?.nationalNumber != null ? String(parsed.nationalNumber) : ''
+  if (!national) {
+    const digits = normalized.replace(/\D/g, '')
+    if (digits.startsWith(String(callingCode))) {
+      national = digits.slice(String(callingCode).length)
+    }
+  }
+  national = national.replace(/^0+/, '')
+
+  return {
+    status: 'detected',
+    callingCode: String(callingCode),
+    iso,
+    national,
+  }
+}
+
+function restoreTelFocus() {
+  nextTick(() => {
+    nextTick(() => {
+      const root = telInputRef.value?.$el
+      const input = root?.querySelector?.('input')
+      if (!input) return
+      input.focus()
+      const len = input.value?.length ?? 0
+      try {
+        input.setSelectionRange(len, len)
+      } catch {
+        /* ignore unsupported selection */
+      }
+    })
+  })
+}
 
 const dropdownOptions = {
   showFlags: true,
@@ -192,25 +280,83 @@ function stripRedundantDialCode(digits) {
 }
 
 const isTyping = ref(false)
+
+function finishTyping(remounted = false) {
+  nextTick(() => {
+    isTyping.value = false
+    if (remounted) restoreTelFocus()
+  })
+}
+
+function applyInternationalDetection(raw) {
+  const trimmed = String(raw ?? '').trim()
+
+  // Resolve the international candidate:
+  // 1) explicit +… / 00… in this keystroke
+  // 2) continuation of an in-progress draft (input may have dropped the "+")
+  let candidate = toInternationalRaw(trimmed)
+  if (!candidate && internationalDraft.value) {
+    if (!trimmed) candidate = '+'
+    else if (trimmed.startsWith('+') || trimmed.startsWith('00')) candidate = toInternationalRaw(trimmed)
+    else candidate = `+${cleanInput(trimmed)}`
+  }
+  if (!candidate) return false
+
+  const detected = detectInternationalDial(candidate)
+  if (!detected || detected.status === 'partial') {
+    internationalDraft.value = detected?.draft || candidate
+    const emitVal =
+      !internationalDraft.value || internationalDraft.value === '+'
+        ? ''
+        : internationalDraft.value.replace(/[^\d+]/g, '')
+    emit('update:modelValue', emitVal)
+    finishTyping(false)
+    return true
+  }
+
+  const prevIso = detectedCountryIso.value
+  internationalDraft.value = ''
+  currentDialCode.value = detected.callingCode
+  if (detected.iso) detectedCountryIso.value = detected.iso
+  localNumber.value = detected.national
+
+  emit(
+    'update:modelValue',
+    detected.national
+      ? `+${detected.callingCode}${detected.national}`
+      : `+${detected.callingCode}`,
+  )
+
+  finishTyping(Boolean(detected.iso && detected.iso !== prevIso))
+  return true
+}
+
 function onUpdate(v) {
-    isTyping.value = true
+  isTyping.value = true
+  const raw = String(v ?? '')
+
+  // Live dial-code → flag detection (opt-in). Only "+…" / "00…" (or an active
+  // draft) triggers this path, so national typing and manual flag picks are unchanged.
+  if (props.autoDetectCountry && applyInternationalDetection(raw)) {
+    return
+  }
+
+  internationalDraft.value = ''
 
   // Clean the input value (remove spaces and non-digits), then drop a redundant
   // dial code the user may have typed on top of the selected country.
-  const cleaned = stripRedundantDialCode(cleanInput(v ?? ''))
+  const cleaned = stripRedundantDialCode(cleanInput(raw))
   localNumber.value = cleaned
-  
+
   // Build the full international number to send to backend
   let fullNumber = ''
   if (cleaned) {
     fullNumber = `+${currentDialCode.value}${cleaned}`
   }
-  
+
   // Emit the full number to parent/backend
   emit('update:modelValue', fullNumber)
-  nextTick(() => {
-    isTyping.value = false
-  })
+  finishTyping(false)
 }
 
 function onFocus() {
@@ -219,6 +365,11 @@ function onFocus() {
 
 function onBlur() {
   isFocused.value = false
+  // Drop an unfinished "+9" draft once the field loses focus so we don't leave
+  // a dangling prefix in the controlled input on the next focus.
+  if (internationalDraft.value) {
+    internationalDraft.value = ''
+  }
 }
 
 function onCountryChanged(country) {
@@ -228,6 +379,9 @@ function onCountryChanged(country) {
   if (props.collapseCountryWhenEmpty) {
     hasExplicitCountryChoice.value = true
   }
+
+  // Manual flag pick wins over any in-progress "+…" draft.
+  internationalDraft.value = ''
 
   // Update the dial code when country changes
   if (country) {
@@ -289,6 +443,7 @@ watch(
     } else if (!newVal) {
       localNumber.value = ''
       detectedCountryIso.value = ''
+      internationalDraft.value = ''
     }
     if (!newVal) lastLibValid.value = true
   },
