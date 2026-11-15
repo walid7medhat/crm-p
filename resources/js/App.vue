@@ -65,6 +65,7 @@
     />
     <MatchAlertToast v-if="showLayout && !isAppLoading" />
     <LiveWatchOnlineAlert v-if="showLayout && !isAppLoading" />
+    <ForeignAccessAlert v-if="showLayout && !isAppLoading" />
     <OfferPdfHost v-if="offerPdfJobs.length" />
     <PropertyCompareDock v-if="showLayout && !isAppLoading" />
     <PropertyDetailsModal v-if="showLayout" />
@@ -101,6 +102,7 @@ const UserAnimationPlayer = defineAsyncComponent(() => import('./components/anim
 const SmartSearchDialog = defineAsyncComponent(() => import('./components/search/SmartSearchDialog.vue'))
 const MatchAlertToast = defineAsyncComponent(() => import('./components/matches/MatchAlertToast.vue'))
 const LiveWatchOnlineAlert = defineAsyncComponent(() => import('./components/live-watch/LiveWatchOnlineAlert.vue'))
+const ForeignAccessAlert = defineAsyncComponent(() => import('./components/foreign-access/ForeignAccessAlert.vue'))
 const MatchQuickPanel = defineAsyncComponent(() => import('./components/matches/MatchQuickPanel.vue'))
 // Loaded only while a Send offer is building its PDF (pulls in BlogOne's offer generator).
 const OfferPdfHost = defineAsyncComponent(() => import('./components/matches/OfferPdfHost.vue'))
@@ -137,6 +139,7 @@ export default {
     SmartSearchDialog,
     MatchAlertToast,
     LiveWatchOnlineAlert,
+    ForeignAccessAlert,
     MatchQuickPanel,
     OfferPdfHost,
     Header,

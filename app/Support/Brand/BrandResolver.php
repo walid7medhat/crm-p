@@ -42,7 +42,7 @@ class BrandResolver
         }
 
         // Prefer the raw Host header for brand selection so X-Forwarded-Host cannot
-        // spoof Luxvant ↔ OIA when trustProxies(at: '*') is enabled.
+        // spoof Luxvant ↔ OIA even when a trusted Cloudflare proxy is in front.
         $rawHost = $request->headers->get('Host');
         if (is_string($rawHost) && trim($rawHost) !== '') {
             return $this->resolveFromHost($rawHost);

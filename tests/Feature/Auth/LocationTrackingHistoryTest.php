@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Models\UserLocationHistory;
+use App\Support\Brand\BrandContext;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -22,6 +23,10 @@ class LocationTrackingHistoryTest extends TestCase
         if (! Schema::hasTable('user_location_history')) {
             $this->fail('Run php artisan migrate before location history tests.');
         }
+
+        // Isolate from local BRAND_FORCE=luxvant so factory users are not brand-gated.
+        $this->withoutMiddleware(\App\Http\Middleware\ResolveBrandFromHost::class);
+        app(BrandContext::class)->set(config('brands.brands.oia'));
 
         config([
             'location_tracking.write_cooldown_seconds' => 0,

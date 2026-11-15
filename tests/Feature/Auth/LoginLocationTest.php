@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Jobs\EvaluateForeignAccessJob;
 use App\Jobs\ResolveLoginLocation;
 use App\Models\User;
+use App\Support\Brand\BrandContext;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -22,6 +25,13 @@ class LoginLocationTest extends TestCase
         if (! Schema::hasColumn('users', 'last_login_accuracy') || ! Schema::hasColumn('users', 'last_login_location_at')) {
             $this->fail('Run php artisan migrate before login location tests.');
         }
+
+        // Isolate from local BRAND_FORCE=luxvant so factory users are not brand-gated.
+        $this->withoutMiddleware(\App\Http\Middleware\ResolveBrandFromHost::class);
+        app(BrandContext::class)->set(config('brands.brands.oia'));
+
+        // Foreign-access GeoIP must not run inline (phpunit QUEUE_CONNECTION=sync).
+        Queue::fake([EvaluateForeignAccessJob::class]);
 
         config(['location_tracking.write_cooldown_seconds' => 0]);
     }
