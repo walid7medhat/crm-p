@@ -90,6 +90,17 @@
                             Create deal
                         </button>
                     </div>
+                    <button
+                        v-if="canDeleteThisLead"
+                        type="button"
+                        class="close-btn view-lead-delete-btn"
+                        aria-label="Delete lead"
+                        title="Delete lead"
+                        :disabled="deletingLead"
+                        @click="deleteThisLead"
+                    >
+                        <iconify-icon :icon="deletingLead ? 'lucide:loader-2' : 'lucide:trash-2'" :class="{ 'spin': deletingLead }"></iconify-icon>
+                    </button>
                     <button type="button" class="close-btn view-lead-close-btn" aria-label="Close lead" @click="closeWithMotion">
                         <iconify-icon icon="lucide:x"></iconify-icon>
                     </button>
@@ -220,6 +231,7 @@ import BrandLoader from '@/components/layout/BrandLoader.vue'
 import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
+import Swal from 'sweetalert2'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 import {
     playLeadDetailData,
@@ -483,7 +495,7 @@ const blockQualifiedRequirementEscape = async (event) => {
     show.value = false
 }
 
-const QUALIFIED_REQUIREMENT_ALLOW = '.view-lead-close-btn, .complete-requirement-cta, .lead-converted-deal-link, .lead-converted-create-deal, .tab-item, .btn-toggle, .scroll-hover-edge, .btn-show-older, .show-older-link'
+const QUALIFIED_REQUIREMENT_ALLOW = '.view-lead-close-btn, .view-lead-delete-btn,.complete-requirement-cta, .lead-converted-deal-link, .lead-converted-create-deal, .tab-item, .btn-toggle, .scroll-hover-edge, .btn-show-older, .show-older-link'
 
 const isQualifiedRequirementAction = (target) => {
     if (!(target instanceof Element)) return false
@@ -576,6 +588,49 @@ async function handleLeadConverted(deal) {
         return
     }
     openConvertedDeal()
+}
+
+// Delete (archive) from the lead view — same roles as the board's delete
+// (LeadController::canDeleteLead is the real gate). Converted leads can't be deleted.
+const deletingLead = ref(false)
+const canDeleteThisLead = computed(() => {
+    if (!user.value || !lead.value?.id) return false
+    if (isConvertedLeadStage(lead.value)) return false
+    return Boolean(
+        user.value.roles?.includes('super_admin') ||
+        user.value.roles?.includes('admin') ||
+        [30, 33].includes(Number(user.value.id))
+    )
+})
+
+async function deleteThisLead() {
+    const target = lead.value
+    if (!target?.id || deletingLead.value) return
+
+    const result = await Swal.fire({
+        title: 'Delete this lead?',
+        text: `${target.lead_name || 'This lead'} moves to the archive. You can delete it forever from there.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc3545',
+    })
+    if (!result.isConfirmed) return
+
+    deletingLead.value = true
+    try {
+        await api.delete(`/leads/${target.id}`)
+        window.$showNotification?.('Lead deleted.', 'success')
+        // Board / list drop the card now (the realtime "deleted" event follows).
+        window.dispatchEvent(new CustomEvent('lead-deleted', { detail: { id: Number(target.id) } }))
+        deletingLead.value = false
+        await closeWithMotion()
+    } catch (error) {
+        window.$showNotification?.(error.response?.data?.message || 'Could not delete this lead.', 'error')
+    } finally {
+        deletingLead.value = false
+    }
 }
 
 const canViewHistory = computed(() => {
@@ -2391,6 +2446,34 @@ defineExpose({
     background: #fff;
     color: var(--color-primary);
     transform: translateY(-1px);
+}
+
+.view-lead-delete-btn {
+    width: 34px;
+    height: 34px;
+    margin-right: 8px;
+    border: 1px solid rgba(220, 53, 69, 0.28);
+    background: #fff;
+    color: #dc3545;
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.12);
+}
+
+.view-lead-delete-btn:hover:not(:disabled) {
+    background: #dc3545;
+    color: #fff;
+}
+
+.view-lead-delete-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.view-lead-delete-btn .spin {
+    animation: view-lead-spin 0.8s linear infinite;
+}
+
+@keyframes view-lead-spin {
+    to { transform: rotate(360deg); }
 }
 
 .view-lead-close-btn {
