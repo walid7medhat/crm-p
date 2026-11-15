@@ -2364,6 +2364,12 @@ function syncLiveTextFromQuery(q) {
     liveBlacklistOnly.value = !!(q.has_blacklist)
 }
 
+/** Lead deleted from the lead view modal — drop its card without waiting for realtime. */
+function onLeadDeletedFromModal(event) {
+    const id = Number(event?.detail?.id)
+    if (id) removeLeadsFromBoard([id])
+}
+
 function onKanbanLeadLiveFilter(event) {
     const term = event?.detail?.search
     liveTextSearch.value = term == null ? '' : String(term).trim()
@@ -4016,6 +4022,7 @@ onMounted(async () => {
     window.addEventListener('echo-ready', onEchoReady)
     window.addEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     window.addEventListener('kanban-lead-live-filter', onKanbanLeadLiveFilter)
+    window.addEventListener('lead-deleted', onLeadDeletedFromModal)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
     if (leadIdFromUrl) {
@@ -4044,6 +4051,7 @@ onUnmounted(() => {
     window.removeEventListener('echo-ready', onEchoReady)
     window.removeEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     window.removeEventListener('kanban-lead-live-filter', onKanbanLeadLiveFilter)
+    window.removeEventListener('lead-deleted', onLeadDeletedFromModal)
     cleanup()
     destroyLeadMotion()
 })
