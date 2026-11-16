@@ -95,4 +95,12 @@ return [
         'private_key' => env('WEB_PUSH_VAPID_PRIVATE_KEY'),
     ],
 
+    // Meta (Facebook lead ads). Read through config() so `config:cache` never blanks them.
+    'meta' => [
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'access_token' => env('META_ACCESS_TOKEN'),
+        'webhook_verify_token' => env('META_WEBHOOK_VERIFY_TOKEN', 'oia777'),
+    ],
+
 ];

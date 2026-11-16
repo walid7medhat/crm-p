@@ -19,9 +19,9 @@ class RefreshMetaAppToken extends Command
     {
         $this->info('Starting Meta App Token refresh...');
 
-        $appId = env('META_APP_ID');
-        $appSecret = env('META_APP_SECRET');
-        $currentToken = env('META_ACCESS_TOKEN');
+        $appId = config('services.meta.app_id');
+        $appSecret = config('services.meta.app_secret');
+        $currentToken = config('services.meta.access_token');
 
         $this->line("App ID: " . ($appId ?: 'NOT SET'));
         $this->line("App Secret: " . ($appSecret ? '****' : 'NOT SET'));

@@ -107,15 +107,26 @@ class GlobalMaintenanceModeTest extends TestCase
         ])->assertOk();
     }
 
-    public function test_public_webhooks_and_auth_recovery_are_blocked_when_on(): void
+    public function test_inbound_lead_webhooks_stay_open_when_on(): void
+    {
+        $this->enableMaintenance();
+
+        // A 503 makes Meta / Bitrix / PF drop the delivery and the lead is lost.
+        foreach ([
+            '/api/bitrix24/webhook',
+            '/api/propertyfinder/webhook',
+            '/api/webhook/facebook',
+            '/api/website-lead',
+        ] as $uri) {
+            $this->assertNotSame(503, $this->postJson($uri, [])->status(), "Expected {$uri} to bypass maintenance");
+        }
+    }
+
+    public function test_public_auth_recovery_is_blocked_when_on(): void
     {
         $this->enableMaintenance();
 
         $blocked = [
-            ['POST', '/api/bitrix24/webhook'],
-            ['POST', '/api/propertyfinder/webhook'],
-            ['POST', '/api/webhook/facebook'],
-            ['POST', '/api/website-lead'],
             ['POST', '/api/auth/forgot-password', ['email' => 'a@example.com']],
             ['POST', '/api/auth/register', [
                 'name' => 'X',

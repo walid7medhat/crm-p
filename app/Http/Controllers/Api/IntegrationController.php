@@ -78,7 +78,7 @@ class IntegrationController extends Controller
      */
     public function fetchMetaPages(): JsonResponse
     {
-        $accessToken = env('META_ACCESS_TOKEN');
+        $accessToken = config('services.meta.access_token');
         
         if (!$accessToken) {
             Log::error('META_ACCESS_TOKEN not set in environment');
@@ -360,7 +360,7 @@ class IntegrationController extends Controller
             // )->firstOrFail();
         
             // $token = 'EAAW4JN9suLQBQ0NOcfe2ZBmpoGOSvCus7R5NQJoSqnpoiV3u2NGZBz1QoG6yDBXcfa3YNftZBSOsmKJ3ZCm6oEPGIFLcUKXdO67VhXCsXPuWDkVNbouRjtxGTdiiRu9chW3yT3Kf3b6HyPxuzpsEBEGaZC0LfyT2SQuoD4sZBL6JqaOdasXOIG04xlhB2hikZAaWuDh8E0ZD';
-        $token=env('META_ACCESS_TOKEN');
+        $token=config('services.meta.access_token');
             $url = self::META_GRAPH_BASE . '/' .
                 self::META_GRAPH_VERSION .
                 "/{$form_id}/leads";
@@ -425,7 +425,7 @@ class IntegrationController extends Controller
     {
         Log::info('🔍 Webhook verification request', $request->all());
 
-        $verifyToken = env('META_WEBHOOK_VERIFY_TOKEN', 'oia777');
+        $verifyToken = config('services.meta.webhook_verify_token', 'oia777');
         
         $mode = $request->input('hub_mode');
         $token = $request->input('hub_verify_token');
@@ -516,7 +516,7 @@ class IntegrationController extends Controller
 {
     try {
         // نجيب الـ token
-        $token = env('META_ACCESS_TOKEN');
+        $token = config('services.meta.access_token');
         
         // التحقق من عدم وجود الليد مكرر
         $existingLead = Lead::where('meta_lead_id', $leadgenId)->first();
@@ -911,7 +911,7 @@ $fieldMappings = [
 
 public function getFormFields($formId)
 {
-    $token = env('META_ACCESS_TOKEN');
+    $token = config('services.meta.access_token');
 
     $url = "https://graph.facebook.com/v18.0/{$formId}";
 
@@ -943,7 +943,7 @@ public function get_from_date(Request $request, $form_id)
         ->firstOrFail();
 
     $tz    = 'Asia/Dubai';
-    $token = env('META_ACCESS_TOKEN');
+    $token = config('services.meta.access_token');
     $url   = self::META_GRAPH_BASE . '/' . self::META_GRAPH_VERSION . "/{$form_id}/leads";
 
     $params = [
