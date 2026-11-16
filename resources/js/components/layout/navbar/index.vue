@@ -61,6 +61,7 @@
           >
             <iconify-icon icon="lucide:arrow-left" />
           </button>
+          <BranchViewSwitch v-if="isDashboardHome" dropdown class="navbar-branch-view navbar-branch-view--mob-row" />
           <div class="kanban-mob-lead-select-wrap kanban-mob-lead-select-wrap--title">
             <button
               v-if="!showMobileHeaderBack && !isProjectsRoute && moduleHeaderTabs.length > 1"
@@ -513,6 +514,7 @@
       </div>
 
       <div class="navbar-header-right">
+        <BranchViewSwitch v-if="isDashboardHome" class="navbar-branch-view navbar-branch-view--right" />
         <OiaSmartSearchLaunch
           v-if="isDashboardHome"
           placeholder="Search"
@@ -984,6 +986,7 @@ import {
 import { useLayoutActiveState } from '@/composables/useLayoutActiveState.js';
 import { useTheme } from '@/composables/useTheme.js';
 import { useBrand, brandEmailSuffix } from '@/composables/useBrand.js';
+import BranchViewSwitch from './BranchViewSwitch.vue';
 import { useMobileNavigation } from '@/composables/useMobileNavigation.js';
 import { setBirthdayBackgroundActive, useBirthdayCelebrationBanner } from '@/composables/useBirthdayCelebrationBanner.js';
 import { useSidebarCounts } from '@/composables/useSidebarCounts.js';
@@ -3433,6 +3436,33 @@ const showBackButton = computed(() => {
   min-width: 0;
   padding: 0 0.5rem;
   pointer-events: auto;
+}
+
+/* OIA Abu Dhabi / Dubai branch filter (super admin + #30) */
+.navbar-branch-view--right {
+  margin-right: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .navbar-branch-view--right {
+    display: none !important;
+  }
+
+  /* Same line as the "Home" title, before it — compact so bell + avatar still fit. */
+  .navbar-branch-view--mob-row {
+    flex: 0 0 auto;
+    max-width: none;
+    margin: 0;
+    padding: 2px;
+    position: relative;
+    z-index: 2; /* above the centered title */
+  }
+
+  .kanban-mob-toolbar__main--board:has(.navbar-branch-view--mob-row) .kanban-mob-toolbar__actions {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
 }
 
 /* Top shortcut menu: CRM, HRM, Accounts, Listings, Learnings */
