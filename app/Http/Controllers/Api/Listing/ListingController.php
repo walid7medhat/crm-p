@@ -2990,6 +2990,10 @@ public function markAsConverted(Request $request, $id)
             return ApiResponse::error('Access denied', 403);
         }
 
+        if (! $property->approved) {
+            return ApiResponse::error('This listing is not approved yet, so it cannot be marked as sold.', 422);
+        }
+
         $rules = [
             'sold_by' => 'required|in:me,oia,owner,a_to_a,another_agent',
             'agent_id' => 'required_if:sold_by,another_agent|exists:users,id',
@@ -3040,7 +3044,11 @@ public function markAsRented(Request $request, $id)
 {
     try {
         $property = Listing::findOrFail($id);
-        
+
+        if (! $property->approved) {
+            return ApiResponse::error('This listing is not approved yet, so it cannot be marked as rented.', 422);
+        }
+
         $rules = [
             'rented_by' => 'required|in:me,oia,owner,a_to_a,another_agent',
             'agent_id' => 'required_if:rented_by,another_agent|exists:users,id',
