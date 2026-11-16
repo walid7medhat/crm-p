@@ -101,7 +101,7 @@ $listingId = $this->route('property');
             'number_of_floors' => (($isBuilding && ! $isDraft) ? 'required' : 'nullable') . '|integer|min:1|max:200',
             'price' => "required|numeric|min:10000|$maxAmount",
             'listing_status' => 'sometimes|string|max:50',
-            // Draft: mortgage status, project and area may be left empty.
+            // Draft only: mortgage status, project and area may be left empty.
             'mortgage_status' => ($isDraft ? 'nullable' : 'required') . '|string|max:50',
             'mortgage_amount' => "nullable|numeric|min:0|$maxAmount",
             'mortgage_comment' => 'nullable|string|max:1000',
