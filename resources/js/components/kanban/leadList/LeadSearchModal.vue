@@ -7463,6 +7463,15 @@ const restoreSavedFields = async () => {
                 console.log('All available field IDs:', allFieldIds)
 
                 const validFields = parsed.filter(id => allFieldIds.includes(id))
+                // One-time: show newly added fields (Campaign ID) for users whose saved list predates them.
+                try {
+                    const NEW_FIELDS_FLAG = 'selectedLeadFields:added:integration_id'
+                    if (!localStorage.getItem(NEW_FIELDS_FLAG) && allFieldIds.includes('integration_id')) {
+                        if (!validFields.includes('integration_id')) validFields.push('integration_id')
+                        localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(validFields))
+                        localStorage.setItem(NEW_FIELDS_FLAG, '1')
+                    }
+                } catch (e) { /* storage blocked — field still selectable in settings */ }
                 console.log('Valid fields after filtering:', validFields)
 
                 if (validFields.length === 0) {
