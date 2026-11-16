@@ -664,8 +664,8 @@ export function buildTopModuleNav(ctx = {}) {
   const items = [
     { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
     { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
-    { id: 'property', label: 'Property', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
-    { id: 'transaction', label: 'Transaction', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
+    { id: 'property', label: 'Listings', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
+    { id: 'transaction', label: 'Deals', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
   ];
   // hideListings: e.g. the accountant role — no Listings ("Property") module.
   return ctx.hideListings ? items.filter((i) => i.id !== 'property') : items;

@@ -98,6 +98,7 @@ const getDefaultLeadFields = () => [
     { id: 'created_on', label: 'Created On', checked: true },
     { id: 'assigned_on', label: 'Assign On', checked: true },
     { id: 'work_phone', label: 'Phone', checked: true },
+    { id: 'integration_id', label: 'Campaign ID', checked: true },
     { id: 'responsible_person', label: 'Responsible Person', checked: true },
     { id: 'source', label: 'Source', checked: true },
     { id: 'lead_branch_source', label: 'Lead Branch Source', checked: true },
