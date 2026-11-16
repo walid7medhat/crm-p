@@ -693,6 +693,9 @@ class StageController extends Controller
         // Luxvant host: Admin Luxvant branch only (no-op on OIA).
         \App\Support\Brand\BrandCrmScope::constrainLeads($baseLeadsQuery);
 
+        // Lead search "Integration ID" — super_admin + admin only.
+        \App\Support\LeadIntegrationFilter::apply($baseLeadsQuery, $request, $user);
+
         // ================= apply all filters (unchanged logic) =================
         $baseLeadsQuery->where(function ($q) use ($request) {
             if ($request->filled('changed_by')) {
@@ -923,6 +926,9 @@ class StageController extends Controller
 
             // Luxvant host: Admin Luxvant branch only (no-op on OIA).
             \App\Support\Brand\BrandCrmScope::constrainLeads($leadsQuery);
+
+            // Lead search "Integration ID" — super_admin + admin only.
+            \App\Support\LeadIntegrationFilter::apply($leadsQuery, request(), $user);
 
             // ================= نفس الفلاتر =================
             if ($request->filled('changed_by')) {
@@ -1346,6 +1352,9 @@ public function getOffices()
             }
 
             \App\Support\Brand\BrandCrmScope::constrainLeads($leadsQuery);
+
+            // Lead search "Integration ID" — super_admin + admin only.
+            \App\Support\LeadIntegrationFilter::apply($leadsQuery, request(), $user);
             
             $leads = $leadsQuery
                 ->orderBy('updated_at', 'desc')

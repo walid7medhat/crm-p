@@ -138,6 +138,7 @@ class LeadController extends Controller
 
                 // ================= Full filter set (ported from StageController so lead-pool search
                 // matches the kanban-stages search modal behavior end-to-end) =================
+                \App\Support\LeadIntegrationFilter::apply($leadsQuery, $request, $user);
                 $responsiblePersonIds = $this->requestedResponsiblePersonIds($request);
                 if ($responsiblePersonIds) {
                     $leadsQuery->whereIn('responsible_person_id', $responsiblePersonIds);
