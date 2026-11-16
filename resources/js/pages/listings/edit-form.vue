@@ -3963,8 +3963,9 @@ const handleSubmit = async (action = 'draft') => {
     }
 
     // Validation للـ rented fields
-    if (form.value.saleOrRent === 'Rent' && form.value.rented_status === 'Rented' && !form.value.rented_until) {
-      proxy.$showNotification("❌ Please select rental end date for rented properties!", "error");
+    // Required for drafts too (checked before the publish-only rules below).
+    if (!isUnderConstruction.value && form.value.occupancyStatus === 'Rented' && !form.value.rentExpiryDate) {
+      proxy.$showNotification("❌ Please select rent expiry date for rented properties!", "error");
       isSubmitting.value = false;
       return;
     }

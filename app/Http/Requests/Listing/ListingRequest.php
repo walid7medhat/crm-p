@@ -104,7 +104,8 @@ $listingId = $this->route('property');
             'mortgage_status' => 'required|string|max:50',
             'mortgage_amount' => "nullable|numeric|min:0|$maxAmount",
             'mortgage_comment' => 'nullable|string|max:1000',
-            'occupancy_status' => 'nullable|string|max:50',
+            // Drafts too: occupancy unless under construction; a rented unit needs its rent expiry date.
+            'occupancy_status' => (self::isUnderConstructionStatus($this->input('completion_status')) ? 'nullable' : 'required') . '|string|max:50',
             'occupancy_comment' => 'nullable|string|max:1000',
             'spa_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,svg',
             'desk_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,svg',
@@ -119,7 +120,8 @@ $listingId = $this->route('property');
             'owner_id' => 'required|exists:owners,id',
             'developer_id' => 'nullable|exists:developers,id',
             // TEMP: was after:today (rejects "today" and any past date). Relax until product confirms rules.
-            'rent_expiry_date' => 'nullable|date',
+            'rent_expiry_date' => ((! self::isUnderConstructionStatus($this->input('completion_status'))
+                && $this->input('occupancy_status') === 'Rented') ? 'required' : 'nullable') . '|date',
             'rent_amount' => "nullable|numeric|min:0|$maxAmount",
             //   'rented_status' => 'nullable|in:Available,Rented',
             // 'rented_until' => 'nullable|date|after_or_equal:today',
@@ -202,6 +204,8 @@ $listingId = $this->route('property');
             'area_id.required' => 'Area is required',
             'agent_id.required' => 'Agent is required',
             'owner_id.required' => 'Owner is required',
+            'occupancy_status.required' => 'Occupancy status is required',
+            'rent_expiry_date.required' => 'Rent expiry date is required for rented properties',
             'completion_status.required' => 'Completion status is required',
             'plot_size.required' => 'Plot size is required for this property type',
             'number_of_floors.required' => 'Number of floors is required for a building',
