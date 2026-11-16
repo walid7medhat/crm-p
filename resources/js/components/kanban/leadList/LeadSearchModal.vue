@@ -2508,7 +2508,7 @@ const budgetDropdownPanelRef = ref(null)
 
 const budgetDropdownStyle = ref({})
 
-const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
+const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'integration_id', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 
@@ -2955,6 +2955,8 @@ const queryToFormKeys = {
 
     work_phone: 'workPhone',
 
+    integration_id: 'integrationId',
+
     email: 'email',
 
     bedrooms: 'bedrooms',
@@ -3062,6 +3064,7 @@ function syncFormFromQuery(query) {
         stageChangedBy: '',
         branchSource: '',
         workPhone: '',
+        integrationId: '',
         email: '',
         bedrooms: '',
         leadName: '',
@@ -3395,6 +3398,8 @@ const form = ref({
     branchSource: '',
 
     workPhone: '',
+
+    integrationId: '',
 
     email: '',
 
@@ -4564,6 +4569,8 @@ const searchFieldsConfig = computed(() => {
     if(isSuperAdmin || isAdmin) {
 
         fields.push(
+
+            { id: 'integration_id', label: 'Campaign ID', formKey: 'integrationId', queryKey: 'integration_id', type: 'text', placeholder: 'Campaign ID (e.g. 12 or 12,15)' },
 
             { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
 
@@ -6030,6 +6037,11 @@ async function applySearch(options = {}) {
 
         work_phone: form.value.workPhone || undefined,
 
+        // Integration ID — super_admin + admin only (backend enforces too).
+        integration_id: (user.value?.roles?.includes('super_admin') || user.value?.roles?.includes('admin')) && String(form.value.integrationId || '').trim()
+            ? String(form.value.integrationId).replace(/\s+/g, '')
+            : undefined,
+
         email: form.value.email || undefined,
 
         bedrooms: form.value.bedrooms ?? undefined,
@@ -6736,6 +6748,7 @@ function resetFormValues() {
         branchSource: '',
 
         workPhone: '',
+        integrationId: '',
 
         email: '',
 
@@ -7288,6 +7301,7 @@ watch(
         form.value.leadName,
         form.value.firstName,
         form.value.workPhone,
+        form.value.integrationId,
         form.value.email,
     ].map((v) => String(v || '').trim()).join('\0'),
     () => {
