@@ -50,6 +50,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Host → brand context for every web + API request (before controllers).
         $middleware->append(ResolveBrandFromHost::class);
 
+        // OIA Abu Dhabi / Dubai view switch (super admin + #30, GET only).
+        $middleware->append(\App\Http\Middleware\ApplyBranchView::class);
+
         // Global maintenance (after brand resolve). HTTP-only; queues keep running.
         $middleware->append(\App\Http\Middleware\EnsureNotInMaintenance::class);
 

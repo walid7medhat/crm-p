@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use App\Support\Brand\Concerns\BrandOwned;
-
+use App\Support\Branch\BranchFiltered;
 class Listing extends Model
 {
     use HasFactory;
    use LogsActivity;
     use BrandOwned;
+    use BranchFiltered;
 
     public function getActivitylogOptions(): LogOptions
     {

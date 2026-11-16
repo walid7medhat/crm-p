@@ -17,11 +17,11 @@ use App\Traits\AltCRMLeadTrait;
 use App\Support\Brand\Concerns\BrandOwned;
 use DB;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
+use App\Support\Branch\BranchFiltered;
 class Lead extends Model
 {
     // 
-    use HasFactory; use AltCRMLeadTrait; use SoftDeletes; use BrandOwned;
+    use HasFactory; use AltCRMLeadTrait; use SoftDeletes; use BrandOwned; use BranchFiltered;
     protected $guarded=[];
     public const INTELLIGENCE_FIELDS = [
         'score',

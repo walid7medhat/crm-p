@@ -132,6 +132,17 @@ export async function forceInactiveLogout(message) {
 
 const INTERCEPTOR_FLAG = '__crmAuthInterceptorsAttached'
 
+export const BRANCH_VIEW_STORAGE_KEY = 'crm.branchView'
+
+function readBranchView() {
+  try {
+    const v = localStorage.getItem(BRANCH_VIEW_STORAGE_KEY)
+    return v === 'abu_dhabi' || v === 'dubai' ? v : ''
+  } catch {
+    return ''
+  }
+}
+
 function attachAuthInterceptor(client) {
   if (client[INTERCEPTOR_FLAG]) return
   client[INTERCEPTOR_FLAG] = true
@@ -159,6 +170,12 @@ function attachAuthInterceptor(client) {
     if (token) {
       config.headers = config.headers || {}
       config.headers.Authorization = `Bearer ${token}`
+    }
+    // OIA Abu Dhabi / Dubai view switch (super admin + #30). Server ignores it for others.
+    const branchView = readBranchView()
+    if (branchView) {
+      config.headers = config.headers || {}
+      config.headers['X-Branch-View'] = branchView
     }
     return config
   })

@@ -89,6 +89,13 @@ class BrandIsolation
      */
     public static function constrain($query, string $table, ?string $column = null)
     {
+        // OIA Abu Dhabi / Dubai view switch (no-op unless picked by super admin / #30).
+        \App\Support\Branch\BranchView::constrain(
+            $query,
+            $table,
+            ($column !== null && str_contains($column, '.')) ? strstr($column, '.', true) : $table
+        );
+
         if (! self::columnReady($table)) {
             return $query;
         }
@@ -120,7 +127,7 @@ class BrandIsolation
      */
     public static function cacheSegment(): string
     {
-        return 'brand:'.self::trustedKey();
+        return 'brand:'.self::trustedKey().\App\Support\Branch\BranchView::cacheSuffix();
     }
 
     /**
@@ -365,6 +372,9 @@ class BrandIsolation
      */
     public static function constrainUsers($query, string $table = 'users')
     {
+        // OIA Abu Dhabi / Dubai view switch → branch members only.
+        \App\Support\Branch\BranchView::constrainUsers($query, $table);
+
         if (self::superAdminCrossBrandEnabled()) {
             return $query;
         }

@@ -83,8 +83,8 @@ class ListingController extends Controller
 
         // Cache resolved grid JSON (not raw models) so cache hits skip resource N+1 work.
         $cacheKey = $request->boolean('my_listings')
-            ? self::CACHE_PREFIX . 'my_json_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash
-            : self::CACHE_PREFIX . 'index_json_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash;
+            ? self::CACHE_PREFIX . 'my_json_' . \App\Support\Brand\BrandIsolation::trustedKey() . \App\Support\Branch\BranchView::cacheSuffix() . '_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash
+            : self::CACHE_PREFIX . 'index_json_' . \App\Support\Brand\BrandIsolation::trustedKey() . \App\Support\Branch\BranchView::cacheSuffix() . '_' . $userId . '_v' . $version . '_e' . $epoch . '_' . $filtersHash;
 
         $resolver = function () use ($request) {
             ListingGridResource::resetRequestCaches();
@@ -2346,7 +2346,7 @@ private function sendResubmissionNotification($listing, $user)
         $userScoped = $user && ($user->hasRole('sales') || $myListings);
         $scope = $userScoped ? ('u' . (int) $user->id) : 'global';
 
-        return self::CACHE_PREFIX . 'stats_' . \App\Support\Brand\BrandIsolation::trustedKey() . '_' . $scope . '_e' . self::getStatsCacheEpoch() . '_' . md5(serialize($request->all()));
+        return self::CACHE_PREFIX . 'stats_' . \App\Support\Brand\BrandIsolation::trustedKey() . \App\Support\Branch\BranchView::cacheSuffix() . '_' . $scope . '_e' . self::getStatsCacheEpoch() . '_' . md5(serialize($request->all()));
     }
 
     /**
