@@ -43,6 +43,7 @@ class LeadKanbanHeatCache
         'lead_name',
         'first_name',
         'lead_branch_source',
+        'integration_id',
         'office_branch',
         'team_id',
         'status_lead',

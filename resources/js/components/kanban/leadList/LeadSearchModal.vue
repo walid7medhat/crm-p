@@ -4570,7 +4570,7 @@ const searchFieldsConfig = computed(() => {
 
         fields.push(
 
-            { id: 'integration_id', label: 'Campaign ID', formKey: 'integrationId', queryKey: 'integration_id', type: 'text', placeholder: 'Campaign ID (e.g. 12 or 12,15)' },
+            { id: 'integration_id', label: 'Campaign ID', formKey: 'integrationId', queryKey: 'integration_id', type: 'text', placeholder: 'Meta Ad ID or Campaign ID (comma for several)' },
 
             { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
 
