@@ -1623,6 +1623,7 @@ const QUERY_FILTER_LABELS = {
     modified_by: 'Modified By',
     team_id: 'Team',
     lead_branch_source: 'Lead Branch Source',
+    integration_id: 'Campaign ID',
     source: 'Source',
     interaction_result: 'Call Result',
     status_lead: 'Quality Status',
