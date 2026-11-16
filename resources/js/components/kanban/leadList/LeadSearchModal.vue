@@ -4883,7 +4883,9 @@ const searchFieldSections = [
 
         title: 'Lead Source',
 
-        fieldIds: ['source', 'lead_branch_source']
+        // integration_id = "Campaign ID" (super_admin/admin only; hidden for others because
+        // searchFieldsConfig doesn't add it). A field shows only if it's listed in a section.
+        fieldIds: ['source', 'lead_branch_source', 'integration_id']
 
     },
 
