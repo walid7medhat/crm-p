@@ -138,7 +138,8 @@ function isLeadNotification(notification) {
 }
 
 function isAssignmentAlert(notification) {
-  return String(notification?.type || '').includes('AssignmentPocNotification')
+  const type = String(notification?.type || '')
+  return type.includes('AssignmentPocNotification') || type.includes('DubaiNewLeadAlertNotification')
 }
 
 async function raiseHomeIconAlert(notification) {
@@ -156,13 +157,19 @@ async function raiseHomeIconAlert(notification) {
   try {
     const registration = await navigator.serviceWorker?.getRegistration?.()
     if (!registration) return
-    await registration.showNotification('New Lead Assigned', {
-      body: 'You have a new lead assigned to you.',
+    const isDubaiNewLead = String(notification?.type || '').includes('DubaiNewLeadAlertNotification')
+    const title = notification?.title || (isDubaiNewLead ? 'You have a new lead' : 'New Lead Assigned')
+    const body = notification?.message || (isDubaiNewLead
+      ? 'You have a new lead'
+      : 'You have a new lead assigned to you.')
+    const leadId = notification?.lead_id || notification?.lead?.id
+    await registration.showNotification(title, {
+      body,
       icon: '/assets/images/pwa/icon-192.png',
       badge: '/assets/images/pwa/icon-192.png',
-      tag: 'lead-assignment',
+      tag: isDubaiNewLead ? 'dubai-new-lead' : 'lead-assignment',
       renotify: true,
-      data: { url: '/' },
+      data: { url: leadId ? `/?lead=${leadId}` : '/' },
     })
   } catch (_) {
     /* The in-app toast still shows when the system banner cannot. */

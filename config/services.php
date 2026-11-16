@@ -87,6 +87,17 @@ return [
     ],
 
     /*
+    | Dubai New Lead stage watchers. Fired when a Dubai lead enters New Lead.
+    */
+    'dubai_new_lead_alert' => [
+        'enabled' => filter_var(env('DUBAI_NEW_LEAD_ALERT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'user_ids' => array_values(array_filter(array_map(
+            'intval',
+            explode(',', (string) env('DUBAI_NEW_LEAD_ALERT_USER_IDS', '1541,195'))
+        ))),
+    ],
+
+    /*
     | Web Push. The private key stays server-side. Any active user is eligible.
     */
     'web_push' => [
