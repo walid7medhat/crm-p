@@ -3997,7 +3997,8 @@ const handleSubmit = async (action = 'draft') => {
     }
     const requiredFields = [
       { value: form.value.property_type, message: "❌ Please select a property type!" },
-      { value: form.value.area, message: "❌ Please select an area!" },
+      // A draft may be saved without an area; preview / publish still need one.
+      ...(action === 'draft' ? [] : [{ value: form.value.area, message: "❌ Please select an area!" }]),
     ];
 
     for (const field of requiredFields) {
@@ -4087,7 +4088,7 @@ const handleSubmit = async (action = 'draft') => {
     }
     formData.append('agent_id', currentAgentId);
     formData.append('property_type_id', form.value.property_type.id);
-    formData.append('area_id', form.value.area.id);
+    if (form.value.area?.id) formData.append('area_id', form.value.area.id);
     formData.append('number_of_floors', isBuilding.value ? String(form.value.number_of_floors ?? '') : '');
     if (form.value.rented_status) {
       formData.append('rented_status', form.value.rented_status);
