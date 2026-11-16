@@ -4283,7 +4283,8 @@ const handleSubmit = async (action = 'draft') => {
     };
     const requiredFields = [
       { value: form.value.property_type, message: "❌ Please select a property type!" },
-      { value: form.value.area, message: "❌ Please select an area!" },
+      // A draft may be saved without an area; preview / publish still need one.
+      ...(action === 'draft' ? [] : [{ value: form.value.area, message: "❌ Please select an area!" }]),
     ];
 
     for (const field of requiredFields) {
@@ -4383,7 +4384,7 @@ const handleSubmit = async (action = 'draft') => {
     formData.append('owner_id', selectedOwner.value.id);
     formData.append('agent_id', currentAgentId);
     formData.append('property_type_id', form.value.property_type.id);
-    formData.append('area_id', form.value.area.id);
+    if (form.value.area?.id) formData.append('area_id', form.value.area.id);
     formData.append('unit_view_id', form.value.unit_view?.id ?? "");
     formData.append('layout_type_id', form.value.layout_type?.id ?? "");
     listingFeatureOptions.forEach(feature => {
