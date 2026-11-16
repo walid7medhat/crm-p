@@ -7,11 +7,18 @@ use Illuminate\Http\Request;
 /**
  * Lead search "Campaign ID" — super_admin + admin only.
  *
- * Matches a lead when the value is either:
- *  - its Meta ad id (leads.ad_id, saved from the Meta lead webhook), or
- *  - its CRM integration / Meta lead form (leads.integration_id).
+ * What the Meta webhook saves on a lead (IntegrationController::fetchAndStoreLead):
+ *  - integration_id → our integrations.id (the integration whose facebook_form_id sent it)
+ *  - ad_id          → Meta ad id (Graph `ad_id`)
+ *  - meta_lead_id   → Meta leadgen id
  *
- * Accepts one value or a comma list: ?integration_id=120210000000000001 or ?integration_id=12,15
+ * The value typed in search matches a lead when it is:
+ *  - the Meta form id shown in the Integrations table "ID" column
+ *    (integrations.facebook_form_id — several integrations can share one form), or
+ *  - our integration id (shown there when an integration has no form id), or
+ *  - the lead's Meta ad id.
+ *
+ * Accepts one value or a comma list: ?integration_id=1219288530385917 or ?integration_id=16,18
  */
 class LeadIntegrationFilter
 {
@@ -65,10 +72,14 @@ class LeadIntegrationFilter
         ));
 
         $query->where(function ($q) use ($table, $ids, $integrationIds) {
-            $q->whereIn($table.'.ad_id', $ids);
+            // Meta form id (Integrations table "ID") → every integration with that form.
+            $q->whereIn($table.'.integration_id', function ($sub) use ($ids) {
+                $sub->select('id')->from('integrations')->whereIn('facebook_form_id', $ids);
+            });
             if ($integrationIds !== []) {
                 $q->orWhereIn($table.'.integration_id', $integrationIds);
             }
+            $q->orWhereIn($table.'.ad_id', $ids);
         });
     }
 }
