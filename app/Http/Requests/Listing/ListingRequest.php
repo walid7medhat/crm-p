@@ -101,7 +101,8 @@ $listingId = $this->route('property');
             'number_of_floors' => (($isBuilding && ! $isDraft) ? 'required' : 'nullable') . '|integer|min:1|max:200',
             'price' => "required|numeric|min:10000|$maxAmount",
             'listing_status' => 'sometimes|string|max:50',
-            'mortgage_status' => 'required|string|max:50',
+            // Draft: mortgage status, project and area may be left empty.
+            'mortgage_status' => ($isDraft ? 'nullable' : 'required') . '|string|max:50',
             'mortgage_amount' => "nullable|numeric|min:0|$maxAmount",
             'mortgage_comment' => 'nullable|string|max:1000',
             // Drafts too: occupancy unless under construction; a rented unit needs its rent expiry date.
@@ -112,8 +113,8 @@ $listingId = $this->route('property');
             'other_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,svg',
             'comment' => 'nullable|string|max:2000',
             'property_type_id' => 'required|exists:property_types,id',
-            'project_id'=>'required|exists:projects,id',
-            'area_id' =>request()->has('project_id')?'nullable|exists:areas,id': 'required|exists:areas,id',
+            'project_id' => ($isDraft ? 'nullable' : 'required') . '|exists:projects,id',
+            'area_id' => ($isDraft || request()->has('project_id')) ? 'nullable|exists:areas,id' : 'required|exists:areas,id',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'agent_id' => 'required|exists:users,id',
