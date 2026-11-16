@@ -761,6 +761,11 @@ public function markAsConverted(Request $request, ListingAccessRequest $accessRe
         //     return ApiResponse::error('Access denied', 403);
         // }
 
+        // Converting also marks the listing sold — not allowed before the listing is approved.
+        if (! $accessRequest->listing?->approved) {
+            return ApiResponse::error('This listing is not approved yet, so it cannot be marked as sold.', 422);
+        }
+
         // Only approved requests can be marked as converted
         if ($accessRequest->status !== 'approved' && !($user->id == $accessRequest->listing->added_by && $accessRequest->status == 'pending' )) {
             return ApiResponse::error('Only approved requests can be marked as converted', 422);

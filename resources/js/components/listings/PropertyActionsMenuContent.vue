@@ -75,7 +75,7 @@
     </button>
 
     <button
-      v-if="canMarkAsConverted && property.status !== 'converted' && property.listing_status === 'sale'"
+      v-if="canMarkAsConverted && property.approved && property.status !== 'converted' && property.listing_status === 'sale'"
       type="button"
       :class="itemClass('success')"
       @click="emit('mark-sold')"
@@ -95,7 +95,7 @@
     </button>
 
     <button
-      v-if="canMarkAsConverted && property.status !== 'rented' && property.listing_status === 'rent'"
+      v-if="canMarkAsConverted && property.approved && property.status !== 'rented' && property.listing_status === 'rent'"
       type="button"
       :class="itemClass('success')"
       @click="emit('mark-rented')"
