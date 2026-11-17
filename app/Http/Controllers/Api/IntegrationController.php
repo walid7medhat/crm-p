@@ -78,7 +78,7 @@ class IntegrationController extends Controller
      */
     public function fetchMetaPages(): JsonResponse
     {
-        $accessToken = env('META_ACCESS_TOKEN');
+        $accessToken = config('services.meta.access_token');
         
         if (!$accessToken) {
             Log::error('META_ACCESS_TOKEN not set in environment');
@@ -419,7 +419,7 @@ class IntegrationController extends Controller
             // )->firstOrFail();
         
             // $token = 'EAAW4JN9suLQBQ0NOcfe2ZBmpoGOSvCus7R5NQJoSqnpoiV3u2NGZBz1QoG6yDBXcfa3YNftZBSOsmKJ3ZCm6oEPGIFLcUKXdO67VhXCsXPuWDkVNbouRjtxGTdiiRu9chW3yT3Kf3b6HyPxuzpsEBEGaZC0LfyT2SQuoD4sZBL6JqaOdasXOIG04xlhB2hikZAaWuDh8E0ZD';
-        $token=env('META_ACCESS_TOKEN');
+        $token=config('services.meta.access_token');
             $url = self::META_GRAPH_BASE . '/' .
                 self::META_GRAPH_VERSION .
                 "/{$form_id}/leads";
@@ -484,7 +484,7 @@ class IntegrationController extends Controller
     {
         Log::info('🔍 Webhook verification request', $request->all());
 
-        $verifyToken = env('META_WEBHOOK_VERIFY_TOKEN', 'oia777');
+        $verifyToken = config('services.meta.webhook_verify_token', 'oia777');
         
         $mode = $request->input('hub_mode');
         $token = $request->input('hub_verify_token');
@@ -575,7 +575,7 @@ class IntegrationController extends Controller
 {
     try {
         // نجيب الـ token
-        $token = env('META_ACCESS_TOKEN');
+        $token = config('services.meta.access_token');
         
         // التحقق من عدم وجود الليد مكرر
         $existingLead = Lead::where('meta_lead_id', $leadgenId)->first();
@@ -832,7 +832,12 @@ public function store_website(Request $request)
         return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
     $data = $request->all();
-
+    $crmresponse = match ((int) ($data['responsible_person'] ?? $data['responsible_person_id'] ?? 0)) {
+        2911    => 59,
+        default => 25,
+    };
+    // Shared outside-lead rule (#25 → #1690 when that user exists) — Lead::externalResponsibleId.
+    $crmresponse = Lead::externalResponsibleId($crmresponse);
     // Public webhook: never trust client assignee fields. Lead Assignment owns
     // responsible_person_id via ProcessLeadAutoAssignmentJob after create.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
@@ -871,7 +876,7 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => 1,
+        'responsible_person_id' => $crmresponse??1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
@@ -970,7 +975,7 @@ $fieldMappings = [
 
 public function getFormFields($formId)
 {
-    $token = env('META_ACCESS_TOKEN');
+    $token = config('services.meta.access_token');
 
     $url = "https://graph.facebook.com/v18.0/{$formId}";
 
@@ -1002,7 +1007,7 @@ public function get_from_date(Request $request, $form_id)
         ->firstOrFail();
 
     $tz    = 'Asia/Dubai';
-    $token = env('META_ACCESS_TOKEN');
+    $token = config('services.meta.access_token');
     $url   = self::META_GRAPH_BASE . '/' . self::META_GRAPH_VERSION . "/{$form_id}/leads";
 
     $params = [
