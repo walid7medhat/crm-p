@@ -2036,6 +2036,13 @@ const locationIcon  =  '/assets/images/Location.png';
 const OiaLogo = offerBrand.isLuxvant
   ? (offerBrand.logos.on_dark || offerBrand.logos.primary_png)
   : '/assets/images/LogoWhite.png';
+// Luxvant's logo is wide (≈3.25:1) while OIA's is ≈1.43:1, so a fixed OIA width made it
+// tiny and different per page. Luxvant gets one width on every page; OIA is unchanged.
+const LUX_OFFER_LOGO_W_MM = 24;
+const LUX_OFFER_LOGO_RATIO = 1024 / 315;
+const offerLogoCss = (oiaWidthMm, oiaExtra = '') => (offerBrand.isLuxvant
+  ? `width:${LUX_OFFER_LOGO_W_MM}mm !important; height:auto !important; display:block !important;`
+  : `width:${oiaWidthMm}mm !important;${oiaExtra} display:block !important;`);
 const offerCompanyName = offerBrand.isLuxvant
   ? (offerBrand.companyName || 'Luxvant Properties')
   : 'Oia Properties';
@@ -5885,6 +5892,41 @@ const tryAddOfferImage = (pdf, dataUrl, x, y, w, h) => {
   }
 };
 
+// Header logo in a jsPDF page. OIA fills the legacy box; Luxvant keeps its real shape,
+// same size on every page, right-aligned and vertically centred in that box.
+const addOfferLogo = (pdf, dataUrl, x, y, w, h) => {
+  if (!dataUrl) return;
+  if (!offerBrand.isLuxvant) {
+    tryAddOfferImage(pdf, dataUrl, x, y, w, h);
+    return;
+  }
+  const lw = LUX_OFFER_LOGO_W_MM;
+  const lh = lw / LUX_OFFER_LOGO_RATIO;
+  tryAddOfferImage(pdf, dataUrl, x + w - lw, y + (h - lh) / 2, lw, lh);
+};
+
+/** Logo → PNG data URL keeping its aspect ratio (imgUrlToPng squares it). */
+const logoUrlToPng = (url, width = 480) => new Promise((resolve) => {
+  const timer = setTimeout(() => resolve(null), 6000);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    clearTimeout(timer);
+    try {
+      const ratio = (img.naturalHeight || 1) / (img.naturalWidth || 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = Math.max(1, Math.round(width * ratio));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    } catch {
+      resolve(null);
+    }
+  };
+  img.onerror = () => { clearTimeout(timer); resolve(null); };
+  img.src = url;
+});
+
 const drawOfferFooter = (pdf) => {
   const footerTop = 137;
   const footerH = 11;
@@ -6048,7 +6090,7 @@ const drawMobileCover = async (pdf, logo) => {
     pdf.setFillColor(...navy);
     pdf.rect(101, 0, 109, 133, 'F');
   }
-  if (logo) tryAddOfferImage(pdf, logo, 186, 6, 16, 11);
+  if (logo) addOfferLogo(pdf, logo, 186, 6, 16, 11);
 
   pdf.setTextColor(...navy);
   pdf.setFont('helvetica', 'bold');
@@ -6138,7 +6180,7 @@ const drawMobileDetails = async (pdf, logo) => {
     const cropped = await cropOfferImageToBox(photo, 210, 63);
     tryAddOfferImage(pdf, await darkenOfferJpeg(cropped, 0.42), 0, 0, 210, 63);
   }
-  if (logo) tryAddOfferImage(pdf, logo, 183, 7, 18, 12);
+  if (logo) addOfferLogo(pdf, logo, 183, 7, 18, 12);
   pdf.setDrawColor(255, 255, 255);
   pdf.setLineWidth(0.4);
   pdf.line(left, 8.6, left + 6, 8.6);
@@ -6248,7 +6290,7 @@ const drawMobileFloor = (pdf, logo) => {
   pdf.setFontSize(18);
   pdf.setTextColor(11, 7, 54);
   pdf.text('FLOOR PLAN', 14, 16);
-  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 18, 12);
+  if (logo) addOfferLogo(pdf, logo, 184, 6, 18, 12);
   const plans = (property.value?.floor_plans || []).slice(0, 2).map((plan) => mobilePdfImage(getImageUrl(plan.image_url))).filter(Boolean);
   if (plans.length === 1) tryAddOfferImage(pdf, plans[0], 30, 24, 150, 100);
   plans.forEach((plan, index) => {
@@ -6308,7 +6350,7 @@ const drawMobileGallery = async (pdf, images, logo) => {
     const data = await cropOfferImageToBox(raw, boxW, boxH);
     tryAddOfferImage(pdf, data, 4 + index * (boxW + gap), 6, boxW, boxH);
   }
-  if (logo) tryAddOfferImage(pdf, logo, 184, 8, 16, 11);
+  if (logo) addOfferLogo(pdf, logo, 184, 8, 16, 11);
   drawOfferFooter(pdf);
 };
 
@@ -6322,7 +6364,7 @@ const drawMobileAbout = (pdf, logo) => {
     pdf.setFillColor(1, 6, 45);
     pdf.rect(108, 0, 102, 133, 'F');
   }
-  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 16, 11);
+  if (logo) addOfferLogo(pdf, logo, 184, 6, 16, 11);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(16);
   pdf.setTextColor(1, 6, 44);
@@ -6346,7 +6388,7 @@ const drawMobileAmenities = (pdf, logo) => {
     pdf.setFillColor(1, 6, 45);
     pdf.rect(105, 0, 105, 133, 'F');
   }
-  if (logo) tryAddOfferImage(pdf, logo, 184, 6, 16, 11);
+  if (logo) addOfferLogo(pdf, logo, 184, 6, 16, 11);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(16);
   pdf.setTextColor(1, 6, 44);
@@ -6430,7 +6472,7 @@ const loadOfferPdfLibs = () => {
 const buildMobileOfferPdf = async (currentUser) => {
   const { jsPDF } = await loadOfferPdfLibs();
   const pdf = new jsPDF({ unit: 'mm', format: [210, 148], orientation: 'landscape' });
-  const logo = await imgUrlToPng(OiaLogo, 160);
+  const logo = offerBrand.isLuxvant ? await logoUrlToPng(OiaLogo) : await imgUrlToPng(OiaLogo, 160);
   const paymentHtml = createPaymentDetailsSlide();
   const paymentPageCount = paymentSlideModel?.pages?.length || (paymentHtml ? 1 : 0);
   const hasFloor = Array.isArray(property.value?.floor_plans) && property.value.floor_plans.length > 0;
@@ -7324,7 +7366,7 @@ const createGallerySlide = (imagesChunk) => {
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; box-sizing:border-box !important; padding:8mm 8mm 5mm 8mm !important; display:flex !important; flex-direction:column !important;">
       <div style="display:flex !important; align-items:flex-start !important; justify-content:space-between !important; flex-shrink:0 !important; margin:0 0 5mm 0 !important;">
         <div>${heading}</div>
-        <img src="${pnglogo}" alt="${offerCompanyName}" style="width:16mm !important; height:auto !important; display:block !important;" />
+        <img src="${pnglogo}" alt="${offerCompanyName}" style="${offerLogoCss(16, ' height:auto !important;')}" />
       </div>
       <div style="flex:1 !important; min-height:0 !important; display:flex !important; flex-direction:row !important; gap:3mm !important; overflow:hidden !important;">
         ${panels}
@@ -7540,7 +7582,7 @@ const createSlide1 = (currentUser) => {
       </div>
       <div style="flex:1 !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
         <div style="position:absolute !important; top:6mm !important; right:7mm !important; z-index:10 !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+          <img src="${OiaLogo}" style="${offerLogoCss(15)}" />
         </div>
       </div>
     </div>
@@ -7939,7 +7981,7 @@ const createSlide2 = () => {
       <div style="flex:1 !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${bgImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
         <div style="position:absolute !important; top:0 !important; right:0 !important; width:42mm !important; height:30mm !important; background:linear-gradient(225deg, rgba(11,7,54,0.5) 0%, rgba(11,7,54,0) 72%) !important;"></div>
         <div style="position:absolute !important; top:6mm !important; right:7mm !important; z-index:10 !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+          <img src="${OiaLogo}" style="${offerLogoCss(15)}" />
         </div>
       </div>
     </div>
@@ -8003,7 +8045,7 @@ const createSlide3 = () => {
       <div style="flex:1 !important; height:100% !important; background:#ffffff !important; box-sizing:border-box !important; padding:10mm 8mm 8mm 9mm !important; display:flex !important; flex-direction:column !important;">
         <div style="display:flex !important; align-items:flex-start !important; justify-content:space-between !important; margin:0 0 8mm 0 !important; flex-shrink:0 !important;">
           <div>${heading}</div>
-          <img src="${pnglogo}" alt="${offerCompanyName}" style="width:15mm !important; height:auto !important; display:block !important;" />
+          <img src="${pnglogo}" alt="${offerCompanyName}" style="${offerLogoCss(15, ' height:auto !important;')}" />
         </div>
         <table style="width:100% !important; border-collapse:collapse !important; border-spacing:0 !important; table-layout:fixed !important;">
           ${rows.join('')}
@@ -8038,7 +8080,7 @@ const createSlide4 = () => {
       </div>
       <div style="flex:1 !important; height:100% !important; position:relative !important; overflow:hidden !important; background-image:url('${projectImage}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
         <div style="position:absolute !important; top:6mm !important; right:7mm !important; z-index:10 !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+          <img src="${OiaLogo}" style="${offerLogoCss(15)}" />
         </div>
       </div>
     </div>
@@ -8060,7 +8102,7 @@ const createSlide5 = () => {
     <div style="width:100% !important; height:137mm !important; padding:10mm 14mm 0 14mm !important; box-sizing:border-box !important; position:relative !important;">
       <div style="display:flex !important; justify-content:space-between !important; align-items:flex-start !important; margin-bottom:6mm !important;">
         <h1 style="color:#0B0736 !important;  font-size:6mm !important; font-weight:700 !important;  margin:0 !important; text-transform:uppercase !important;font-family: 'Montserrat', sans-serif !important;">Floor Plan</h1>
-        <img src="${logo}" style="width:18mm !important; display:block !important;" />
+        <img src="${logo}" style="${offerLogoCss(18)}" />
       </div>
       <div style="display:flex !important; gap:6mm !important; height:95mm !important;">
         <div style="flex:1 !important; background-image:url('${floorPlan1}') !important; background-size:contain !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
@@ -8088,7 +8130,7 @@ const createSlide6 = () => {
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${img3}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
         <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+          <img src="${OiaLogo}" style="${offerLogoCss(15)}" />
         </div>
       </div>
     </div>
@@ -8113,7 +8155,7 @@ const createSlide7 = () => {
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; background-image:url('${img2}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
       <div style="flex:1 !important; height:100% !important; overflow:hidden !important; position:relative !important; background-image:url('${img3}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;">
         <div style="position:absolute !important; top:5mm !important; right:5mm !important;">
-          <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+          <img src="${OiaLogo}" style="${offerLogoCss(15)}" />
         </div>
       </div>
     </div>
@@ -8205,7 +8247,7 @@ const createSlide9 = (currentUser) => {
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background-image:url('${LastSlide_bg}') !important; background-size:cover !important; background-position:center !important; background-repeat:no-repeat !important;"></div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; background:rgba(11,7,54,0.62) !important;"></div>
     <div style="position:absolute !important; top:7mm !important; right:8mm !important; z-index:10 !important;">
-      <img src="${OiaLogo}" style="width:15mm !important; display:block !important;" />
+      <img src="${OiaLogo}" style="${offerLogoCss(15)}" />
     </div>
     <div style="position:absolute !important; top:0 !important; left:0 !important; width:100% !important; height:137mm !important; z-index:5 !important; box-sizing:border-box !important; display:flex !important; align-items:center !important; justify-content:center !important;">
       <div style="color:#ffffff !important; font-size:11mm !important; font-weight:700 !important; letter-spacing:0.8mm !important; text-transform:uppercase !important; line-height:1 !important; font-family:Arial, Helvetica, sans-serif !important;">THANK YOU !</div>
@@ -8435,7 +8477,7 @@ const paintPaymentDetailsPage = async (pdf, container) => {
     pdf.setFillColor(...gold);
     pdf.roundedRect(8, 12.2, 18, 1.1, 0.4, 0.4, 'F');
     if (logo) {
-      try { pdf.addImage(logo, 'PNG', 186, 3.5, 16, 11); } catch { /* optional */ }
+      addOfferLogo(pdf, logo, 186, 3.5, 16, 11);
     }
   };
 
