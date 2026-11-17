@@ -35,10 +35,42 @@ class BrandIsolation
             return self::$columnCache[$table];
         }
 
+        // Laravel's own alias for a self-relation subquery (e.g. a lead's merged-count
+        // withCount). No such table exists, so hasColumn() is always false here —
+        // return that without the information_schema round trip.
+        if (str_starts_with($table, 'laravel_reserved_')) {
+            return self::$columnCache[$table] = false;
+        }
+
+        // Schema::hasColumn queries information_schema on every request. A "column exists"
+        // answer is kept across requests (columns are never dropped). A "missing" answer
+        // is never kept: a stale "missing" would skip brand filtering after the
+        // migration adds the column.
+        $sharedKey = 'brand_isolation.column_ready.v1.'.$table;
+        $shareAcrossRequests = ! app()->runningUnitTests();
+
+        if ($shareAcrossRequests) {
+            try {
+                if (\Illuminate\Support\Facades\Cache::get($sharedKey) === true) {
+                    return self::$columnCache[$table] = true;
+                }
+            } catch (\Throwable) {
+                // cache unavailable — fall through to the live check
+            }
+        }
+
         try {
             self::$columnCache[$table] = Schema::hasColumn($table, 'brand_key');
         } catch (\Throwable) {
             self::$columnCache[$table] = false;
+        }
+
+        if ($shareAcrossRequests && self::$columnCache[$table] === true) {
+            try {
+                \Illuminate\Support\Facades\Cache::put($sharedKey, true, now()->addDay());
+            } catch (\Throwable) {
+                // best effort
+            }
         }
 
         return self::$columnCache[$table];

@@ -383,19 +383,35 @@ class LeadController extends Controller
                 $normalizedTypeSql = $this->normalizedLeadTypeSql();
 
                 if ($request->boolean('type_counts_only')) {
-                        $rows = (clone $leadsQuery)->setEagerLoads([])
-                            ->toBase()
-                            ->cloneWithout(['columns', 'orders'])
-                            ->selectRaw("($normalizedTypeSql) as t, COUNT(*) as c")
-                            ->groupBy('t')
-                            ->pluck('c', 't');
+                        // Rent/Sale chips parse JSON on every matching lead (the whole pool),
+                        // so keep the totals 60 s per user + filters. The board version is
+                        // bumped when a lead is created or changes stage/owner, so a lead
+                        // entering or leaving the pool refreshes the totals at once.
+                        $typeCountsKey = 'leads.type_counts.v1.'.hash('sha256', json_encode([
+                            'brand' => \App\Support\Brand\BrandIsolation::cacheSegment(),
+                            'user' => (int) $user->id,
+                            'query' => collect($request->except(['_nc', 'page', 'per_page']))->sortKeys()->all(),
+                            'version' => (int) \Illuminate\Support\Facades\Cache::get(\App\Services\LeadKanbanHeatCache::VERSION_KEY, 0),
+                        ]));
 
-                        $both = (int) ($rows['both'] ?? 0);
-                        return response()->json(['success' => true, 'data' => [
-                            'rent' => (int) ($rows['rent'] ?? 0) + $both,
-                            'sale' => (int) ($rows['sale'] ?? 0) + $both,
-                            'none' => (int) ($rows['none'] ?? 0),
-                        ]]);
+                        $typeCounts = \Illuminate\Support\Facades\Cache::remember($typeCountsKey, 60, function () use ($leadsQuery, $normalizedTypeSql) {
+                            $rows = (clone $leadsQuery)->setEagerLoads([])
+                                ->toBase()
+                                ->cloneWithout(['columns', 'orders'])
+                                ->selectRaw("($normalizedTypeSql) as t, COUNT(*) as c")
+                                ->groupBy('t')
+                                ->pluck('c', 't');
+
+                            $both = (int) ($rows['both'] ?? 0);
+
+                            return [
+                                'rent' => (int) ($rows['rent'] ?? 0) + $both,
+                                'sale' => (int) ($rows['sale'] ?? 0) + $both,
+                                'none' => (int) ($rows['none'] ?? 0),
+                            ];
+                        });
+
+                        return response()->json(['success' => true, 'data' => $typeCounts]);
                     }
 
                 // Aggregates for report KPI cards — never load lead rows.
