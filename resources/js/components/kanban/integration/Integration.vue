@@ -8,6 +8,45 @@
             </button>
         </div>
 
+        <!-- Filters -->
+        <div v-if="!loading && !loadError && forms.length > 0" class="integration-filters">
+            <div class="filter-search">
+                <iconify-icon icon="lucide:search" class="filter-search-icon"></iconify-icon>
+                <input
+                    v-model.trim="filters.search"
+                    type="text"
+                    class="filter-input"
+                    placeholder="Search name, integration ID or form ID"
+                />
+                <button v-if="filters.search" type="button" class="filter-clear-x" @click="filters.search = ''">
+                    <iconify-icon icon="lucide:x"></iconify-icon>
+                </button>
+            </div>
+            <select v-model="filters.status" class="filter-select">
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            <select v-model="filters.responsible" class="filter-select">
+                <option value="">All responsible</option>
+                <option v-for="p in responsibleOptions" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
+            </select>
+            <select v-model="filters.leads" class="filter-select">
+                <option value="">Any leads count</option>
+                <option value="with">With leads</option>
+                <option value="without">No leads</option>
+            </select>
+            <label class="filter-dup" :class="{ on: filters.duplicates }">
+                <input v-model="filters.duplicates" type="checkbox" />
+                Same form used twice
+                <span v-if="duplicateCount" class="filter-dup-count">{{ duplicateCount }}</span>
+            </label>
+            <button v-if="hasFilters" type="button" class="filter-reset" @click="resetFilters">
+                <iconify-icon icon="lucide:rotate-ccw"></iconify-icon>
+                Reset
+            </button>
+        </div>
+
         <!-- Loading / Error -->
         <div v-if="loading" class="loading-state">
             <div class="spinner-border text-primary" role="status">
@@ -66,7 +105,17 @@
                                 {{ form.facebook_form_id || form.id }}
                             </span>
                         </td>
-                        <td class="form-name">{{ form.name }}</td>
+                        <td class="form-name">
+                            {{ form.name }}
+                            <span class="int-id">#{{ form.id }}</span>
+                            <span
+                                v-if="isDuplicate(form)"
+                                class="dup-badge"
+                                :title="`This Facebook form has ${formUseCount[form.facebook_form_id]} integrations — only the first active one gets leads`"
+                            >
+                                Same form ×{{ formUseCount[form.facebook_form_id] }}
+                            </span>
+                        </td>
                         <td class="created-on">{{ formatDate(form.created_at) }}</td>
                         <td class="active-column">
                             <div class="active-toggle-wrapper">
@@ -123,9 +172,13 @@
             <iconify-icon icon="lucide:inbox" class="empty-icon"></iconify-icon>
             <p>No integrations yet. Click "Create Integration" to add your first Meta form.</p>
         </div>
+        <div v-else-if="!loading && !loadError && filteredForms.length === 0" class="empty-state">
+            <iconify-icon icon="lucide:search-x" class="empty-icon"></iconify-icon>
+            <p>No integrations match these filters.</p>
+        </div>
 
         <!-- Pagination -->
-        <div v-if="!loading && forms.length > 0" class="pagination-container">
+        <div v-if="!loading && filteredForms.length > 0" class="pagination-container">
             <div class="pagination-info">
                 <span>Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ totalEntries }} Entries</span>
                 <iconify-icon icon="lucide:chevron-up" class="entries-icon"></iconify-icon>
@@ -173,7 +226,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, getCurrentInstance } from 'vue'
+import { ref, reactive, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import { BDropdown, BDropdownItem } from 'bootstrap-vue-3'
 import CreateIntegrationModal from './CreateIntegrationModal.vue'
 import api from '@/plugins/axios'
@@ -326,14 +379,69 @@ onMounted(() => {
 // Export for parent components
 defineExpose({ loadIntegrations })
 
+// Filters
+const emptyFilters = () => ({ search: '', status: '', responsible: '', leads: '', duplicates: false })
+const filters = reactive(emptyFilters())
+const resetFilters = () => Object.assign(filters, emptyFilters())
+const hasFilters = computed(() =>
+    !!(filters.search || filters.status || filters.responsible || filters.leads || filters.duplicates)
+)
+
+/** How many integrations use each Facebook form (the webhook feeds only the first). */
+const formUseCount = computed(() => {
+    const counts = {}
+    for (const f of forms.value) {
+        if (!f.facebook_form_id) continue
+        counts[f.facebook_form_id] = (counts[f.facebook_form_id] || 0) + 1
+    }
+    return counts
+})
+const isDuplicate = (form) => !!form.facebook_form_id && (formUseCount.value[form.facebook_form_id] || 0) > 1
+const duplicateCount = computed(() => forms.value.filter(isDuplicate).length)
+
+const responsibleOptions = computed(() => {
+    const map = new Map()
+    for (const f of forms.value) {
+        const p = f.responsible_person
+        if (p?.id && !map.has(p.id)) map.set(p.id, { id: p.id, name: p.name || `#${p.id}` })
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+})
+
+const filteredForms = computed(() => {
+    const q = filters.search.toLowerCase()
+    const list = forms.value.filter((f) => {
+        if (filters.status && f.status !== filters.status) return false
+        if (filters.responsible && String(f.responsible_person?.id ?? '') !== filters.responsible) return false
+        if (filters.leads === 'with' && !(f.leads_count > 0)) return false
+        if (filters.leads === 'without' && f.leads_count > 0) return false
+        if (filters.duplicates && !isDuplicate(f)) return false
+        if (q) {
+            const hay = [f.name, f.id, f.facebook_form_id, f.facebook_form_name, f.track_keyword, f.page_id]
+                .map((v) => String(v ?? '').toLowerCase())
+            if (!hay.some((v) => v.includes(q))) return false
+        }
+        return true
+    })
+    // Group the copies of one form together so they're easy to compare and clean up.
+    if (filters.duplicates) {
+        list.sort((a, b) => String(a.facebook_form_id).localeCompare(String(b.facebook_form_id)) || a.id - b.id)
+    }
+    return list
+})
+
+watch(filters, () => {
+    currentPage.value = 1
+})
+
 // Computed properties for pagination
-const totalEntries = computed(() => forms.value.length)
+const totalEntries = computed(() => filteredForms.value.length)
 const totalPages = computed(() => Math.ceil(totalEntries.value / entriesPerPage.value))
 const startIndex = computed(() => (currentPage.value - 1) * entriesPerPage.value)
 const endIndex = computed(() => Math.min(startIndex.value + entriesPerPage.value, totalEntries.value))
 
 const paginatedForms = computed(() => {
-    return forms.value.slice(startIndex.value, endIndex.value)
+    return filteredForms.value.slice(startIndex.value, endIndex.value)
 })
 
 const isAllSelected = computed(() => {
@@ -492,6 +600,172 @@ const formatDateShort = (dateString) => {
 
 .create-icon {
     font-size: 18px;
+}
+
+.integration-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.filter-search {
+    position: relative;
+    flex: 1 1 260px;
+    min-width: 200px;
+}
+
+.filter-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #94A3B8;
+}
+
+.filter-input,
+.filter-select {
+    height: 40px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #ffffff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: #1E293B;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filter-input {
+    width: 100%;
+    padding: 0 34px 0 36px;
+}
+
+.filter-select {
+    padding: 0 10px;
+    flex: 0 1 170px;
+    min-width: 140px;
+    cursor: pointer;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
+}
+
+.filter-clear-x {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    border: 0;
+    background: transparent;
+    color: #94A3B8;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.filter-dup {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+    margin: 0;
+}
+
+.filter-dup input {
+    accent-color: var(--color-primary);
+    margin: 0;
+}
+
+.filter-dup.on {
+    border-color: #FCA5A5;
+    background: #FEF2F2;
+    color: #B91C1C;
+}
+
+.filter-dup-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #FEE2E2;
+    color: #B91C1C;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.filter-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: #F1F5F9;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.filter-reset:hover {
+    background: #E2E8F0;
+}
+
+.int-id {
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #94A3B8;
+}
+
+.dup-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #FEE2E2;
+    color: #B91C1C;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .integration-container {
+        padding: 16px;
+    }
+
+    .filter-search {
+        flex-basis: 100%;
+    }
+
+    .filter-select {
+        flex: 1 1 calc(50% - 5px);
+        min-width: 0;
+    }
+
+    .filter-dup,
+    .filter-reset {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
 }
 
 .loading-state {

@@ -127,7 +127,9 @@ class IntegrationController extends Controller
             'page_id' => 'required|string',
             'page_access_token' => 'required|string', // بناخد التوكن بتاع الصفحة
             'cursor' => 'nullable|string',
+            'exclude_integration_id' => 'nullable|integer',
         ]);
+        $excludeIntegrationId = $request->integer('exclude_integration_id') ?: null;
     
         $pageId = $request->input('page_id');
         $pageAccessToken = $request->input('page_access_token');
@@ -181,13 +183,26 @@ class IntegrationController extends Controller
                 $nextCursor = null;
             }
 
-            $list = array_map(function ($form) {
+            // Forms that already have an integration can't be picked again.
+            $formIds = array_values(array_filter(array_map(fn ($f) => isset($f['id']) ? (string) $f['id'] : null, $forms)));
+            $usedBy = $formIds === [] ? collect() : Integration::query()
+                ->whereIn('facebook_form_id', $formIds)
+                ->when($excludeIntegrationId, fn ($q) => $q->where('id', '!=', $excludeIntegrationId))
+                ->orderBy('id')
+                ->get(['id', 'name', 'status', 'facebook_form_id'])
+                ->unique('facebook_form_id')
+                ->keyBy('facebook_form_id');
+
+            $list = array_map(function ($form) use ($usedBy) {
+                $used = $usedBy->get((string) ($form['id'] ?? ''));
+
                 return [
                     'id' => $form['id'] ?? null,
                     'name' => $form['name'] ?? 'Unnamed',
                     'status' => $form['status'] ?? null,
                     'leads_count' => $form['leads_count'] ?? 0,
                     'created_time' => $form['created_time'] ?? null,
+                    'integration' => $used ? ['id' => $used->id, 'name' => $used->name, 'status' => $used->status] : null,
                 ];
             }, $forms);
     
@@ -228,6 +243,10 @@ class IntegrationController extends Controller
 
         $user = auth()->user();
 
+        if ($taken = $this->integrationUsingForm($request->input('facebook_form_id'))) {
+            return $this->formTakenResponse($taken);
+        }
+
         try {
             $integration = Integration::create([
                 'user_id' => $user->id,
@@ -258,6 +277,31 @@ class IntegrationController extends Controller
             Log::error('Store integration error: ' . $e->getMessage());
             return ApiResponse::error('Failed to save integration: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * One Facebook form = one integration (the webhook only feeds the first match,
+     * so a second integration on the same form never gets leads).
+     */
+    private function integrationUsingForm($formId, ?int $exceptId = null): ?Integration
+    {
+        $formId = trim((string) $formId);
+        if ($formId === '') {
+            return null;
+        }
+
+        return Integration::query()
+            ->where('facebook_form_id', $formId)
+            ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+            ->orderBy('id')
+            ->first(['id', 'name', 'status']);
+    }
+
+    private function formTakenResponse(Integration $taken): JsonResponse
+    {
+        $message = "This Facebook form already has an integration: #{$taken->id} \"{$taken->name}\". Edit that integration instead.";
+
+        return ApiResponse::error($message, 422, ['facebook_form_id' => [$message]]);
     }
 
     /**
@@ -316,6 +360,13 @@ class IntegrationController extends Controller
             'track_enabled' => 'boolean',
             'track_keyword' => 'nullable|string|max:255|required_if:track_enabled,true',
         ]);
+
+        // Only when the form changes — old duplicate copies must still be editable.
+        if ($request->filled('facebook_form_id')
+            && trim((string) $request->input('facebook_form_id')) !== (string) $integration->facebook_form_id
+            && ($taken = $this->integrationUsingForm($request->input('facebook_form_id'), $integration->id))) {
+            return $this->formTakenResponse($taken);
+        }
 
         try {
             $integration->update($request->all());
