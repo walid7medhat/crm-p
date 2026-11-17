@@ -1228,11 +1228,11 @@
         </div>
     </div>
 
-    <div v-if="showBulkStagePicker" class="lead-bulk-overlay" @click.self="showBulkStagePicker = false">
+    <div v-if="showBulkStagePicker" class="lead-bulk-overlay" @click.self="closeBulkStagePicker">
         <div class="lead-bulk-panel" role="dialog" aria-label="Change stage">
             <header class="lead-bulk-panel__head">
                 <span class="lead-bulk-panel__title">Change stage</span>
-                <button type="button" class="lead-bulk-panel__close" aria-label="Close" @click="showBulkStagePicker = false">
+                <button type="button" class="lead-bulk-panel__close" aria-label="Close" :disabled="bulkActionBusy" @click="closeBulkStagePicker">
                     <iconify-icon icon="lucide:x" />
                 </button>
             </header>
@@ -1243,13 +1243,35 @@
                     :key="column.status"
                     type="button"
                     class="lead-bulk-option"
+                    :class="{ 'is-selected': String(bulkStageTarget?.status) === String(column.status) }"
+                    :aria-pressed="String(bulkStageTarget?.status) === String(column.status)"
                     :disabled="bulkActionBusy"
-                    @click="applyBulkStage(column)"
+                    @click="bulkStageTarget = column"
                 >
                     <span class="lead-bulk-option__dot" :style="{ background: column.color }"></span>
                     <span>{{ column.title }}</span>
+                    <iconify-icon
+                        v-if="String(bulkStageTarget?.status) === String(column.status)"
+                        icon="lucide:check"
+                        class="lead-bulk-option__check"
+                    />
                 </button>
             </div>
+            <footer class="lead-bulk-panel__foot">
+                <button type="button" class="btn btn-light" :disabled="bulkActionBusy" @click="closeBulkStagePicker">
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-primary lead-bulk-confirm"
+                    :disabled="!bulkStageTarget || bulkActionBusy"
+                    @click="applyBulkStage(bulkStageTarget)"
+                >
+                    <span v-if="bulkActionBusy" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span v-if="bulkActionBusy">Moving {{ bulkStageProgress.done }}/{{ bulkStageProgress.total }}…</span>
+                    <span v-else>Move {{ selectedLeadIds.length }} lead{{ selectedLeadIds.length === 1 ? '' : 's' }}</span>
+                </button>
+            </footer>
         </div>
     </div>
 
@@ -1885,9 +1907,21 @@ async function deleteSelectedLeads() {
     if (archived) clearLeadSelection()
 }
 
+const bulkStageTarget = ref(null)
+const bulkStageProgress = ref({ done: 0, total: 0 })
+// Parallel requests for bulk stage moves — fast without flooding the server.
+const BULK_STAGE_CONCURRENCY = 6
+
 function openBulkStagePicker() {
     if (!selectedLeadIds.value.length) return
+    bulkStageTarget.value = null
     showBulkStagePicker.value = true
+}
+
+function closeBulkStagePicker() {
+    if (bulkActionBusy.value) return
+    showBulkStagePicker.value = false
+    bulkStageTarget.value = null
 }
 
 async function applyBulkStage(column) {
@@ -1895,14 +1929,24 @@ async function applyBulkStage(column) {
     bulkActionBusy.value = true
     const ids = [...selectedLeadIds.value]
     const failed = []
-    for (const id of ids) {
-        try {
-            await api.post(`/leads/${id}/change-stage`, { stage_id: column.status })
-        } catch (error) {
-            failed.push(id)
+    bulkStageProgress.value = { done: 0, total: ids.length }
+    let cursor = 0
+    const worker = async () => {
+        while (cursor < ids.length) {
+            const id = ids[cursor++]
+            try {
+                await api.post(`/leads/${id}/change-stage`, { stage_id: column.status })
+            } catch (error) {
+                failed.push(id)
+            }
+            bulkStageProgress.value.done++
         }
     }
+    await Promise.all(
+        Array.from({ length: Math.min(BULK_STAGE_CONCURRENCY, ids.length) }, worker)
+    )
     showBulkStagePicker.value = false
+    bulkStageTarget.value = null
     clearLeadSelection()
     bulkActionBusy.value = false
     if (failed.length) {
@@ -7391,6 +7435,38 @@ const fetchRevertNotifications = async () => {
 
 .lead-bulk-option:hover:not(:disabled) {
     background: rgba(11, 7, 54, 0.06);
+}
+
+.lead-bulk-option.is-selected,
+.lead-bulk-option.is-selected:hover:not(:disabled) {
+    background: rgba(11, 7, 54, 0.08);
+    box-shadow: inset 0 0 0 1.5px var(--color-primary);
+    font-weight: 600;
+}
+
+.lead-bulk-option:disabled {
+    cursor: default;
+}
+
+.lead-bulk-option__check {
+    margin-left: auto;
+    color: var(--color-primary);
+    font-size: 16px;
+}
+
+.lead-bulk-panel__foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(11, 7, 54, 0.08);
+}
+
+.lead-bulk-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .lead-bulk-option__dot {
