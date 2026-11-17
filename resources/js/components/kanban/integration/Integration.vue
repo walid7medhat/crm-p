@@ -645,6 +645,7 @@ const formatDateShort = (dateString) => {
 }
 
 .filter-select {
+<<<<<<< HEAD
     padding: 0 32px 0 12px !important;
     line-height: 38px !important;
     flex: 0 1 170px;
@@ -656,6 +657,12 @@ const formatDateShort = (dateString) => {
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 14px;
+=======
+    padding: 0 10px;
+    flex: 0 1 170px;
+    min-width: 140px;
+    cursor: pointer;
+>>>>>>> 1c31ba8a (integration search and validation)
 }
 
 .filter-input:focus,
