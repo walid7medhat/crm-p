@@ -65,6 +65,7 @@
                     v-model:form-id="formData.facebookFormId"
                     v-model:form-name="formData.facebookFormName"
                     v-model:field-mappings="formData.fieldMappings"
+                    :edit-id="editId"
                     @connected="handleFacebookConnected"
                 />
 

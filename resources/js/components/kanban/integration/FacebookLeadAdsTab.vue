@@ -58,25 +58,31 @@
                     label="name"
                     placeholder="Choose a form..."
                     :filter-by="filterFormOption"
+                    :selectable="form => !form.integration"
                     class="custom-select"
                     :loading="loadingForms"
                     :disabled="loadingForms"
                     append-to-body
                     :calculate-position="positionIntegrationMenu"
                 >
-                    <template #option="{ name, status, leads_count, id }">
-                      <div class="select-option">
+                    <template #option="{ name, status, leads_count, id, integration }">
+                      <div class="select-option" :class="{ 'is-taken': integration }">
                         <span class="option-name">
                           {{ name }}
-                          <span 
-                            class="status-indicator" 
-                            :class="status.toLowerCase()"
+                          <span
+                            class="status-indicator"
+                            :class="String(status || '').toLowerCase()"
                             :title="status"
                           ></span>
                         </span>
                         <span class="option-meta">
                           <iconify-icon icon="lucide:users" class="meta-icon"></iconify-icon>
                           {{ leads_count || 0 }} leads
+                          <span class="option-form-id">· ID {{ id }}</span>
+                        </span>
+                        <span v-if="integration" class="option-taken">
+                          <iconify-icon icon="lucide:link" class="meta-icon"></iconify-icon>
+                          Already has integration #{{ integration.id }} "{{ integration.name }}"
                         </span>
                       </div>
                     </template>
@@ -199,6 +205,11 @@ const props = defineProps({
     fieldMappings: {
         type: Array,
         default: () => []
+    },
+    /** Integration being edited — its own form stays selectable. */
+    editId: {
+        type: Number,
+        default: null
     }
 })
 
@@ -406,7 +417,11 @@ const handlePageSelect = (page) => {
 // Handle form selection
 const handleFormSelect = async (form) => {
     if (!form) return
-    
+    if (form.integration) {
+        proxy?.$showNotification?.(`This form already has integration #${form.integration.id} "${form.integration.name}"`, 'error')
+        return
+    }
+
     isInternalUpdate.value = true
     
     selectedFormId.value = form.id
@@ -461,7 +476,10 @@ const loadForms = async (pageId, pageAccessToken, cursor = null) => {
         if (cursor) {
             params.cursor = cursor
         }
-        
+        if (props.editId) {
+            params.exclude_integration_id = props.editId
+        }
+
         const response = await api.get('/integrations/meta/forms', { params })
         const data = response.data.data
         
@@ -666,6 +684,28 @@ watch(localMappings, (newVal) => {
 
 .meta-icon {
     font-size: 12px;
+}
+
+.option-form-id {
+    color: #94A3B8;
+}
+
+.option-taken {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #DC2626;
+}
+
+.select-option.is-taken .option-name {
+    color: #94A3B8;
+}
+
+:deep(.vs__dropdown-option--disabled) {
+    cursor: not-allowed;
+    background: #F8FAFC !important;
 }
 
 /* No Options */
