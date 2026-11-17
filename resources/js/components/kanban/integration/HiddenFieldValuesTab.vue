@@ -188,7 +188,8 @@ const loadSources = async () => {
             source => source.name === 'Lead Form'
         )
 
-        if (metaSource) {
+        // Only as a default — never overwrite a value already chosen / loaded for edit.
+        if (metaSource && !selectedLeadValue.value) {
             selectedLeadValue.value = metaSource.name
         }
 
@@ -313,6 +314,20 @@ watch(selectedProject, (newVal) => {
 watch(selectedLeadValue, (newVal) => {
     emit('update:leadSource', newVal)
 })
+
+// Keep in sync when the parent sets/clears the values (edit load, reset).
+watch(() => props.project, (val) => {
+    if (val !== selectedProject.value) selectedProject.value = val
+})
+
+watch(() => props.leadSource, (val) => {
+    if (val !== selectedLeadValue.value) selectedLeadValue.value = val
+})
+
+// The step shows a value the parent doesn't have yet (e.g. auto "Lead Form") — push it up.
+if (!props.leadSource && selectedLeadValue.value) {
+    emit('update:leadSource', selectedLeadValue.value)
+}
 </script>
 
 

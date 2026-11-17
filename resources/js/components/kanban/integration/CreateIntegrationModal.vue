@@ -42,7 +42,7 @@
             </div>
 
             <!-- Content Area -->
-            <div class="modal-body-section info-card bg-white m-3 p-3 radius-12 shadow-4 border">
+            <div :key="openKey" class="modal-body-section info-card bg-white m-3 p-3 radius-12 shadow-4 border">
                 <!-- CRM Entities Tab Content -->
                 <!--<CrmEntitiesTab-->
                 <!--    v-if="activeTab === 'crm-entities'"-->
@@ -148,6 +148,7 @@ const { proxy } = getCurrentInstance()
 const show = ref(props.modelValue)
 const activeTab = ref('hidden-fields')
 const loading = ref(false)
+const openKey = ref(0)
 
 // Tabs configuration
 const tabs = [
@@ -234,6 +235,8 @@ const previousTab = () => {
 watch(() => props.modelValue, (newVal) => {
     show.value = newVal
     if (!newVal) return
+    // Fresh steps on every open — no stale values left from the last integration.
+    openKey.value++
     if (props.editId) {
         activeTab.value = tabs[0].id
         loadIntegrationData()
