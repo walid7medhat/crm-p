@@ -196,7 +196,7 @@
                                     <span class="comment-reply-time">{{ reply.dateLabel === 'TODAY' ? '' : reply.dateLabel + ' · ' }}{{ reply.time }}</span>
                                     <span v-if="reply.deletedAt" class="comment-deleted-badge">Soft deleted</span>
                                     <button
-                                        v-if="isSuperAdmin && reply.id && !String(reply.id).startsWith('temp')"
+                                        v-if="canDeleteComment(reply)"
                                         class="comment-kebab-btn ms-auto"
                                         title="Delete reply"
                                         @click="deleteComment(reply)"
@@ -246,7 +246,7 @@
                                     <span class="icon-btn-text">Reply</span>
                                 </button>
                                 <button
-                                    v-if="isSuperAdmin && comment.id && !String(comment.id).startsWith('temp')"
+                                    v-if="canDeleteComment(comment)"
                                     class="comment-kebab-btn"
                                     title="Delete comment"
                                     @click="deleteComment(comment)"
@@ -447,13 +447,27 @@ const deleteAttachment = async (comment, attachment, attachmentIndex) => {
     }
 }
 
-const isSuperAdmin = (() => {
+// Delete-comment button: super_admin on any comment; branch_admin only on comments
+// they wrote (the server enforces the same rule).
+const deleteAccess = (() => {
     try {
-        return JSON.parse(localStorage.getItem('user') || '{}')?.roles?.includes('super_admin') ?? false
+        const user = JSON.parse(localStorage.getItem('user') || '{}') || {}
+        const roles = user.roles || []
+        return {
+            any: roles.includes('super_admin'),
+            own: roles.includes('branch_admin'),
+            userId: Number(user.id) || 0,
+        }
     } catch {
-        return false
+        return { any: false, own: false, userId: 0 }
     }
 })()
+
+const canDeleteComment = (c) => {
+    if (!c?.id || String(c.id).startsWith('temp')) return false
+    if (deleteAccess.any) return true
+    return deleteAccess.own && deleteAccess.userId > 0 && Number(c.userId) === deleteAccess.userId
+}
 
 /**
  * Ask soft vs hard delete. Resolves true = hard, false = soft, null = cancelled.
@@ -492,7 +506,7 @@ const askDeleteType = async (alreadySoftDeleted = false) => {
     return null
 }
 
-// Super admin: delete any comment on the lead
+// Super admin / branch admin: delete any comment on the lead
 const deleteComment = async (comment) => {
     const hard = await askDeleteType(!!comment.deletedAt)
     if (hard === null) return

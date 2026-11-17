@@ -620,13 +620,18 @@ public function destroyCommentByAdmin($id)
         $user = auth()->user();
         
         // تحقق من صلاحية المشرف
-        if (!$user->hasRole(['admin', 'super_admin'])) {
+        if (!$user->hasRole(['admin', 'super_admin', 'branch_admin'])) {
             return ApiResponse::error('Unauthorized - Only admins can delete comments', 403);
         }
-        
+
         // withTrashed: admins still see soft-deleted comments, so they must be able to
         // hard-delete one that is already soft deleted.
         $comment = LeadComment::withTrashed()->findOrFail($id);
+
+        // branch_admin: only comments they wrote themselves.
+        if (!$user->hasRole(['admin', 'super_admin']) && (int) $comment->user_id !== (int) $user->id) {
+            return ApiResponse::error('Unauthorized - You can only delete your own comments', 403);
+        }
 
         // ?force=1 → hard delete (row + attachment files gone for good).
         // Otherwise soft delete: the comment is hidden but can be restored.
