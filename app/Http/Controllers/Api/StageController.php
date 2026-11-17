@@ -348,7 +348,7 @@ class StageController extends Controller
         // Soft has_more (limit+1) avoids repeating the expensive predicate in COUNT(*).
         $exactCountsByStage = collect();
         if (! $isTextSearch && ! $isDuplicateFilter) {
-            $exactCountsByStage = (clone $baseLeadsQuery)
+            $exactCountsByStage = \App\Support\LeadBoardIndexHint::apply(clone $baseLeadsQuery)
                 ->whereIn('stage_id', $stageIds)
                 ->reorder()
                 ->toBase()
@@ -868,7 +868,7 @@ class StageController extends Controller
         }
 
         return LeadKanbanHeatCache::remember($user, $request, function () use ($baseLeadsQuery) {
-            $heatCounts = (clone $baseLeadsQuery)
+            $heatCounts = \App\Support\LeadBoardIndexHint::apply(clone $baseLeadsQuery)
                 ->selectRaw(
                     "SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
                     SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,

@@ -201,7 +201,7 @@ class BrandCrmScope
         $ids = self::resolveConfiguredBranchUserIds();
 
         try {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'brand_key')) {
+            if (BrandIsolation::columnReady('users')) {
                 $ids = array_merge($ids, User::query()->where('brand_key', 'luxvant')->pluck('id')->map(fn ($id) => (int) $id)->all());
             }
         } catch (\Throwable) {
