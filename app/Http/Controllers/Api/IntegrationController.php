@@ -832,7 +832,12 @@ public function store_website(Request $request)
         return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
     $data = $request->all();
-
+    $crmresponse = match ((int) ($data['responsible_person'] ?? $data['responsible_person_id'] ?? 0)) {
+        2911    => 59,
+        default => 25,
+    };
+    // Shared outside-lead rule (#25 → #1690 when that user exists) — Lead::externalResponsibleId.
+    $crmresponse = Lead::externalResponsibleId($crmresponse);
     // Public webhook: never trust client assignee fields. Lead Assignment owns
     // responsible_person_id via ProcessLeadAutoAssignmentJob after create.
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
@@ -871,7 +876,7 @@ $fieldMappings = [
         'ad_id' => null,
         'added_by' => 1,
         // NOT NULL column — system placeholder until ProcessLeadAutoAssignmentJob assigns.
-        'responsible_person_id' => 1,
+        'responsible_person_id' => $crmresponse??1,
         'field_mappings_data' => json_encode($data),
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
