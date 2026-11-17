@@ -85,7 +85,7 @@
             <div class="modal-footer-section">
                 <div class="footer-left">
                     <button 
-                        v-if="activeTab !== 'crm-entities'" 
+                        v-if="activeTab !== tabs[0].id"
                         class="footer-btn prev-btn" 
                         @click="previousTab"
                     >
@@ -233,8 +233,12 @@ const previousTab = () => {
 // Watch for modal visibility
 watch(() => props.modelValue, (newVal) => {
     show.value = newVal
-    if (newVal && props.editId) {
+    if (!newVal) return
+    if (props.editId) {
+        activeTab.value = tabs[0].id
         loadIntegrationData()
+    } else {
+        resetModal()
     }
 })
 
@@ -324,10 +328,11 @@ const handleSave = async () => {
 }
 
 // Reset modal
+// Back to a clean first step so another integration can be created without a page refresh.
 const resetModal = () => {
-    activeTab.value = 'crm-entities'
+    activeTab.value = tabs[0].id
     formData.value = {
-        selectedEntity: null,
+        selectedEntity: 'lead',
         expertMode: false,
         duplicateHandling: 'merge',
         project: null,
@@ -422,7 +427,11 @@ const resetModal = () => {
 }
 
 .tab-button {
-    padding: 5px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+    padding: 5px 12px;
     border: 1px solid #E5E7EB;
     background: #FFFFFF;
     font-family: 'Montserrat', sans-serif;
@@ -479,8 +488,23 @@ const resetModal = () => {
 }
 
 .tab-check-icon {
-    font-size: 16px;
+    font-size: 15px;
     margin-left: 4px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+    .tabs-container {
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding: 0 12px;
+        scrollbar-width: none;
+    }
+
+    .tab-button {
+        flex-shrink: 0;
+        font-size: 12px;
+    }
 }
 
 .section-title {

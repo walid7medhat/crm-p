@@ -297,6 +297,14 @@ class IntegrationController extends Controller
             ->first(['id', 'name', 'status']);
     }
 
+    /** Owner, or super admin (any integration). */
+    private function canManage(Integration $integration): bool
+    {
+        $user = auth()->user();
+
+        return $user && ((int) $integration->user_id === (int) $user->id || $user->hasRole('super_admin'));
+    }
+
     private function formTakenResponse(Integration $taken): JsonResponse
     {
         $message = "This Facebook form already has an integration: #{$taken->id} \"{$taken->name}\". Edit that integration instead.";
@@ -309,7 +317,7 @@ class IntegrationController extends Controller
      */
     public function show(Integration $integration): JsonResponse
     {
-        if ($integration->user_id !== auth()->id()) {
+        if (! $this->canManage($integration)) {
             return ApiResponse::error('Unauthorized', 403);
         }
 
@@ -339,7 +347,7 @@ class IntegrationController extends Controller
      */
     public function update(Request $request, Integration $integration): JsonResponse
     {
-        if ($integration->user_id !== auth()->id()) {
+        if (! $this->canManage($integration)) {
             return ApiResponse::error('Unauthorized', 403);
         }
 
@@ -386,7 +394,7 @@ class IntegrationController extends Controller
      */
     public function destroy(Integration $integration): JsonResponse
     {
-        if ($integration->user_id !== auth()->id()) {
+        if (! $this->canManage($integration)) {
             return ApiResponse::error('Unauthorized', 403);
         }
 

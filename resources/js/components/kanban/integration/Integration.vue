@@ -156,7 +156,7 @@
                                     <iconify-icon icon="lucide:edit" class="dropdown-icon"></iconify-icon>
                                     <span>Edit</span>
                                 </b-dropdown-item>
-                                <b-dropdown-item @click="deleteForm(form)" class="dropdown-item-custom">
+                                <b-dropdown-item @click="deleteForm(form)" class="dropdown-item-custom dropdown-item-custom--danger">
                                     <iconify-icon icon="lucide:trash-2" class="dropdown-icon"></iconify-icon>
                                     <span>Delete</span>
                                 </b-dropdown-item>
@@ -645,10 +645,17 @@ const formatDateShort = (dateString) => {
 }
 
 .filter-select {
-    padding: 0 10px;
+    padding: 0 32px 0 12px !important;
+    line-height: 38px !important;
     flex: 0 1 170px;
     min-width: 140px;
     cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
 }
 
 .filter-input:focus,
@@ -1123,9 +1130,45 @@ const formatDateShort = (dateString) => {
     background: #F8FAFC !important;
 }
 
+/* Icon and label on one row (the inner <a> is what bootstrap renders). */
+:deep(.dropdown-item-custom .dropdown-item) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px !important;
+    border-radius: 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1E293B;
+    white-space: nowrap;
+}
+
+:deep(.dropdown-item-custom .dropdown-item:hover) {
+    background: #F1F5F9 !important;
+}
+
 :deep(.dropdown-item-custom .dropdown-icon) {
+    display: inline-flex;
     font-size: 16px;
     color: #64748B;
+    flex-shrink: 0;
+}
+
+:deep(.dropdown-item-custom--danger .dropdown-item),
+:deep(.dropdown-item-custom--danger .dropdown-icon) {
+    color: #DC2626 !important;
+}
+
+:deep(.action-dropdown-btn:focus),
+:deep(.action-dropdown-btn:focus-visible) {
+    box-shadow: none !important;
+    outline: none;
+}
+
+:deep(.action-dropdown-btn::after) {
+    display: none !important;
 }
 
 .pagination-container {
