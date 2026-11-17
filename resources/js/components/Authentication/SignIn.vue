@@ -8,7 +8,13 @@
         <p class="auth-mobile-hero__lead">Sign in with your email to access your workspace.</p>
       </div>
 
-      <form class="auth-glass-form" @submit.prevent="login">
+      <!--
+        Browser password managers are deliberately disabled here: shared company
+        browser profiles synced saved logins across laptops, so one user's
+        account was auto-filled for another user. Fields stay readonly until the
+        user interacts with them (readonly inputs are never autofilled).
+      -->
+      <form class="auth-glass-form" autocomplete="off" @submit.prevent="login">
         <div class="auth-glass-field">
           <label class="auth-glass-field__label" for="signin-username">Email</label>
           <div class="auth-glass-input-wrap">
@@ -16,9 +22,13 @@
               id="signin-username"
               v-model="email"
               type="email"
+              name="crm-signin-id"
               class="auth-glass-input"
               placeholder="Email Address"
-              autocomplete="username"
+              autocomplete="off"
+              :readonly="fieldsLocked"
+              @pointerdown="unlockFields"
+              @focus="unlockFields"
               inputmode="email"
               enterkeyhint="next"
               autocapitalize="off"
@@ -38,9 +48,13 @@
               id="signin-password"
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
+              name="crm-signin-secret"
               class="auth-glass-input"
               placeholder="Password"
-              autocomplete="current-password"
+              autocomplete="new-password"
+              :readonly="fieldsLocked"
+              @pointerdown="unlockFields"
+              @focus="unlockFields"
               enterkeyhint="go"
               required
             />
@@ -152,6 +166,7 @@ export default {
       errorMessage: '',
       authNotice: '',
       locationAttempt: 0,
+      fieldsLocked: true,
     };
   },
   setup() {
@@ -203,6 +218,9 @@ export default {
   methods: {
     togglePassword() {
       this.showPassword = !this.showPassword;
+    },
+    unlockFields() {
+      this.fieldsLocked = false;
     },
           getDeviceType() {
             const ua = navigator.userAgent.toLowerCase();
@@ -331,6 +349,9 @@ export default {
         const notificationPermission = await askLeadPushPermission(webPush);
 
         setAuthToken(token);
+
+        // Empty the fields before redirecting so the browser has nothing to offer to save.
+        this.password = '';
 
         // Login does not store coordinates; auth/location does. keepalive lets
         // the request finish after the redirect below, so sign-in never waits on it.
