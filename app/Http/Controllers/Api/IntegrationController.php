@@ -297,7 +297,6 @@ class IntegrationController extends Controller
             ->first(['id', 'name', 'status']);
     }
 
-<<<<<<< HEAD
     /** Owner, or super admin (any integration). */
     private function canManage(Integration $integration): bool
     {
@@ -306,8 +305,6 @@ class IntegrationController extends Controller
         return $user && ((int) $integration->user_id === (int) $user->id || $user->hasRole('super_admin'));
     }
 
-=======
->>>>>>> 1c31ba8a (integration search and validation)
     private function formTakenResponse(Integration $taken): JsonResponse
     {
         $message = "This Facebook form already has an integration: #{$taken->id} \"{$taken->name}\". Edit that integration instead.";
