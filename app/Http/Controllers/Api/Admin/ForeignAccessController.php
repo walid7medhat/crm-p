@@ -6,6 +6,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\ForeignAccessEvent;
 use App\Models\User;
+use App\Services\Security\ForeignAccessMonitorService;
 use App\Support\Brand\BrandIsolation;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -38,6 +39,8 @@ class ForeignAccessController extends Controller
             BrandIsolation::constrain($query, 'foreign_access_events');
         }
 
+        $this->excludeExemptUsers($query);
+
         if ($request->filled('user_id')) {
             $query->where('user_id', (int) $request->input('user_id'));
         }
@@ -66,6 +69,7 @@ class ForeignAccessController extends Controller
                 BrandIsolation::columnReady('foreign_access_events'),
                 fn ($q) => BrandIsolation::constrain($q, 'foreign_access_events')
             )
+            ->tap(fn ($q) => $this->excludeExemptUsers($q))
             ->where('status', 'new')
             ->count();
 
@@ -114,8 +118,22 @@ class ForeignAccessController extends Controller
         return ApiResponse::success($this->serialize($foreignAccess, detailed: true), 'Marked as reviewed');
     }
 
+    /**
+     * Hide events of exempt users (super admins), including any recorded before the exemption.
+     */
+    private function excludeExemptUsers($query): void
+    {
+        $query->whereDoesntHave('user.roles', function ($q) {
+            $q->whereIn('name', ForeignAccessMonitorService::EXEMPT_ROLES);
+        });
+    }
+
     private function ensureBrandAccess(ForeignAccessEvent $event): void
     {
+        if (ForeignAccessMonitorService::isExempt($event->user)) {
+            abort(404);
+        }
+
         if (! BrandIsolation::columnReady('foreign_access_events')) {
             return;
         }

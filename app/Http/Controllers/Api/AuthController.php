@@ -13,6 +13,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Helpers\ApiResponse;
 use App\Http\Resources\User\NotificationResource;
 use App\Jobs\EvaluateForeignAccessJob;
+use App\Services\Security\ForeignAccessMonitorService;
 use App\Services\Auth\LocationTrackingService;
 use App\Services\LiveWatch\LiveWatchEventRecorder;
 use App\Services\LiveWatch\LiveWatchPresenceService;
@@ -216,16 +217,19 @@ public function resetPassword(Request $request): JsonResponse
         }
 
         // Foreign Access Monitor — async queue only; never blocks or alters login.
+        // Super admins are exempt from monitoring.
         try {
-            EvaluateForeignAccessJob::dispatch(
-                (int) $user->id,
-                (string) $request->ip(),
-                BrandIsolation::trustedKey(),
-                $request->userAgent(),
-                null,
-                'login',
-                null,
-            );
+            if (! ForeignAccessMonitorService::isExempt($user)) {
+                EvaluateForeignAccessJob::dispatch(
+                    (int) $user->id,
+                    (string) $request->ip(),
+                    BrandIsolation::trustedKey(),
+                    $request->userAgent(),
+                    null,
+                    'login',
+                    null,
+                );
+            }
         } catch (\Throwable $e) {
             Log::warning('foreign access login dispatch skipped', ['error' => $e->getMessage()]);
         }

@@ -461,6 +461,61 @@ class ForeignAccessMonitorTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_super_admin_foreign_access_is_not_tracked(): void
+    {
+        Event::fake([ForeignAccessDetected::class]);
+        Queue::fake();
+        $this->fakeGeoIp('EG', 'Egypt', 'Cairo');
+
+        $sa = $this->makeUser('super_admin');
+        $monitor = app(ForeignAccessMonitorService::class);
+
+        $event = $monitor->evaluate($sa->id, '41.33.10.20', 'oia', 'Mozilla/5.0', 'session-sa-1', 'login');
+        $this->assertNull($event);
+        $this->assertSame(0, ForeignAccessEvent::query()->count());
+        Event::assertNotDispatched(ForeignAccessDetected::class);
+
+        // Login does not queue an evaluation for a super admin.
+        $this->postJson('/api/auth/login', [
+            'email' => $sa->email,
+            'password' => 'password',
+        ])->assertOk();
+        Queue::assertNotPushed(EvaluateForeignAccessJob::class);
+    }
+
+    public function test_super_admin_events_are_hidden_from_monitor_page(): void
+    {
+        $this->fakeGeoIp('EG', 'Egypt', 'Cairo');
+        $sales = $this->makeUser('sales');
+        $salesEvent = app(ForeignAccessMonitorService::class)->evaluate(
+            $sales->id, '41.33.10.20', 'oia', 'Mozilla/5.0', 'session-sales', 'login',
+        );
+        $this->assertNotNull($salesEvent);
+
+        // A super admin event recorded before the exemption existed.
+        $viewer = $this->makeUser('super_admin');
+        $saEvent = ForeignAccessEvent::query()->create([
+            'user_id' => $viewer->id,
+            'brand_key' => 'oia',
+            'ip' => '41.33.10.30',
+            'country' => 'Egypt',
+            'country_code' => 'EG',
+            'city' => 'Cairo',
+            'detection_reason' => ForeignAccessMonitorService::REASON_FOREIGN_LOGIN,
+            'status' => 'new',
+            'session_key' => 'session-sa-old',
+            'occurred_at' => now(),
+        ]);
+
+        $list = $this->asUser($viewer)->getJson('/api/admin/foreign-access')->assertOk();
+        $ids = collect($list->json('data.events'))->pluck('id')->all();
+        $this->assertContains($salesEvent->id, $ids);
+        $this->assertNotContains($saEvent->id, $ids);
+        $this->assertSame(1, $list->json('data.open_count'));
+
+        $this->asUser($viewer)->getJson('/api/admin/foreign-access/'.$saEvent->id)->assertNotFound();
+    }
+
     private function fakeGeoIp(string $code, string $country, string $city): void
     {
         Http::fake([

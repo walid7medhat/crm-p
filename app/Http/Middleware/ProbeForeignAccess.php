@@ -24,7 +24,7 @@ class ProbeForeignAccess
 
         try {
             $user = $request->user();
-            if (! $user || $request->attributes->get('impersonated')) {
+            if (! $user || $request->attributes->get('impersonated') || ForeignAccessMonitorService::isExempt($user)) {
                 return $response;
             }
 

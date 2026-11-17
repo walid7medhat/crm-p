@@ -23,6 +23,14 @@ class ForeignAccessMonitorService
 
     public const REASON_COUNTRY_CHANGE = 'country_change';
 
+    /** Roles that are never monitored and never shown on the Foreign Access page. */
+    public const EXEMPT_ROLES = ['super_admin'];
+
+    public static function isExempt(?User $user): bool
+    {
+        return $user !== null && $user->hasAnyRole(self::EXEMPT_ROLES);
+    }
+
     /**
      * Cheap mid-session gate: compare request IP to the cached fingerprint.
      * Dispatches evaluation only when the IP changed (or first sighting).
@@ -94,7 +102,7 @@ class ForeignAccessMonitorService
         }
 
         $user = User::query()->find($userId);
-        if (! $user) {
+        if (! $user || self::isExempt($user)) {
             return null;
         }
 
