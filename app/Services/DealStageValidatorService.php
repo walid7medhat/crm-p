@@ -41,7 +41,7 @@ class DealStageValidatorService
 
     $deal->loadMissing(['parties', 'documents',   'properties.propertyType']); // ✅ أضف 'properties' هنا
 
-    $result = $this->validator->validate($deal, $targetStageId, $resolvedType);
+    $result = $this->validator->validate($deal, $targetStageId, $resolvedType, ! empty($context['completeness']));
     
     $missingFields = $result['missing_fields'] ?? [];
     $missingByStage = $result['missing_by_stage'] ?? [];

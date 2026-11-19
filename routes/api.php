@@ -625,6 +625,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::post('/store/new', [LeadConversionController::class, 'store']);
         Route::post('/{id}/update-stage', [DealController::class, 'updateStage']);
         Route::post('/check-stage-requirements', [DealController::class, 'checkStageRequirements']);
+        Route::get('/{id}/completeness', [DealController::class, 'completeness']);
         Route::post('/{id}/update-partial', [DealController::class, 'updatePartial']);
          Route::post('/{id}/change-stage', [DealController::class, 'changeStage']);
         Route::post('/get-stage-required-fields', [DealController::class, 'getStageRequiredFields']);
