@@ -67,12 +67,15 @@ stage() {
   copy_list "$REPO" "${PACKAGE_S[@]}"
   copy_list "$REPO" "${PACKAGE_B_SOURCE[@]}"
   mkdir -p "$STAGE/public"
+  # Copy build tree only — never copy public/hot (Vite HMR sentinel).
   cp -a "$REPO/public/build" "$STAGE/public/build"
+  rm -f "$STAGE/public/hot"
 
   # Refuse dirty exclusions
   for bad in \
     resources/js/components/ConfirmationModal.vue \
     .env \
+    public/hot \
     OIA_CRM_FULL_PERFORMANCE_AUDIT.md
   do
     if [[ -e "$STAGE/$bad" ]]; then
@@ -90,6 +93,20 @@ require_app_stage() {
   [[ -n "$STAGE" && -d "$STAGE" ]] || { echo "Set STAGE to staged release dir"; exit 1; }
 }
 
+# Remove Vite HMR sentinel on the production tree only (never touches local REPO).
+ensure_no_public_hot() {
+  local root="${1:-}"
+  [[ -n "$root" && -d "$root" ]] || { echo "ensure_no_public_hot: root required" >&2; exit 1; }
+  if [[ -e "$root/public/hot" ]]; then
+    rm -f "$root/public/hot"
+    echo "removed stray public/hot under $root"
+  fi
+  if [[ -e "$root/public/hot" ]]; then
+    echo "FATAL: public/hot still present under $root" >&2
+    exit 1
+  fi
+}
+
 # Package S only — no public/build touch
 deploy_s() {
   require_app_stage
@@ -98,6 +115,7 @@ deploy_s() {
     cp -a "$STAGE/$f" "$APP_ROOT/$f"
     echo "deployed S: $f"
   done
+  ensure_no_public_hot "$APP_ROOT"
   php "$APP_ROOT/artisan" optimize:clear
   echo "Package S deployed. Old public/build untouched."
 }
@@ -128,6 +146,7 @@ deploy_b_atomic() {
   test -f "$APP_ROOT/public/build/manifest.json"
   echo "swapped build-next → build; previous kept at public/build-prev"
 
+  ensure_no_public_hot "$APP_ROOT"
   php "$APP_ROOT/artisan" optimize:clear
   echo "Package B deployed. Verify, then optionally: rm -rf public/build-prev"
 }
@@ -140,13 +159,27 @@ retire_prev_build() {
   fi
 }
 
+# Server-side / post-deploy verification (read-only). Exit 0 only if public/hot is absent.
+verify_no_hot() {
+  local root="${APP_ROOT:-}"
+  [[ -n "$root" && -d "$root" ]] || { echo "Set APP_ROOT to the production app root" >&2; exit 1; }
+  if [[ -e "$root/public/hot" ]]; then
+    echo "FAIL: $root/public/hot exists (Vite HMR sentinel must not be on production)" >&2
+    echo "contents:" >&2
+    cat "$root/public/hot" >&2 || true
+    exit 1
+  fi
+  echo "PASS: public/hot absent under $root"
+}
+
 case "$ACTION" in
   stage) stage ;;
   deploy-s) deploy_s ;;
   deploy-b-atomic) deploy_b_atomic ;;
   retire-prev-build) retire_prev_build ;;
+  verify-no-hot) verify_no_hot ;;
   *)
-    echo "Usage: $0 {stage|deploy-s|deploy-b-atomic|retire-prev-build}" >&2
+    echo "Usage: $0 {stage|deploy-s|deploy-b-atomic|retire-prev-build|verify-no-hot}" >&2
     exit 1
     ;;
 esac
