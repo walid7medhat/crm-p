@@ -85,6 +85,15 @@ class AppServiceProvider extends ServiceProvider
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(30)
                 ->by('live-watch-hb:' . ($request->user()?->id ?? $request->ip()));
         });
+        // Sidebar badges are pushed (SidebarCountsChanged) instead of polled every minute.
+        \App\Support\SidebarCounts::registerModelHooks();
+
+        // Lead board is the heaviest endpoint. People load it a few times a minute at most;
+        // this only stops scripts/integrations from looping it (user 33 hit ~14/min, 24h a day).
+        \Illuminate\Support\Facades\RateLimiter::for('kanban-board', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute((int) config('lead_scoring.kanban_board_per_minute', 30))
+                ->by('kanban-board:' . ($request->user()?->id ?? $request->ip()));
+        });
         \Illuminate\Support\Facades\RateLimiter::for('live-watch-navigation', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)
                 ->by('live-watch-nav:' . ($request->user()?->id ?? $request->ip()));

@@ -56,12 +56,90 @@ async function fetchCounts({ force = false } = {}) {
   return inflight
 }
 
-async function pollTick() {
+// ---- Push (Echo) --------------------------------------------------------------------
+// The server broadcasts `.sidebar.counts.changed` on crm-campaigns whenever a listing /
+// access request / hot deal change can move a badge. While that push is live, the timer
+// is only a slow safety net; without it we fall back to the old 60s poll.
+const PUSH_SAFETY_MS = 10 * 60_000
+// Spread refetches so ~100 open tabs don't all hit the server in the same second.
+const PUSH_JITTER_MIN_MS = 1500
+const PUSH_JITTER_MAX_MS = 7000
+
+let echoBound = false
+let echoReadyHandler = null
+let pushTimer = null
+let dirtyWhileHidden = false
+
+function isHidden() {
+  return typeof document !== 'undefined' && document.visibilityState === 'hidden'
+}
+
+function pushIsLive() {
+  if (!echoBound) return false
+  try {
+    const state = window.Echo?.connector?.pusher?.connection?.state
+    return state ? state === 'connected' : true
+  } catch {
+    return true
+  }
+}
+
+function staleAfterMs() {
+  return pushIsLive() ? PUSH_SAFETY_MS : POLL_MS
+}
+
+function onCountsPushed() {
+  if (isHidden()) {
+    dirtyWhileHidden = true
+    return
+  }
+  if (pushTimer) return // one refetch covers a burst of events
+  const delay = PUSH_JITTER_MIN_MS + Math.random() * (PUSH_JITTER_MAX_MS - PUSH_JITTER_MIN_MS)
+  pushTimer = window.setTimeout(() => {
+    pushTimer = null
+    pollTick({ force: true })
+  }, delay)
+}
+
+function bindEcho() {
+  if (echoBound || !window.Echo || pollTimer == null) return
+  try {
+    window.Echo.private('crm-campaigns').listen('.sidebar.counts.changed', onCountsPushed)
+    echoBound = true
+  } catch {
+    echoBound = false
+  }
+}
+
+function unbindEcho() {
+  if (echoReadyHandler) {
+    window.removeEventListener('echo-ready', echoReadyHandler)
+    echoReadyHandler = null
+  }
+  if (echoBound) {
+    try {
+      window.Echo?.private('crm-campaigns').stopListening('.sidebar.counts.changed', onCountsPushed)
+    } catch {
+      /* ignore */
+    }
+  }
+  echoBound = false
+  clearTimeout(pushTimer)
+  pushTimer = null
+}
+
+// ---- Safety poll ----------------------------------------------------------------------
+
+async function pollTick({ force = false } = {}) {
   if (pollInFlight) {
     return
   }
   // Background tabs don't need live badges; catch up on visibilitychange.
-  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+  if (isHidden()) {
+    return
+  }
+  // Timer fires every minute, but with live push only refetch when the safety window passed.
+  if (!force && Date.now() - lastFetchedAt < staleAfterMs()) {
     return
   }
   pollInFlight = true
@@ -78,9 +156,12 @@ function onVisibilityChange() {
   if (document.visibilityState !== 'visible' || pollTimer == null) {
     return
   }
-  if (Date.now() - lastFetchedAt >= POLL_MS) {
-    pollTick()
+  if (dirtyWhileHidden) {
+    dirtyWhileHidden = false
+    pollTick({ force: true })
+    return
   }
+  pollTick()
 }
 
 function startPolling() {
@@ -88,8 +169,14 @@ function startPolling() {
   if (pollTimer != null) {
     return
   }
-  pollTimer = window.setInterval(pollTick, POLL_MS)
+  pollTimer = window.setInterval(() => pollTick(), POLL_MS)
   document.addEventListener('visibilitychange', onVisibilityChange)
+  if (window.Echo) {
+    bindEcho()
+  } else {
+    echoReadyHandler = () => bindEcho()
+    window.addEventListener('echo-ready', echoReadyHandler)
+  }
 }
 
 function stopPolling() {
@@ -98,6 +185,7 @@ function stopPolling() {
     window.clearInterval(pollTimer)
     pollTimer = null
     document.removeEventListener('visibilitychange', onVisibilityChange)
+    unbindEcho()
   }
 }
 

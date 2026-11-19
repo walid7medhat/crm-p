@@ -16,6 +16,18 @@ let lastFetchAt = 0
 
 // Echo pushes `.maintenance.updated` instantly; polling is only a fallback.
 const POLL_MS = 120000
+const POLL_WITH_PUSH_MS = 10 * 60_000
+let echoBoundForMaintenance = false
+
+function maintenancePushIsLive() {
+  if (!echoBoundForMaintenance) return false
+  try {
+    const state = window.Echo?.connector?.pusher?.connection?.state
+    return state ? state === 'connected' : true
+  } catch {
+    return true
+  }
+}
 const VISIBLE_REFETCH_MIN_MS = 15000
 
 function isStoredSuperAdmin() {
@@ -115,6 +127,8 @@ export function startMaintenanceWatch() {
   if (pollTimer) clearInterval(pollTimer)
   pollTimer = setInterval(() => {
     if (document.visibilityState === 'hidden') return
+    // With live push this is only a safety net.
+    if (maintenancePushIsLive() && Date.now() - lastFetchAt < POLL_WITH_PUSH_MS) return
     fetchStatus()
   }, POLL_MS)
 
@@ -122,19 +136,21 @@ export function startMaintenanceWatch() {
     visibilityBound = true
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return
-      if (Date.now() - lastFetchAt < VISIBLE_REFETCH_MIN_MS) return
+      const minGap = maintenancePushIsLive() ? POLL_MS : VISIBLE_REFETCH_MIN_MS
+      if (Date.now() - lastFetchAt < minGap) return
       fetchStatus()
     })
   }
 
   const bindEcho = () => {
-    if (!window.Echo || !resolveAuthToken()) return
+    if (echoBoundForMaintenance || !window.Echo || !resolveAuthToken()) return
     try {
       window.Echo.private('crm-campaigns')
         .listen('.maintenance.updated', () => {
           // Re-fetch so affects_me is computed server-side for this user.
           fetchStatus()
         })
+      echoBoundForMaintenance = true
     } catch {
       // ignore
     }

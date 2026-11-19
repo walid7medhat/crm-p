@@ -250,7 +250,8 @@ class StageController extends Controller
 {
     try {
         $user = auth()->user();
-        $perPage = (int) $request->get('per_page', 15);
+        // The board UI asks for 12–20; cap outside callers so one request can't pull 100+/stage.
+        $perPage = max(1, min((int) $request->get('per_page', 15), 50));
 
         $userRole = $user->roles()->first()?->name ?? 'sales';
         $perfStart = microtime(true);
