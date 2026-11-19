@@ -134,8 +134,30 @@ function restoreTabTitle() {
   originalTitle = null
 }
 
+function startUnreadPoll() {
+  if (pollInterval) return
+  pollInterval = setInterval(() => {
+    if (document.visibilityState === 'hidden') return
+    fetchUnreadCount()
+  }, 60000)
+}
+
+function stopUnreadPoll() {
+  if (!pollInterval) return
+  clearInterval(pollInterval)
+  pollInterval = null
+}
+
 function onVisibilityChange() {
-  if (document.visibilityState === 'visible') restoreTabTitle()
+  if (document.visibilityState === 'visible') {
+    restoreTabTitle()
+    if (visible.value) {
+      fetchUnreadCount()
+      startUnreadPoll()
+    }
+    return
+  }
+  stopUnreadPoll()
 }
 
 function subscribeToNewMessages() {
@@ -246,7 +268,7 @@ onMounted(() => {
   })
   if (visible.value) {
     fetchUnreadCount()
-    pollInterval = setInterval(fetchUnreadCount, 60000)
+    startUnreadPoll()
   }
 })
 
@@ -256,7 +278,7 @@ onUnmounted(() => {
   unsubscribeEcho()
   document.removeEventListener('visibilitychange', onVisibilityChange)
   restoreTabTitle()
-  if (pollInterval) clearInterval(pollInterval)
+  stopUnreadPoll()
   releaseIncomingChatSound()
   if (attentionFrame) cancelAnimationFrame(attentionFrame)
   attentionFrame = null
@@ -270,9 +292,10 @@ watch(() => props.show, (v) => {
     visible.value = true
     fetchUnreadCount()
     if (!echoChannel.value) subscribeToNewMessages()
-    if (!pollInterval) pollInterval = setInterval(fetchUnreadCount, 60000)
+    startUnreadPoll()
   } else {
     visible.value = false
+    stopUnreadPoll()
   }
 })
 

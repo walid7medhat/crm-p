@@ -567,6 +567,14 @@ class StageController extends Controller
             }
         }
 
+        // Warm parent chains once for inactive-creator / office walks on cards.
+        User::warmHierarchy(
+            $allLeadsForMeta->flatMap(fn ($lead) => array_filter([
+                $lead->relationLoaded('addedBy') ? $lead->addedBy : null,
+                $lead->relationLoaded('responsiblePerson') ? $lead->responsiblePerson : null,
+            ]))
+        );
+
         // Duplicate badge: one exact-phone lookup for all leads on the board (cheap, indexed).
         // Blacklisted label: one indexed lookup of blacklisted leads by phone digits / email.
         KanbanLeadCardResource::setKanbanMeta(
@@ -639,7 +647,57 @@ class StageController extends Controller
      */
     private function firstPageLeadIdsByStage($baseLeadsQuery, $stages, int $limit): array
     {
+        $stages = collect($stages)->values();
         $idsByStage = [];
+        foreach ($stages as $stage) {
+            $idsByStage[(int) $stage->id] = [];
+        }
+
+        if ($stages->isEmpty()) {
+            return $idsByStage;
+        }
+
+        // One round-trip: UNION ALL of the same per-stage ORDER/LIMIT selects as before.
+        // Parentheses required so MySQL keeps each branch's ORDER BY + LIMIT.
+        $parts = [];
+        $bindings = [];
+        foreach ($stages as $stage) {
+            $stageId = (int) $stage->id;
+            $query = (clone $baseLeadsQuery)
+                ->where('leads.stage_id', $stageId)
+                ->reorder()
+                ->selectRaw('leads.id as id, '.$stageId.' as stage_id_key');
+
+            if ((int) $stage->order === 1) {
+                $query->orderBy('leads.created_at', 'desc')->orderBy('leads.id', 'desc');
+            } else {
+                $query->orderBy('leads.bitrix24_last_activity_at', 'desc')
+                    ->orderBy('leads.id', 'desc');
+            }
+
+            $query->limit($limit);
+            $parts[] = '('.$query->toSql().')';
+            $bindings = array_merge($bindings, $query->getBindings());
+        }
+
+        try {
+            $rows = DB::select(implode(' UNION ALL ', $parts), $bindings);
+            foreach ($rows as $row) {
+                $sid = (int) $row->stage_id_key;
+                if (! array_key_exists($sid, $idsByStage)) {
+                    continue;
+                }
+                $idsByStage[$sid][] = (int) $row->id;
+            }
+
+            return $idsByStage;
+        } catch (\Throwable $e) {
+            // Fallback: previous N-query loop (identical ordering / limits).
+            \Log::warning('kanban firstPageLeadIdsByStage union failed; falling back', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         foreach ($stages as $stage) {
             $query = (clone $baseLeadsQuery)
                 ->where('leads.stage_id', $stage->id)
@@ -650,10 +708,10 @@ class StageController extends Controller
                 $query->orderBy('leads.created_at', 'desc')->orderBy('leads.id', 'desc');
             } else {
                 $query->orderBy('leads.bitrix24_last_activity_at', 'desc')
-                        ->orderBy('leads.id', 'desc');
+                    ->orderBy('leads.id', 'desc');
             }
 
-            $idsByStage[$stage->id] = $query->limit($limit)->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $idsByStage[(int) $stage->id] = $query->limit($limit)->pluck('id')->map(fn ($id) => (int) $id)->all();
         }
 
         return $idsByStage;

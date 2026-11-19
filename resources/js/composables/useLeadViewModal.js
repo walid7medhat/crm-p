@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/plugins/axios'
+import { invalidateLeadCache, setCachedLead } from '@/composables/leadShowCache.js'
 
 
 export const showLeadViewModal = ref(false)
@@ -137,6 +138,13 @@ export function onLeadViewUpdated(callback) {
 }
 
 export function notifyLeadViewUpdated(updatedLead) {
+  const id = Number(updatedLead?.id)
+  if (id) {
+    // Keep SWR cache aligned with the latest edited payload; never leave stale fields.
+    setCachedLead(id, updatedLead)
+  } else {
+    invalidateLeadCache()
+  }
   leadUpdatedListeners.forEach((callback) => {
     try {
       callback(updatedLead)

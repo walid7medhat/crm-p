@@ -47,6 +47,78 @@ class LeadResource extends JsonResource
         static::$fastShow = false;
     }
 
+    public static function isFastShow(): bool
+    {
+        return static::$fastShow;
+    }
+
+    /**
+     * Single-lead modal open: prime assignment + last-activity history maps without
+     * duplicate/blacklist scans (those are skipped by enableFastShow anyway).
+     */
+    public static function primeForFastShow(Lead $lead): void
+    {
+        static::clearCollectionPrime();
+        static::$collectionPrimed = true;
+
+        $leadId = (int) $lead->id;
+        static::$assignmentHistoryByLeadId[$leadId] = null;
+        static::$latestHistoryByLeadId[$leadId] = null;
+        static::$duplicateIdsByLeadId[$leadId] = [];
+        static::$serviceDuplicateByLeadId[$leadId] = false;
+
+        $assignmentHistoryId = LeadHistory::query()
+            ->where('lead_id', $leadId)
+            ->where('changes->action', 'assigned')
+            ->orderByDesc('id')
+            ->value('id');
+
+        // Skip latest-history fallback when Bitrix activity columns already answer last_activity_*.
+        $needsHistoryActivityFallback = empty($lead->bitrix24_last_activity_by_id)
+            || empty($lead->bitrix24_last_activity_at);
+
+        $latestHistoryId = null;
+        if ($needsHistoryActivityFallback) {
+            $latestHistoryId = LeadHistory::query()
+                ->where('lead_id', $leadId)
+                ->whereNotNull('user_id')
+                ->whereHas('user')
+                ->orderByDesc('id')
+                ->value('id');
+        }
+
+        $historyIds = array_values(array_filter([
+            $assignmentHistoryId ? (int) $assignmentHistoryId : null,
+            $latestHistoryId ? (int) $latestHistoryId : null,
+        ]));
+
+        if ($historyIds !== []) {
+            $historiesById = LeadHistory::query()
+                ->with('user:id,name,display_name,avatar,email,parent_id,status,bitrix24_id')
+                ->whereIn('id', $historyIds)
+                ->get()
+                ->keyBy('id');
+
+            if ($assignmentHistoryId && ($history = $historiesById->get((int) $assignmentHistoryId))) {
+                static::$assignmentHistoryByLeadId[$leadId] = $history;
+            }
+            if ($latestHistoryId && ($history = $historiesById->get((int) $latestHistoryId))) {
+                static::$latestHistoryByLeadId[$leadId] = $history;
+            }
+        }
+
+        $b24Id = $lead->bitrix24_last_activity_by_id
+            ? (int) $lead->bitrix24_last_activity_by_id
+            : null;
+        $activityMap = [];
+        if ($b24Id) {
+            $activityMap[$b24Id] = User::query()
+                ->where('bitrix24_id', $b24Id)
+                ->first(['id', 'bitrix24_id', 'name', 'display_name', 'avatar', 'email', 'parent_id', 'status']);
+        }
+        static::setKanbanActivityUsersByBitrixId($activityMap);
+    }
+
     /**
      * Batch-load per-lead duplicate / history / activity data for a collection.
      * Preserves the same rules as the per-row queries previously used in toArray().

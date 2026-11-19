@@ -108,8 +108,8 @@ export default {
   methods: {
     async load() {
       try {
-        const response = await api.get('/push-subscriptions/config')
-        const data = response.data?.data
+        const { fetchPushSubscriptionConfig } = await import('@/composables/pushSubscriptionConfig.js')
+        const data = await fetchPushSubscriptionConfig()
         if (!data?.eligible) return
         this.visible = true
         this.publicKey = data.public_key || null

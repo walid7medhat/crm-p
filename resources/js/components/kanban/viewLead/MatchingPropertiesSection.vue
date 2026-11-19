@@ -615,10 +615,25 @@ async function fetchMatches() {
         loading.value = false
         bindScrollResize()
 
-        const searched = await fetchSearchMatchRows()
-        if (Number(props.lead?.id) !== leadId) return
-        listings.value = mergeMatchingRows(scored.rows, searched)
-        scoredMode.value = scored.rows.length > 0 || listings.value.some((row) => row.match_score != null)
+        // Enough scored matches for first paint — defer listings/matching so it
+        // does not compete with lead show / comments on the critical path.
+        const deferSearch = scored.rows.length >= 6
+        const runSearchFill = async () => {
+            if (Number(props.lead?.id) !== leadId) return
+            const searched = await fetchSearchMatchRows()
+            if (Number(props.lead?.id) !== leadId) return
+            listings.value = mergeMatchingRows(scored.rows, searched)
+            scoredMode.value = scored.rows.length > 0 || listings.value.some((row) => row.match_score != null)
+        }
+        if (deferSearch) {
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => { runSearchFill().catch(() => {}) }, { timeout: 2500 })
+            } else {
+                window.setTimeout(() => { runSearchFill().catch(() => {}) }, 600)
+            }
+        } else {
+            await runSearchFill()
+        }
         if (!listings.value.length && !hasSearchCriteria.value) {
             error.value = ''
         }

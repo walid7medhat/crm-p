@@ -10,7 +10,15 @@ function isPlainLeadBoardParams(params) {
     const value = params[key]
     return value != null && value !== ''
   })
-  return keys.length === 1 && keys[0] === 'per_page' && Number(params.per_page) === 15
+  // Default first board page: per_page=15, optional page=1 only.
+  // leads.vue always sends page:1 — treating that as a mismatch caused a second full board GET.
+  if (!keys.includes('per_page') || Number(params.per_page) !== 15) return false
+  for (const key of keys) {
+    if (key === 'per_page') continue
+    if (key === 'page' && Number(params.page) === 1) continue
+    return false
+  }
+  return true
 }
 
 function takeEarlyBrowserPrefetch() {
@@ -63,7 +71,10 @@ export function peekLeadBoardPrefetchPromise(params) {
  */
 export function takeLeadBoardPrefetch(params) {
   if (!pending) return null
+  // Do not clear pending on param mismatch — a filtered fetch must not
+  // discard the shared default-board prefetch for a later consumer.
+  if (!isPlainLeadBoardParams(params)) return null
   const promise = pending
   pending = null
-  return isPlainLeadBoardParams(params) ? promise : null
+  return promise
 }

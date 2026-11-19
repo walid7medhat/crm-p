@@ -6,6 +6,7 @@ use App\Events\LiveWatchPresenceChanged;
 use App\Models\LiveWatchSession;
 use App\Models\LiveWatchSetting;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -175,6 +176,7 @@ class LiveWatchPresenceService
             }
 
             $settings->forceFill($payload)->save();
+            Cache::forget('live-watch:presence-snapshot');
             $fresh = $settings->fresh(['monitoredUser']);
 
             if ($previousId !== (int) ($userId ?? 0)) {
@@ -194,24 +196,28 @@ class LiveWatchPresenceService
 
     public function presenceSnapshot(): array
     {
-        $settings = $this->reconcilePresence();
-        $row = $this->settings()->load('monitoredUser:id,name,email,status');
+        // Shared SA snapshot (not per-viewer lead data). Absorbs duplicate polls
+        // from alert + tracking page within a few seconds without skipping Echo events.
+        return Cache::remember('live-watch:presence-snapshot', 3, function () {
+            $settings = $this->reconcilePresence();
+            $row = $this->settings()->load('monitoredUser:id,name,email,status');
 
-        return [
-            'monitored_user_id' => $row->monitored_user_id,
-            'monitored_user' => $row->monitoredUser ? [
-                'id' => $row->monitoredUser->id,
-                'name' => $row->monitoredUser->name,
-                'email' => $row->monitoredUser->email,
-                'status' => $row->monitoredUser->status,
-            ] : null,
-            'is_online' => (bool) $row->is_online,
-            'transition_id' => $row->is_online ? $row->current_transition_id : null,
-            'online_since' => $row->online_since?->toIso8601String(),
-            'heartbeat_interval_seconds' => (int) $row->heartbeat_interval_seconds,
-            'offline_timeout_seconds' => (int) $row->offline_timeout_seconds,
-            'active_sessions' => $settings['active_sessions'] ?? 0,
-        ];
+            return [
+                'monitored_user_id' => $row->monitored_user_id,
+                'monitored_user' => $row->monitoredUser ? [
+                    'id' => $row->monitoredUser->id,
+                    'name' => $row->monitoredUser->name,
+                    'email' => $row->monitoredUser->email,
+                    'status' => $row->monitoredUser->status,
+                ] : null,
+                'is_online' => (bool) $row->is_online,
+                'transition_id' => $row->is_online ? $row->current_transition_id : null,
+                'online_since' => $row->online_since?->toIso8601String(),
+                'heartbeat_interval_seconds' => (int) $row->heartbeat_interval_seconds,
+                'offline_timeout_seconds' => (int) $row->offline_timeout_seconds,
+                'active_sessions' => $settings['active_sessions'] ?? 0,
+            ];
+        });
     }
 
     public function clientConfig(User $user): array
@@ -248,6 +254,8 @@ class LiveWatchPresenceService
 
     private function broadcastPresence(LiveWatchSetting $settings, string $status): void
     {
+        Cache::forget('live-watch:presence-snapshot');
+
         if (! $settings->relationLoaded('monitoredUser')) {
             $settings->load('monitoredUser:id,name');
         }

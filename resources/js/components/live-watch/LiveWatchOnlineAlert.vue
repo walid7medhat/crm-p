@@ -51,7 +51,8 @@ import {
   unlockLiveWatchSiren,
 } from '@/utils/liveWatchSiren'
 
-const POLL_MS = 12_000
+/** Echo carries live transitions; polling is a safety net (was 12s — too chatty). */
+const POLL_MS = 30_000
 
 const presence = ref(null)
 const muted = ref(isLiveWatchSirenMuted())

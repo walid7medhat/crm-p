@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -140,12 +141,23 @@ class ChatController extends Controller
     public function unreadCount(Request $request): JsonResponse
     {
         $user = $request->user();
-        $count = Message::whereHas('conversation', function ($q) use ($user) {
-            $q->whereHas('users', fn ($q2) => $q2->where('user_id', $user->id));
-        })
-            ->where('sender_id', '!=', $user->id)
-            ->whereNull('read_at')
-            ->count();
+        $cacheKey = 'chat:unread-count:'.$user->id;
+        $count = Cache::remember($cacheKey, 15, function () use ($user) {
+            // Conversation membership via pivot first — avoids correlated double whereHas.
+            $conversationIds = DB::table('conversation_user')
+                ->where('user_id', $user->id)
+                ->pluck('conversation_id');
+
+            if ($conversationIds->isEmpty()) {
+                return 0;
+            }
+
+            return (int) Message::query()
+                ->whereIn('conversation_id', $conversationIds)
+                ->where('sender_id', '!=', $user->id)
+                ->whereNull('read_at')
+                ->count();
+        });
 
         return response()->json(['success' => true, 'count' => $count]);
     }
@@ -263,6 +275,13 @@ class ChatController extends Controller
         ]);
         $message->load('sender:id,name,email,avatar');
 
+        $participantIds = $conversation->users()->pluck('users.id');
+        foreach ($participantIds as $participantId) {
+            if ((int) $participantId !== (int) $user->id) {
+                Cache::forget('chat:unread-count:'.$participantId);
+            }
+        }
+
         try {
             broadcast(new MessageSent($message))->toOthers();
         } catch (\Throwable $e) {
@@ -311,6 +330,7 @@ class ChatController extends Controller
             ->update(['read_at' => now()]);
 
         $conversation->users()->updateExistingPivot($user->id, ['last_read_at' => now()]);
+        Cache::forget('chat:unread-count:'.$user->id);
 
         return response()->json(['success' => true]);
     }
