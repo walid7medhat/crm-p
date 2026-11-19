@@ -19,6 +19,7 @@ const baseRoutes = [
     { path: '/settings/stage-duplicates-report', component: () => import('./pages/settings/stage-duplicates-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/location-tracking', component: () => import('./pages/settings/location-tracking.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/foreign-access', component: () => import('./pages/settings/foreign-access.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/settings/request-monitor', component: () => import('./pages/settings/request-monitor.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/settings/maintenance', component: () => import('./pages/settings/MaintenanceModeAdmin.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/tracking', component: () => import('./pages/tracking/index.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/evaluations/:id', component: () => import('./pages/evaluations/FillEvaluation.vue'), meta: { requiresAuth: true } },

@@ -842,6 +842,9 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/admin/foreign-access', [\App\Http\Controllers\Api\Admin\ForeignAccessController::class, 'index']);
         Route::get('/admin/foreign-access/{foreignAccess}', [\App\Http\Controllers\Api\Admin\ForeignAccessController::class, 'show']);
         Route::post('/admin/foreign-access/{foreignAccess}/review', [\App\Http\Controllers\Api\Admin\ForeignAccessController::class, 'markReviewed']);
+
+        // Request Monitor: live traffic from the access log + board timings (read-only).
+        Route::get('/admin/request-monitor', [\App\Http\Controllers\Api\Admin\RequestMonitorController::class, 'index']);
     });
 
      // User routes
