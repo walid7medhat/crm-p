@@ -3142,7 +3142,14 @@ async function enrichBoardMetaInBackground(params) {
 function applyStagesWithLeadsResponse(response, params) {
     const responseData = response?.data?.data
     const stagesData = responseData?.stages || []
-    applyBoardAnalytics(responseData?.analytics, params)
+    // analytics_pending → last-known totals, or placeholder zeros when the server has
+    // none. Never blank the chips we already show with those zeros; stage-counts
+    // returns the exact totals right after.
+    const boardAnalytics = responseData?.analytics
+    const boardAnalyticsEmpty = !boardAnalytics || !Object.values(boardAnalytics).some((n) => Number(n) > 0)
+    if (!responseData?.analytics_pending || !boardAnalyticsEmpty) {
+        applyBoardAnalytics(boardAnalytics, params)
+    }
 
     const searching = !!(params.search && String(params.search).trim())
     const newData = stagesData.map((stage, index) => ({
@@ -3314,6 +3321,8 @@ function saveColumnsToCache() {
             columns: snapshot,
             // Persist exact stage totals so the badge is not the loaded page size
             stagePagination: stagePagination.value || {},
+            // Temp / call chips — painted instantly on next open while stage-counts refreshes.
+            analytics: { ...leadAnalyticsServer.value },
         }
         localStorage.setItem(getKanbanCacheKey(), JSON.stringify(payload))
     } catch (e) {
@@ -3366,6 +3375,9 @@ function loadCachedColumns() {
         syncStageOrderMapFromColumns(parsed.columns)
         if (parsed.stagePagination && typeof parsed.stagePagination === 'object') {
             stagePagination.value = parsed.stagePagination
+        }
+        if (parsed.analytics && typeof parsed.analytics === 'object') {
+            applyBoardAnalytics(parsed.analytics)
         }
         sortAllColumnLeads()
 
