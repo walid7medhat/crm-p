@@ -20,16 +20,21 @@ class DealStageValidator
         $this->stageRequirements = config('deal_stage_requirements.requirements', []);
     }
 
-    public function validate(Deal $deal, int $targetStageId, string $dealType): array
+    /**
+     * $fromStart: completeness check — evaluate every stage from the first up to and
+     * including the target (usually the deal's current stage), instead of only the
+     * stages between the current one and the target.
+     */
+    public function validate(Deal $deal, int $targetStageId, string $dealType, bool $fromStart = false): array
     {
         $currentStage = Stage::find($deal->stage_id);
         $targetStage = Stage::find($targetStageId);
-        
+
         if (!$currentStage || !$targetStage) {
             return ['valid' => true];
         }
 
-        if ($targetStage->order <= $currentStage->order) {
+        if (!$fromStart && $targetStage->order <= $currentStage->order) {
             return ['valid' => true];
         }
 
@@ -41,7 +46,7 @@ class DealStageValidator
             ->orderBy('order')
             ->get();
 
-        $startOrder = (int) $currentStage->order + 1;
+        $startOrder = $fromStart ? 1 : (int) $currentStage->order + 1;
         $endOrder = (int) $targetStage->order;
 
         // Load relationships
@@ -372,6 +377,35 @@ class DealStageValidator
         }
         
         return ['sections' => $sections];
+    }
+
+    /**
+     * Flat, human-readable list for a completeness summary:
+     * [['key' => ..., 'section' => ..., 'label' => 'Buyer · Email' | 'Property 1 · Unit No' | ...]].
+     */
+    public function labelMissingFieldsForSummary(array $missingFields): array
+    {
+        $fieldMeta = $this->getFieldMeta();
+        $out = [];
+
+        foreach ($this->getMissingFieldsGroupedForUI($missingFields)['sections'] as $section) {
+            $title = $section['title'];
+            foreach ($section['fields'] as $field) {
+                $key = $field['key'];
+                $label = $field['label'];
+
+                if (preg_match('/^property_(\d+)_(.+)$/', $key, $m)) {
+                    $metaLabel = $fieldMeta['property_' . $m[2]]['label'] ?? $this->humanizeFieldKey($m[2]);
+                    $label = 'Property ' . ((int) $m[1] + 1) . ' · ' . $metaLabel;
+                } elseif (preg_match('/^(Buyer|Seller|Tenant|Landlord) Details$/', $title, $m)) {
+                    $label = $m[1] . ' · ' . $label;
+                }
+
+                $out[] = ['key' => $key, 'section' => $title, 'label' => $label];
+            }
+        }
+
+        return $out;
     }
 
     protected function humanizeFieldKey(string $key): string

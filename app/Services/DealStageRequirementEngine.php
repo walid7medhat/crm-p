@@ -138,7 +138,8 @@ class DealStageRequirementEngine
         }
         $targetOrder = (int) $targetStage->order;
         $this->currentTargetStageOrder = $targetOrder;
-        if ($currentStage && (int) $targetStage->order <= (int) $currentStage->order) {
+        // Completeness check (context['completeness']) evaluates the deal's own stage too.
+        if (empty($context['completeness']) && $currentStage && (int) $targetStage->order <= (int) $currentStage->order) {
             return $this->successResult($deal, [
                 'current_stage_order' => (int) ($currentStage?->order ?? 0),
                 'target_stage_order' => (int) $targetStage->order,

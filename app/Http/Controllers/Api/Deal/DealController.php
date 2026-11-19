@@ -778,6 +778,49 @@ class DealController extends Controller
     }
 
     /**
+     * Completeness of a deal: every field required by the stage rules from the first
+     * stage up to and including the deal's CURRENT stage that is still empty.
+     * Same validators as the stage-move gate, so the view summary never disagrees with it.
+     */
+    public function completeness($id, DealStageValidatorService $guard, DealStageValidator $validator)
+    {
+        $deal = Deal::find($id);
+
+        if (!$deal) {
+            return response()->json(['success' => false, 'message' => 'Deal not found'], 404);
+        }
+
+        if (!$this->authorizeAccess($deal)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if (!$deal->stage_id) {
+            return response()->json(['success' => true, 'complete' => true, 'missing_count' => 0, 'missing' => []]);
+        }
+
+        $deal->load(['parties', 'documents', 'properties']);
+
+        $result = $guard->validateStageChange(
+            $deal,
+            (int) $deal->stage_id,
+            $deal->deal_type,
+            null,
+            ['completeness' => true]
+        );
+
+        $missingKeys = $result['missing_fields'] ?? [];
+        $missing = $validator->labelMissingFieldsForSummary($missingKeys);
+
+        return response()->json([
+            'success' => true,
+            'complete' => empty($missing),
+            'missing_count' => count($missing),
+            'missing' => $missing,
+            'missing_fields' => $missingKeys,
+        ]);
+    }
+
+    /**
      * تحديث جزئي للصفقة
      */
     public function updatePartial(UpdatePartialRequest $request, $id)

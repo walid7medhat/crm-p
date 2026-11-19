@@ -8,8 +8,8 @@
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <div class="info-label mb-1">Completeness Status</div>
-            <div class="info-value mb-0" :class="missingSummary.count ? 'text-warning' : 'text-success'">
-              {{ missingSummary.count ? 'Incomplete' : 'Complete' }}
+            <div class="info-value mb-0" :class="missingSummary.loading ? 'text-muted' : (missingSummary.count ? 'text-warning' : 'text-success')">
+              {{ missingSummary.loading ? 'Checking…' : (missingSummary.count ? 'Incomplete' : 'Complete') }}
             </div>
           </div>
           <div class="text-end">
@@ -544,6 +544,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { dealUnitNo, dealPropertyType } from '@/utils/dealCompleteness'
+import { useDealCompleteness } from '@/composables/useDealCompleteness'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
 import CommissionDistributionReadonly from './CommissionDistributionReadonly.vue'
@@ -664,7 +665,10 @@ const landlordDocuments = computed(() => {
   return d.landlord_documents || []
 })
 
-const missingSummary = computed(() => {
+// All stage-required fields up to the current stage, from the backend validator;
+// localMissingSummary is only a fallback if that request fails.
+const { completeness: missingSummary } = useDealCompleteness(() => props.deal, () => localMissingSummary.value)
+const localMissingSummary = computed(() => {
   const d = props.deal || {}
 
   const checks = [
