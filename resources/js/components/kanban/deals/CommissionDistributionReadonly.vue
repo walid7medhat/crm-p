@@ -10,6 +10,10 @@
         <strong>{{ formatMoney(dist.external_agency?.amount) }} <small>AED</small></strong>
         <em>{{ dist.external_agency?.name || 'External' }} · {{ Number(dist.external_agency?.split_percent || 0) }}%</em>
       </div>
+      <div class="df-ro__kpi">
+        <span class="df-ro__label">Distributed</span>
+        <strong>{{ formatMoney(distributed) }} <small>AED</small></strong>
+      </div>
       <div class="df-ro__kpi df-ro__kpi--oia">
         <span class="df-ro__label">OIA retained</span>
         <strong>{{ formatMoney(dist.oia_retained_amount) }} <small>AED</small></strong>
@@ -24,9 +28,10 @@
       >
         <span class="df-ro__avatar">{{ initial(agent) }}</span>
         <div class="df-ro__agent-meta">
-          <strong>{{ agent.name || ('Agent #' + (agent.user_id || idx + 1)) }}</strong>
-          <span>{{ Number(agent.split_percent || 0) }}% · {{ formatMoney(agent.amount) }} AED</span>
+          <strong :title="agent.name">{{ agent.name || ('Agent #' + (agent.user_id || idx + 1)) }}</strong>
+          <span class="df-ro__agent-share">{{ Number(agent.split_percent || 0) }}%</span>
         </div>
+        <span class="df-ro__agent-amount">{{ formatMoney(agent.amount) }} <small>AED</small></span>
       </div>
     </div>
   </div>
@@ -42,6 +47,13 @@ const props = defineProps({
 const dist = computed(() => props.distribution || {})
 const agencyEnabled = computed(() => !!dist.value.external_agency?.enabled)
 const agents = computed(() => Array.isArray(dist.value.agents) ? dist.value.agents : [])
+// Same as the editor's "Distributed" tile: agents + external agency (when enabled).
+const distributed = computed(() => {
+  const agentsTotal = Number(dist.value.agents_total_amount)
+    || agents.value.reduce((s, a) => s + (Number(a.amount) || 0), 0)
+  const agency = agencyEnabled.value ? (Number(dist.value.external_agency?.amount) || 0) : 0
+  return agentsTotal + agency
+})
 const hasData = computed(() => {
   if (!props.distribution || typeof props.distribution !== 'object') return false
   return agencyEnabled.value || agents.value.length > 0 || Number(dist.value.gross_amount) > 0
@@ -65,16 +77,19 @@ function initial(agent) {
   gap: 0.75rem;
 }
 
+/* auto-fit: tiles always share the full row (a fixed 3-col grid left 2 tiles squeezed
+   into 2/3 of the width, wrapping "OIA RETAINED" and the amounts). */
 .df-ro__kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.55rem;
 }
 
 .df-ro__kpi {
+  min-width: 0;
   border: 1px solid var(--color-primary-border);
   border-radius: 12px;
-  padding: 0.7rem 0.85rem;
+  padding: 0.6rem 0.75rem;
   background: var(--color-primary-soft);
 }
 
@@ -96,11 +111,15 @@ function initial(agent) {
   letter-spacing: 0.04em;
   color: var(--color-text-secondary);
   margin-bottom: 0.2rem;
+  white-space: nowrap;
 }
 
 .df-ro__kpi strong {
+  display: block;
   font-size: 0.95rem;
   color: var(--color-text-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .df-ro__kpi small {
@@ -119,7 +138,7 @@ function initial(agent) {
 
 .df-ro__agents {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.5rem;
 }
 
@@ -148,6 +167,7 @@ function initial(agent) {
 
 .df-ro__agent-meta {
   min-width: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
 }
@@ -156,17 +176,28 @@ function initial(agent) {
   font-size: 0.82rem;
   color: var(--color-text-primary);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.df-ro__agent-meta span {
+.df-ro__agent-share {
   font-size: 0.72rem;
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 768px) {
-  .df-ro__kpis,
-  .df-ro__agents {
-    grid-template-columns: 1fr;
-  }
+.df-ro__agent-amount {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.df-ro__agent-amount small {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
 }
 </style>
