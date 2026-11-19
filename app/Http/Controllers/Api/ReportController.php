@@ -326,6 +326,9 @@ class ReportController extends Controller
                 ->leftJoin('stages as s', 's.id', '=', 'l.stage_id')
                 ->when($from, fn ($q) => $q->where('a.assigned_at', '>=', $from))
                 ->when($to, fn ($q) => $q->where('a.assigned_at', '<=', $to))
+                // Only takers of this company (Luxvant host → Luxvant) and, on OIA, of the
+                // Abu Dhabi / Dubai branch picked in the branch switch.
+                ->tap(fn ($q) => \App\Support\Brand\BrandIsolation::constrainUsers($q, 'u'))
                 ->orderBy('a.assigned_at', 'desc')
                 ->get([
                     'a.user_id', 'a.lead_id', 'a.assigned_at',
