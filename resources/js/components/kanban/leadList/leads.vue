@@ -2568,7 +2568,7 @@ const showLeftZone = ref(true)
 const showRightZone = ref(true)
 const stagePagination = ref({})          
 const loadingMoreLeads = ref({})          
-const leadsPerPage = ref(15)              
+const leadsPerPage = ref(20)              
 const SCROLL_SPEED = 10
 const SCROLL_TICK_MS = 16
 const isLeadDragging = ref(false)
@@ -3030,25 +3030,78 @@ async function saveStage() {
     }
 }
 
+function applyBoardAnalytics(analytics, params = {}) {
+    if (!analytics || typeof analytics !== 'object') return
+    const nextAnalytics = {
+        tempCold: Number(analytics.tempCold) || 0,
+        tempWarm: Number(analytics.tempWarm) || 0,
+        tempHot: Number(analytics.tempHot) || 0,
+        callAnswered: Number(analytics.callAnswered) || 0,
+        callNoAnswer: Number(analytics.callNoAnswer) || 0,
+    }
+    // Free-text search skips server analytics for speed — keep previous chip totals.
+    const searching = !!(params.search && String(params.search).trim())
+    const hasAny = Object.values(nextAnalytics).some((n) => n > 0)
+    if (!searching || hasAny) {
+        leadAnalyticsServer.value = nextAnalytics
+    }
+}
+
+function applyExactStageCounts(counts, perPage = leadsPerPage.value) {
+    if (!counts || typeof counts !== 'object') return
+    const pageSize = Math.max(1, Number(perPage) || leadsPerPage.value)
+    const nextPagination = { ...stagePagination.value }
+    columns.value = columns.value.map((col) => {
+        const key = String(col.status)
+        if (!Object.prototype.hasOwnProperty.call(counts, key) && !Object.prototype.hasOwnProperty.call(counts, col.status)) {
+            return col
+        }
+        const total = Number(counts[key] ?? counts[col.status] ?? 0) || 0
+        const lastPage = Math.max(1, Math.ceil(total / pageSize))
+        nextPagination[col.status] = {
+            ...(nextPagination[col.status] || {}),
+            currentPage: nextPagination[col.status]?.currentPage || 1,
+            lastPage,
+            perPage: pageSize,
+            total,
+            hasMorePages: total > pageSize,
+        }
+        return col
+    })
+    stagePagination.value = nextPagination
+    // lead_count badges read from stagePagination in the template via helpers —
+    // also stamp a display total on the column when present.
+    columns.value = columns.value.map((col) => {
+        const pag = stagePagination.value[col.status]
+        if (!pag || pag.total == null) return col
+        return { ...col, lead_count: pag.total }
+    })
+}
+
+let boardMetaEnrichGeneration = 0
+async function enrichBoardMetaInBackground(params) {
+    const generation = ++boardMetaEnrichGeneration
+    try {
+        const filterParams = { ...params }
+        delete filterParams.per_page
+        delete filterParams.page
+        const response = await api.get('/stages/kanban/stage-counts', {
+            params: filterParams,
+        })
+        if (generation !== boardMetaEnrichGeneration) return
+        const data = response?.data?.data || {}
+        applyExactStageCounts(data.counts || {}, params.per_page)
+        applyBoardAnalytics(data.analytics, params)
+        saveColumnsToCache()
+    } catch {
+        // Background enrich is best-effort; board cards already painted.
+    }
+}
+
 function applyStagesWithLeadsResponse(response, params) {
     const responseData = response?.data?.data
     const stagesData = responseData?.stages || []
-    const analytics = responseData?.analytics
-    if (analytics && typeof analytics === 'object') {
-        const nextAnalytics = {
-            tempCold: Number(analytics.tempCold) || 0,
-            tempWarm: Number(analytics.tempWarm) || 0,
-            tempHot: Number(analytics.tempHot) || 0,
-            callAnswered: Number(analytics.callAnswered) || 0,
-            callNoAnswer: Number(analytics.callNoAnswer) || 0,
-        }
-        // Free-text search skips server analytics for speed — keep previous chip totals.
-        const searching = !!(params.search && String(params.search).trim())
-        const hasAny = Object.values(nextAnalytics).some((n) => n > 0)
-        if (!searching || hasAny) {
-            leadAnalyticsServer.value = nextAnalytics
-        }
-    }
+    applyBoardAnalytics(responseData?.analytics, params)
 
     const searching = !!(params.search && String(params.search).trim())
     const newData = stagesData.map((stage, index) => ({
@@ -3167,6 +3220,10 @@ const executeFetchLeads = async (options = {}) => {
             applyStagesWithLeadsResponse(response, params)
         }
         saveColumnsToCache()
+        const payload = response?.data?.data
+        if (payload?.counts_pending || payload?.analytics_pending) {
+            void enrichBoardMetaInBackground(params)
+        }
         
     } catch (err) {
         if (generation !== fetchGeneration) return
@@ -3299,6 +3356,10 @@ if (!hadCachedBoard) {
         applyStagesWithLeadsResponse(response, earlyParams)
         loading.value = false
         paintedSettledPrefetch = true
+        const payload = response?.data?.data
+        if (payload?.counts_pending || payload?.analytics_pending) {
+            void enrichBoardMetaInBackground(earlyParams)
+        }
     }
     const settled = peekSettledLeadBoardPrefetch(earlyParams)
     if (settled) {

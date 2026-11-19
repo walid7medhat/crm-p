@@ -254,6 +254,9 @@ class StageController extends Controller
 
         $userRole = $user->roles()->first()?->name ?? 'sales';
         $perfStart = microtime(true);
+        // First paint: first page of cards only. Exact COUNT(*) / heat SUM over 80k+
+        // unqualified leads is deferred (exact_counts=1 or /kanban/stage-counts).
+        $deferHeavyAggregates = ! $request->boolean('exact_counts');
 
         if ($this->kanbanPerfQueryLogEnabled()) {
             DB::enableQueryLog();
@@ -329,9 +332,34 @@ class StageController extends Controller
         $skipHeavyBoardAggregates = $isTextSearch || $skipSearchRanking || $isDuplicateFilter;
 
         // ================= analytics counts (chip totals, pre-heat-filter) =================
-        // Skip during free-text search / duplicates filter. For normal board refresh, cache briefly
-        // to avoid re-scanning the full lead set on every page reload.
-        $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, $skipHeavyBoardAggregates);
+        // Fast board: serve warm cache only; miss → empty + analytics_pending for background fill.
+        // Skip during free-text search / duplicates filter.
+        $analyticsPending = false;
+        if ($skipHeavyBoardAggregates) {
+            $leadAnalytics = [
+                'tempCold' => 0,
+                'tempWarm' => 0,
+                'tempHot' => 0,
+                'callAnswered' => 0,
+                'callNoAnswer' => 0,
+            ];
+        } elseif ($deferHeavyAggregates) {
+            $cachedHeat = LeadKanbanHeatCache::getOnly($user, $request);
+            if ($cachedHeat !== null) {
+                $leadAnalytics = $cachedHeat;
+            } else {
+                $leadAnalytics = [
+                    'tempCold' => 0,
+                    'tempWarm' => 0,
+                    'tempHot' => 0,
+                    'callAnswered' => 0,
+                    'callNoAnswer' => 0,
+                ];
+                $analyticsPending = true;
+            }
+        } else {
+            $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, false);
+        }
 
         // ================= apply heat chip filter (affects stage counts + lists only) =================
         if ($request->filled('heat')) {
@@ -344,10 +372,11 @@ class StageController extends Controller
         $stagesWithLeads = [];
         $allLeadsForMeta = collect();
 
-        // Exact per-stage totals for header badges — skip during free-text / duplicates filter.
-        // Soft has_more (limit+1) avoids repeating the expensive predicate in COUNT(*).
+        // Exact per-stage totals for header badges — skip on fast first paint and during
+        // free-text / duplicates filter. Soft has_more (limit+1) avoids COUNT(*) over 80k+ rows.
         $exactCountsByStage = collect();
-        if (! $isTextSearch && ! $isDuplicateFilter) {
+        $countsPending = false;
+        if (! $isTextSearch && ! $isDuplicateFilter && ! $deferHeavyAggregates) {
             $exactCountsByStage = \App\Support\LeadBoardIndexHint::apply(clone $baseLeadsQuery)
                 ->whereIn('stage_id', $stageIds)
                 ->reorder()
@@ -355,6 +384,8 @@ class StageController extends Controller
                 ->selectRaw('stage_id, COUNT(*) as cnt')
                 ->groupBy('stage_id')
                 ->pluck('cnt', 'stage_id');
+        } elseif (! $isTextSearch && ! $isDuplicateFilter && $deferHeavyAggregates) {
+            $countsPending = true;
         }
 
         if ($isTextSearch) {
@@ -523,8 +554,8 @@ class StageController extends Controller
                 $loaded = $leads->count();
                 $allLeadsForMeta = $allLeadsForMeta->merge($leads);
 
-                if ($isDuplicateFilter) {
-                    // Soft totals — avoid a second full-board COUNT with hasDuplicates().
+                if ($isDuplicateFilter || $countsPending) {
+                    // Soft totals — first paint / duplicates: avoid COUNT(*) over huge stages.
                     $stagesWithLeads[] = [
                         'id' => $stage->id,
                         'name' => $stage->name,
@@ -600,6 +631,8 @@ class StageController extends Controller
         return ApiResponse::success([
             'stages' => $stagesWithLeads,
             'analytics' => $leadAnalytics,
+            'counts_pending' => $countsPending,
+            'analytics_pending' => $analyticsPending,
             // Temporary benchmark marker (see KANBAN_SEARCH_SKIP_RANKING).
             'search_ranking_disabled' => $skipSearchRanking,
             'pagination' => [
@@ -632,6 +665,91 @@ class StageController extends Controller
             $leadAnalytics = $this->leadHeatAnalytics($request, $user, $baseLeadsQuery, $isTextSearch || $skipSearchRanking);
 
             return ApiResponse::success($leadAnalytics, 'Lead analytics retrieved successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::error($e->getMessage());
+        }
+    }
+
+    /**
+     * Exact per-stage badge totals + heat chips for the visible lead scope.
+     * Called in the background after the fast board first page has painted.
+     */
+    public function getStageCounts(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            $userRole = $user->roles()->first()?->name ?? 'sales';
+
+            $stageVisibility = DB::table('stage_visibility')
+                ->where('role_name', $userRole)
+                ->first();
+
+            $visibleStageIds = [];
+            if ($stageVisibility) {
+                $decoded = json_decode($stageVisibility->visible_stages, true);
+                $visibleStageIds = is_array($decoded) ? array_values(array_filter($decoded)) : [];
+            }
+            if (empty($visibleStageIds)) {
+                $visibleStageIds = Stage::where('stage_type', 'lead')->pluck('id')->toArray();
+            }
+            if ($user->isAccountant()) {
+                $visibleStageIds = \App\Models\Lead::convertedStageIds() ?: [0];
+            }
+            if (($user->hasAnyRole(['manager', 'sales']) && $user->is_listing_team) || $user->hasRole('branch_admin')) {
+                $newLeadStageId = Stage::where('stage_type', 'lead')->orderBy('order')->value('id');
+                if ($newLeadStageId && ! in_array($newLeadStageId, $visibleStageIds)) {
+                    $visibleStageIds[] = $newLeadStageId;
+                }
+            }
+
+            $stagesQuery = Stage::where('stage_type', 'lead')
+                ->where('name', '!=', 'lead pool')
+                ->whereIn('id', $visibleStageIds)
+                ->orderBy('order');
+            if ($request->filled('stage_id')) {
+                $stagesQuery->where('id', $request->stage_id);
+            }
+            $stageIds = $stagesQuery->pluck('id')->all();
+
+            $baseLeadsQuery = $this->scopedLeadsQuery($request, $user);
+            $isTextSearch = $request->filled('search') && LeadTextSearch::isActionable((string) $request->search);
+            $isDuplicateFilter = ($request->boolean('has_duplicate') || $request->boolean('has_blacklist'))
+                && $user->canUseDuplicateFilters();
+
+            if ($request->filled('heat')) {
+                $heat = $request->heat;
+                $baseLeadsQuery->where(function ($qq) use ($heat) {
+                    $qq->where('status_lead', $heat);
+                });
+            }
+
+            $counts = [];
+            if (! empty($stageIds) && ! $isTextSearch && ! $isDuplicateFilter) {
+                $exactCountsByStage = \App\Support\LeadBoardIndexHint::apply(clone $baseLeadsQuery)
+                    ->whereIn('stage_id', $stageIds)
+                    ->reorder()
+                    ->toBase()
+                    ->selectRaw('stage_id, COUNT(*) as cnt')
+                    ->groupBy('stage_id')
+                    ->pluck('cnt', 'stage_id');
+
+                foreach ($stageIds as $stageId) {
+                    $counts[(string) $stageId] = (int) ($exactCountsByStage[$stageId] ?? 0);
+                }
+            }
+
+            $skipHeat = $isTextSearch || $isDuplicateFilter;
+            $analytics = $this->leadHeatAnalytics(
+                $request,
+                $user,
+                $this->scopedLeadsQuery($request, $user),
+                $skipHeat
+            );
+
+            return ApiResponse::success([
+                'counts' => $counts,
+                'analytics' => $analytics,
+            ], 'Stage counts retrieved successfully');
         } catch (\Exception $e) {
             return ApiResponse::error($e->getMessage());
         }

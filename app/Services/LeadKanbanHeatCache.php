@@ -88,6 +88,24 @@ class LeadKanbanHeatCache
         return $value;
     }
 
+    /**
+     * Return a warm cache hit only — never run the expensive SUM scan.
+     * Used by the fast board first-paint so chips can fill in the background.
+     *
+     * @return array<string, int>|null
+     */
+    public static function getOnly(User $user, Request $request): ?array
+    {
+        $ttl = (int) config('lead_scoring.kanban_heat.ttl_seconds', 30);
+        if ($ttl < 1) {
+            return null;
+        }
+
+        $cached = Cache::get(self::key($user, $request));
+
+        return self::isAnalytics($cached) ? $cached : null;
+    }
+
     public static function bump(): void
     {
         try {
