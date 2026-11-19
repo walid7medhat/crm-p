@@ -26,8 +26,8 @@
             @click="previewDocument(doc)"
           >
             <img
-              v-if="isImage(doc) && doc.url"
-              :src="doc.url"
+              v-if="isImage(doc) && fileSrc(doc.url)"
+              :src="fileSrc(doc.url)"
               :alt="doc.name"
               class="document-box-preview"
             />
@@ -54,15 +54,28 @@
           </button>
         </div>
         <div class="modal-body">
-          <img 
-            v-if="isImage(previewDoc)" 
-            :src="previewDoc.url" 
+          <div
+            v-if="(isImage(previewDoc) || isPdf(previewDoc)) && !fileSrc(previewDoc.url)"
+            class="preview-placeholder-large"
+          >
+            <template v-if="fileFailed(previewDoc.url)">
+              <iconify-icon icon="lucide:file-x" class="large-icon" />
+              <p>This file could not be loaded. Close and reopen the deal, then try again.</p>
+            </template>
+            <template v-else>
+              <iconify-icon icon="lucide:loader-2" class="large-icon preview-spin" />
+              <p>Loading…</p>
+            </template>
+          </div>
+          <img
+            v-else-if="isImage(previewDoc)"
+            :src="fileSrc(previewDoc.url)"
             :alt="previewDoc.name"
             class="preview-full-image"
           />
-          <iframe 
+          <iframe
             v-else-if="isPdf(previewDoc)"
-            :src="previewDoc.url"
+            :src="fileSrc(previewDoc.url)"
             class="preview-pdf"
           ></iframe>
           <div v-else class="preview-placeholder-large">
@@ -80,6 +93,10 @@
 
 <script setup>
 import { computed, ref ,onMounted, onBeforeUnmount } from 'vue'
+import { pickDocumentUrl, useAuthorizedFileUrls, downloadFile } from '@/composables/useAuthorizedFile'
+
+// Private files (signed /company-files/serve URLs) are fetched with the JWT and shown as blob: URLs.
+const { src: fileSrc, failed: fileFailed } = useAuthorizedFileUrls()
 
 const props = defineProps({
   documents: { type: Array, default: () => [] },
@@ -136,8 +153,8 @@ function extractName(doc, index) {
 }
 
 function extractUrl(doc) {
-  if (typeof doc === 'string') return doc
-  return doc.url || doc.file_url || doc.path || doc.link || null
+  // Server url first (signed for private files); a bare private path would open the SPA home page.
+  return pickDocumentUrl(doc)
 }
 
 function extractCategory(doc) {
@@ -255,13 +272,9 @@ function closePreview() {
 
 function downloadDocument(doc) {
   if (doc.url) {
-    const link = document.createElement('a')
-    link.href = doc.url
-    link.download = doc.name
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    downloadFile(doc.url, doc.name).catch(() => {
+      window.$showNotification?.('Could not download this file.', 'error')
+    })
   }
   activeMenu.value = null
 }
@@ -531,6 +544,14 @@ function deleteDocument(doc) {
   font-size: 64px;
   color: #94A3B8;
   margin-bottom: 16px;
+}
+
+.preview-spin {
+  animation: deal-docs-spin 0.9s linear infinite;
+}
+
+@keyframes deal-docs-spin {
+  to { transform: rotate(360deg); }
 }
 
 .btn-download {

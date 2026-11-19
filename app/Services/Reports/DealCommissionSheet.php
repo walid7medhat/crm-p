@@ -31,11 +31,39 @@ class DealCommissionSheet
         'rental' => 'Rental',
     ];
 
-    /** @var array<int, array{parent_id:?int, name:string}>|null */
-    private ?array $users = null;
+    /**
+     * Document check columns: key => [heading, property JSON columns, deal_documents types, party].
+     * party = which party's uploads count (buyer = buyer/tenant, seller = seller/landlord),
+     * null = any (property-level documents).
+     */
+    public const DOCUMENTS = [
+        'doc_buyer_passport' => ['Buyer Passport', [], ['passport'], 'buyer'],
+        'doc_buyer_id' => ['Buyer Emirates ID', [], ['national_id', 'emirates_id'], 'buyer'],
+        'doc_buyer_kyc' => ['Buyer KYC', [], ['kyc'], 'buyer'],
+        'doc_seller_passport' => ['Seller Passport', [], ['passport'], 'seller'],
+        'doc_seller_id' => ['Seller Emirates ID', [], ['national_id', 'emirates_id'], 'seller'],
+        'doc_eoi' => ['EOI', ['eoi_documents'], ['eoi'], null],
+        'doc_booking' => ['Booking Form', ['booking_documents'], ['booking'], null],
+        'doc_payment' => ['Proof of Payment', ['payment_proof'], ['payment_proof', 'payment'], null],
+        'doc_spa' => ['SPA', ['spa_document'], ['spa', 'spa_document'], null],
+        'doc_mou' => ['MOU', ['mou_documents'], ['mou'], null],
+        'doc_noc' => ['NOC', ['noc_documents'], ['noc'], null],
+        'doc_title_deed' => ['Title Deed', ['title_deed_documents'], ['title_deed'], null],
+        'doc_contract' => ['Contract', ['contract_document'], ['contract', 'tenancy_contract'], null],
+        'doc_ejari' => ['Ejari / Tawtheeq', ['ejari_document'], ['ejari', 'tawtheeq'], null],
+    ];
 
-    /** @var array<int, true>|null */
-    private ?array $teamLeadIds = null;
+    private const PARTY_TYPES = [
+        'buyer' => ['buyer', 'tenant'],
+        'seller' => ['seller', 'landlord'],
+    ];
+
+    public function __construct(
+        private \App\Services\DealStageValidatorService $stageGuard,
+        private \App\Services\DealStageValidator $stageValidator,
+    ) {
+    }
+
 
     public static function canExport(?User $user): bool
     {
@@ -52,7 +80,7 @@ class DealCommissionSheet
         $deals = Deal::query()
             ->with([
                 'parties',
-                'documents:id,deal_id,document_type',
+                'documents:id,deal_id,deal_party_id,document_type',
                 'properties.propertyType:id,name',
                 'properties.project:id,title',
                 'properties.developer:id,name',
@@ -62,6 +90,7 @@ class DealCommissionSheet
                 'listing:id,agent_id',
                 'listing.agent:id,name,display_name',
                 'responsiblePerson:id,name,display_name,parent_id,commission_percentage',
+                'responsiblePerson.parent:id,name,display_name',
                 'responsiblePerson.employeeProfile:id,user_id,employee_code',
             ])
             ->visibleFor($user)
@@ -96,7 +125,8 @@ class DealCommissionSheet
         return [
             'date' => ($deal->won_date ?? $deal->created_at)?->timezone('Asia/Dubai'),
             'deal_type' => self::DEAL_TYPE_LABELS[$deal->deal_type] ?? ucfirst((string) $deal->deal_type),
-            'team_leader' => $agent ? $this->teamLeaderName((int) $agent->id) : null,
+            // Team Leader = the agent's direct parent (who they report to in the user tree).
+            'team_leader' => $agent?->parent ? ($agent->parent->display_name ?: $agent->parent->name) : null,
             'emp_code' => $agent?->employeeProfile?->employee_code,
             'agent' => $agent ? ($agent->display_name ?: $agent->name) : null,
             'seller' => $sellerName ?: null,
@@ -113,8 +143,69 @@ class DealCommissionSheet
             'referral' => $referral,
             'broker_share' => $this->brokerShare($dist, $gross, $agent),
             'listing_agent' => $this->listingAgent($deal),
-            'spa' => $this->hasSpa($deal),
+            'documents' => $this->documentChecks($deal),
+            'missing' => $this->missingFields($deal),
         ];
+    }
+
+    /** key => bool for every DOCUMENTS column. */
+    private function documentChecks(Deal $deal): array
+    {
+        $partyTypeById = $deal->parties->mapWithKeys(fn ($p) => [(int) $p->id => $p->party_type])->all();
+        $out = [];
+
+        foreach (self::DOCUMENTS as $key => [, $propertyColumns, $docTypes, $party]) {
+            $onProperty = $propertyColumns && $deal->properties->contains(
+                fn ($p) => collect($propertyColumns)->contains(fn ($col) => ! empty($p->{$col}))
+            );
+
+            $onDeal = $deal->documents->contains(function ($d) use ($docTypes, $party, $partyTypeById) {
+                if (! in_array(strtolower((string) $d->document_type), $docTypes, true)) {
+                    return false;
+                }
+                if ($party === null) {
+                    return true;
+                }
+                $type = $partyTypeById[(int) $d->deal_party_id] ?? null;
+
+                return in_array($type, self::PARTY_TYPES[$party], true);
+            });
+
+            $out[$key] = $onProperty || $onDeal;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Same completeness check as the deal view (GET /deals/{id}/completeness): every field
+     * the stage rules require up to the deal's current stage that is still empty.
+     */
+    private function missingFields(Deal $deal): ?string
+    {
+        if (! $deal->stage_id) {
+            return null;
+        }
+
+        try {
+            $result = $this->stageGuard->validateStageChange(
+                $deal,
+                (int) $deal->stage_id,
+                $deal->deal_type,
+                null,
+                ['completeness' => true]
+            );
+            $labels = array_column(
+                $this->stageValidator->labelMissingFieldsForSummary($result['missing_fields'] ?? []),
+                'label'
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return 'Could not check';
+        }
+
+        return $labels ? implode(', ', $labels) : 'Complete';
     }
 
     /** Primary-role party of a type (a joint/secondary buyer never replaces the main one). */
@@ -153,15 +244,6 @@ class DealCommissionSheet
         return $this->join($names);
     }
 
-    private function hasSpa(Deal $deal): bool
-    {
-        if ($deal->properties->contains(fn ($p) => ! empty($p->spa_document))) {
-            return true;
-        }
-
-        return $deal->documents->contains(fn ($d) => in_array(strtolower((string) $d->document_type), ['spa', 'spa_document'], true));
-    }
-
     private function rooms($bedrooms): ?string
     {
         if ($bedrooms === null || $bedrooms === '') {
@@ -179,44 +261,5 @@ class DealCommissionSheet
         $out = $values->map(fn ($v) => is_string($v) ? trim($v) : $v)->filter(fn ($v) => $v !== null && $v !== '')->unique()->implode(', ');
 
         return $out !== '' ? $out : null;
-    }
-
-    /** Nearest team_lead above the agent in the parent_id tree. */
-    private function teamLeaderName(int $userId): ?string
-    {
-        $this->loadUserTree();
-
-        $seen = [];
-        $current = $this->users[$userId]['parent_id'] ?? null;
-        while ($current && ! isset($seen[$current])) {
-            $seen[$current] = true;
-            if (isset($this->teamLeadIds[$current])) {
-                return $this->users[$current]['name'] ?? null;
-            }
-            $current = $this->users[$current]['parent_id'] ?? null;
-        }
-
-        return null;
-    }
-
-    private function loadUserTree(): void
-    {
-        if ($this->users !== null) {
-            return;
-        }
-
-        $this->users = User::query()
-            ->get(['id', 'parent_id', 'name', 'display_name'])
-            ->mapWithKeys(fn ($u) => [(int) $u->id => [
-                'parent_id' => $u->parent_id ? (int) $u->parent_id : null,
-                'name' => $u->display_name ?: $u->name,
-            ]])
-            ->all();
-
-        $this->teamLeadIds = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'team_lead'))
-            ->pluck('id')
-            ->mapWithKeys(fn ($id) => [(int) $id => true])
-            ->all();
     }
 }
