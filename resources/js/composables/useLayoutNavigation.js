@@ -29,7 +29,8 @@ export const KANBAN_ACTIVE_TAB_KEY = 'kanban_active_tab';
 export const CRM_SECTION_KEY = 'crm_active_section';
 export const DEAL_TYPE_KEY = 'kanban_deal_type';
 export const MARKETING_TAB_KEY = 'marketing_active_tab';
-export const MARKETING_TAB_IDS = ['production', 'design', 'content', 'bookings', 'calendar', 'analytics'];
+export const MARKETING_TAB_IDS = ['production', 'design', 'content', 'bookings', 'calendar', 'analytics', 'tracking'];
+export const MARKETING_TRACKING_ALLOWED_USER_IDS = [58];
 export const LAST_LISTINGS_PATH_KEY = 'layout_last_listings_path';
 
 const LISTINGS_INVENTORY_PATHS = [
@@ -323,7 +324,8 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
 
   // Marketing boards switch in-page (like Deal types): the page listens for `marketing-tab-change`.
   if (module === LAYOUT_MODULES.MARKETING) {
-    return [
+    const { isAdmin, isSuperAdmin, user } = ctx;
+    const tabs = [
       { id: 'production', label: 'Production', type: 'marketing-tab', icon: 'lucide:clapperboard' },
       { id: 'design', label: 'Design', type: 'marketing-tab', icon: 'lucide:palette' },
       { id: 'content', label: 'Content', type: 'marketing-tab', icon: 'lucide:file-text' },
@@ -331,6 +333,14 @@ export function buildHeaderTabs(module, ctx = {}, crmSection = null) {
       { id: 'calendar', label: 'Calendar', type: 'marketing-tab', icon: 'lucide:calendar-days' },
       { id: 'analytics', label: 'Analytics', type: 'marketing-tab', icon: 'lucide:bar-chart-3' },
     ];
+    const canTracking =
+      isSuperAdmin
+      || isAdmin
+      || MARKETING_TRACKING_ALLOWED_USER_IDS.includes(Number(user?.id));
+    if (canTracking) {
+      tabs.push({ id: 'tracking', label: 'Tracking Sheets', type: 'marketing-tab', icon: 'lucide:sheet' });
+    }
+    return tabs;
   }
 
   if (module === LAYOUT_MODULES.CALCULATOR) {
