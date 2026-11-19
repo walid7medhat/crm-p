@@ -345,9 +345,12 @@ class StageController extends Controller
                 'callNoAnswer' => 0,
             ];
         } elseif ($deferHeavyAggregates) {
-            $cachedHeat = LeadKanbanHeatCache::getOnly($user, $request);
+            $exactHeat = LeadKanbanHeatCache::getExact($user, $request);
+            $cachedHeat = $exactHeat ?? LeadKanbanHeatCache::getOnly($user, $request);
             if ($cachedHeat !== null) {
                 $leadAnalytics = $cachedHeat;
+                // Last-known (not exact) totals paint now; stage-counts refreshes them.
+                $analyticsPending = $exactHeat === null;
             } else {
                 $leadAnalytics = [
                     'tempCold' => 0,
@@ -724,6 +727,49 @@ class StageController extends Controller
                 });
             }
 
+            $skipHeat = $isTextSearch || $isDuplicateFilter;
+
+            // Fast path — no heat chip filter and no exact heat cache: the badge counts and the
+            // chip totals share the same scope, so get both from ONE grouped scan instead of
+            // two full passes over the visible leads.
+            if (! $skipHeat && ! $request->filled('heat') && ! empty($stageIds)
+                && LeadKanbanHeatCache::getExact($user, $request) === null) {
+                $rows = \App\Support\LeadBoardIndexHint::apply(clone $baseLeadsQuery)
+                    ->reorder()
+                    ->toBase()
+                    ->selectRaw(
+                        "stage_id, COUNT(*) AS cnt,
+                        SUM(CASE WHEN status_lead = 'cold' THEN 1 ELSE 0 END) AS temp_cold,
+                        SUM(CASE WHEN status_lead = 'warm' THEN 1 ELSE 0 END) AS temp_warm,
+                        SUM(CASE WHEN status_lead = 'hot'  THEN 1 ELSE 0 END) AS temp_hot,
+                        SUM(CASE WHEN stage_id = 5 AND interaction_result = 'answered'  THEN 1 ELSE 0 END) AS call_answered,
+                        SUM(CASE WHEN stage_id = 5 AND interaction_result = 'no_answer' THEN 1 ELSE 0 END) AS call_no_answer"
+                    )
+                    ->groupBy('stage_id')
+                    ->get();
+
+                $byStage = [];
+                $analytics = ['tempCold' => 0, 'tempWarm' => 0, 'tempHot' => 0, 'callAnswered' => 0, 'callNoAnswer' => 0];
+                foreach ($rows as $row) {
+                    $byStage[(int) $row->stage_id] = (int) $row->cnt;
+                    $analytics['tempCold'] += (int) $row->temp_cold;
+                    $analytics['tempWarm'] += (int) $row->temp_warm;
+                    $analytics['tempHot'] += (int) $row->temp_hot;
+                    $analytics['callAnswered'] += (int) $row->call_answered;
+                    $analytics['callNoAnswer'] += (int) $row->call_no_answer;
+                }
+                $counts = [];
+                foreach ($stageIds as $stageId) {
+                    $counts[(string) $stageId] = (int) ($byStage[$stageId] ?? 0);
+                }
+                LeadKanbanHeatCache::store($user, $request, $analytics);
+
+                return ApiResponse::success([
+                    'counts' => $counts,
+                    'analytics' => $analytics,
+                ], 'Stage counts retrieved successfully');
+            }
+
             $counts = [];
             if (! empty($stageIds) && ! $isTextSearch && ! $isDuplicateFilter) {
                 $exactCountsByStage = \App\Support\LeadBoardIndexHint::apply(clone $baseLeadsQuery)
@@ -739,7 +785,6 @@ class StageController extends Controller
                 }
             }
 
-            $skipHeat = $isTextSearch || $isDuplicateFilter;
             $analytics = $this->leadHeatAnalytics(
                 $request,
                 $user,

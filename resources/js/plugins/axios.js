@@ -166,6 +166,9 @@ function attachAuthInterceptor(client) {
     const isSmartSearch = url.includes('smart-search')
     // Card field settings are part of painting the board (without them cards are title-only).
     const isBoardCardSettings = /\/settings\/kanban(?:\?|$)/.test(url)
+    // Stage badge totals + temp/call chips: one request fired right after the board —
+    // queuing it behind the post-board shell flood left the chips empty for seconds.
+    const isBoardStageCounts = url.includes('/stages/kanban/stage-counts')
     // The pool list must not wait behind the kanban board request, or the cards
     // stay blank until that board call finishes (often only after a refresh).
     const isDeferrableShell =
@@ -173,7 +176,8 @@ function attachAuthInterceptor(client) {
       !isLeadPoolPage &&
       !isLeadOpenCritical &&
       !isSmartSearch &&
-      !isBoardCardSettings
+      !isBoardCardSettings &&
+      !isBoardStageCounts
     if (isDeferrableShell) {
       await waitForLeadBoardPriority()
       // Allow prioritizeLeadOpen() to free HTTP slots occupied by SAC/dashboard/config.

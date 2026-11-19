@@ -272,7 +272,7 @@ Route::prefix('stages')->middleware(['jwt.auth'])->group(function () {
     Route::post('/reorder', [StageController::class, 'reorder']);
     Route::get('/kanban/stages-with-leads', [StageController::class, 'getStagesWithLeads'])->middleware(['log.usage', 'throttle:kanban-board']);
     Route::get('/kanban/lead-analytics', [StageController::class, 'getLeadAnalytics']);
-    Route::get('/kanban/stage-counts', [StageController::class, 'getStageCounts']);
+    Route::get('/kanban/stage-counts', [StageController::class, 'getStageCounts'])->middleware('log.usage');
     Route::get('/kanban/leads-by-stage/{stage}', [StageController::class, 'getLeadsByStage']);
     Route::get('/kanban/stage/{stage}/more-leads', [StageController::class, 'getMoreStageLeads']);
     Route::get('/visibility/settings', [StageController::class, 'getStageVisibilitySettings']);

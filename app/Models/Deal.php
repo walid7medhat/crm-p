@@ -300,16 +300,19 @@ class Deal extends Model
                 // histories() returns a Builder, not a real Eloquent relation, so whereHas()
                 // throws "undefined method ... getRelated()". Inline the same OR-on-deal_id-or-
                 // lead_id predicate via whereExists. `action` lives inside the `changes` JSON.
-                $q->orWhereExists(function ($sub) use ($v) {
+                // AND, not OR: an edit/stage move made BY this user. The old orWhereExists +
+                // (user OR updated OR stage_changed) matched nearly every deal and widened the
+                // other filters instead of narrowing them.
+                $q->whereExists(function ($sub) use ($v) {
                     $sub->selectRaw('1')
                         ->from('lead_histories as lh')
                         ->where(function ($w) {
                             $w->whereColumn('lh.deal_id', 'deals.id')
                               ->orWhereColumn('lh.lead_id', 'deals.lead_id');
                         })
-                        ->where(function ($w) use ($v) {
-                            $w->where('lh.user_id', $v)
-                              ->orWhere('lh.changes->action', 'updated')
+                        ->where('lh.user_id', $v)
+                        ->where(function ($w) {
+                            $w->where('lh.changes->action', 'updated')
                               ->orWhere('lh.changes->action', 'stage_changed');
                         });
                 });

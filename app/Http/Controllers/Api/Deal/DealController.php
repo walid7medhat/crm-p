@@ -716,11 +716,26 @@ class DealController extends Controller
             if (!$this->authorizeAccess($deal)) {
                 return ApiResponse::error('Unauthorized', 403);
             }
-            DealHistoryHelper::log($deal->id, ['action' => 'view']);
+            // Same rule as leads: super admins open deals to check or support, not to work
+            // them — their opens would only fill the deal's history with noise.
+            if (auth()->user()->hasRole('super_admin')) {
+                return ApiResponse::success(['id' => (int) $deal->id], 'View not recorded for super admin');
+            }
+
+            // One "view" per user per deal per minute (double clicks, URL sync, two tabs).
+            $recentlyViewed = \App\Models\LeadHistory::where('deal_id', $deal->id)
+                ->where('user_id', auth()->id())
+                ->where('changes->action', 'view')
+                ->where('created_at', '>=', now()->subMinute())
+                ->exists();
+
+            if (! $recentlyViewed) {
+                DealHistoryHelper::log($deal->id, ['action' => 'view']);
+            }
 
             return ApiResponse::success(
                 new DealResource($deal),
-                'Lead history saved successfully'
+                'Deal history saved successfully'
             );
         } catch (\Exception $e) {
             return ApiResponse::error('Failed to retrieve lead: ' . $e->getMessage());
