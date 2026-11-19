@@ -60,7 +60,7 @@
       :disableStageChange="leadViewModalDisableStageChange"
       :openSection="leadViewOpenSection"
       :z-index="12200"
-      @update:leadId="(v) => { console.log('[App.vue] update:leadId received', v); leadViewModalId = v }"
+      @update:leadId="(v) => { leadViewModalId = v }"
       @lead-updated="notifyLeadViewUpdated"
     />
     <MatchAlertToast v-if="showLayout && !isAppLoading" />
