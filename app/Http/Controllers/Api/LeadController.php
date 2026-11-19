@@ -762,19 +762,25 @@ class LeadController extends Controller
                 'responsiblePerson:id,name,display_name,avatar,email,parent_id,status,bitrix24_id',
                 'responsiblePerson.roles:id,name',
                 'participants',
-                'observers.user:id,name,display_name,avatar,email',
+                'observers.user:id,name,display_name,avatar,email,parent_id,status,bitrix24_id',
+                'observers.user.roles:id,name',
                 'integration:id,project_id',
                 'propertyType:id,name',
+                // Deep enough for Area::title parent walk without N+1.
                 'area:id,name,parent_id,type',
                 'area.parent:id,name,parent_id,type',
+                'area.parent.parent:id,name,parent_id,type',
+                'area.parent.parent.parent:id,name,parent_id,type',
                 'createdHistory',
             ]);
 
+            LeadResource::primeForFastShow($lead);
             LeadResource::enableFastShow();
             try {
                 $data = (new LeadResource($lead))->resolve();
             } finally {
                 LeadResource::disableFastShow();
+                LeadResource::clearCollectionPrime();
             }
 
             $data['comment_portal_links'] = [];
