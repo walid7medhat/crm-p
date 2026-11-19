@@ -237,6 +237,11 @@ const props = defineProps({
     focusSection: {
         type: String,
         default: 'details'
+    },
+    /** False while only kanban seed is painted — delays heavy comments/engagement SQL. */
+    leadReady: {
+        type: Boolean,
+        default: true
     }
 })
 
@@ -756,9 +761,19 @@ onMounted(() => {
 })
 
 watch(
-    () => props.lead?.id,
-    (id, prevId) => {
+    () => [props.lead?.id, props.leadReady],
+    ([id, ready], prev = []) => {
+        const prevId = prev?.[0]
         if (!id) {
+            clearSecondarySchedule()
+            clearCommentsRailSchedule()
+            showActivityTimeline.value = false
+            showMergedLeads.value = false
+            showCommentsRail.value = false
+            return
+        }
+        // Wait for GET /leads/{id} (or cache) so engagement SQL never races the critical show path.
+        if (!ready) {
             clearSecondarySchedule()
             clearCommentsRailSchedule()
             showActivityTimeline.value = false

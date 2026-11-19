@@ -368,32 +368,37 @@ public function visibleEngagement(string $model, string $ownerColumn = 'user_id'
         return $relation->whereRaw('1 = 0');
     }
 
-    $table   = $relation->getRelated()->getTable();       // lead_comments
-    $leadKey = $relation->getQualifiedForeignKeyName();   // lead_comments.lead_id
-    $ids     = implode(',', $allowed);
+    $table = $relation->getRelated()->getTable();       // lead_comments / lead_activities
+    $ids   = implode(',', $allowed);
 
-    // صاحب الليد لحظة كتابة الكومنت:
-    //  - old_person_id بتاع أول "assigned" حصل بعد الكومنت
-    //  - أو responsible_person_id الحالي لو مفيش إسناد بعده
+    // Single-lead relation: constant-fold lead_id + current owner so MySQL can use
+    // lead_histories (lead_id, created_at) without a per-row leads lookup.
+    // Semantics unchanged vs the prior correlated form:
+    //  - old_person_id of the first "assigned" history after the engagement row
+    //  - else current responsible_person_id
+    // Raw history SQL intentionally omits deleted_at (same as before SoftDeletes existed on the subquery).
+    $leadId = (int) $this->id;
+    $currentOwner = (int) ($this->responsible_person_id ?? 0);
+
     $ownerAtCommentTime = sprintf(
         "coalesce(
             nullif(
-                json_unquote(json_extract((
-                    select h.changes
+                (
+                    select json_unquote(json_extract(h.changes, '$.old_person_id'))
                       from lead_histories h
-                     where h.lead_id = %s
+                     where h.lead_id = %d
                        and json_unquote(json_extract(h.changes, '$.action')) = 'assigned'
                        and h.created_at > %s.created_at
                      order by h.created_at asc, h.id asc
                      limit 1
-                ), '$.old_person_id')),
+                ),
                 'null'
             ),
-            (select l.responsible_person_id from leads l where l.id = %s)
+            %d
         )",
-        $leadKey,
+        $leadId,
         $table,
-        $leadKey
+        $currentOwner
     );
 
     return $relation

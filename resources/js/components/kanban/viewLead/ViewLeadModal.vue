@@ -174,6 +174,7 @@
                     :lead="lead" 
                     :stage-id="leadStageId"
                     :focus-section="focusSection"
+                    :lead-ready="leadHydrated"
                     @update:lead="handleLeadUpdateFromTab"
                     @section-change="activeJump = $event"
                 />
@@ -232,6 +233,13 @@ import GeneralTab from './GeneralTab.vue'
 import HistoryTab from './HistoryTab.vue'
 import api from '@/plugins/axios'
 import Swal from 'sweetalert2'
+import {
+    getCachedLead,
+    fetchLeadShow,
+    setCachedLead,
+    invalidateLeadCache,
+    shouldBackgroundRefresh,
+} from '@/composables/leadShowCache.js'
 import { shouldSuppressLeadUpdateNotification } from '@/utils/leadRealtimeNotifications.js'
 import {
     playLeadDetailData,
@@ -304,6 +312,8 @@ const lead = ref(
     : null
 )
 const isLoadingLead = ref(false)
+/** True after GET /leads/{id} (or a valid per-user cache hit) — gates heavy secondary rails. */
+const leadHydrated = ref(false)
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
@@ -1428,6 +1438,21 @@ function scheduleCommentPortalLinks(leadIdNum, requestGeneration) {
     }
 }
 
+const applyFreshLeadPayload = (fresh, leadIdNum) => {
+    if (!fresh) return
+    const prev = lead.value
+    // Fast show omits duplicate_* — keep kanban seed badges until a full payload arrives.
+    lead.value = {
+        ...(prev || {}),
+        ...fresh,
+        duplicate_no: fresh.duplicate_no ?? prev?.duplicate_no,
+        duplicate_ids: fresh.duplicate_ids ?? prev?.duplicate_ids,
+        has_service_duplicate: fresh.has_service_duplicate ?? prev?.has_service_duplicate,
+    }
+    if (fresh.stage_id) leadStageId.value = fresh.stage_id
+    leadHydrated.value = true
+}
+
 const fetchLead = async ({ silent = false } = {}) => {
     console.log('[ViewLeadModal] fetchLead called', { propsLeadId: props.leadId })
     if (!props.leadId) return
@@ -1439,6 +1464,12 @@ const fetchLead = async ({ silent = false } = {}) => {
 
     const requestGeneration = ++fetchLeadGeneration
     fetchLeadInFlightId = leadIdNum
+    const switchingLead = !lead.value || Number(lead.value.id) !== leadIdNum
+    // Only clear hydration when opening a different lead — silent refreshes must not
+    // tear down comments/engagement rails mid-edit.
+    if (switchingLead && !silent) {
+        leadHydrated.value = false
+    }
 
     const seed = props.initialLead
     const seedMatches = seed && Number(seed.id) === leadIdNum
@@ -1454,32 +1485,37 @@ const fetchLead = async ({ silent = false } = {}) => {
         lead.value = null
     }
 
+    // Per-user SWR: show a recent full payload immediately (revisit / back-nav).
+    const cached = getCachedLead(leadIdNum)
+    if (cached?.data) {
+        applyFreshLeadPayload(cached.data, leadIdNum)
+    }
+
     if (!silent) {
         isLoadingLead.value = !lead.value
     }
+
+    const needsNetwork = shouldBackgroundRefresh(leadIdNum) || !cached?.data
 
     fetchLeadInFlight = (async () => {
         if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
             return
         }
 
+        if (!needsNetwork) {
+            await nextTick()
+            applyOpenSection()
+            scheduleCommentPortalLinks(leadIdNum, requestGeneration)
+            return
+        }
+
         try {
-            const response = await api.get(`/leads/${leadIdNum}`)
+            const fresh = await fetchLeadShow(leadIdNum)
             if (requestGeneration !== fetchLeadGeneration || Number(props.leadId) !== leadIdNum) {
                 return
             }
-            const fresh = response.data.data
             if (fresh) {
-                const prev = lead.value
-                // Fast show omits duplicate_* — keep kanban seed badges until a full payload arrives.
-                lead.value = {
-                    ...(prev || {}),
-                    ...fresh,
-                    duplicate_no: fresh.duplicate_no ?? prev?.duplicate_no,
-                    duplicate_ids: fresh.duplicate_ids ?? prev?.duplicate_ids,
-                    has_service_duplicate: fresh.has_service_duplicate ?? prev?.has_service_duplicate,
-                }
-                if (fresh.stage_id) leadStageId.value = fresh.stage_id
+                applyFreshLeadPayload(fresh, leadIdNum)
                 await nextTick()
                 applyOpenSection()
                 // Portal LIKE scan is expensive — never compete with first paint of lead essentials.
@@ -1493,7 +1529,9 @@ const fetchLead = async ({ silent = false } = {}) => {
             if (error?.response?.status === 403) {
                 // Never leave a half-populated modal showing (e.g. seeded from a kanban
                 // card thumbnail) for a lead this user isn't actually authorized to view.
+                invalidateLeadCache(leadIdNum)
                 lead.value = null
+                leadHydrated.value = false
                 $showNotification(
                     error.response?.data?.message || 'You do not have permission to view this lead',
                     'error'
@@ -1586,6 +1624,9 @@ const handleLeadUpdate = (event, eventType = 'unknown') => {
 const handleLeadUpdateFromTab = (updatedLeadData) => {
     console.log('📝 ViewLeadModal: Received lead update from GeneralTab:', updatedLeadData)
     lead.value = updatedLeadData
+    if (updatedLeadData?.id) {
+        setCachedLead(updatedLeadData.id, updatedLeadData)
+    }
     
     if (updatedLeadData.stage_id) {
         leadStageId.value = updatedLeadData.stage_id

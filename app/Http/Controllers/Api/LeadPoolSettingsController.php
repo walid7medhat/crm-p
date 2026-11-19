@@ -125,6 +125,7 @@ class LeadPoolSettingsController extends Controller
             'lead_pool_daily_limit' => (int) $data['daily_limit'],
             'lead_pool_hourly_limit' => (int) $data['hourly_limit'],
         ])->save();
+        $this->service->forgetStatusCache((int) $agent->id);
     }
 
     private function row(User $agent, int $todayCount): array

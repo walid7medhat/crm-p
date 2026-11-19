@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\LeadPoolAssignment;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class LeadPoolAssignmentService
@@ -222,11 +223,26 @@ class LeadPoolAssignmentService
             'batch_id' => $batchId ?: (string) Str::uuid(),
             'assigned_at' => now(),
         ]);
+        $this->forgetStatusCache($userId);
+    }
+
+    public function statusCacheKey(int $userId): string
+    {
+        return 'lead-pool:assignment-status:'.$userId;
+    }
+
+    public function forgetStatusCache(int $userId): void
+    {
+        Cache::forget($this->statusCacheKey($userId));
     }
 
     public function getStatus(int $userId): array
     {
-        return $this->getStatuses([$userId])[$userId];
+        // Short per-user cache — absorbs Kanban shell + Lead Pool tab double-fetch.
+        // Invalidated on createAssignment / settings updates.
+        return Cache::remember($this->statusCacheKey($userId), 8, function () use ($userId) {
+            return $this->getStatuses([$userId])[$userId];
+        });
     }
 
     /**
