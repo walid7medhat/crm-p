@@ -98,3 +98,6 @@ public/videos/1724186_Nebula_Wallpaper_3840x2160.mp4
 public/videos/crm-background.mp4
 public/videos/nebula-wallpaper.mp4
 public/videos/GettyImages-*.mov
+# Rendered watermark images (generated at runtime)
+/public/wm-cache/*
+!/public/wm-cache/.htaccess

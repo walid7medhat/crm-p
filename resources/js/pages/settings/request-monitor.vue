@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="rm-top">
         <div>
-          <h1 class="rm-title">Request Monitor</h1>
+          <div class="rm-title">Request Monitor</div>
           <p class="rm-hint">
             Who is using the server right now, and what they are asking for.
             <span v-if="snapshot"> Updated {{ formatTime(snapshot.generated_at) }}.</span>
@@ -94,7 +94,7 @@
         <!-- Timeline -->
         <section v-if="access.available && access.timeline.length" class="rm-card">
           <div class="rm-card__head">
-            <h2 class="rm-card__title">Requests per minute</h2>
+            <div class="rm-card__title">Requests per minute</div>
             <span class="rm-legend">
               <i class="rm-dot rm-dot--users" /> Everyone else
               <i class="rm-dot rm-dot--top" /> Biggest user
@@ -124,7 +124,7 @@
         <!-- Biggest users: what they call -->
         <section v-if="access.available" class="rm-card">
           <div class="rm-card__head">
-            <h2 class="rm-card__title">Biggest users and what they use</h2>
+            <div class="rm-card__title">Biggest users and what they use</div>
             <span class="rm-dim">Grouped by IP: everyone in one office shares one IP.</span>
           </div>
 
@@ -143,10 +143,22 @@
                   <div class="rm-source__name">
                     {{ sourceName(src) }}
                     <span v-if="looksAutomated(src)" class="rm-tag rm-tag--warn">Looks automated</span>
-                    <span v-else-if="src.share >= 30" class="rm-tag rm-tag--warn">Heavy</span>
+                    <span v-else-if="src.user_total > 1" class="rm-tag rm-tag--info">Shared office IP</span>
                   </div>
                   <div class="rm-dim">
                     IP {{ src.ip }} · {{ deviceLabel(src.user_agent) }}
+                  </div>
+                  <div v-if="src.users?.length || src.login_users?.length" class="rm-people">
+                    <span v-if="src.users?.length">
+                      <b>Active now:</b> {{ src.users.map((u) => `${u.name} #${u.id}`).join(', ') }}
+                    </span>
+                    <span v-if="src.login_users?.length">
+                      <b>Logged in from this IP:</b>
+                      {{ src.login_users.map((u) => `${u.name} #${u.id}`).join(', ') }}
+                      <template v-if="src.user_total > src.users.length + src.login_users.length">
+                        + {{ src.user_total - src.users.length - src.login_users.length }} more
+                      </template>
+                    </span>
                   </div>
                 </div>
                 <div class="rm-source__stats">
@@ -183,7 +195,7 @@
         <!-- Lead board per user -->
         <section class="rm-card">
           <div class="rm-card__head">
-            <h2 class="rm-card__title">Lead board: who loads it and how long it takes</h2>
+            <div class="rm-card__title">Lead board: who loads it and how long it takes</div>
             <span class="rm-dim">
               {{ fmtNum(board.loads) }} loads in this window. The CRM screen asks for 12–20 leads per stage;
               other sizes come from scripts or integrations.
@@ -227,7 +239,7 @@
         <!-- All endpoints -->
         <section v-if="access.available" class="rm-card">
           <div class="rm-card__head">
-            <h2 class="rm-card__title">Most requested features (everyone)</h2>
+            <div class="rm-card__title">Most requested features (everyone)</div>
           </div>
           <div class="rm-uses">
             <div v-for="r in access.top_urls.slice(0, 15)" :key="r.route" class="rm-use">
@@ -249,7 +261,7 @@
         <!-- Errors -->
         <section v-if="access.recent_errors?.length" class="rm-card">
           <div class="rm-card__head">
-            <h2 class="rm-card__title">Recent server errors</h2>
+            <div class="rm-card__title">Recent server errors</div>
           </div>
           <div class="rm-table-wrap">
             <table class="rm-table">
@@ -296,7 +308,8 @@ const FRIENDLY = [
   [/chat\/unread-count/, 'Chat unread badge'],
   [/\/chat\//, 'Chat'],
   [/maintenance\/status/, 'Maintenance check'],
-  [/image\/watermark/, 'Listing photo (watermarked)', true],
+  [/image\/watermark/, 'Listing photo (first view, rendered by PHP)', true],
+  [/\/wm-cache\//, 'Listing photo (static file, no PHP)'],
   [/announcements/, 'Announcements'],
   [/auth\/notifications/, 'Notifications'],
   [/broadcasting\/auth/, 'Live updates sign-in'],
@@ -356,7 +369,8 @@ const health = computed(() => {
   if (access.value.status['5xx'] > 0 || board.value.median_ms >= 8000) {
     return { level: 'alert', icon: 'lucide:circle-alert', title: 'The CRM is under strain' }
   }
-  if ((top && top.share >= 30) || board.value.median_ms >= 3000) {
+  // A big office behind one IP is normal; only a script-like source or a slow board is a problem.
+  if ((top && looksAutomated(top)) || board.value.median_ms >= 3000) {
     return { level: 'warn', icon: 'lucide:triangle-alert', title: 'The CRM is busy — something needs attention' }
   }
   return { level: 'ok', icon: 'lucide:circle-check', title: 'The CRM looks healthy' }
@@ -454,9 +468,11 @@ function friendly(route) {
 }
 
 function sourceName(src) {
-  if (src.users?.length === 1) return `${src.users[0].name} (#${src.users[0].id})`
-  if (src.users?.length > 1) return `${src.users[0].name} + ${src.users.length - 1} more`
-  return `Unknown (${src.ip})`
+  const people = [...(src.users || []), ...(src.login_users || [])]
+  const total = src.user_total || people.length
+  if (!people.length) return `Unknown device (${src.ip})`
+  if (total === 1) return `${people[0].name} (#${people[0].id})`
+  return `Office · ${total} people`
 }
 
 function looksAutomated(src) {
@@ -551,7 +567,14 @@ onUnmounted(() => {
 .rm-shell { max-width: 1280px; margin: 0 auto; }
 
 .rm-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.rm-title { font-size: 22px; font-weight: 700; color: var(--ink); margin: 0 0 2px; }
+.rm-page .rm-title {
+  font-size: 20px !important;
+  line-height: 1.3 !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+  color: var(--ink);
+  margin: 0 0 2px !important;
+}
 .rm-hint { margin: 0; font-size: 14px; color: var(--muted); }
 .rm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .rm-seg { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
@@ -600,7 +623,14 @@ onUnmounted(() => {
 /* Cards */
 .rm-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; min-width: 0; }
 .rm-card__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 12px; }
-.rm-card__title { font-size: 16px; font-weight: 700; color: var(--ink); margin: 0; }
+.rm-page .rm-card__title {
+  font-size: 15px !important;
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+  color: var(--ink);
+  margin: 0 !important;
+}
 .rm-dim { color: var(--muted); font-size: 13px; }
 .rm-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 
@@ -634,6 +664,8 @@ onUnmounted(() => {
 .rm-source__stats { text-align: right; }
 .rm-source__big { font-size: 24px; font-weight: 800; color: var(--ink); line-height: 1.1; }
 .rm-source.is-heavy .rm-source__big { color: #b86e00; }
+.rm-people { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 13px; color: var(--text); }
+.rm-people b { color: var(--ink); font-weight: 600; }
 .rm-source__line { font-size: 14px; margin-bottom: 10px; }
 .rm-source__line strong { color: var(--ink); }
 
@@ -659,5 +691,6 @@ onUnmounted(() => {
 .rm-txt-alert { color: #c62828; font-weight: 700; }
 .rm-tag { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; vertical-align: middle; }
 .rm-tag--warn { background: #fff1d6; color: #8a5a00; }
+.rm-tag--info { background: #e8eefc; color: #2f4bd0; }
 .rm-tag--err { background: #fdecec; color: #b3261e; margin-left: 0; }
 </style>

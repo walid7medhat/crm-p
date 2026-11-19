@@ -32,9 +32,19 @@ class RequestMonitorService
         $access = $this->accessStats($cutoff, $now, $minutes);
         $board = $this->boardStats($cutoff);
 
-        // Name the IPs we can tie to a CRM user through the usage log.
+        // Name each IP: users seen loading the board from it in this window first, then users
+        // whose last login came from it (users.last_login_ip — already stored at login).
+        $loginUsers = $this->usersByLastLoginIp(array_column($access['top_ips'], 'ip'));
         foreach ($access['top_ips'] as &$row) {
-            $row['users'] = array_values(array_slice($board['users_by_ip'][$row['ip']] ?? [], 0, 3));
+            $seen = $board['users_by_ip'][$row['ip']] ?? [];
+            $seenIds = array_column($seen, 'id');
+            $fromLogin = array_values(array_filter(
+                $loginUsers[$row['ip']] ?? [],
+                fn ($u) => ! in_array($u['id'], $seenIds, true)
+            ));
+            $row['users'] = array_values(array_slice($seen, 0, 3));
+            $row['login_users'] = array_slice($fromLogin, 0, 5);
+            $row['user_total'] = count($seen) + count($fromLogin);
         }
         unset($row, $board['users_by_ip']);
 
@@ -365,6 +375,38 @@ class RequestMonitorService
             'users' => array_slice($users, 0, 20),
             'users_by_ip' => $ipUsers,
         ];
+    }
+
+    /**
+     * @param  string[]  $ips
+     * @return array<string, array<int, array{id:int,name:string,last_login_at:?string}>>
+     */
+    private function usersByLastLoginIp(array $ips): array
+    {
+        if (! $ips) {
+            return [];
+        }
+
+        try {
+            $rows = User::query()
+                ->whereIn('last_login_ip', $ips)
+                ->orderByDesc('last_login_at')
+                ->limit(300)
+                ->get(['id', 'name', 'display_name', 'last_login_ip', 'last_login_at']);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $u) {
+            $out[$u->last_login_ip][] = [
+                'id' => (int) $u->id,
+                'name' => $u->display_name ?: $u->name,
+                'last_login_at' => $u->last_login_at ? Carbon::parse($u->last_login_at)->toIso8601String() : null,
+            ];
+        }
+
+        return $out;
     }
 
     // ------------------------------------------------------------------ server

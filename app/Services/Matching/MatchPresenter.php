@@ -50,7 +50,7 @@ class MatchPresenter
             'property_type' => $listing->propertyType?->name,
             'listing_status' => $listing->listing_status,
             'completion_status' => $listing->completion_status,
-            'main_image' => $image ? route('image.watermark', ['path' => $image]) : null,
+            'main_image' => $image ? \App\Support\Media\WatermarkCache::url($image) : null,
             'created_at' => $listing->created_at?->toIso8601String(),
         ];
     }

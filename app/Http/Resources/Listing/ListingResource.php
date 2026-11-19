@@ -422,7 +422,7 @@ $allowedAgentIds = [];
                     //         : asset('storage/' . $galleryImage->image_path))
                     //     : null,
                         'image_url_final' => $galleryImage->image_path
-                            ? route('image.watermark', ['path' => $galleryImage->image_path])
+                            ? \App\Support\Media\WatermarkCache::url($galleryImage->image_path)
                             : null,
             
                     'order' => $galleryImage->order,
