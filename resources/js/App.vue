@@ -82,18 +82,22 @@ import { startLiveWatchClient, stopLiveWatchClient } from '@/composables/useLive
 import Header from './components/layout/header/index.vue'
 import Navbar from './components/layout/navbar/index.vue'
 import Footer from './components/layout/footer/index.vue'
-import ChatPopup from './components/chat/ChatPopup.vue'
 import ChatFloatingButton from './components/chat/ChatFloatingButton.vue'
 import AppLoader from './components/layout/AppLoader.vue'
 import NavProgressBar from './components/layout/NavProgressBar.vue'
-import BirthdayCelebrationLayer from './components/layout/BirthdayCelebrationLayer.vue'
-import LoginWelcomeSplash from './components/layout/LoginWelcomeSplash.vue'
-import MobilePushToggle from './components/layout/MobilePushToggle.vue'
-import PropertyDetailsModal from './components/listings/PropertyDetailsModal.vue'
-import PropertyCompareDock from './components/listings/PropertyCompareDock.vue'
-import ProjectDetailsModal from './components/projects/ProjectDetailsModal.vue'
-// Eager: async chunk + "Opening lead" overlay made the first card click feel like 5s.
-import ViewLeadModal from './components/kanban/viewLead/ViewLeadModal.vue'
+// Off the first-paint bundle: these mount (hidden) right after the shell renders, so
+// their chunks download in parallel with the page's own API calls instead of
+// blocking the first paint on a cold/incognito load.
+const ChatPopup = defineAsyncComponent(() => import('./components/chat/ChatPopup.vue'))
+const BirthdayCelebrationLayer = defineAsyncComponent(() => import('./components/layout/BirthdayCelebrationLayer.vue'))
+const LoginWelcomeSplash = defineAsyncComponent(() => import('./components/layout/LoginWelcomeSplash.vue'))
+const MobilePushToggle = defineAsyncComponent(() => import('./components/layout/MobilePushToggle.vue'))
+const PropertyDetailsModal = defineAsyncComponent(() => import('./components/listings/PropertyDetailsModal.vue'))
+const PropertyCompareDock = defineAsyncComponent(() => import('./components/listings/PropertyCompareDock.vue'))
+const ProjectDetailsModal = defineAsyncComponent(() => import('./components/projects/ProjectDetailsModal.vue'))
+// Same module preloadLeadViewModal() warms; it mounts with the shell (hidden), so the
+// chunk is fetched straight after first paint — long before the first card click.
+const ViewLeadModal = defineAsyncComponent(() => import('./components/kanban/viewLead/ViewLeadModal.vue'))
 const SystemCampaignPopup = defineAsyncComponent(() => import('./components/layout/SystemCampaignPopup.vue'))
 const DailyEdgeLayer = defineAsyncComponent(() => import('./components/daily-motivation/DailyEdgeLayer.vue'))
 const SalesActionCenter = defineAsyncComponent(() => import('./components/sales-action/SalesActionCenter.vue'))
