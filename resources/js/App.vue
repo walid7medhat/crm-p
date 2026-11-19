@@ -26,8 +26,8 @@
       />
     </ShortcutDock>
     <DailyEdgeLayer v-if="showLayout && !isAppLoading" />
-    <SalesActionCenter v-if="showLayout && !isAppLoading && canUseNextActions" />
-    <MatchQuickPanel v-if="showLayout && !isAppLoading && canUseNextActions" />
+    <SalesActionCenter v-if="showLayout && !isAppLoading && canUseNextActions && shellExtrasReady" />
+    <MatchQuickPanel v-if="showLayout && !isAppLoading && canUseNextActions && shellExtrasReady" />
     <UserAnimationPlayer v-if="showLayout && !isAppLoading" />
     <MobilePushToggle v-if="showLayout" auto-only />
     <Header v-if="showLayout" />
@@ -118,6 +118,10 @@ import { useLeadViewModal, initLeadViewModal, checkUrlForLead, preloadLeadViewMo
 import { useImpersonation } from './composables/useImpersonation.js'
 import MaintenanceScreen from './components/maintenance/MaintenanceScreen.vue'
 import { useMaintenanceMode } from './composables/useMaintenanceMode.js'
+import {
+  isLeadBoardPriorityHeld,
+  waitForLeadBoardPriority,
+} from './composables/leadBoardPriority.js'
 
 export default {
   name: 'App',
@@ -175,6 +179,36 @@ export default {
     const chatAgent = ref(null)
     const chatListingId = ref(null)
     const chatContext = ref(null)
+    // SAC / MatchQuickPanel hit /sales-action-center (~6s). Defer on Kanban until the
+    // board priority hold clears so they do not compete with stages-with-leads / lead open.
+    const shellExtrasReady = ref(route.path !== '/kanban')
+    let shellExtrasTimer = null
+    async function scheduleShellExtras() {
+      if (shellExtrasTimer) {
+        clearTimeout(shellExtrasTimer)
+        shellExtrasTimer = null
+      }
+      if (route.path !== '/kanban') {
+        shellExtrasReady.value = true
+        return
+      }
+      shellExtrasReady.value = false
+      if (isLeadBoardPriorityHeld()) {
+        await waitForLeadBoardPriority()
+      }
+      if (route.path !== '/kanban') {
+        shellExtrasReady.value = true
+        return
+      }
+      const arm = () => {
+        if (route.path === '/kanban') shellExtrasReady.value = true
+      }
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(arm, { timeout: 2500 })
+      } else {
+        shellExtrasTimer = setTimeout(arm, 1200)
+      }
+    }
     const canUseChat = computed(() => {
       try {
         const raw = localStorage.getItem('user')
@@ -272,6 +306,7 @@ export default {
       () => [route.path, route.query.lead],
       ([path, leadId]) => {
         if (path === '/kanban' || leadId) preloadLeadViewModal()
+        scheduleShellExtras()
       },
       { immediate: true },
     )
@@ -288,6 +323,7 @@ export default {
       chatContext,
       canUseChat,
       canUseNextActions,
+      shellExtrasReady,
       openChatInbox,
       closeChat,
       showLeadViewModal,

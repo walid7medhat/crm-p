@@ -496,7 +496,7 @@ router.beforeEach(async (to, from, next) => {
       // Warm lead modal before first card click (same chunk openLeadView preloads).
       import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
       if (!hasBoardQuery) {
-        holdBackgroundApis(700)
+        holdBackgroundApis()
         prefetchLeadBoard().finally(() => releaseBackgroundApis())
       }
     } else {

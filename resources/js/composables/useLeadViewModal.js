@@ -2,6 +2,7 @@ import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/plugins/axios'
 import { invalidateLeadCache, setCachedLead } from '@/composables/leadShowCache.js'
+import { prioritizeLeadOpen } from '@/composables/leadBoardPriority.js'
 
 
 export const showLeadViewModal = ref(false)
@@ -62,6 +63,8 @@ export function preloadLeadViewModal() {
 export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
   if (!id) return
+  // Free HTTP slots from SAC/dashboard/config (~4–8s) so show + history are not queued.
+  prioritizeLeadOpen(3500)
   // Start chunk load before flipping show — avoids BrandLoader flash on cold open.
   preloadLeadViewModal()
   leadViewOpenSeq.value++

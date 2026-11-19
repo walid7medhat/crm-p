@@ -1,6 +1,9 @@
 import axios from 'axios'
 import Swal from 'sweetalert2'
-import { waitForLeadBoardPriority } from '../composables/leadBoardPriority.js'
+import {
+  getBackgroundAbortSignal,
+  waitForLeadBoardPriority,
+} from '../composables/leadBoardPriority.js'
 import { getApiBaseUrl, getAppOrigin } from '../config/apiBaseUrl.js'
 import { attachRequestDiagnostics } from '../utils/requestDiagnostics.js'
 
@@ -163,8 +166,22 @@ function attachAuthInterceptor(client) {
     const isSmartSearch = url.includes('smart-search')
     // The pool list must not wait behind the kanban board request, or the cards
     // stay blank until that board call finishes (often only after a refresh).
-    if (!url.includes('stages-with-leads') && !isLeadPoolPage && !isLeadOpenCritical && !isSmartSearch) {
+    const isDeferrableShell =
+      !url.includes('stages-with-leads') &&
+      !isLeadPoolPage &&
+      !isLeadOpenCritical &&
+      !isSmartSearch
+    if (isDeferrableShell) {
       await waitForLeadBoardPriority()
+      // Allow prioritizeLeadOpen() to free HTTP slots occupied by SAC/dashboard/config.
+      const bgSignal = getBackgroundAbortSignal()
+      if (bgSignal) {
+        if (!config.signal) {
+          config.signal = bgSignal
+        } else if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.any === 'function') {
+          config.signal = AbortSignal.any([config.signal, bgSignal])
+        }
+      }
     }
     const token = resolveAuthToken()
     if (token) {

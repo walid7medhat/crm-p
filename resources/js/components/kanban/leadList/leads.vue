@@ -319,6 +319,7 @@
                                                 @pointerup="onLeadCardTiltUp"
                                                 @pointerleave="releaseLeadCardTilt($event.currentTarget)"
                                                 @pointercancel="releaseLeadCardTilt($event.currentTarget)"
+                                                @pointerenter="warmLeadShow(task?.id)"
                                                 @click="onLeadCardClick(task, column, $event)"
                                                 @dblclick.stop.prevent="onLeadCardDblClick(task)"
                                             >
@@ -622,6 +623,7 @@
                             @touchend="onMobileCardTouchEnd(row.column, $event)"
                             @touchcancel="clearMobileLongPress"
                             @contextmenu="onMobileCardContextMenu"
+                            @pointerenter="warmLeadShow(row.task?.id)"
                             @click="onLeadCardClick(row.task, row.column, $event)"
                             @dblclick.stop.prevent="onLeadCardDblClick(row.task)"
                         >
@@ -1415,6 +1417,7 @@ import api, { getApiBaseUrl, getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { peekLeadBoardPrefetchPromise, peekSettledLeadBoardPrefetch, takeLeadBoardPrefetch } from '@/composables/leadBoardPrefetch.js'
 import { openLeadView, onLeadViewUpdated, closeLeadView, showLeadViewModal } from '@/composables/useLeadViewModal.js'
+import { warmLeadShow } from '@/composables/leadShowCache.js'
 import { rememberLeadDetailOrigin } from '@/motion/leadDetailMotion'
 import {
     clearLeadDragImage,
