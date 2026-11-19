@@ -17,6 +17,15 @@
                         </select>
                         <span>entries per page</span>
                     </div>
+                    <select v-if="branchOptions.length > 1" class="form-select w-auto owners-filter" v-model="branchFilter">
+                        <option value="">All branches</option>
+                        <option v-for="b in branchOptions" :key="b" :value="b">{{ b }}</option>
+                    </select>
+                    <select class="form-select w-auto owners-filter" v-model="listingFilter">
+                        <option value="">Any listings</option>
+                        <option value="with">With listings</option>
+                        <option value="without">No listings</option>
+                    </select>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -69,6 +78,24 @@
                                 </th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Phone</th>
+                                <th scope="col" @click="sortBy('branch')" class="sortable">
+                                    Branch
+                                    <span v-if="sortKey === 'branch'">
+                                        <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
+                                    </span>
+                                </th>
+                                <th scope="col" @click="sortBy('added_by_name')" class="sortable">
+                                    Added By
+                                    <span v-if="sortKey === 'added_by_name'">
+                                        <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
+                                    </span>
+                                </th>
+                                <th scope="col" @click="sortBy('listings_count')" class="sortable">
+                                    Listings
+                                    <span v-if="sortKey === 'listings_count'">
+                                        <iconify-icon :icon="sortAsc ? 'mdi:arrow-up' : 'mdi:arrow-down'"></iconify-icon>
+                                    </span>
+                                </th>
                                 <th scope="col" @click="sortBy('created_at')" class="sortable">
                                     Created Date
                                     <span v-if="sortKey === 'created_at'">
@@ -99,6 +126,25 @@
                                 </td>
                                 <td>{{ owner.email }}</td>
                                 <td>{{ owner.phone_number }}</td>
+                                <td>
+                                    <span v-if="owner.branch" class="owner-branch-badge">
+                                        <iconify-icon icon="lucide:map-pin"></iconify-icon>
+                                        {{ owner.branch }}
+                                    </span>
+                                    <span v-else class="text-muted">—</span>
+                                </td>
+                                <td>
+                                    <span v-if="owner.added_by_name" class="owner-added-by">{{ owner.added_by_name }}</span>
+                                    <span v-else class="text-muted">—</span>
+                                </td>
+                                <td>
+                                    <span v-if="owner.listings_count > 0" class="owner-listings-badge has"
+                                        :title="owner.listings_count + (owner.listings_count === 1 ? ' listing' : ' listings')">
+                                        <iconify-icon icon="lucide:home"></iconify-icon>
+                                        {{ owner.listings_count }}
+                                    </span>
+                                    <span v-else class="owner-listings-badge none">No listings</span>
+                                </td>
                                 <td>{{ formatDate(owner.created_at) }}</td>
                                 <td class="d-flex gap-2">
                                     <!-- View Button -->
@@ -227,6 +273,8 @@ export default {
             loading: true,
             selectedShow: 10,
             searchText: '',
+            branchFilter: '',
+            listingFilter: '',
             selectAll: false,
             selectedIds: [],
             currentPage: 1,
@@ -269,11 +317,27 @@ export default {
         
             return pages;
         },
+        branchOptions() {
+            return [...new Set(this.owners.map(o => o.branch).filter(Boolean))].sort();
+        },
         entriesPerPage() {
             return Number(this.selectedShow);
         },
         filteredOwners() {
-            let result = [...this.owners];
+            let result = this.owners.map(o => ({
+                ...o,
+                added_by_name: o.added_by?.name || '',
+                listings_count: Number(o.listings_count || 0),
+            }));
+
+            if (this.branchFilter) {
+                result = result.filter(o => o.branch === this.branchFilter);
+            }
+            if (this.listingFilter === 'with') {
+                result = result.filter(o => o.listings_count > 0);
+            } else if (this.listingFilter === 'without') {
+                result = result.filter(o => o.listings_count === 0);
+            }
 
             if (this.searchText) {
                 const search = this.searchText.toLowerCase();
@@ -282,7 +346,9 @@ export default {
                     (owner.first_name && owner.first_name.toLowerCase().includes(search)) ||
                     (owner.last_name && owner.last_name.toLowerCase().includes(search)) ||
                     (owner.email && owner.email.toLowerCase().includes(search)) ||
-                    (owner.phone_number && owner.phone_number.includes(search))
+                    (owner.phone_number && owner.phone_number.includes(search)) ||
+                    (owner.branch && owner.branch.toLowerCase().includes(search)) ||
+                    (owner.added_by_name && owner.added_by_name.toLowerCase().includes(search))
                 );
             }
 
@@ -295,6 +361,9 @@ export default {
                     if (this.sortKey === 'created_at') {
                         valA = new Date(valA);
                         valB = new Date(valB);
+                    } else if (this.sortKey === 'listings_count') {
+                        valA = Number(valA || 0);
+                        valB = Number(valB || 0);
                     } else {
                         valA = String(valA || '').toLowerCase();
                         valB = String(valB || '').toLowerCase();
@@ -327,6 +396,12 @@ export default {
             this.currentPage = 1;
         },
         searchText() {
+            this.currentPage = 1;
+        },
+        branchFilter() {
+            this.currentPage = 1;
+        },
+        listingFilter() {
             this.currentPage = 1;
         }
     },
@@ -587,6 +662,53 @@ export default {
 
 .sortable:hover {
     background-color: var(--color-primary-border) !important;
+}
+
+.owners-filter {
+    height: 2.4rem;
+    border-radius: 10px !important;
+    min-width: 150px;
+    font-size: 14px;
+}
+
+.owner-branch-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-ink, var(--color-primary));
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.owner-added-by {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.owner-listings-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.owner-listings-badge.has {
+    background: rgba(25, 135, 84, 0.12);
+    color: #146c43;
+}
+
+.owner-listings-badge.none {
+    background: #f1f5f9;
+    color: #64748b;
 }
 
 .loading, .no-data {
