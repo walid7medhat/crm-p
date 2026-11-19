@@ -671,14 +671,23 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
  * Top header shortcut row on the dashboard — replaces the old CRM / HRM switch.
  */
 export function buildTopModuleNav(ctx = {}) {
+  const can = (p) => (typeof ctx.hasPermission === 'function' ? !!ctx.hasPermission(p) : true);
+
+  // Same rules as the sidebar / mobile dock and the router guards, so a tab never leads
+  // to a page the user is bounced out of.
+  // Leads & Deals: /kanban and /kanban_deal require `show-leads` (admins always pass).
+  const canSeeLeadsAndDeals = !ctx.isShowOnlyListing && !ctx.isHr && (!!ctx.isAdmin || can('show-leads'));
+  // Listings: hidden for roles without the module (e.g. accountant); otherwise admins,
+  // listing-only users, or anyone with `listings-list`.
+  const canSeeListings = !ctx.hideListings && (!!ctx.isAdmin || !!ctx.isShowOnlyListing || can('listings-list'));
+
   const items = [
     { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
-    { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
-    { id: 'property', label: 'Listings', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
-    { id: 'transaction', label: 'Deals', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
+    canSeeLeadsAndDeals && { id: 'leads', label: 'Leads', path: '/kanban', matchPaths: ['/kanban'] },
+    canSeeListings && { id: 'property', label: 'Listings', path: '/alllisting', matchPaths: ['/alllisting', '/my-listing'] },
+    canSeeLeadsAndDeals && { id: 'transaction', label: 'Deals', path: '/kanban_deal', matchPaths: ['/kanban_deal'] },
   ];
-  // hideListings: e.g. the accountant role — no Listings ("Property") module.
-  return ctx.hideListings ? items.filter((i) => i.id !== 'property') : items;
+  return items.filter(Boolean);
 }
 
 export function isTopModuleNavActive(currentPath, activeModule, item) {

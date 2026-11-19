@@ -74,7 +74,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide, defineAsyncComponent, h } from 'vue'
+import KanbanBoardSkeleton from './KanbanBoardSkeleton.vue'
 import { openDealView, useDealViewModal, dealUrlSyncedId, setDealQuery, clearDealQuery } from '@/composables/useDealViewModal.js'
 import { readKanbanUrlFilter } from '@/utils/kanbanUrlFilter.js'
 
@@ -89,8 +90,17 @@ import { rememberCrmSection, CRM_SECTIONS, DEAL_TYPE_KEY } from '@/composables/u
 
 // Split board + modals into separate chunks so first open of Leads or Deals
 // does not download/parse both boards (~800KB shared bundle before).
-const Deals = defineAsyncComponent(() => import('./deals/Deals.vue'))
-const Leads = defineAsyncComponent(() => import('./leadList/leads.vue'))
+// Board-shaped placeholder while a board's code downloads (was a blank page before).
+const Deals = defineAsyncComponent({
+    loader: () => import('./deals/Deals.vue'),
+    delay: 0,
+    loadingComponent: { render: () => h(KanbanBoardSkeleton, { label: 'Loading deals' }) },
+})
+const Leads = defineAsyncComponent({
+    loader: () => import('./leadList/leads.vue'),
+    delay: 0,
+    loadingComponent: { render: () => h(KanbanBoardSkeleton, { label: 'Loading leads' }) },
+})
 const LeadPool = defineAsyncComponent({
     loader: () => import('./leadList/LeadPool.vue'),
     delay: 0,
@@ -850,6 +860,8 @@ const startPolling = () => {
     
     console.log('🔄 Kanban: Starting polling for stages every 30 seconds')
     pollingInterval.value = setInterval(() => {
+        // Fallback only (live push unavailable). Hidden tabs skip — no one is looking.
+        if (document.visibilityState === 'hidden') return
         if (leadsRef.value && typeof leadsRef.value.fetchLeads === 'function') {
             const leadsComponent = Array.isArray(leadsRef.value) ? leadsRef.value[0] : leadsRef.value
             if (leadsComponent) {

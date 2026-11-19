@@ -21,10 +21,11 @@
         @dragover.prevent="onContainerDragOver"
       >
         <!-- Loading state -->
-        <div v-if="loading && columns.length === 0" class="kanban-empty-state kanban-loading">
-          <div class="kanban-empty-spinner"></div>
-          <p class="kanban-empty-title">Loading deals...</p>
-        </div>
+        <KanbanBoardSkeleton
+          v-if="loading && columns.length === 0"
+          label="Loading deals"
+          :columns="dealSkeletonColumns"
+        />
         
         <!-- Error state -->
         <div v-else-if="error && columns.length === 0" class="kanban-empty-state kanban-error-state">
@@ -472,6 +473,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from '
 import { useRoute, useRouter } from 'vue-router'
 import { setDealQuery, clearDealQuery } from '@/composables/useDealViewModal.js'
 import draggable from 'vuedraggable'
+import KanbanBoardSkeleton from '../KanbanBoardSkeleton.vue'
 import axios, { getApiErrorMessage } from '@/plugins/axios'
 import { markKanbanReady } from '@/composables/useKanbanReady.js'
 import { useIntersectionObserver } from '@vueuse/core' 
@@ -560,9 +562,34 @@ function onExternalDealTypeChange(e) {
 }
 const showViewDealModal = ref(false)
 const selectedDeal = ref(null)
-const loading = ref(false)
+// Start as loading: the first fetch runs right after mount, so "No stages yet" must not flash.
+const loading = ref(true)
 const error = ref(null)
 const stagesData = ref([])
+
+// Stage names/colours from the last visit (per deal type) so the skeleton looks like the board.
+const DEAL_STAGE_SHELLS_KEY = 'deal_board_stage_shells_v1'
+function readDealStageShells(typeId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(DEAL_STAGE_SHELLS_KEY) || '{}')
+    return Array.isArray(all?.[typeId]) ? all[typeId] : []
+  } catch {
+    return []
+  }
+}
+function saveDealStageShells(typeId, stages) {
+  try {
+    const all = JSON.parse(localStorage.getItem(DEAL_STAGE_SHELLS_KEY) || '{}') || {}
+    all[typeId] = stages.map((s) => ({ title: s.title, color: s.headerGradient || s.color || '' }))
+    localStorage.setItem(DEAL_STAGE_SHELLS_KEY, JSON.stringify(all))
+  } catch {
+    /* ignore */
+  }
+}
+const dealSkeletonColumns = computed(() => {
+  const shells = readDealStageShells(activeTypeTab.value)
+  return shells.length ? shells : 5
+})
 const kanbanContainerRef = ref(null)
 const scrollInterval = ref(null)
 const showLeftZone = ref(true)
@@ -1222,6 +1249,7 @@ async function executeFetchDeals() {
         total_count: stage.total_count || stage.deals_count || 0
       }
     });
+    saveDealStageShells(activeTypeTab.value, stagesData.value)
     error.value = null;
   } catch (err) {
     const canceled = err?.code === 'ERR_CANCELED'
@@ -1733,7 +1761,9 @@ const stopPolling = () => {
 const startPolling = () => {
   if (pollingInterval.value) return
   
+  // Fallback only (live push unavailable). Hidden tabs skip — no one is looking.
   pollingInterval.value = setInterval(() => {
+    if (document.visibilityState === 'hidden') return
     if (!isFetching.value) {
       fetchDeals(false)
     }
