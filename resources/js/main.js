@@ -66,7 +66,7 @@ import '../css/auth-landing.css'
 import './components/Authentication/auth-glass-shared.css'
 import '../css/popup-close.css'
 import { syncMobileViewport } from './composables/useMobileNavigation.js'
-import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
+import { holdBackgroundApis, releaseBackgroundApis, releaseBackgroundApisAfterBoard } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 import { initLeadViewModal, leadIdFromNotification, openLeadFromNotification } from '@/composables/useLeadViewModal.js'
 import { dealIdFromNotification, openDealFromNotification } from '@/composables/useDealViewModal.js'
@@ -106,11 +106,10 @@ if (window.location.pathname === '/kanban' && initialToken) {
   import('./components/kanban/leadList/leads.vue')
   import('./components/kanban/leadList/LeadPool.vue')
   if (!hasBoardQuery) {
-    // Hold until the board request finishes — a 700ms timer previously released
-    // SAC/dashboard/config while stages-with-leads was still running (~8s), which
-    // starved GET /leads/{id} when the user clicked a card.
+    // Hold until the board request finishes, then keep shell quiet ~1.2s so the
+    // first lead click is not buried under SAC/notifications/config.
     holdBackgroundApis()
-    prefetchLeadBoard().finally(() => releaseBackgroundApis())
+    prefetchLeadBoard().finally(() => releaseBackgroundApisAfterBoard(1200))
   }
 }
 

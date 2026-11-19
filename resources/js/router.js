@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resetSidebarLayout } from './composables/useSidebar.js'
 import { clearAuthToken } from './plugins/axios.js'
 import { installNavProgress } from './composables/useNavProgress.js'
-import { holdBackgroundApis, releaseBackgroundApis } from './composables/leadBoardPriority.js'
+import { holdBackgroundApis, releaseBackgroundApis, releaseBackgroundApisAfterBoard } from './composables/leadBoardPriority.js'
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 import { confirmRegisteredLeadDrafts } from './composables/useLeadFormDraft.js'
 import { resolveCrmSection, CRM_SECTIONS } from './composables/useLayoutNavigation.js'
@@ -497,7 +497,7 @@ router.beforeEach(async (to, from, next) => {
       import('./components/kanban/viewLead/ViewLeadModal.vue').catch(() => {})
       if (!hasBoardQuery) {
         holdBackgroundApis()
-        prefetchLeadBoard().finally(() => releaseBackgroundApis())
+        prefetchLeadBoard().finally(() => releaseBackgroundApisAfterBoard(1200))
       }
     } else {
       releaseBackgroundApis()

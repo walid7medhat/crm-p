@@ -3,11 +3,18 @@ let releaseTimer = null
 let waiters = []
 /** Aborts in-flight non-critical API calls so lead-open can use a free connection. */
 let backgroundAbort = typeof AbortController !== 'undefined' ? new AbortController() : null
+/** When true, only an explicit releaseBackgroundApis() (or 45s safety) clears the hold. */
+let holdUntilExplicitRelease = false
 
 function finishWaiters() {
   const pending = waiters
   waiters = []
   pending.forEach((finish) => finish())
+}
+
+function armReleaseTimer(ms) {
+  if (releaseTimer) clearTimeout(releaseTimer)
+  releaseTimer = setTimeout(() => releaseBackgroundApis(), ms)
 }
 
 /**
@@ -17,23 +24,46 @@ function finishWaiters() {
  */
 export function holdBackgroundApis(ms = null) {
   if (ms == null || !Number.isFinite(ms) || ms < 0) {
+    holdUntilExplicitRelease = true
     releaseAt = Date.now() + 45_000
-    if (releaseTimer) clearTimeout(releaseTimer)
-    releaseTimer = setTimeout(() => releaseBackgroundApis(), 45_000)
+    armReleaseTimer(45_000)
     return
   }
-  releaseAt = Date.now() + ms
-  if (releaseTimer) clearTimeout(releaseTimer)
-  releaseTimer = setTimeout(() => releaseBackgroundApis(), ms)
+  // Never shorten an active board-long hold.
+  if (holdUntilExplicitRelease && releaseAt > Date.now()) {
+    return
+  }
+  const target = Date.now() + ms
+  if (target <= releaseAt) {
+    return
+  }
+  holdUntilExplicitRelease = false
+  releaseAt = target
+  armReleaseTimer(ms)
 }
 
 export function releaseBackgroundApis() {
+  holdUntilExplicitRelease = false
   releaseAt = 0
   if (releaseTimer) {
     clearTimeout(releaseTimer)
     releaseTimer = null
   }
   finishWaiters()
+}
+
+/**
+ * Board finished: keep shell quiet briefly so the first card click gets free HTTP slots
+ * before SAC / notifications / config flood in.
+ */
+export function releaseBackgroundApisAfterBoard(delayMs = 1200) {
+  holdUntilExplicitRelease = false
+  const ms = Math.max(0, Number(delayMs) || 0)
+  releaseAt = Date.now() + ms
+  armReleaseTimer(ms)
+  if (ms === 0) {
+    releaseBackgroundApis()
+  }
 }
 
 export function waitForLeadBoardPriority() {
@@ -60,10 +90,10 @@ export function getBackgroundAbortSignal() {
 }
 
 /**
- * Cancel in-flight background XHRs and hold new ones briefly so GET /leads/{id}
- * is not stuck behind sales-action-center / dashboard / config (often 4–8s).
+ * Cancel in-flight background XHRs so GET /leads/{id} is not stuck behind
+ * sales-action-center / dashboard / config. Never shortens an active board hold.
  */
-export function prioritizeLeadOpen(ms = 3500) {
+export function prioritizeLeadOpen(ms = 4000) {
   if (backgroundAbort) {
     try {
       backgroundAbort.abort()
@@ -71,6 +101,14 @@ export function prioritizeLeadOpen(ms = 3500) {
       /* ignore */
     }
     backgroundAbort = new AbortController()
+  }
+  // If the board hold is still active, only abort — do not replace it with a shorter timer.
+  if (holdUntilExplicitRelease && releaseAt > Date.now()) {
+    return
+  }
+  const remaining = releaseAt - Date.now()
+  if (remaining >= ms) {
+    return
   }
   holdBackgroundApis(ms)
 }

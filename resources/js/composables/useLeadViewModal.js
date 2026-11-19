@@ -63,8 +63,9 @@ export function preloadLeadViewModal() {
 export function openLeadView(leadId, leadData = null, options = {}) {
   const id = Number(leadId)
   if (!id) return
-  // Free HTTP slots from SAC/dashboard/config (~4–8s) so show + history are not queued.
-  prioritizeLeadOpen(3500)
+  // Free HTTP slots from SAC/dashboard/config so show is not queued.
+  // Never shortens an active board-long hold (see prioritizeLeadOpen).
+  prioritizeLeadOpen(4000)
   // Start chunk load before flipping show — avoids BrandLoader flash on cold open.
   preloadLeadViewModal()
   leadViewOpenSeq.value++

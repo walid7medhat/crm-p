@@ -1491,8 +1491,18 @@ const fetchLead = async ({ silent = false } = {}) => {
         applyFreshLeadPayload(cached.data, leadIdNum)
     }
 
+    // Seed / cache must paint the modal on this frame — never block the click handler
+    // on the network round-trip (production show can still take >1s under load).
+    const hasPaint = !!lead.value
     if (!silent) {
-        isLoadingLead.value = !lead.value
+        isLoadingLead.value = !hasPaint
+    }
+    // Full cache can hydrate secondary rails; card seed alone must not (engagement SQL).
+    if (hasPaint && cached?.data) {
+        leadHydrated.value = true
+        applyOpenSection()
+    } else if (hasPaint && seedMatches) {
+        applyOpenSection()
     }
 
     const needsNetwork = shouldBackgroundRefresh(leadIdNum) || !cached?.data
@@ -1506,6 +1516,9 @@ const fetchLead = async ({ silent = false } = {}) => {
             await nextTick()
             applyOpenSection()
             scheduleCommentPortalLinks(leadIdNum, requestGeneration)
+            if (requestGeneration === fetchLeadGeneration && Number(props.leadId) === leadIdNum) {
+                isLoadingLead.value = false
+            }
             return
         }
 
@@ -1546,6 +1559,17 @@ const fetchLead = async ({ silent = false } = {}) => {
             }
         }
     })()
+
+    // Do not await the network when we already painted — keeps click→modal under ~1 frame.
+    if (hasPaint) {
+        fetchLeadInFlight.finally(() => {
+            if (fetchLeadInFlightId === leadIdNum) {
+                fetchLeadInFlight = null
+                fetchLeadInFlightId = null
+            }
+        })
+        return
+    }
 
     try {
         await fetchLeadInFlight

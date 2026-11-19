@@ -107,9 +107,14 @@ export function shouldBackgroundRefresh(leadId) {
   return Date.now() - entry.fetchedAt >= STALE_WHILE_REVALIDATE_MS
 }
 
+let warmTimer = null
+let pendingWarmId = null
+let lastWarmStartedAt = 0
+const WARM_THROTTLE_MS = 450
+
 /**
- * Best-effort warm on card hover / focus so the first click paints from cache.
- * No-ops when a fresh entry already exists.
+ * Best-effort warm on card hover so the first click paints from cache.
+ * Throttled — scrubbing a column must not fire dozens of /leads/{id} GETs.
  */
 export function warmLeadShow(leadId) {
   const id = Number(leadId)
@@ -117,5 +122,17 @@ export function warmLeadShow(leadId) {
   // Do not compete with the first stages-with-leads request.
   if (isLeadBoardPriorityHeld()) return
   if (!shouldBackgroundRefresh(id)) return
-  fetchLeadShow(id).catch(() => {})
+
+  pendingWarmId = id
+  const wait = Math.max(0, WARM_THROTTLE_MS - (Date.now() - lastWarmStartedAt))
+  if (warmTimer) clearTimeout(warmTimer)
+  warmTimer = setTimeout(() => {
+    warmTimer = null
+    const target = pendingWarmId
+    pendingWarmId = null
+    if (!target || isLeadBoardPriorityHeld()) return
+    if (!shouldBackgroundRefresh(target)) return
+    lastWarmStartedAt = Date.now()
+    fetchLeadShow(target).catch(() => {})
+  }, wait)
 }
