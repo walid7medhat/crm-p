@@ -2787,6 +2787,13 @@ function onLeadDragEnd(event) {
 const echoListeners = ref([])
 /** Debounce rapid assignment broadcasts → single board refresh */
 const leadAssignmentBoardRefreshTimer = ref(null)
+/** An assignment refresh arrived while the tab was hidden — run it on return. */
+let pendingAssignmentBoardRefresh = false
+function onBoardVisibilityChange() {
+    if (document.visibilityState !== 'visible' || !pendingAssignmentBoardRefresh) return
+    pendingAssignmentBoardRefresh = false
+    if (!isFetching.value) fetchLeads(true, undefined, { silent: true })
+}
 const pollingInterval = ref(null)
 const isFetching = ref(false)
 const abortController = ref(null)
@@ -4141,6 +4148,7 @@ onMounted(async () => {
     window.addEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     window.addEventListener('kanban-lead-live-filter', onKanbanLeadLiveFilter)
     window.addEventListener('lead-deleted', onLeadDeletedFromModal)
+    document.addEventListener('visibilitychange', onBoardVisibilityChange)
     initializeLeadUpdates()
      const leadIdFromUrl = route.query.lead
     if (leadIdFromUrl) {
@@ -4170,6 +4178,7 @@ onUnmounted(() => {
     window.removeEventListener('lead-search-mobile-sheet', onLeadSearchMobileSheet)
     window.removeEventListener('kanban-lead-live-filter', onKanbanLeadLiveFilter)
     window.removeEventListener('lead-deleted', onLeadDeletedFromModal)
+    document.removeEventListener('visibilitychange', onBoardVisibilityChange)
     cleanup()
     destroyLeadMotion()
 })
@@ -4283,24 +4292,35 @@ const initializeLeadUpdates = () => {
             const payload = normalizeLeadRealtimeEvent(event)
             const leadId = payload?.lead_id
             const assignedId = payload?.assigned_user_id
-            // This event has no card body. If the board card already shows that
-            // owner, lead.updated already patched it. Otherwise reload so the
-            // server decides visibility.
+            // This channel is company-wide: every assignment reaches every open board.
+            // Reload only when it affects THIS board, otherwise each assignment fans out
+            // into a heavy stages-with-leads load for every connected user.
             if (leadId && assignedId != null) {
                 const existing = findLeadInColumns(leadId)
-                if (existing && String(existing.responsible_person_id) === String(assignedId)) {
+                if (existing) {
+                    // Card already shows that owner — lead.updated already patched it.
+                    if (String(existing.responsible_person_id) === String(assignedId)) {
+                        return
+                    }
+                } else if (String(assignedId) !== String(user.id)) {
+                    // Not on this board and not assigned to me — nothing visible changes.
                     return
                 }
             }
+            // Bulk / engine assignments arrive in bursts — coalesce them into one reload.
             if (leadAssignmentBoardRefreshTimer.value) {
                 clearTimeout(leadAssignmentBoardRefreshTimer.value)
             }
             leadAssignmentBoardRefreshTimer.value = setTimeout(() => {
                 leadAssignmentBoardRefreshTimer.value = null
+                if (document.visibilityState === 'hidden') {
+                    pendingAssignmentBoardRefresh = true
+                    return
+                }
                 if (!isFetching.value) {
                     fetchLeads(true, undefined, { silent: true })
                 }
-            }, 400)
+            }, 1500)
         })
         echoListeners.value.push(assignmentChannel)
     } catch (error) {
@@ -4974,6 +4994,7 @@ const startPolling = () => {
         // Only poll if not currently fetching. Background refresh: silent, so an active
         // search doesn't flash the "searching" overlay every 15s (looked like the search
         // loading again by itself).
+        if (document.visibilityState === 'hidden') return
         if (!isFetching.value) {
             fetchLeads(true, undefined, { silent: true })
         }
