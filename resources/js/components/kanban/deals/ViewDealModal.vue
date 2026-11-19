@@ -2297,6 +2297,12 @@ function close() {
   min-width: 0;
 }
 
+/* A .col-12 inside those 2-col grids is meant to be full width (e.g. the commission
+   distribution card under Deal Financials) — otherwise it lands in one half-width cell. */
+.view-lead-modal-content :deep(.view-card .row:has(> [class*="col-"] > .info-group) > .col-12) {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 900px) {
   .modal-body-custom.is-split-scroll {
     display: block;

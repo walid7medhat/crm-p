@@ -2638,21 +2638,17 @@ defineExpose({
 .deals-tab-content--list {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
-  /* Height comes from .kanban-content-area--deals-list (kanban_deal.vue), which is now
-     definite; a viewport min-height here would push past it and break inner scrolling. */
+  flex: 0 0 auto;
+  /* DealListView measures itself to end at the window bottom; this wrapper only wraps
+     it (no viewport min-height, which pushed the list — and its pager — below the fold). */
   min-height: 0;
-  height: 100%;
-  max-height: 100%;
+  height: auto;
   overflow: hidden;
   padding-bottom: 0;
 }
 
 .deals-tab-content--list :deep(.deal-list) {
-  flex: 1 1 0;
   min-height: 0;
-  height: 100%;
-  max-height: none;
 }
 
 .deals-type-tabs {
