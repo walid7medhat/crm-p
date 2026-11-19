@@ -4,15 +4,18 @@ let pending = null
 let settledResponse = null
 let requestId = 0
 
+/** Default first-page size for the unfiltered Lead board (matches leads.vue). */
+export const LEAD_BOARD_FIRST_PAGE = 20
+
 function isPlainLeadBoardParams(params) {
   if (!params || typeof params !== 'object') return false
   const keys = Object.keys(params).filter((key) => {
     const value = params[key]
     return value != null && value !== ''
   })
-  // Default first board page: per_page=15, optional page=1 only.
+  // Default first board page: per_page=N, optional page=1 only.
   // leads.vue always sends page:1 — treating that as a mismatch caused a second full board GET.
-  if (!keys.includes('per_page') || Number(params.per_page) !== 15) return false
+  if (!keys.includes('per_page') || Number(params.per_page) !== LEAD_BOARD_FIRST_PAGE) return false
   for (const key of keys) {
     if (key === 'per_page') continue
     if (key === 'page' && Number(params.page) === 1) continue
@@ -39,7 +42,9 @@ export function prefetchLeadBoard() {
     const id = ++requestId
     settledResponse = null
     const early = takeEarlyBrowserPrefetch()
-    const request = early || api.get('/stages/kanban/stages-with-leads', { params: { per_page: 15 } })
+    const request = early || api.get('/stages/kanban/stages-with-leads', {
+      params: { per_page: LEAD_BOARD_FIRST_PAGE },
+    })
     pending = Promise.resolve(request)
       .then((response) => {
         if (id === requestId) settledResponse = response

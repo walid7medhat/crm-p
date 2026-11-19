@@ -101,7 +101,7 @@
                     }
                     if (!token || !String(token).trim()) return;
                     var base = String(window.__API_BASE_URL__ || '').replace(/\/$/, '');
-                    window.__leadBoardEarlyPrefetch = fetch(base + '/stages/kanban/stages-with-leads?per_page=15', {
+                    window.__leadBoardEarlyPrefetch = fetch(base + '/stages/kanban/stages-with-leads?per_page=20', {
                         headers: {
                             Accept: 'application/json',
                             Authorization: 'Bearer ' + String(token).trim()
