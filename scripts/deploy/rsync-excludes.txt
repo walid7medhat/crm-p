@@ -1,0 +1,11 @@
+# Paths that must never be rsync'd to production.
+# Usage:
+#   rsync -av --exclude-from=scripts/deploy/rsync-excludes.txt ...
+#
+# public/hot is the Vite HMR sentinel (points at localhost:5173). Shipping it
+# forces production to load the local Vite server instead of public/build.
+
+public/hot
+.env
+.phpunit.result.cache
+.DS_Store

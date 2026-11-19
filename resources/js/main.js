@@ -87,8 +87,10 @@ const addCSS = (url) => {
   link.href = url
   document.head.appendChild(link)
 }
-addCSS('/assets/css/style14.css?v=20261103a')
-addCSS('https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css')
+// Legacy theme sheet (still required). Bump ?v= when the file changes.
+addCSS('/assets/css/style14.css?v=20261119a')
+// Local Remix Icon (same glyphs as CDN; long-cache via /assets/ + no third-party DNS).
+addCSS('/assets/css/remixicon.css?v=20261119a')
 
 // Single shared API client (token + /api base URL) for the whole app
 window.axios = api
@@ -178,11 +180,11 @@ async function raiseHomeIconAlert(notification) {
 
 const app = createApp(App)
 app.component('SearchableSelect', SearchableSelect)
-app.config.devtools = true
+app.config.devtools = import.meta.env.DEV
 
 app.config.errorHandler = (err, instance, info) => {
   console.error('[Vue Error]', info, err)
-  if (instance && instance.type) {
+  if (import.meta.env.DEV && instance && instance.type) {
     console.error('[Vue Error] Component:', instance.type.__name || instance.type.name || instance.type)
   }
 }
@@ -473,7 +475,9 @@ function scheduleEchoInit() {
 
         window.Echo.private(`user.${currentUserId}`)
           .notification((notification) => {
-            console.log('[Notification]', notification)
+            if (import.meta.env.DEV) {
+              console.log('[Notification]', notification)
+            }
             raiseHomeIconAlert(notification)
 
             const type = String(notification.type || '').includes('status')

@@ -750,8 +750,8 @@
                     <div class="profile-summary-card">
                       <div class="profile-summary-left">
                         <div class="profile-avatar-wrap">
-                          <img v-if="user && user.avatar" :src="user.avatar" alt="Avatar" class="profile-summary-avatar">
-                          <img v-else :src="userPlaceholder" alt="Avatar" class="profile-summary-avatar">
+                          <img v-if="user && user.avatar" :src="user.avatar" alt="Avatar" class="profile-summary-avatar" width="56" height="56">
+                          <img v-else :src="userPlaceholder" alt="Avatar" class="profile-summary-avatar" width="56" height="56">
                           <label class="profile-avatar-camera">
                             <input
                               ref="avatarInput"
@@ -874,7 +874,7 @@
                           class="profile-team-card profile-team-pill"
                         >
                           <div class="profile-team-avatar-wrap">
-                            <img v-if="member.avatar" :src="member.avatar" :alt="member.name" class="profile-team-avatar">
+                            <img v-if="member.avatar" :src="member.avatar" :alt="member.name" class="profile-team-avatar" width="44" height="44">
                             <span v-else class="profile-team-agent-icon">
                               <iconify-icon icon="lucide:user-round" class="icon"></iconify-icon>
                             </span>

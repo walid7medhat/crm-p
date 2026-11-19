@@ -64,6 +64,8 @@
           :alt="brandCompanyName"
           class="sidebar-brand__logo"
           :class="{ 'sidebar-brand__logo--luxvant': isLuxvantBrand }"
+          width="86"
+          height="44"
         />
       </div>
     </div>
@@ -83,7 +85,7 @@
               @mouseenter="prefetchRoute(isShowOnlyListing ? '/alllisting' : '/')"
               @click="navigate"
             >
-              <img :src="dashboardIcon" class="imgicon" alt="" />
+              <img :src="dashboardIcon" class="imgicon" alt="" width="20" height="20" />
               <span>Dashboard</span>
             </a>
           </router-link>
@@ -99,7 +101,7 @@
           }"
         >
           <a  v-if="!isHr" href="javascript:void(0)" @click.stop.prevent="handleCrmClick" :class="{ active: isSidebarModuleActive('crm') }">
-            <img :src="crmIcon" class="imgicon" alt="" />
+            <img :src="crmIcon" class="imgicon" alt="" width="20" height="20" />
             <span>CRM</span>
             <span class="dropdown-arrow dropdown-arrow--crm" :class="{ rotated: activeDropdown === 'crm' }" />
           </a>
@@ -194,7 +196,7 @@
           }"
         >
           <a href="javascript:void(0)" @click.stop.prevent="toggleDropdown('calculator')" :class="{ active: isSidebarModuleActive('calculator') }">
-            <img :src="calculatorIcon" class="imgicon" alt="" />
+            <img :src="calculatorIcon" class="imgicon" alt="" width="20" height="20" />
             <span>Calculators</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'calculator' }" />
           </a>
@@ -231,7 +233,7 @@
               @mouseenter="prefetchRoute('/hr')"
               @click="navigate"
             >
-              <img :src="hrIcon" class="imgicon" alt="" />
+              <img :src="hrIcon" class="imgicon" alt="" width="20" height="20" />
               <span>HR</span>
             </a>
           </router-link>
@@ -272,7 +274,7 @@
           :class="{ dropdown: true, open: activeDropdown === 'users', 'active-parent': isSidebarModuleActive('agents') }"
         >
           <a href="javascript:void(0)" @click="toggleDropdown('users')" :class="{ active: isSidebarModuleActive('agents') }">
-            <img :src="agentsIcon" class="imgicon" alt="" />
+            <img :src="agentsIcon" class="imgicon" alt="" width="20" height="20" />
             <span>Agents</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'users' }" />
           </a>
@@ -362,7 +364,7 @@
               @mouseenter="prefetchRoute('/suggestion')"
               @click="navigate"
             >
-              <img :src="suggestionIcon" class="imgicon" alt="" />
+              <img :src="suggestionIcon" class="imgicon" alt="" width="20" height="20" />
               <span>Suggestions</span>
             </a>
           </router-link>
@@ -374,7 +376,7 @@
           :class="{ dropdown: true, open: activeDropdown === 'settings', 'active-parent': isSidebarModuleActive('settings') }"
         >
           <a href="javascript:void(0)" @click="toggleDropdown('settings')" :class="{ active: isSidebarModuleActive('settings') }">
-            <img :src="roleIcon" class="imgicon" alt="" />
+            <img :src="roleIcon" class="imgicon" alt="" width="20" height="20" />
             <span>Settings</span>
             <span class="dropdown-arrow" :class="{ rotated: activeDropdown === 'settings' }" />
           </a>
@@ -409,6 +411,8 @@
         :src="user.avatar"
         alt=""
         class="sidebar-user__avatar"
+        width="36"
+        height="36"
       />
       <span v-else class="sidebar-user__avatar sidebar-user__avatar--fallback">{{ sidebarUserInitial }}</span>
       <span v-show="!isSidebarActive" class="sidebar-user__meta">

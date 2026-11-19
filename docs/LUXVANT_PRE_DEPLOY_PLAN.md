@@ -46,6 +46,7 @@
 
 | Path | Reason |
 |------|--------|
+| `public/hot` | Vite HMR sentinel — **never deploy** (gitignored; also in `scripts/deploy/rsync-excludes.txt`; stripped by `docs/LUXVANT_DEPLOY_SEQUENCE.sh`) |
 | `resources/js/components/ConfirmationModal.vue` | Unrelated whitespace-only local change |
 | `.DS_Store`, `.phpunit.result.cache` | Noise |
 | `OIA_*_AUDIT.md`, `ALT_CRM_*`, `executive-reports/` | Unrelated docs |
@@ -229,6 +230,12 @@ php artisan optimize:clear
 Use admin-supplied credentials in your shell only. **Never echo tokens.**
 
 ```bash
+# --- public/hot must be absent on the server (Vite HMR) ---
+APP_ROOT=/path/to/crm-p   # SET THIS
+test ! -e "$APP_ROOT/public/hot" && echo 'PASS: public/hot absent' || echo 'FAIL: public/hot present'
+# Or via deploy helper:
+# APP_ROOT=/path/to/crm-p ./docs/LUXVANT_DEPLOY_SEQUENCE.sh verify-no-hot
+
 LUX=https://luxvant.altcrm.com
 OIA=https://oiaproperties.altcrm.com
 
