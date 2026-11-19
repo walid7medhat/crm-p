@@ -3913,24 +3913,16 @@ public function watermark(Request $request)
     // Brand watermark: OIA mark on OIA host, Luxvant logo on Luxvant host.
     $watermarkPath = \App\Support\Brand\BrandIsolation::watermarkAbsolutePath();
 
-    // Rendered-output disk cache. Authorization above still runs on every request;
-    // the key changes whenever the source photo, the brand or its watermark changes.
-    // Bump the 'v1' prefix when the rendering pipeline itself changes (rotation, size, quality).
-    $cacheKey = sha1(implode('|', [
-        'v1',
-        (string) \App\Support\Brand\BrandIsolation::trustedKey(),
-        $path,
-        (string) @filemtime($fullPath),
-        (string) @filesize($fullPath),
-        (string) ($watermarkPath ? @filemtime($watermarkPath) : 'none'),
-    ]));
-    $cacheFile = storage_path('app/watermark-cache/'.substr($cacheKey, 0, 2).'/'.$cacheKey.'.webp');
+    // Rendered output is saved as a static file under public/wm-cache (only after the gate
+    // above passed). API resources then link the static file directly via WatermarkCache::url,
+    // so later views skip PHP entirely. The name changes when photo, brand or watermark change.
+    $cacheFile = \App\Support\Media\WatermarkCache::fileFor($path, $fullPath);
     $cacheHeaders = [
         'Content-Type' => 'image/webp',
         'Cache-Control' => 'public, max-age=86400',
     ];
 
-    if (is_file($cacheFile)) {
+    if ($cacheFile !== null && is_file($cacheFile)) {
         return response()->file($cacheFile, $cacheHeaders);
     }
 
@@ -3961,7 +3953,7 @@ public function watermark(Request $request)
 
     $encoded = (string) $image->encode('webp', 80);
 
-    try {
+    if ($cacheFile !== null) try {
         $dir = dirname($cacheFile);
         if (! is_dir($dir)) {
             @mkdir($dir, 0775, true);

@@ -1,0 +1,16 @@
+# Watermarked listing photos rendered by /image/watermark (see App\Support\Media\WatermarkCache).
+# File names are content hashes, so they never change in place: cache them for a long time.
+Options -Indexes
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=2592000, immutable"
+</IfModule>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp "access plus 30 days"
+</IfModule>
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+</IfModule>
+<FilesMatch "\.(php|phtml|phar|tmp)$">
+    Require all denied
+</FilesMatch>

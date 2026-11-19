@@ -237,7 +237,7 @@ class ListingGridResource extends JsonResource
             'payment_plan' => $this->payment_plan,
             'can_edit_payment_breakdown' => $this->resolveCanEditPaymentBreakdown($request),
             'main_image' => $this->resolveMainImagePath()
-                ? route('image.watermark', ['path' => $this->resolveMainImagePath()])
+                ? \App\Support\Media\WatermarkCache::url($this->resolveMainImagePath())
                 : null,
             'total_images' => $this->resolveTotalImages(),
             'property_type' => $this->propertyType?->name,

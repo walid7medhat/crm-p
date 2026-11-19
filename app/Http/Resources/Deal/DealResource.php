@@ -415,7 +415,7 @@ class DealResource extends JsonResource
         }
 
         try {
-            return route('image.watermark', ['path' => $path]);
+            return \App\Support\Media\WatermarkCache::url($path);
         } catch (\Throwable $e) {
             return asset('storage/'.$path);
         }
