@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\Marketing;
 
 use App\Models\MarketingStage;
 use App\Models\MarketingTask;
+use App\Models\MarketingTrackingEntry;
 use App\Services\Marketing\MarketingPresenter;
 use App\Services\Marketing\MarketingTaskMirror;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class BoardController extends MarketingBaseController
@@ -120,6 +122,10 @@ class BoardController extends MarketingBaseController
             ->map(fn ($u) => MarketingPresenter::user($u))
             ->values();
 
-        return response()->json(['members' => $members, 'can_manage' => $this->isAdmin()]);
+        return response()->json([
+            'members' => $members,
+            'can_manage' => $this->isAdmin(),
+            'can_tracking_sheets' => MarketingTrackingEntry::userCanAccess(Auth::user()),
+        ]);
     }
 }

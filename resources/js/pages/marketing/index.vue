@@ -25,7 +25,7 @@
             data-1p-ignore
             data-form-type="other"
             readonly
-            :placeholder="isBoard ? 'Search title, people, notes, links…' : (activeTab === 'bookings' ? 'Search name, phone, email, reference…' : 'Search posts…')"
+            :placeholder="isBoard ? 'Search title, people, notes, links…' : (activeTab === 'bookings' ? 'Search name, phone, email, reference…' : (activeTab === 'tracking' ? 'Search name, area, developer, links…' : 'Search posts…'))"
             aria-label="Search"
             @pointerdown="$event.target.removeAttribute('readonly')"
             @focus="$event.target.removeAttribute('readonly')"
@@ -112,6 +112,7 @@
       @open-task="openTask"
     />
     <MarketingAnalytics v-else-if="activeTab === 'analytics'" />
+    <MarketingTrackingSheets v-else-if="activeTab === 'tracking'" :search="search" />
     </Transition>
 
     <!-- Overlays -->
@@ -157,6 +158,7 @@ import MarketingBoard from '@/components/marketing/MarketingBoard.vue'
 import MarketingCalendar from '@/components/marketing/MarketingCalendar.vue'
 import MarketingAnalytics from '@/components/marketing/MarketingAnalytics.vue'
 import MarketingBookings from '@/components/marketing/MarketingBookings.vue'
+import MarketingTrackingSheets from '@/components/marketing/MarketingTrackingSheets.vue'
 import TaskFormModal from '@/components/marketing/TaskFormModal.vue'
 import TaskDrawer from '@/components/marketing/TaskDrawer.vue'
 import DoneLinkModal from '@/components/marketing/DoneLinkModal.vue'
@@ -164,17 +166,31 @@ import SchedulePostModal from '@/components/marketing/SchedulePostModal.vue'
 import StageManagerModal from '@/components/marketing/StageManagerModal.vue'
 import MkSelect from '@/components/marketing/shared/MkSelect.vue'
 import DailyReportModal from '@/components/marketing/DailyReportModal.vue'
-import { MARKETING_TAB_KEY, MARKETING_TAB_IDS } from '@/composables/useLayoutNavigation.js'
+import { MARKETING_TAB_KEY, MARKETING_TAB_IDS, MARKETING_TRACKING_ALLOWED_USER_IDS } from '@/composables/useLayoutNavigation.js'
 import { MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, PLATFORMS, apiError, isoDate } from '@/config/marketingConfig.js'
 
 const BOARD_TABS = ['production', 'design', 'content']
 const route = useRoute()
 const router = useRouter()
 
+function readCanTrackingSheets() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || 'null')
+    if (!u) return false
+    if (u.roles?.includes('super_admin') || u.roles?.includes('admin')) return true
+    return MARKETING_TRACKING_ALLOWED_USER_IDS.includes(Number(u.id))
+  } catch {
+    return false
+  }
+}
+
 function storedTab() {
   try {
     const t = localStorage.getItem(MARKETING_TAB_KEY)
-    if (t && MARKETING_TAB_IDS.includes(t)) return t
+    if (t && MARKETING_TAB_IDS.includes(t)) {
+      if (t === 'tracking' && !readCanTrackingSheets()) return 'production'
+      return t
+    }
   } catch {
     /* ignore */
   }
@@ -186,6 +202,7 @@ const isBoard = computed(() => BOARD_TABS.includes(activeTab.value))
 
 const members = ref([])
 const canManage = ref(false)
+const canTrackingSheets = ref(readCanTrackingSheets())
 const stages = ref([])
 const boardLoading = ref(false)
 const search = ref('')
@@ -261,6 +278,7 @@ const HERO = {
   bookings: { title: 'Photoshoot Bookings', hint: 'Requests from the public booking page — call, confirm, turn into a card', icon: 'lucide:calendar-check-2', color: 'var(--color-primary, #733E87)' },
   calendar: { title: 'Content Calendar', hint: 'What goes out, where and when — tick posts as they go live', icon: 'lucide:calendar-days', color: '#9333ea' },
   analytics: { title: 'Marketing Analytics', hint: 'Throughput, workload, revisions and posting', icon: 'lucide:bar-chart-3', color: '#2563eb' },
+  tracking: { title: 'Tracking Sheets', hint: 'Blogs, OIA and All Properties landing pages — links, content docs and notes', icon: 'lucide:sheet', color: '#733E87' },
 }
 const heroTitle = computed(() => (isBoard.value ? `${MARKETING_CATEGORIES[activeTab.value].label} board` : HERO[activeTab.value].title))
 const heroHint = computed(() => (isBoard.value ? MARKETING_CATEGORIES[activeTab.value].hint : HERO[activeTab.value].hint))
@@ -307,6 +325,8 @@ async function loadMembers() {
     const { data } = await api.get('/marketing/members')
     members.value = data.members
     canManage.value = !!data.can_manage
+    canTrackingSheets.value = !!data.can_tracking_sheets
+    if (activeTab.value === 'tracking' && !canTrackingSheets.value) setTab('production')
   } catch {
     members.value = []
   }
@@ -352,6 +372,7 @@ function clearFilters() {
 // ---------- Tabs (driven by the header, like Deal types) ----------
 function setTab(tab) {
   if (!MARKETING_TAB_IDS.includes(tab) || tab === activeTab.value) return
+  if (tab === 'tracking' && !canTrackingSheets.value) return
   activeTab.value = tab
 }
 function onTabChange(e) { setTab(e?.detail) }

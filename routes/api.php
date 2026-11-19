@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Marketing\AnalyticsController as MarketingAnalytics
 use App\Http\Controllers\Api\Marketing\ReportController as MarketingReportController;
 use App\Http\Controllers\Api\Marketing\BookingController as MarketingBookingController;
 use App\Http\Controllers\Api\Marketing\MyBookingController as MarketingMyBookingController;
+use App\Http\Controllers\Api\Marketing\TrackingSheetController as MarketingTrackingSheetController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserRoleController;
 use App\Http\Controllers\Api\LeadController;
@@ -1179,6 +1180,12 @@ Route::middleware(['jwt.auth', 'role_or_permission:super_admin|marketing'])->pre
     Route::put('/calendar/{post}', [MarketingCalendarController::class, 'update']);
     Route::post('/calendar/{post}/posted', [MarketingCalendarController::class, 'togglePosted']);
     Route::delete('/calendar/{post}', [MarketingCalendarController::class, 'destroy']);
+
+    // Tracking Sheets — super_admin / admin / user 58 (enforced in controller)
+    Route::get('/tracking-sheets', [MarketingTrackingSheetController::class, 'index']);
+    Route::post('/tracking-sheets', [MarketingTrackingSheetController::class, 'store']);
+    Route::put('/tracking-sheets/{entry}', [MarketingTrackingSheetController::class, 'update']);
+    Route::delete('/tracking-sheets/{entry}', [MarketingTrackingSheetController::class, 'destroy']);
 
     Route::middleware('role:super_admin|admin')->group(function () {
         Route::post('/stages', [MarketingStageController::class, 'store']);
