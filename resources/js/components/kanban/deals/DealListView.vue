@@ -1,5 +1,10 @@
 <template>
-  <div class="deal-list" :class="{ 'deal-list--mobile': isMobile }">
+  <div
+    ref="rootRef"
+    class="deal-list"
+    :class="{ 'deal-list--mobile': isMobile }"
+    :style="fitHeight ? { height: fitHeight + 'px', maxHeight: fitHeight + 'px', flex: '0 0 auto' } : null"
+  >
     <div class="deal-list__toolbar">
       <div
         v-if="stageTabs.length"
@@ -285,7 +290,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import axios, { getApiErrorMessage } from '@/plugins/axios'
 import { resolveDealStageStyle } from '@/config/dealStageStyles.js'
 
@@ -815,6 +820,53 @@ watch(
   () => quick.stage_id,
   () => fetchDeals(true)
 )
+
+// ---- Fit the list to the viewport: from its own top edge down to the window bottom.
+// CSS-only heights depended on guessing the header/toolbar offsets above the list and
+// kept ending below the fold (bottom pager cut off). Measuring is exact on every layout.
+const rootRef = ref(null)
+const fitHeight = ref(null)
+const FIT_BOTTOM_GAP = 10
+const FIT_MIN_HEIGHT = 320
+let fitFrame = 0
+let fitObserver = null
+
+function fitToViewport() {
+  cancelAnimationFrame(fitFrame)
+  fitFrame = requestAnimationFrame(() => {
+    const el = rootRef.value
+    if (!el) return
+    const viewport = window.visualViewport?.height || window.innerHeight
+    // Document-relative top, so a slightly scrolled page doesn't shrink the list.
+    const top = el.getBoundingClientRect().top + (window.scrollY || 0)
+    fitHeight.value = Math.max(FIT_MIN_HEIGHT, Math.floor(viewport - top - FIT_BOTTOM_GAP))
+  })
+}
+
+onMounted(() => {
+  fitToViewport()
+  window.addEventListener('resize', fitToViewport)
+  window.visualViewport?.addEventListener('resize', fitToViewport)
+  // Content above the list (filter chips, banners) can change height — refit then too.
+  if (typeof ResizeObserver !== 'undefined' && rootRef.value?.parentElement) {
+    fitObserver = new ResizeObserver(fitToViewport)
+    let node = rootRef.value.parentElement
+    for (let i = 0; node && i < 3; i++, node = node.parentElement) {
+      for (const sibling of node.children) {
+        if (!sibling.contains(rootRef.value)) fitObserver.observe(sibling)
+      }
+    }
+  }
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(fitFrame)
+  window.removeEventListener('resize', fitToViewport)
+  window.visualViewport?.removeEventListener('resize', fitToViewport)
+  fitObserver?.disconnect()
+})
+
+watch(() => props.filters, () => nextTick(fitToViewport), { deep: true })
 
 onMounted(async () => {
   await loadFilterOptions()
