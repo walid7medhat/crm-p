@@ -45,7 +45,7 @@ class TrackingSheetImporter
 
     protected function importBlogs(string $path): int
     {
-        $wb = IOFactory::load($path);
+        $wb = $this->loadWorkbook($path);
         $ws = $wb->getActiveSheet();
         $rows = $ws->toArray(null, true, true, false);
         $count = 0;
@@ -93,7 +93,7 @@ class TrackingSheetImporter
 
     protected function importLanding(string $path, string $category): int
     {
-        $wb = IOFactory::load($path);
+        $wb = $this->loadWorkbook($path);
         $count = 0;
 
         foreach ($wb->getWorksheetIterator() as $ws) {
@@ -294,6 +294,25 @@ class TrackingSheetImporter
         }
 
         return $count;
+    }
+
+    /**
+     * PhpSpreadsheet emits an unsuppressed simplexml warning for empty optional
+     * parts inside some workbooks (Reader/Xlsx::loadZipNonamespace). The load
+     * succeeds, but Laravel promotes warnings to exceptions, so swallow just those.
+     */
+    protected function loadWorkbook(string $path): \PhpOffice\PhpSpreadsheet\Spreadsheet
+    {
+        set_error_handler(
+            fn (int $errno, string $errstr) => str_starts_with($errstr, 'simplexml_load_string()'),
+            E_WARNING
+        );
+
+        try {
+            return IOFactory::load($path);
+        } finally {
+            restore_error_handler();
+        }
     }
 
     protected function hyperlink(Worksheet $ws, string $col, int $row): ?string
