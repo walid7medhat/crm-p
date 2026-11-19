@@ -278,10 +278,11 @@ class RequestMonitorService
         $byUser = [];
         $usersByIp = [];
         $endpointMs = [];
+        $endpointDb = [];
 
         foreach ($files as $file) {
             $reachedCutoff = false;
-            $this->eachLineBackwards($file, function (string $line) use ($cutoffStr, &$allMs, &$byUser, &$usersByIp, &$reachedCutoff, &$endpointMs) {
+            $this->eachLineBackwards($file, function (string $line) use ($cutoffStr, &$allMs, &$byUser, &$usersByIp, &$reachedCutoff, &$endpointMs, &$endpointDb) {
                 if (strlen($line) < 22 || $line[0] !== '[') {
                     return true;
                 }
@@ -302,6 +303,17 @@ class RequestMonitorService
                 $ms = (float) $ctx['ms'];
                 $endpointKey = strtoupper((string) ($ctx['method'] ?? 'GET')).' /'.ltrim($mm[1], '/');
                 $endpointMs[$endpointKey][] = $ms;
+                if (isset($ctx['db_ms'])) {
+                    $db = &$endpointDb[$endpointKey];
+                    $db['n'] = ($db['n'] ?? 0) + 1;
+                    $db['db_ms'] = ($db['db_ms'] ?? 0) + (float) $ctx['db_ms'];
+                    $db['queries'] = ($db['queries'] ?? 0) + (int) ($ctx['db_queries'] ?? 0);
+                    if (! empty($ctx['slowest_sql']) && (float) ($ctx['slowest_ms'] ?? 0) > ($db['slowest_ms'] ?? 0)) {
+                        $db['slowest_ms'] = (float) $ctx['slowest_ms'];
+                        $db['slowest_sql'] = (string) $ctx['slowest_sql'];
+                    }
+                    unset($db);
+                }
 
                 if (! str_contains($mm[1], 'stages-with-leads')) {
                     return true;
@@ -371,12 +383,18 @@ class RequestMonitorService
         $endpoints = [];
         foreach ($endpointMs as $key => $list) {
             sort($list);
+            $db = $endpointDb[$key] ?? null;
             $endpoints[] = [
                 'route' => $key,
                 'count' => count($list),
                 'median_ms' => (int) round($this->percentile($list, 0.5)),
                 'p90_ms' => (int) round($this->percentile($list, 0.9)),
                 'max_ms' => (int) round(end($list)),
+                // Averages over requests logged with DB stats (older log lines have none).
+                'avg_db_ms' => $db ? (int) round($db['db_ms'] / $db['n']) : null,
+                'avg_queries' => $db ? (int) round($db['queries'] / $db['n']) : null,
+                'slowest_query_ms' => $db && isset($db['slowest_ms']) ? (int) round($db['slowest_ms']) : null,
+                'slowest_query' => $db['slowest_sql'] ?? null,
             ];
         }
         usort($endpoints, fn ($a, $b) => $b['p90_ms'] <=> $a['p90_ms']);

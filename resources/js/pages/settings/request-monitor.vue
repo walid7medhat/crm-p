@@ -251,6 +251,8 @@
                   <th class="rm-num">Typical</th>
                   <th class="rm-num">Slow (1 in 10)</th>
                   <th class="rm-num">Slowest</th>
+                  <th class="rm-num" title="Average time spent waiting on the database per request">Database</th>
+                  <th class="rm-num" title="Average number of database queries per request">Queries</th>
                 </tr>
               </thead>
               <tbody>
@@ -258,11 +260,16 @@
                   <td>
                     <div class="rm-name">{{ friendly(e.route).label }}</div>
                     <div class="rm-dim rm-mono">{{ e.route }}</div>
+                    <div v-if="e.slowest_query" class="rm-dim rm-mono" style="white-space: normal; word-break: break-word; margin-top: 4px">
+                      Slowest query ({{ fmtMs(e.slowest_query_ms) }}): {{ e.slowest_query }}
+                    </div>
                   </td>
                   <td class="rm-num">{{ fmtNum(e.count) }}</td>
                   <td class="rm-num" :class="msTextClass(e.median_ms)">{{ fmtMs(e.median_ms) }}</td>
                   <td class="rm-num" :class="msTextClass(e.p90_ms)">{{ fmtMs(e.p90_ms) }}</td>
                   <td class="rm-num" :class="msTextClass(e.max_ms)">{{ fmtMs(e.max_ms) }}</td>
+                  <td class="rm-num">{{ e.avg_db_ms == null ? '—' : fmtMs(e.avg_db_ms) }}</td>
+                  <td class="rm-num">{{ e.avg_queries == null ? '—' : fmtNum(e.avg_queries) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -359,6 +366,8 @@ const FRIENDLY = [
   [/^GET \/api\/leads$/, 'Lead list / search', true],
   [/^POST \/api\/leads$/, 'Create a lead'],
   [/^(POST|PUT|PATCH) \/api\/leads/, 'Create / update lead'],
+  [/dashboard\/studio/, 'Dashboard home', true],
+  [/stages\/kanban\/stage-counts/, 'Board counts + temp/call chips'],
   [/deals\/grouped-by-stage/, 'Deals board', true],
   [/deals\/get-more\/by-stage/, 'Deals board: load more'],
   [/^GET \/api\/deals\/\{(id|deal)\}$/, 'Open a deal'],
