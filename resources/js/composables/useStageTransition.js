@@ -157,13 +157,14 @@ export function useStageTransition() {
       }
       if (value !== null && value !== undefined && value !== '') {
         if (key === 'commission_distribution' && typeof value === 'object') {
-          // Admin / super_admin only — other roles must not overwrite metadata
+          // super_admin / admin / accountant only (= DealCommissionDistribution::viewerCanSee()) —
+          // other roles must not overwrite metadata
           try {
             const raw = JSON.parse(localStorage.getItem('user') || '{}')
             const roles = (raw?.roles || []).map((r) =>
               String(typeof r === 'string' ? r : r?.name).toLowerCase()
             )
-            if (roles.includes('super_admin') || roles.includes('admin')) {
+            if (roles.includes('super_admin') || roles.includes('admin') || roles.includes('accountant')) {
               formData.append(key, JSON.stringify(value))
             }
           } catch (_) { /* skip */ }

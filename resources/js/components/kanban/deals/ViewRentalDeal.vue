@@ -510,15 +510,15 @@
         <div v-else class="row g-3">
           <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Deal Total Commission %</label>
-              <p class="info-value mb-0">{{ val(deal.deal_commission) }}</p>
+              <label class="info-label">Deal Total Amount</label>
+              <p class="info-value mb-0">{{ formatDealAmount(deal.deal_total_amount, deal.currency) }}</p>
             </div>
           </div>
-           <div class="col-md-6">
+          <div class="col-md-6">
             <div class="info-group">
-              <label class="info-label">Deal Total Amount</label>
-              <p class="info-value mb-0">{{ val(deal.deal_total_amount) }}</p>
-            </div> 
+              <label class="info-label">Deal Total Commission %</label>
+              <p class="info-value mb-0">{{ formatDealPercent(deal.deal_commission) }}</p>
+            </div>
           </div>
           <div v-if="canManageCommissionDistribution" class="col-12">
             <CommissionDistributionReadonly :distribution="deal.commission_distribution" />
@@ -545,6 +545,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { dealUnitNo, dealPropertyType } from '@/utils/dealCompleteness'
 import { useDealCompleteness } from '@/composables/useDealCompleteness'
+import { formatDealAmount, formatDealPercent } from '@/utils/dealMoney'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
 import CommissionDistributionReadonly from './CommissionDistributionReadonly.vue'

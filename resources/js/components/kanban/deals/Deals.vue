@@ -2639,9 +2639,9 @@ defineExpose({
   display: flex;
   flex-direction: column;
   flex: 1 1 0;
-  /* Keep a viewport floor so list mode never paints as a blank shell if a
-     parent in the flex chain lacks an explicit height. */
-  min-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 5rem);
+  /* Height comes from .kanban-content-area--deals-list (kanban_deal.vue), which is now
+     definite; a viewport min-height here would push past it and break inner scrolling. */
+  min-height: 0;
   height: 100%;
   max-height: 100%;
   overflow: hidden;

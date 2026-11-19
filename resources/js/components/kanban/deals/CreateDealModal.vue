@@ -968,13 +968,13 @@ async function submitForm() {
           }
         })
       } else if (key === 'commission_distribution' && typeof value === 'object') {
-        // Admin / super_admin only
+        // super_admin / admin / accountant only (= DealCommissionDistribution::viewerCanSee())
         try {
           const raw = JSON.parse(localStorage.getItem('user') || '{}')
           const roles = (raw?.roles || []).map((r) =>
             String(typeof r === 'string' ? r : r?.name).toLowerCase()
           )
-          if (roles.includes('super_admin') || roles.includes('admin')) {
+          if (roles.includes('super_admin') || roles.includes('admin') || roles.includes('accountant')) {
             submitData.append(key, JSON.stringify(value))
           }
         } catch (_) { /* skip */ }

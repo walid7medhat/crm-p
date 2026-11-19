@@ -1296,10 +1296,14 @@ const $showNotification = (message, type = 'info') => {
     background: transparent;
 }
 
+/* Definite height: the list scrolls inside .deal-list__scroll. With only a min-height
+   (+ height:100% of an auto-height parent) the list grew to its full content height and
+   overflow:hidden clipped the rows below the fold — nothing could scroll. */
 .kanban-content-area--deals-list {
     flex: 1 1 0;
-    min-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 4.5rem);
-    height: 100%;
+    min-height: 0;
+    height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 4.5rem);
+    max-height: calc(100dvh - var(--app-topbar-height, 3.75rem) - 4.5rem);
     overflow: hidden !important;
     display: flex;
     flex-direction: column;
@@ -1639,6 +1643,14 @@ const $showNotification = (message, type = 'info') => {
     min-height: calc(100dvh - 56px);
     border-radius: 0;
     margin: 0 -4px;
+}
+
+/* Mobile deal list: the min-height above would beat the definite height and bring back
+   the "grows past the screen, can't scroll" bug. */
+.kanban-shell--mobile.kanban-content-area--deals-list {
+    min-height: 0;
+    height: calc(100dvh - 56px - 3.5rem);
+    max-height: calc(100dvh - 56px - 3.5rem);
 }
 
 .kanban-shell--mobile :deep(.kanban-tabs-container > .nav-tabs) {

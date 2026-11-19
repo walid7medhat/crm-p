@@ -363,7 +363,7 @@ import DealCommentList from './DealCommentList.vue'
 import ResponsiblePersonSection from './ResponsiblePersonSection.vue'
 import DealLeadInformationSection from './DealLeadInformationSection.vue'
 import ViewLeadModal from '../viewLead/ViewLeadModal.vue'
-import axios from '@/plugins/axios'
+import axios, { getApiErrorMessage } from '@/plugins/axios'
 import { enrichDealStage, getDealStagePillStyle } from '@/config/dealStageStyles.js'
 import { useStageTransition } from '@/composables/useStageTransition'
 import { normalizeLanguageSelection, hasLanguageSelection } from '@/composables/useLanguageMultiSelect'
@@ -1275,6 +1275,9 @@ async function saveEditDeal() {
     if (err?.response?.status === 422) {
       editShowErrors.value = true
       editFieldErrors.value = err.response?.data?.errors ?? {}
+    } else {
+      // 403 / 500 / network used to fail silently — the modal just stayed open.
+      window.$showNotification?.(getApiErrorMessage(err, 'Failed to save deal'), 'error')
     }
     console.error('Failed to save deal', err)
   } finally {

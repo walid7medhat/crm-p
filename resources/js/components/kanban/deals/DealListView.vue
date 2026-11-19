@@ -213,6 +213,74 @@
       </article>
       </div>
     </div>
+
+    <nav
+      v-if="meta.total > 0"
+      class="deal-list__footer"
+      aria-label="Deal list pages"
+    >
+      <label class="deal-list__per-page">
+        <span>Per page</span>
+        <select :value="perPage" :disabled="loading" @change="changePerPage($event.target.value)">
+          <option v-for="n in PER_PAGE_OPTIONS" :key="'pp-' + n" :value="n">{{ n }}</option>
+        </select>
+      </label>
+
+      <div v-if="meta.last_page > 1" class="deal-list__pages">
+        <button
+          type="button"
+          class="deal-list__page-btn"
+          :disabled="page <= 1 || loading"
+          aria-label="First page"
+          @click="goToPage(1)"
+        >
+          <iconify-icon icon="lucide:chevrons-left" />
+        </button>
+        <button
+          type="button"
+          class="deal-list__page-btn"
+          :disabled="page <= 1 || loading"
+          aria-label="Previous page"
+          @click="goToPage(page - 1)"
+        >
+          <iconify-icon icon="lucide:chevron-left" />
+        </button>
+        <template v-for="(item, i) in pageItems" :key="'pg-' + i + '-' + item">
+          <span v-if="item === '…'" class="deal-list__page-gap" aria-hidden="true">…</span>
+          <button
+            v-else
+            type="button"
+            class="deal-list__page-btn"
+            :class="{ 'is-active': item === page }"
+            :aria-current="item === page ? 'page' : undefined"
+            :disabled="loading"
+            @click="goToPage(item)"
+          >
+            {{ item }}
+          </button>
+        </template>
+        <button
+          type="button"
+          class="deal-list__page-btn"
+          :disabled="page >= meta.last_page || loading"
+          aria-label="Next page"
+          @click="goToPage(page + 1)"
+        >
+          <iconify-icon icon="lucide:chevron-right" />
+        </button>
+        <button
+          type="button"
+          class="deal-list__page-btn"
+          :disabled="page >= meta.last_page || loading"
+          aria-label="Last page"
+          @click="goToPage(meta.last_page)"
+        >
+          <iconify-icon icon="lucide:chevrons-right" />
+        </button>
+      </div>
+
+      <span class="deal-list__footer-count">{{ rangeStart }}–{{ rangeEnd }} of {{ meta.total }}</span>
+    </nav>
   </div>
 </template>
 
@@ -244,7 +312,16 @@ const deals = ref([])
 const loading = ref(false)
 const error = ref(null)
 const page = ref(1)
-const perPage = 15
+const PER_PAGE_OPTIONS = [15, 30, 50]
+const PER_PAGE_KEY = 'dealList.perPage'
+const perPage = ref((() => {
+  try {
+    const saved = Number(localStorage.getItem(PER_PAGE_KEY))
+    return PER_PAGE_OPTIONS.includes(saved) ? saved : 15
+  } catch {
+    return 15
+  }
+})())
 const meta = reactive({ total: 0, current_page: 1, last_page: 1 })
 const quick = reactive({
   stage_id: '',
@@ -255,13 +332,27 @@ const stageOptions = ref([])
 let abortController = null
 let fetchSeq = 0
 
-const rangeStart = computed(() => (meta.total ? (page.value - 1) * perPage + 1 : 0))
-const rangeEnd = computed(() => Math.min(page.value * perPage, meta.total || 0))
+const rangeStart = computed(() => (meta.total ? (page.value - 1) * perPage.value + 1 : 0))
+const rangeEnd = computed(() => Math.min(page.value * perPage.value, meta.total || 0))
 const showPager = computed(() => {
   const last = Number(meta.last_page || 1)
   const total = Number(meta.total || 0)
   // Also show when the page is full — meta may be missing/malformed.
-  return last > 1 || total > perPage || deals.value.length >= perPage
+  return last > 1 || total > perPage.value || deals.value.length >= perPage.value
+})
+
+/** Page buttons: 1 … (current ± 2) … last */
+const pageItems = computed(() => {
+  const last = Math.max(1, Number(meta.last_page || 1))
+  const cur = Math.min(Math.max(1, page.value), last)
+  const from = Math.max(2, cur - 2)
+  const to = Math.min(last - 1, cur + 2)
+  const items = [1]
+  if (from > 2) items.push('…')
+  for (let p = from; p <= to; p++) items.push(p)
+  if (to < last - 1) items.push('…')
+  if (last > 1) items.push(last)
+  return items
 })
 
 const stageTabs = computed(() => {
@@ -367,7 +458,7 @@ function stageTabStyle(tab) {
 function buildParams() {
   const params = {
     deal_type: props.dealType || 'primary',
-    per_page: perPage,
+    per_page: perPage.value,
     page: page.value,
     order_by: 'created_at',
     order_dir: 'desc',
@@ -415,7 +506,7 @@ async function fetchDeals(resetPage = false) {
     const current = Number(m.current_page ?? root.current_page ?? page.value ?? 1)
     let last = Number(m.last_page ?? root.last_page ?? 0)
     if (!last) {
-      last = Math.max(1, Math.ceil(total / perPage) || 1)
+      last = Math.max(1, Math.ceil(total / perPage.value) || 1)
     }
     meta.total = total
     meta.current_page = current
@@ -483,6 +574,23 @@ async function goNext() {
   if (page.value >= meta.last_page) return
   page.value += 1
   await fetchDeals(false)
+  scrollListToTop()
+}
+
+async function goToPage(n) {
+  const target = Math.min(Math.max(1, Number(n) || 1), Math.max(1, Number(meta.last_page || 1)))
+  if (target === page.value) return
+  page.value = target
+  await fetchDeals(false)
+  scrollListToTop()
+}
+
+async function changePerPage(value) {
+  const n = Number(value)
+  if (!PER_PAGE_OPTIONS.includes(n) || n === perPage.value) return
+  perPage.value = n
+  try { localStorage.setItem(PER_PAGE_KEY, String(n)) } catch { /* private mode */ }
+  await fetchDeals(true)
   scrollListToTop()
 }
 
@@ -952,6 +1060,108 @@ defineExpose({
   color: #64748b;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Bottom pager — pinned under the scroll area (flex: 0 0 auto in the column). */
+.deal-list__footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 4px 4px;
+  border-top: 1px solid var(--color-border, #e8e6ee);
+}
+
+.deal-list__per-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.deal-list__per-page select {
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #e8e6ee);
+  background: #fff;
+  color: var(--color-text-primary, #171717);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.deal-list__pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.deal-list__page-btn {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e8e6ee);
+  background: #fff;
+  color: var(--color-text-primary, #171717);
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.deal-list__page-btn:hover:not(:disabled):not(.is-active) {
+  border-color: var(--color-primary, #733e87);
+  color: var(--color-primary, #733e87);
+}
+
+.deal-list__page-btn.is-active {
+  background: var(--color-primary, #733e87);
+  border-color: var(--color-primary, #733e87);
+  color: #fff;
+  cursor: default;
+}
+
+.deal-list__page-btn:disabled:not(.is-active) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.deal-list__page-gap {
+  min-width: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.deal-list__footer-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .deal-list__footer {
+    justify-content: center;
+  }
+
+  .deal-list__footer-count {
+    display: none;
+  }
 }
 
 @media (max-width: 900px) {
