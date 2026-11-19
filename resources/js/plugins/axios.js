@@ -164,13 +164,16 @@ function attachAuthInterceptor(client) {
       (/\/stages(?:\?|$)/.test(url) && !url.includes('stages-with-leads'))
     // Global / smart search must stay interactive while the kanban board is loading.
     const isSmartSearch = url.includes('smart-search')
+    // Card field settings are part of painting the board (without them cards are title-only).
+    const isBoardCardSettings = /\/settings\/kanban(?:\?|$)/.test(url)
     // The pool list must not wait behind the kanban board request, or the cards
     // stay blank until that board call finishes (often only after a refresh).
     const isDeferrableShell =
       !url.includes('stages-with-leads') &&
       !isLeadPoolPage &&
       !isLeadOpenCritical &&
-      !isSmartSearch
+      !isSmartSearch &&
+      !isBoardCardSettings
     if (isDeferrableShell) {
       await waitForLeadBoardPriority()
       // Allow prioritizeLeadOpen() to free HTTP slots occupied by SAC/dashboard/config.

@@ -2864,38 +2864,69 @@ const colors = ['#7BD3EA', '#E3DA32', '#F2C934', '#8EC82F', '#00A74C']
 function getColorByIndex(index) {
     return colors[index % colors.length]
 }
+// Card field settings decide which details a card shows. Without them every card renders
+// title-only until /settings/kanban returns, so keep the last copy and paint with it at once.
+const KANBAN_CARD_SETTINGS_CACHE_PREFIX = 'kanban_card_settings_v1'
+function cardSettingsCacheKey() {
+    const uid = user.value?.id ?? getUserFromStorage()?.id ?? 'anon'
+    return `${KANBAN_CARD_SETTINGS_CACHE_PREFIX}:${uid}`
+}
+
+function applyCardSettings(data) {
+    if (!data || typeof data !== 'object') return
+    cardFields.value = data.card_fields || []
+    allFields.value = data.all_fields || []
+    const apiBehavior = data.card_behavior || {}
+    const localBehaviorRaw = localStorage.getItem(KANBAN_CARD_BEHAVIOR_STORAGE_KEY)
+    let localBehavior = {}
+    try {
+        localBehavior = localBehaviorRaw ? JSON.parse(localBehaviorRaw) : {}
+    } catch {
+        localBehavior = {}
+    }
+    cardBehavior.value = {
+        ...cardBehavior.value,
+        ...apiBehavior,
+        ...localBehavior,
+    }
+    if (!Number.isFinite(Number(cardBehavior.value.qualifiedStartOrder)) || Number(cardBehavior.value.qualifiedStartOrder) < 1) {
+        cardBehavior.value.qualifiedStartOrder = 4
+    }
+    const allKeys = allFields.value.map(f => f.key)
+    if (!Array.isArray(cardBehavior.value.qualifiedFieldKeys) || cardBehavior.value.qualifiedFieldKeys.length === 0) {
+        cardBehavior.value.qualifiedFieldKeys = [...allKeys]
+    } else {
+        cardBehavior.value.qualifiedFieldKeys = cardBehavior.value.qualifiedFieldKeys.filter(key => allKeys.includes(key))
+    }
+}
+
+// Same tick as the cached board paint (loadCachedColumns) so cards show full details at once.
+try {
+    const cachedSettings = JSON.parse(localStorage.getItem(cardSettingsCacheKey()) || 'null')
+    if (cachedSettings) applyCardSettings(cachedSettings)
+} catch {
+    /* ignore — the API call below fills it */
+}
+
 const fetchCardSettings = async () => {
     try {
         const response = await api.get('/settings/kanban')
         const data = response.data.data
-        cardFields.value = data.card_fields || []
-        allFields.value = data.all_fields || []
-        const apiBehavior = data.card_behavior || {}
-        const localBehaviorRaw = localStorage.getItem(KANBAN_CARD_BEHAVIOR_STORAGE_KEY)
-        let localBehavior = {}
+        applyCardSettings(data)
         try {
-            localBehavior = localBehaviorRaw ? JSON.parse(localBehaviorRaw) : {}
+            localStorage.setItem(cardSettingsCacheKey(), JSON.stringify({
+                card_fields: data?.card_fields || [],
+                all_fields: data?.all_fields || [],
+                card_behavior: data?.card_behavior || {},
+            }))
         } catch {
-            localBehavior = {}
-        }
-        cardBehavior.value = {
-            ...cardBehavior.value,
-            ...apiBehavior,
-            ...localBehavior,
-        }
-        if (!Number.isFinite(Number(cardBehavior.value.qualifiedStartOrder)) || Number(cardBehavior.value.qualifiedStartOrder) < 1) {
-            cardBehavior.value.qualifiedStartOrder = 4
-        }
-        const allKeys = allFields.value.map(f => f.key)
-        if (!Array.isArray(cardBehavior.value.qualifiedFieldKeys) || cardBehavior.value.qualifiedFieldKeys.length === 0) {
-            cardBehavior.value.qualifiedFieldKeys = [...allKeys]
-        } else {
-            cardBehavior.value.qualifiedFieldKeys = cardBehavior.value.qualifiedFieldKeys.filter(key => allKeys.includes(key))
+            /* storage full / private mode — just no instant paint next time */
         }
     } catch (error) {
         console.error('Error fetching card settings:', error)
     }
 }
+
 function buildLeadSearchApiParams(q = {}) {
     const params = {
         ...(q.search && { search: q.search }),
@@ -4118,6 +4149,8 @@ let unsubscribeLeadViewUpdated = null
 onMounted(async () => {
     unsubscribeLeadViewUpdated = onLeadViewUpdated(handleLeadUpdatedFromModal)
     markKanbanReady()
+    // Start with the board (not after it) — cards need these to show their details.
+    fetchCardSettings()
 
     if (hadCachedBoard || paintedSettledPrefetch) {
         markKanbanReady()
@@ -4132,7 +4165,6 @@ onMounted(async () => {
     }
 
     fetchResponsiblePersons()
-    fetchCardSettings()
 
 
   setupRevertAlertListener();
