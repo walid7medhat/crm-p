@@ -183,7 +183,7 @@ class DealResource extends JsonResource
             'agent_share' => $this->agent_share,
             'company_share' => $this->company_share,
             'commission_distribution' => \App\Support\DealCommissionDistribution::viewerCanSee()
-                ? \App\Support\DealCommissionDistribution::fromDeal($this->resource)
+                ? \App\Support\DealCommissionDistribution::forDisplay($this->resource)
                 : null,
 
             // Relationships
