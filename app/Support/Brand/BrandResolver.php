@@ -109,8 +109,8 @@ class BrandResolver
         $mode = $access['mode'] ?? 'open';
         $brandKey = (string) ($brand['key'] ?? 'oia');
 
-        // Platform Super Admin is the one identity shared by both companies.
-        if (self::isSuperAdmin($user)) {
+        // Platform Super Admin (and the configured shared users, e.g. #30) work on both companies.
+        if (self::isCrossBrandUser($user)) {
             return true;
         }
 
@@ -151,6 +151,19 @@ class BrandResolver
     public static function isSuperAdmin($user): bool
     {
         return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
+    }
+
+    /** Non–super-admin users allowed on both companies (config brands.shared_user_ids, default #30). */
+    public static function isSharedUserId(?int $userId): bool
+    {
+        return $userId !== null
+            && in_array($userId, array_map('intval', (array) config('brands.shared_user_ids', [])), true);
+    }
+
+    /** Super admin or a shared user — may use either company's host. */
+    public static function isCrossBrandUser($user): bool
+    {
+        return $user && (self::isSuperAdmin($user) || self::isSharedUserId((int) $user->id));
     }
 
     /**

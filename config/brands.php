@@ -21,6 +21,16 @@ return [
     'super_admin_cross_brand' => (bool) env('BRAND_SUPER_ADMIN_CROSS_BRAND', false),
 
     /*
+    | Users (besides super_admin) who may sign in on BOTH companies' hosts.
+    | On the Luxvant host their team is the whole Luxvant company, so they see
+    | all Luxvant data the way they see all OIA data on the OIA host.
+    */
+    'shared_user_ids' => array_values(array_filter(array_map(
+        'intval',
+        explode(',', (string) env('BRAND_SHARED_USER_IDS', '30'))
+    ))),
+
+    /*
     | Reject hosts that are not mapped to any brand when true (production).
     | Local / MAMP hosts should stay in the map or leave this false in .env.
     */
