@@ -645,6 +645,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
+import { dealUnitNo, dealPropertyType } from '@/utils/dealCompleteness'
 import DealDocumentsReadonly from './DealDocumentsReadonly.vue'
 import InlineSectionEditor from './InlineSectionEditor.vue'
 import CommissionDistributionReadonly from './CommissionDistributionReadonly.vue'
@@ -779,8 +780,8 @@ const missingSummary = computed(() => {
   const checks = [
     [d.deal_name, 'Deal Name'],
     [d.source, 'Source'],
-    [d.unit_no, 'Unit No'],
-    [d.property_type?.name, 'Property Type'],
+    [dealUnitNo(d), 'Unit No'],
+    [dealPropertyType(d), 'Property Type'],
     [buyer.first_name, 'Buyer First Name'],
     [buyer.last_name, 'Buyer Last Name'],
     [buyer.phone, 'Buyer Phone'],
