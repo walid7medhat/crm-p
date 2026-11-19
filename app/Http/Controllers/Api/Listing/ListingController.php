@@ -3910,15 +3910,36 @@ public function watermark(Request $request)
         abort(404);
     }
 
+    // Brand watermark: OIA mark on OIA host, Luxvant logo on Luxvant host.
+    $watermarkPath = \App\Support\Brand\BrandIsolation::watermarkAbsolutePath();
+
+    // Rendered-output disk cache. Authorization above still runs on every request;
+    // the key changes whenever the source photo, the brand or its watermark changes.
+    // Bump the 'v1' prefix when the rendering pipeline itself changes (rotation, size, quality).
+    $cacheKey = sha1(implode('|', [
+        'v1',
+        (string) \App\Support\Brand\BrandIsolation::trustedKey(),
+        $path,
+        (string) @filemtime($fullPath),
+        (string) @filesize($fullPath),
+        (string) ($watermarkPath ? @filemtime($watermarkPath) : 'none'),
+    ]));
+    $cacheFile = storage_path('app/watermark-cache/'.substr($cacheKey, 0, 2).'/'.$cacheKey.'.webp');
+    $cacheHeaders = [
+        'Content-Type' => 'image/webp',
+        'Cache-Control' => 'public, max-age=86400',
+    ];
+
+    if (is_file($cacheFile)) {
+        return response()->file($cacheFile, $cacheHeaders);
+    }
+
     try {
         $image = \App\Helpers\ImageHelper::autoOrient(Image::make($fullPath));
     } catch (\Throwable $e) {
         Log::warning('watermark decode failed', ['path' => $path, 'error' => $e->getMessage()]);
         abort(404);
     }
-
-    // Brand watermark: OIA mark on OIA host, Luxvant logo on Luxvant host.
-    $watermarkPath = \App\Support\Brand\BrandIsolation::watermarkAbsolutePath();
 
     if ($watermarkPath !== null) {
         try {
@@ -3938,9 +3959,23 @@ public function watermark(Request $request)
         }
     }
 
-    return $image->response('webp', 80, [
-        'Cache-Control' => 'public, max-age=86400',
-    ]);
+    $encoded = (string) $image->encode('webp', 80);
+
+    try {
+        $dir = dirname($cacheFile);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        // Write to a temp file then rename so concurrent requests never read a partial image.
+        $tmp = $cacheFile.'.'.bin2hex(random_bytes(4)).'.tmp';
+        if (@file_put_contents($tmp, $encoded) !== false) {
+            @rename($tmp, $cacheFile) || @unlink($tmp);
+        }
+    } catch (\Throwable $e) {
+        Log::debug('watermark cache write skipped', ['error' => $e->getMessage()]);
+    }
+
+    return response($encoded, 200, $cacheHeaders);
 }
 
 /**
