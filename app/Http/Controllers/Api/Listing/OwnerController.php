@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Http\Requests\Listing\OwnerRequest;
 use App\Http\Resources\Listing\OwnerResource;
 use App\Models\Owner;
+use App\Support\Listing\OwnerVisibility;
 use App\Models\Area;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,7 @@ public function index(Request $request): JsonResponse
         // Per-user version makes the cache key change whenever clearOwnersCacheFor() runs,
         // so file/database drivers (no tag support) still invalidate correctly.
         $version = self::getUserCacheVersion($userId);
-        $cacheKey = self::CACHE_PREFIX . 'user_' . $userId . '_v' . $version . '_index_' . md5(serialize($request->all()));
+        $cacheKey = self::CACHE_PREFIX . 'user_' . $userId . '_v' . $version . '_' . OwnerVisibility::scopeKey($user) . '_index_' . md5(serialize($request->all()));
 
         // استخدام cache tags إذا كان مدعوماً
         if (method_exists(Cache::getStore(), 'tags')) {
@@ -88,9 +89,8 @@ public static function bumpUserCacheVersion(int $userId): void
         $user = Auth::user();
         
         $query = Owner::query();
-        if(!( $user->id==30 || $user->hasRole('super_admin') || ($user->hasRole('manager') && $user->listing_team == 1))){
-                $query->where('added_by', $user->id);
-        }
+        // super_admin / #30 → all; `owners-view-branch` → their branch; others → their own.
+        OwnerVisibility::constrainOwners($query, $user);
                      
         // Search filter
         if ($request->has('search') && $request->search) {
@@ -135,7 +135,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         $user = Auth::user();
         
         // Check permissions
-        if ($owner->added_by !== $user->id && !$user->hasRole('super_admin') && !($user->hasRole('manager') && $user->listing_team==1)) {
+        if (! OwnerVisibility::canSeeOwner($user, $owner)) {
             return ApiResponse::error('Access denied', 403);
         }
         
@@ -250,7 +250,7 @@ public function getOwnerProperties(Owner $owner): JsonResponse
         $user = Auth::user();
         
         // If user has sales role, check if they added this owner
-        if ($owner->added_by !== $user->id && $user->id !=30 && !$user->hasRole(['super_admin']) && !($user->hasRole('manager') && $user->listing_team==1)) {
+        if (! OwnerVisibility::canSeeOwner($user, $owner)) {
             return ApiResponse::error('Access denied', 403);
         }
         

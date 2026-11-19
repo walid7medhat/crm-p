@@ -628,15 +628,20 @@ SQL;
             }
             if ($request->filled('search')) {
                 $search = trim($request->search);
-                $query->where(function ($q) use ($search) {
+                $viewer = auth()->user();
+                $query->where(function ($q) use ($search, $viewer) {
                     $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('reference_number', 'like', "%{$search}%")
-                    ->orWhere('unit_number', 'like', "%{$search}%")
-                    ->orWhereHas('owner', function ($q) use ($search) {
-                        $q->where('first_name', 'like', "%{$search}%")
-                          ->orWhere('last_name', 'like', "%{$search}%")
-                          ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
-                    })
+                    ->orWhere('reference_number', 'like', "%{$search}%");
+                    // Unit number / owner name only match listings the viewer may see them on.
+                    \App\Support\Listing\OwnerVisibility::orWhereSensitive($q, $viewer, function ($s) use ($search) {
+                        $s->where('unit_number', 'like', "%{$search}%")
+                          ->orWhereHas('owner', function ($o) use ($search) {
+                              $o->where('first_name', 'like', "%{$search}%")
+                                ->orWhere('last_name', 'like', "%{$search}%")
+                                ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+                          });
+                    });
+                    $q
                     // Area name or any ancestor area name (handles "Dubai Marina" → its sub-communities, etc.)
                     ->orWhereHas('area', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
