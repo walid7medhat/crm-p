@@ -20,6 +20,10 @@ let lastDealId = null
 let leadWatchStop = null
 let dealWatchStop = null
 let configPollTimer = null
+let lastConfigAt = 0
+
+// Monitored-user changes are rare; poll config slowly and only in visible tabs.
+const CONFIG_POLL_MS = 300_000
 
 function isAuthenticated() {
   try {
@@ -87,6 +91,7 @@ async function refreshConfig() {
     heartbeatEnabled = false
     return
   }
+  lastConfigAt = Date.now()
   try {
     const { data } = await api.get('/auth/live-watch/client-config')
     const cfg = data?.data || {}
@@ -259,9 +264,19 @@ export async function startLiveWatchClient(router) {
   scheduleHeartbeat()
   bindModalWatches()
 
+  const refreshConfigAndReschedule = async () => {
+    const before = heartbeatEnabled
+    await refreshConfig()
+    if (before !== heartbeatEnabled) scheduleHeartbeat()
+  }
+
   visibilityHandler = () => {
     if (document.visibilityState === 'visible') {
       sendHeartbeat()
+      // Catch up on config missed while hidden (hidden tabs skip the poll).
+      if (Date.now() - lastConfigAt >= CONFIG_POLL_MS) {
+        refreshConfigAndReschedule()
+      }
     }
   }
   document.addEventListener('visibilitychange', visibilityHandler)
@@ -274,12 +289,11 @@ export async function startLiveWatchClient(router) {
     })
   }
 
-  // Config may change when SA selects this user — light poll.
-  configPollTimer = window.setInterval(async () => {
-    const before = heartbeatEnabled
-    await refreshConfig()
-    if (before !== heartbeatEnabled) scheduleHeartbeat()
-  }, 60_000)
+  // Config may change when SA selects this user — light poll, visible tabs only.
+  configPollTimer = window.setInterval(() => {
+    if (document.visibilityState === 'hidden') return
+    refreshConfigAndReschedule()
+  }, CONFIG_POLL_MS)
 }
 
 export function stopLiveWatchClient() {

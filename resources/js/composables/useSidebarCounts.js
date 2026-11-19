@@ -60,6 +60,10 @@ async function pollTick() {
   if (pollInFlight) {
     return
   }
+  // Background tabs don't need live badges; catch up on visibilitychange.
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+    return
+  }
   pollInFlight = true
   try {
     await fetchCounts({ force: true })
@@ -70,12 +74,22 @@ async function pollTick() {
   }
 }
 
+function onVisibilityChange() {
+  if (document.visibilityState !== 'visible' || pollTimer == null) {
+    return
+  }
+  if (Date.now() - lastFetchedAt >= POLL_MS) {
+    pollTick()
+  }
+}
+
 function startPolling() {
   pollSubscribers += 1
   if (pollTimer != null) {
     return
   }
   pollTimer = window.setInterval(pollTick, POLL_MS)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 }
 
 function stopPolling() {
@@ -83,6 +97,7 @@ function stopPolling() {
   if (pollSubscribers === 0 && pollTimer != null) {
     window.clearInterval(pollTimer)
     pollTimer = null
+    document.removeEventListener('visibilitychange', onVisibilityChange)
   }
 }
 
