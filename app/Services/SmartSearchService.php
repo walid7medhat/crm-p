@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Listing\OwnerVisibility;
 use App\Models\Area;
 use App\Models\Deal;
 use App\Models\Lead;
@@ -877,28 +878,30 @@ class SmartSearchService
         $with = ['area:id,name', 'project:id,title', 'propertyType:id,name', 'agent:id,name,display_name'];
         $exact = collect();
         if ($raw !== '') {
-            $exact = (clone $base)->where(function ($q) use ($raw) {
-                $q->where('reference_number', $raw)->orWhere('unit_number', $raw);
+            $exact = (clone $base)->where(function ($q) use ($raw, $user) {
+                $q->where('reference_number', $raw);
+                OwnerVisibility::orWhereSensitive($q, $user, fn ($u) => $u->where('unit_number', $raw));
             })->with($with)->limit($limit)->get();
         }
 
         if (! $structured && ! $intent['phone'] && ! $intent['email'] && mb_strlen($intent['normalized']) >= LeadTextSearch::MIN_TEXT_LENGTH) {
             $like = '%'.addcslashes($intent['normalized'], '%_\\').'%';
             $rawLike = '%'.addcslashes($raw, '%_\\').'%';
-            $base->where(function ($q) use ($like, $rawLike, $raw) {
+            $base->where(function ($q) use ($like, $rawLike, $raw, $user) {
                 $q->where('title', 'like', $like)
                     ->orWhere('reference_number', $raw)
                     ->orWhere('reference_number', 'like', $rawLike)
                     ->orWhere('reference_number', 'like', $like)
-                    ->orWhere('unit_number', $raw)
-                    ->orWhere('unit_number', 'like', $like)
+                    ->orWhere(fn ($x) => OwnerVisibility::orWhereSensitive($x->whereRaw('0 = 1'), $user,
+                        fn ($u) => $u->where('unit_number', $raw)->orWhere('unit_number', 'like', $like)))
                     ->orWhereHas('area', fn ($a) => $a->where('name', 'like', $like))
                     ->orWhereHas('project', fn ($p) => $p->where('title', 'like', $like))
                     ->orWhereHas('propertyType', fn ($pt) => $pt->where('name', 'like', $like));
             });
         } elseif ($intent['phone']) {
-            $base->where(function ($q) use ($raw) {
-                $q->where('reference_number', $raw)->orWhere('unit_number', $raw);
+            $base->where(function ($q) use ($raw, $user) {
+                $q->where('reference_number', $raw);
+                OwnerVisibility::orWhereSensitive($q, $user, fn ($u) => $u->where('unit_number', $raw));
             });
         } elseif (! $structured) {
             return $this->presentListings($exact, $raw, $limit);
@@ -956,13 +959,14 @@ class SmartSearchService
             $beds = $listing->number_of_bedrooms;
             $bedLabel = $beds === null ? null : ((int) $beds === 0 ? 'Studio' : $beds.' bed');
             $exact = $raw !== '' && strcasecmp((string) $listing->reference_number, $raw) === 0;
+            $unit = OwnerVisibility::canSeeListingOf(auth()->user(), $listing->agent_id) ? $listing->unit_number : null;
             $out[] = [
                 'type' => 'listing',
                 'id' => (int) $listing->id,
                 'label' => (string) ($listing->title ?: $listing->reference_number),
                 'description' => implode(' · ', array_values(array_filter([
                     $listing->reference_number,
-                    $listing->unit_number ? 'Unit '.$listing->unit_number : null,
+                    $unit ? 'Unit '.$unit : null,
                     $listing->area?->name,
                     $bedLabel,
                     $listing->listing_status,
@@ -971,7 +975,7 @@ class SmartSearchService
                 'exact' => $exact,
                 'meta' => [
                     'reference_number' => $listing->reference_number,
-                    'unit_number' => $listing->unit_number,
+                    'unit_number' => $unit,
                     'area' => $listing->area?->name,
                     'bedrooms' => $beds === null ? null : (int) $beds,
                     'listing_status' => $listing->listing_status,

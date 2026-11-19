@@ -130,13 +130,9 @@ public const FEATURE_LABELS = [
     $isTodayMain = $this->created_at?->isToday();
 
         // Visibility policy for sensitive fields (unit_number, owner).
-        // Privileged = listing agent | super_admin | manager with listing_team=1 | (legacy) user 30.
-        $isPrivilegedViewer = $user && (
-            $user->hasRole('super_admin')
-            || $this->agent_id == $user->id
-            || ($user->hasRole('manager') && $user->listing_team == 1)
-            || $user->id == 30
-        );
+        // Privileged = listing agent | super_admin | user 30 | `owners-view-branch` permission
+        // for listings of their own branch (see OwnerVisibility).
+        $isPrivilegedViewer = \App\Support\Listing\OwnerVisibility::canSeeListingOf($user, $this->agent_id);
         $canSeeUnitNumber = $isPrivilegedViewer
             || ($user && $this->hasApprovedAccess($user->id, ListingAccessRequest::TYPE_UNIT_NUMBER))
             // The agent who converted (sold) or rented out this listing needs the unit

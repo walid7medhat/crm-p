@@ -167,12 +167,8 @@ class ListingGridResource extends JsonResource
     {
         $flags = $this->viewerFlags();
         $user = $flags['user'];
-        $isPrivilegedViewer = $user && (
-            $flags['is_super_admin']
-            || (int) $this->agent_id === (int) $user->id
-            || $flags['is_listing_manager']
-            || $flags['is_user_30']
-        );
+        // Agent | super_admin | user 30 | `owners-view-branch` for listings of their branch.
+        $isPrivilegedViewer = \App\Support\Listing\OwnerVisibility::canSeeListingOf($user, $this->agent_id);
        $canSeeUnitNumber = $isPrivilegedViewer
             // Deal Select-Unit picker (sends not_in_deals): branch admins pick any sold unit, like super_admin.
             || ($user && $request->boolean('not_in_deals') && $user->hasRole('branch_admin'))
