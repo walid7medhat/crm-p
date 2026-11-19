@@ -25,6 +25,55 @@ class DealCommissionDistribution
         return is_array($value) ? $value : null;
     }
 
+    /** user id => display name, shared across one request (deal lists render many rows). */
+    private static array $agentNameCache = [];
+
+    /**
+     * fromDeal() for API output: agents saved with a user_id but an empty name (older
+     * saves / the form not sending it) get their name from the user record, so the UI
+     * shows "Razan Ahmed" instead of "Agent #125".
+     */
+    public static function forDisplay(Deal $deal): ?array
+    {
+        $dist = self::fromDeal($deal);
+        if (!$dist || empty($dist['agents']) || !is_array($dist['agents'])) {
+            return $dist;
+        }
+
+        $dist['agents'] = self::fillAgentNames($dist['agents']);
+
+        return $dist;
+    }
+
+    /** Fill empty agent names from users (by user_id); keeps any name already stored. */
+    private static function fillAgentNames(array $agents): array
+    {
+        $missing = collect($agents)
+            ->filter(fn ($a) => is_array($a) && !empty($a['user_id']) && trim((string) ($a['name'] ?? '')) === '')
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => array_key_exists($id, self::$agentNameCache))
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($missing) {
+            $found = \App\Models\User::query()->whereIn('id', $missing)->get(['id', 'name', 'display_name']);
+            foreach ($missing as $id) {
+                $user = $found->firstWhere('id', $id);
+                self::$agentNameCache[$id] = $user ? ($user->display_name ?: $user->name) : '';
+            }
+        }
+
+        return array_map(function ($a) {
+            if (is_array($a) && !empty($a['user_id']) && trim((string) ($a['name'] ?? '')) === '') {
+                $a['name'] = self::$agentNameCache[(int) $a['user_id']] ?? '';
+            }
+
+            return $a;
+        }, $agents);
+    }
+
     /**
      * Apply only when the request explicitly includes commission_distribution.
      * Missing key → leave metadata unchanged.
@@ -128,6 +177,9 @@ class DealCommissionDistribution
                 'amount' => round((float) ($agent['amount'] ?? 0), 2),
             ];
         }
+
+        // Store the agent's name too, so the saved breakdown reads on its own.
+        $agents = self::fillAgentNames($agents);
 
         return [
             'gross_amount' => round((float) ($raw['gross_amount'] ?? 0), 2),
