@@ -75,6 +75,7 @@ const ariaLabel = computed(() => {
 })
 
 async function fetchUnreadCount() {
+  lastUnreadFetchAt = Date.now()
   try {
     const res = await api.get('/chat/unread-count')
     if (res.data?.success && typeof res.data.count === 'number') {
@@ -152,7 +153,8 @@ function onVisibilityChange() {
   if (document.visibilityState === 'visible') {
     restoreTabTitle()
     if (visible.value) {
-      fetchUnreadCount()
+      // Quick tab switches don't need a fresh count; Echo covers new messages.
+      if (Date.now() - lastUnreadFetchAt >= 15000) fetchUnreadCount()
       startUnreadPoll()
     }
     return
@@ -256,6 +258,7 @@ function checkVisible() {
 }
 
 let pollInterval = null
+let lastUnreadFetchAt = 0
 let stopEchoWait = null
 
 onMounted(() => {

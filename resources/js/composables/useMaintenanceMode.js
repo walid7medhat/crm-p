@@ -12,6 +12,11 @@ const bootstrapped = ref(false)
 
 let pollTimer = null
 let visibilityBound = false
+let lastFetchAt = 0
+
+// Echo pushes `.maintenance.updated` instantly; polling is only a fallback.
+const POLL_MS = 120000
+const VISIBLE_REFETCH_MIN_MS = 15000
 
 function isStoredSuperAdmin() {
   try {
@@ -78,6 +83,7 @@ export function useMaintenanceMode() {
 }
 
 export async function fetchStatus() {
+  lastFetchAt = Date.now()
   try {
     const res = await api.get('/maintenance/status')
     applyPayload(res?.data?.data || res?.data)
@@ -110,12 +116,14 @@ export function startMaintenanceWatch() {
   pollTimer = setInterval(() => {
     if (document.visibilityState === 'hidden') return
     fetchStatus()
-  }, 30000)
+  }, POLL_MS)
 
   if (!visibilityBound && typeof document !== 'undefined') {
     visibilityBound = true
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') fetchStatus()
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - lastFetchAt < VISIBLE_REFETCH_MIN_MS) return
+      fetchStatus()
     })
   }
 
