@@ -106,7 +106,10 @@ if (window.location.pathname === '/kanban' && initialToken) {
   import('./components/kanban/leadList/leads.vue')
   import('./components/kanban/leadList/LeadPool.vue')
   if (!hasBoardQuery) {
-    holdBackgroundApis(700)
+    // Hold until the board request finishes — a 700ms timer previously released
+    // SAC/dashboard/config while stages-with-leads was still running (~8s), which
+    // starved GET /leads/{id} when the user clicked a card.
+    holdBackgroundApis()
     prefetchLeadBoard().finally(() => releaseBackgroundApis())
   }
 }

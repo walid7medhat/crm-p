@@ -5,6 +5,7 @@
 
 import api from '@/plugins/axios'
 import { dedupeRequest } from '@/composables/requestDedupe'
+import { isLeadBoardPriorityHeld } from '@/composables/leadBoardPriority.js'
 
 const cache = new Map()
 /** Fresh enough to paint instantly without waiting on network. */
@@ -104,4 +105,17 @@ export function shouldBackgroundRefresh(leadId) {
   const entry = getCachedLead(leadId)
   if (!entry) return true
   return Date.now() - entry.fetchedAt >= STALE_WHILE_REVALIDATE_MS
+}
+
+/**
+ * Best-effort warm on card hover / focus so the first click paints from cache.
+ * No-ops when a fresh entry already exists.
+ */
+export function warmLeadShow(leadId) {
+  const id = Number(leadId)
+  if (!id) return
+  // Do not compete with the first stages-with-leads request.
+  if (isLeadBoardPriorityHeld()) return
+  if (!shouldBackgroundRefresh(id)) return
+  fetchLeadShow(id).catch(() => {})
 }
