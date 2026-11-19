@@ -837,6 +837,9 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/admin/live-watch/presence', [LiveWatchController::class, 'presence']);
         Route::get('/admin/live-watch/users', [LiveWatchController::class, 'users']);
         Route::get('/admin/live-watch/timeline', [LiveWatchController::class, 'timeline']);
+
+        // Request Monitor: live traffic from the access log + board timings (read-only).
+        Route::get('/admin/request-monitor', [\App\Http\Controllers\Api\Admin\RequestMonitorController::class, 'index']);
     });
 
      // User routes

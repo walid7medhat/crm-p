@@ -1444,6 +1444,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/settings/stage-duplicates-report', label: 'Stage Lead Duplicates', iconSrc: leadsIcon.value });
     system.push({ path: '/settings/account-emails', label: 'Account Emails', icon: 'lucide:mail' });
     system.push({ path: '/settings/location-tracking', label: 'Location Tracking', icon: 'lucide:map-pin' });
+    system.push({ path: '/settings/request-monitor', label: 'Request Monitor', icon: 'lucide:activity' });
     system.push({ path: '/tracking', label: 'Live Watch', icon: 'lucide:radar' });
   }
 
