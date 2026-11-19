@@ -132,7 +132,7 @@
             class="doc-preview-iframe"
             title="Document preview"
           />
-          <div v-else class="doc-preview-empty">Preview is not available for this file.</div>
+          <div v-else class="doc-preview-empty">{{ previewModal.loading ? 'Loading…' : 'Preview is not available for this file.' }}</div>
         </div>
       </div>
     </div>
@@ -144,6 +144,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
+import { pickDocumentUrl, isProtectedFileUrl, resolveFileUrl } from '@/composables/useAuthorizedFile'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -669,24 +670,35 @@ function resolveViewTarget(file) {
   if (typeof file.file === 'string') {
     return normalizePublicStorageUrl(file.file) || file.file
   }
-  const raw = file.path || file.file_url || file.url
-  if (raw && typeof raw === 'string') {
-    return normalizePublicStorageUrl(raw) || raw
-  }
-  return null
+  // Server url first (signed for private files); a bare private path opened the SPA home page.
+  return pickDocumentUrl(file)
 }
 
-function viewFile(file) {
+async function viewFile(file) {
   const target = resolveViewTarget(file)
   if (!target) return
 
   const mime = (file?.mime_type || file?.type || '').toLowerCase()
   const isImage = mime.includes('image')
 
+  // Private files need the JWT — fetch them and preview the blob: URL.
+  let url = target
+  if (isProtectedFileUrl(target)) {
+    previewModal.value = { open: true, url: '', kind: isImage ? 'image' : 'file', loading: true }
+    try {
+      url = await resolveFileUrl(target)
+    } catch {
+      previewModal.value = { open: true, url: '', kind: 'file', loading: false }
+      window.$showNotification?.('Could not load this file.', 'error')
+      return
+    }
+  }
+
   previewModal.value = {
     open: true,
-    url: target,
-    kind: isImage ? 'image' : 'file'
+    url,
+    kind: isImage ? 'image' : 'file',
+    loading: false,
   }
 }
 

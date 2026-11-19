@@ -8,6 +8,7 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
+use App\Services\Reports\DealCommissionSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
@@ -65,7 +66,7 @@ class DealCommissionSheetExport extends DefaultValueBinder implements FromArray,
         'company_share' => ['Company Share', 16],
         'notes' => ['Notes', 24],
         'listing_agent' => ['Listing Agent', 20],
-        'spa' => ['SPA', 7],
+        // + one ✓ column per DealCommissionSheet::DOCUMENTS entry, then 'missing' (constructor).
     ];
 
     /** Columns summed in the totals row. */
@@ -84,10 +85,19 @@ class DealCommissionSheetExport extends DefaultValueBinder implements FromArray,
     /** @var array<string, string> key => column letter */
     private array $col = [];
 
+    /** @var array<string, array{0:string,1:int}> COLUMNS + document checks + missing fields */
+    private array $columns = [];
+
     public function __construct(private array $rows)
     {
+        $this->columns = self::COLUMNS;
+        foreach (DealCommissionSheet::DOCUMENTS as $key => [$heading]) {
+            $this->columns[$key] = [$heading, 11];
+        }
+        $this->columns['missing'] = ['Missing Fields', 60];
+
         $i = 1;
-        foreach (array_keys(self::COLUMNS) as $key) {
+        foreach (array_keys($this->columns) as $key) {
             $this->col[$key] = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($i++);
         }
     }
@@ -111,11 +121,16 @@ class DealCommissionSheetExport extends DefaultValueBinder implements FromArray,
 
     public function array(): array
     {
-        $out = [array_map(fn ($c) => $c[0], self::COLUMNS)];
+        $out = [array_map(fn ($c) => $c[0], $this->columns)];
 
         foreach (array_values($this->rows) as $i => $r) {
             $n = $i + 2; // sheet row (1 = header)
             $c = fn (string $key) => $this->col[$key].$n;
+
+            $docCells = array_map(
+                fn ($key) => ! empty($r['documents'][$key]) ? '✓' : '',
+                array_keys(DealCommissionSheet::DOCUMENTS)
+            );
 
             $out[] = [
                 $r['date'] ? ExcelDate::PHPToExcel($r['date']) : null,
@@ -155,7 +170,8 @@ class DealCommissionSheetExport extends DefaultValueBinder implements FromArray,
                 "=IF({$c('received')}=\"\",\"\",N({$c('received')})-N({$c('broker_share')})-N({$c('tl_share')})-N({$c('senior_share')}))",
                 null, // Notes
                 $r['listing_agent'],
-                $r['spa'] ? '✓' : '',
+                ...$docCells,
+                $r['missing'] ?? null,
             ];
         }
 
@@ -167,11 +183,15 @@ class DealCommissionSheetExport extends DefaultValueBinder implements FromArray,
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $lastCol = $this->col['spa'];
+                $lastCol = $this->col['missing'];
+                $docKeys = array_keys(DealCommissionSheet::DOCUMENTS);
+                $firstDocCol = $this->col[$docKeys[0]];
+                $lastDocCol = $this->col[end($docKeys)];
+                $missingCol = $this->col['missing'];
                 $lastRow = count($this->rows) + 1;
                 $totalRow = $lastRow + 1;
 
-                foreach (self::COLUMNS as $key => [, $width]) {
+                foreach ($this->columns as $key => [, $width]) {
                     $sheet->getColumnDimension($this->col[$key])->setWidth($width);
                 }
 
@@ -201,8 +221,22 @@ class DealCommissionSheetExport extends DefaultValueBinder implements FromArray,
                     $sheet->getStyle("{$this->col['broker_pct']}2:{$this->col['broker_pct']}{$lastRow}")->getNumberFormat()->setFormatCode('0.00%');
                     // Phones stay text (no 9.71E+11).
                     $sheet->getStyle("{$this->col['buyer_phone']}2:{$this->col['buyer_phone']}{$lastRow}")->getNumberFormat()->setFormatCode('@');
-                    $sheet->getStyle("{$this->col['spa']}2:{$this->col['spa']}{$lastRow}")->getFont()->setBold(true)->getColor()->setRGB('15803D');
+                    // Document checks: bold green ✓.
+                    $sheet->getStyle("{$firstDocCol}2:{$lastDocCol}{$lastRow}")->getFont()->setBold(true)->getColor()->setRGB('15803D');
+                    // Missing fields: left-aligned wrapped text, red unless "Complete".
+                    $sheet->getStyle("{$missingCol}2:{$missingCol}{$lastRow}")->applyFromArray([
+                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'wrapText' => true],
+                        'font' => ['color' => ['rgb' => 'B91C1C']],
+                    ]);
+                    foreach (array_values($this->rows) as $i => $r) {
+                        if (($r['missing'] ?? null) === 'Complete') {
+                            $sheet->getStyle($missingCol.($i + 2))->getFont()->getColor()->setRGB('15803D');
+                        }
+                    }
                 }
+
+                // Document headers in a lighter tint so the group reads as one block.
+                $sheet->getStyle("{$firstDocCol}1:{$lastDocCol}1")->getFill()->getStartColor()->setRGB('DCEFE3');
 
                 // Money columns: number format, right-aligned (data + totals).
                 foreach (self::MONEY_KEYS as $key) {

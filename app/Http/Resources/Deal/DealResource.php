@@ -269,22 +269,22 @@ class DealResource extends JsonResource
                     if (! static::$listMode) {
                         $row['payment_proof_raw'] = $property->payment_proof;
                         $row['spa_document_raw'] = $property->spa_document;
-                        $row['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
-                        $row['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
+                        $row['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof', (int) $property->id))->resolve($request);
+                        $row['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa', (int) $property->id))->resolve($request);
                         $row['eoi_documents_raw'] = $property->eoi_documents;
-                        $row['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request);
+                        $row['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi', (int) $property->id))->resolve($request);
                         $row['booking_documents_raw'] = $property->booking_documents;
-                        $row['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request);
+                        $row['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking', (int) $property->id))->resolve($request);
                         $row['mou_documents_raw'] = $property->mou_documents;
-                        $row['mou_documents'] = (new PropertyDocumentResource($property->mou_documents, 'mou'))->resolve($request);
+                        $row['mou_documents'] = (new PropertyDocumentResource($property->mou_documents, 'mou', (int) $property->id))->resolve($request);
                         $row['noc_documents_raw'] = $property->noc_documents;
-                        $row['noc_documents'] = (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request);
+                        $row['noc_documents'] = (new PropertyDocumentResource($property->noc_documents, 'noc', (int) $property->id))->resolve($request);
                         $row['title_deed_documents_raw'] = $property->title_deed_documents;
-                        $row['title_deed_documents'] = (new PropertyDocumentResource($property->title_deed_documents, 'title_deed'))->resolve($request);
+                        $row['title_deed_documents'] = (new PropertyDocumentResource($property->title_deed_documents, 'title_deed', (int) $property->id))->resolve($request);
                         $row['contract_document_raw'] = $property->contract_document;
-                        $row['contract_document'] = (new PropertyDocumentResource($property->contract_document, 'contract'))->resolve($request);
+                        $row['contract_document'] = (new PropertyDocumentResource($property->contract_document, 'contract', (int) $property->id))->resolve($request);
                         $row['ejari_document_raw'] = $property->ejari_document;
-                        $row['ejari_document'] = (new PropertyDocumentResource($property->ejari_document, 'ejari'))->resolve($request);
+                        $row['ejari_document'] = (new PropertyDocumentResource($property->ejari_document, 'ejari', (int) $property->id))->resolve($request);
                     }
 
                     return $row;

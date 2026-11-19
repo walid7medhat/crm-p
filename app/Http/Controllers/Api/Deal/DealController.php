@@ -2288,12 +2288,12 @@ class DealController extends Controller
         $property->load(['propertyType', 'area.parent.parent.parent.parent.parent', 'developer']);
 
         $payload = $property->toArray();
-        $payload['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof'))->resolve($request);
-        $payload['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa'))->resolve($request);
-        $payload['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi'))->resolve($request);
-        $payload['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking'))->resolve($request);
-        $payload['mou_documents'] = (new PropertyDocumentResource($property->mou_documents, 'mou'))->resolve($request);
-        $payload['noc_documents'] = (new PropertyDocumentResource($property->noc_documents, 'noc'))->resolve($request);
+        $payload['payment_proof'] = (new PropertyDocumentResource($property->payment_proof, 'payment_proof', (int) $property->id))->resolve($request);
+        $payload['spa_document'] = (new PropertyDocumentResource($property->spa_document, 'spa', (int) $property->id))->resolve($request);
+        $payload['eoi_documents'] = (new PropertyDocumentResource($property->eoi_documents, 'eoi', (int) $property->id))->resolve($request);
+        $payload['booking_documents'] = (new PropertyDocumentResource($property->booking_documents, 'booking', (int) $property->id))->resolve($request);
+        $payload['mou_documents'] = (new PropertyDocumentResource($property->mou_documents, 'mou', (int) $property->id))->resolve($request);
+        $payload['noc_documents'] = (new PropertyDocumentResource($property->noc_documents, 'noc', (int) $property->id))->resolve($request);
 
         return response()->json([
             'success' => true,

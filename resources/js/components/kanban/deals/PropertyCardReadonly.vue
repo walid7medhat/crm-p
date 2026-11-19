@@ -142,7 +142,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -175,7 +175,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -208,7 +208,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -241,7 +241,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -274,7 +274,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -309,7 +309,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -343,7 +343,7 @@
                   <div class="document-preview" @click="previewDocument(doc)">
                     <img
                       v-if="isImageDocument(doc)"
-                      :src="getDocumentUrl(doc)"
+                      :src="fileSrc(getDocumentUrl(doc))"
                       :alt="doc.original_name || doc.name"
                       class="document-thumbnail"
                       @error="handleImageError"
@@ -605,21 +605,28 @@
           <iconify-icon icon="lucide:x" />
         </button>
         <div class="doc-preview-body">
+          <div
+            v-if="(isImageDocument(previewDoc) || isPdfDocument(previewDoc)) && !fileSrc(getDocumentUrl(previewDoc))"
+            class="doc-preview-empty"
+          >
+            <p v-if="fileFailed(getDocumentUrl(previewDoc))">This file could not be loaded. Close and reopen the deal, then try again.</p>
+            <p v-else>Loading…</p>
+          </div>
           <img
-            v-if="isImageDocument(previewDoc)"
-            :src="getDocumentUrl(previewDoc)"
+            v-else-if="isImageDocument(previewDoc)"
+            :src="fileSrc(getDocumentUrl(previewDoc))"
             alt="Document preview"
             class="doc-preview-image"
           />
           <iframe
-            v-else-if="previewDoc.mime_type === 'application/pdf' || previewDoc.mime === 'application/pdf'"
-            :src="getDocumentUrl(previewDoc)"
+            v-else-if="isPdfDocument(previewDoc)"
+            :src="fileSrc(getDocumentUrl(previewDoc))"
             class="doc-preview-iframe"
             title="Document preview"
           />
           <div v-else class="doc-preview-empty">
             <p>Preview not available</p>
-            <a :href="getDocumentUrl(previewDoc)" target="_blank" class="btn-download">Download</a>
+            <button type="button" class="btn-download" @click="downloadPreviewDoc">Download</button>
           </div>
         </div>
       </div>
@@ -635,7 +642,10 @@ import vSelect from 'vue-select'
 import DocumentUpload from './DocumentUpload.vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
-import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl'
+import { pickDocumentUrl, useAuthorizedFileUrls, downloadFile } from '@/composables/useAuthorizedFile'
+
+// Private files (signed /company-files/serve URLs) are fetched with the JWT and shown as blob: URLs.
+const { src: fileSrc, failed: fileFailed } = useAuthorizedFileUrls()
 import api from '@/plugins/axios'
 import { buildListingFilterParams } from '@/composables/useDealListingPicker'
 const props = defineProps({
@@ -911,17 +921,25 @@ function mapPropertyDocsForEditor(docs, documentTypeSlug) {
 }
 
 function getDocumentUrl(doc) {
-  if (!doc) return null
-  if (doc.url && String(doc.url).startsWith('blob:')) return doc.url
+  // Server url first (signed for private files). Preferring `path` rewrote private files to
+  // /storage/<path>, which 404s into the SPA and opened the home page.
+  return pickDocumentUrl(doc)
+}
 
-  for (const key of ['path', 'file_url', 'url']) {
-    const v = doc[key]
-    if (v && typeof v === 'string') {
-      const n = normalizePublicStorageUrl(v)
-      if (n) return n
-    }
-  }
-  return null
+function isPdfDocument(doc) {
+  if (!doc) return false
+  if (doc.mime_type === 'application/pdf' || doc.mime === 'application/pdf') return true
+  const name = String(doc.original_name || doc.name || doc.file_name || '').toLowerCase()
+  return name.endsWith('.pdf')
+}
+
+function downloadPreviewDoc() {
+  const doc = previewDoc.value
+  const url = getDocumentUrl(doc)
+  if (!url) return
+  downloadFile(url, doc?.original_name || doc?.name || '').catch(() => {
+    window.$showNotification?.('Could not download this file.', 'error')
+  })
 }
 
 function isImageDocument(doc) {
