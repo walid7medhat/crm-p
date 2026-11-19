@@ -33,6 +33,17 @@
       </div>
 
       <div class="deal-list__bar">
+        <button
+          v-if="canExportCommissionSheet"
+          type="button"
+          class="deal-list__export-btn"
+          :disabled="exporting || !meta.total"
+          title="Export the deals in this list to the accountant commission sheet (Excel)"
+          @click="exportCommissionSheet"
+        >
+          <iconify-icon :icon="exporting ? 'lucide:loader-2' : 'lucide:file-spreadsheet'" :class="{ 'is-spinning': exporting }" />
+          {{ exporting ? 'Exporting…' : 'Export' }}
+        </button>
         <p class="deal-list__count">
           <template v-if="meta.total">
             {{ rangeStart }}–{{ rangeEnd }} of {{ meta.total }}
@@ -582,6 +593,55 @@ async function goNext() {
   scrollListToTop()
 }
 
+// ---- Accountant commission sheet (Excel): accountant / super_admin / user #30
+// (backend: DealCommissionSheet::canExport). Same filters as the list, all pages.
+const COMMISSION_SHEET_EXTRA_USER_IDS = [30]
+const canExportCommissionSheet = computed(() => {
+  try {
+    const raw = JSON.parse(localStorage.getItem('user') || '{}')
+    const roles = (raw?.roles || []).map((r) => String(typeof r === 'string' ? r : r?.name).toLowerCase())
+    return roles.includes('super_admin')
+      || roles.includes('accountant')
+      || COMMISSION_SHEET_EXTRA_USER_IDS.includes(Number(raw?.id))
+  } catch {
+    return false
+  }
+})
+const exporting = ref(false)
+
+async function exportCommissionSheet() {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const params = buildParams()
+    delete params.page
+    delete params.per_page
+    const res = await axios.get('/deals/export/commission-sheet', { params, responseType: 'blob' })
+    const disposition = res.headers?.['content-disposition'] || ''
+    const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)
+    const filename = match ? decodeURIComponent(match[1]) : `deals-commission-${new Date().toISOString().slice(0, 10)}.xlsx`
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (err) {
+    // Blob error bodies need decoding to show the server message.
+    let message = 'Export failed.'
+    try {
+      const text = await err?.response?.data?.text?.()
+      message = JSON.parse(text)?.message || message
+    } catch { /* keep default */ }
+    window.$showNotification?.(message, 'error')
+    console.error('Commission sheet export failed', err)
+  } finally {
+    exporting.value = false
+  }
+}
+
 async function goToPage(n) {
   const target = Math.min(Math.max(1, Number(n) || 1), Math.max(1, Number(meta.last_page || 1)))
   if (target === page.value) return
@@ -1112,6 +1172,41 @@ defineExpose({
   color: #64748b;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.deal-list__export-btn {
+  height: 26px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+  border-radius: 999px;
+  border: 1px solid #15803d;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.deal-list__export-btn:hover:not(:disabled) {
+  background: #15803d;
+  color: #fff;
+}
+
+.deal-list__export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deal-list__export-btn .is-spinning {
+  animation: deal-list-spin 0.8s linear infinite;
+}
+
+@keyframes deal-list-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Bottom pager — pinned under the scroll area (flex: 0 0 auto in the column). */

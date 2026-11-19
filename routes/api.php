@@ -604,6 +604,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::prefix('deals')->group(function () {
         Route::put('/{deal}/deal-type', [DealController::class, 'changeDealType']);
         Route::get('/', [DealController::class, 'index']);
+        Route::get('/export/commission-sheet', \App\Http\Controllers\Api\Deal\DealCommissionSheetController::class);
         Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
         Route::get('/get-more/by-stage', [DealController::class, 'getDealsByStage']);
         Route::post('/{deal}/assign-responsible-person', [DealController::class, 'assignResponsiblePerson']);
