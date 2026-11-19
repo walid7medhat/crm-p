@@ -3911,7 +3911,7 @@ public function watermark(Request $request)
     }
 
     try {
-        $image = Image::make($fullPath);
+        $image = \App\Helpers\ImageHelper::autoOrient(Image::make($fullPath));
     } catch (\Throwable $e) {
         Log::warning('watermark decode failed', ['path' => $path, 'error' => $e->getMessage()]);
         abort(404);

@@ -9,6 +9,22 @@ use Intervention\Image\ImageManagerStatic as Image;
 
 class ImageHelper
 {
+    /**
+     * Apply the EXIF Orientation tag (phone photos) to the pixels before
+     * re-encoding — encoding strips EXIF, so without this portrait photos
+     * come out rotated. No-op if the exif extension or tag is missing.
+     */
+    public static function autoOrient($image)
+    {
+        try {
+            $image->orientate();
+        } catch (\Throwable $e) {
+            // exif extension unavailable or unreadable metadata — keep as is
+        }
+
+        return $image;
+    }
+
   public static function compressAndConvertToWebP(
     UploadedFile $file,
     string $storagePath,
@@ -20,7 +36,7 @@ class ImageHelper
     $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
 
     try {
-        $image = Image::make($file->getRealPath());
+        $image = self::autoOrient(Image::make($file->getRealPath()));
 
         $quality   = $options['quality'] ?? 80;
         $maxWidth  = $options['max_width'] ?? 1920;
@@ -138,7 +154,7 @@ class ImageHelper
         $storagePath = \App\Support\Brand\BrandIsolation::ensureCompanyStoragePath($storagePath);
 
         try {
-            $image = \Intervention\Image\ImageManagerStatic::make($file->getRealPath());
+            $image = self::autoOrient(\Intervention\Image\ImageManagerStatic::make($file->getRealPath()));
 
             $quality = $options['quality'] ?? 80;
             $maxWidth = $options['max_width'] ?? 1920;
@@ -267,7 +283,7 @@ class ImageHelper
         return asset('storage/' . $path);
     }
 
-    $image = \Intervention\Image\ImageManagerStatic::make($fullImagePath);
+    $image = self::autoOrient(\Intervention\Image\ImageManagerStatic::make($fullImagePath));
 
     $watermarkFullPath = storage_path('app/public/' . $options['watermark']['path']);
 
