@@ -2218,7 +2218,8 @@ public function getPropertyTypesWithListings(Request $request)
                     $period,
                     $month->format('Y-m')
                 );
-                $payload = Cache::remember($cacheKey, now()->addSeconds(45), $build);
+                // KPIs don't need second-level freshness; the SPA also paints its last copy instantly.
+                $payload = Cache::remember($cacheKey, now()->addSeconds(180), $build);
             }
         } catch (\Throwable $e) {
             report($e);
@@ -2386,7 +2387,16 @@ public function getPropertyTypesWithListings(Request $request)
 
         $performance = $this->studioPerformance($isSuperAdmin, $scopeIds, $period, $isBranchAdmin);
 
-        $featured = $this->studioFeaturedListing($activeListingBase, $isSuperAdmin, $scopeIds);
+        // Featured listing sorts every active listing by its request count — expensive and
+        // slow-changing, so share it per scope for 10 minutes instead of per user every 3.
+        $featuredKey = sprintf(
+            'dashboard:studio:featured:%s:%s',
+            \App\Support\Brand\BrandIsolation::cacheSegment(),
+            ($isSuperAdmin || $isBranchAdmin) && empty($scopeIds) ? 'all' : md5(($isBranchAdmin ? 'b' : 'u').implode(',', $scopeIds))
+        );
+        $featured = config('app.debug')
+            ? $this->studioFeaturedListing($activeListingBase, $isSuperAdmin, $scopeIds)
+            : Cache::remember($featuredKey, now()->addMinutes(10), fn () => $this->studioFeaturedListing($activeListingBase, $isSuperAdmin, $scopeIds));
 
         $followBase = $leadScope(Lead::query());
         if ($followStageIds->isNotEmpty()) {
@@ -2420,7 +2430,8 @@ public function getPropertyTypesWithListings(Request $request)
             ->whereNotNull('handover_date')
             ->whereBetween('handover_date', [now()->toDateString(), now()->addDays(5)->toDateString()])
             ->count();
-        if (Schema::hasColumn('listings', 'rent_expiry_date')) {
+        $hasRentExpiry = Cache::remember('schema:listings:rent_expiry_date', now()->addDay(), fn () => Schema::hasColumn('listings', 'rent_expiry_date'));
+        if ($hasRentExpiry) {
             $expiring += (int) $listingScope(Listing::query())
                 ->where('is_archived', false)
                 ->whereNotNull('rent_expiry_date')

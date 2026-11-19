@@ -689,7 +689,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::get('/dashboard/listings-status-summary', [DashboardController::class, 'getListingsStatusSummary']);
     Route::get('/dashboard/kanban-task-summary', [DashboardController::class, 'getKanbanTaskSummary']);
     Route::get('/dashboard/schedule', [DashboardController::class, 'getDashboardSchedule']);
-    Route::get('/dashboard/studio', [DashboardController::class, 'getStudio']);
+    Route::get('/dashboard/studio', [DashboardController::class, 'getStudio'])->middleware('log.usage');
     Route::get('/dashboard/my-day', [MyDayController::class, 'show']);
     Route::get('/sales-action-center', [SalesActionCenterController::class, 'index']);
     Route::get('/sales-action-center/agents', [SalesActionCenterController::class, 'agents']);

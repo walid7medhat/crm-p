@@ -804,17 +804,60 @@ async function shiftMonth(delta) {
   await load()
 }
 
+// Last dashboard payload per user/period/month, painted instantly on open while
+// the fresh copy loads in the background (stale-while-revalidate).
+const STUDIO_CACHE_PREFIX = 'dashboard_studio_v1'
+const STUDIO_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000
+
+function studioCacheKey() {
+  let uid = 'anon'
+  try {
+    uid = JSON.parse(localStorage.getItem('user') || 'null')?.id ?? 'anon'
+  } catch (e) { /* storage unavailable */ }
+  return `${STUDIO_CACHE_PREFIX}:${uid}:${period.value}:${month.value}`
+}
+
+function readStudioCache() {
+  try {
+    const raw = localStorage.getItem(studioCacheKey())
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed?.data || Date.now() - (parsed.at || 0) > STUDIO_CACHE_MAX_AGE_MS) return null
+    return parsed.data
+  } catch (e) {
+    return null
+  }
+}
+
+function saveStudioCache(data) {
+  try {
+    localStorage.setItem(studioCacheKey(), JSON.stringify({ at: Date.now(), data }))
+  } catch (e) { /* quota or private mode */ }
+}
+
 async function load() {
   error.value = ''
-  if (!board.value) loading.value = true
+  const cached = readStudioCache()
+  if (cached) {
+    board.value = cached
+    loading.value = false
+    nextTick(bindDeckObserver)
+  } else if (!board.value) {
+    loading.value = true
+  }
   try {
     const res = await api.get('/dashboard/studio', {
       params: { period: period.value, month: month.value },
     })
-    board.value = res.data?.data || null
-    if (!board.value) error.value = 'Dashboard data did not load.'
+    const fresh = res.data?.data || null
+    if (fresh) {
+      board.value = fresh
+      saveStudioCache(fresh)
+    } else if (!board.value) {
+      error.value = 'Dashboard data did not load.'
+    }
   } catch (err) {
-    error.value = err?.response?.data?.message || 'Could not load the dashboard.'
+    if (!board.value) error.value = err?.response?.data?.message || 'Could not load the dashboard.'
   } finally {
     loading.value = false
     await nextTick()
