@@ -236,6 +236,39 @@
           </div>
         </section>
 
+        <!-- Response times per feature (endpoint-usage log) -->
+        <section v-if="board.endpoints?.length" class="rm-card">
+          <div class="rm-card__head">
+            <div class="rm-card__title">How fast is each feature</div>
+            <span class="rm-dim">Server time per request. Under 1 s is good, over 3 s feels slow.</span>
+          </div>
+          <div class="rm-table-wrap">
+            <table class="rm-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th class="rm-num">Requests</th>
+                  <th class="rm-num">Typical</th>
+                  <th class="rm-num">Slow (1 in 10)</th>
+                  <th class="rm-num">Slowest</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="e in board.endpoints" :key="e.route">
+                  <td>
+                    <div class="rm-name">{{ friendly(e.route).label }}</div>
+                    <div class="rm-dim rm-mono">{{ e.route }}</div>
+                  </td>
+                  <td class="rm-num">{{ fmtNum(e.count) }}</td>
+                  <td class="rm-num" :class="msTextClass(e.median_ms)">{{ fmtMs(e.median_ms) }}</td>
+                  <td class="rm-num" :class="msTextClass(e.p90_ms)">{{ fmtMs(e.p90_ms) }}</td>
+                  <td class="rm-num" :class="msTextClass(e.max_ms)">{{ fmtMs(e.max_ms) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- All endpoints -->
         <section v-if="access.available" class="rm-card">
           <div class="rm-card__head">
@@ -319,9 +352,16 @@ const FRIENDLY = [
   [/sales-action-center/, 'Sales action center', true],
   [/auth\/location/, 'Location tracking'],
   [/auth\/login/, 'Login'],
-  [/^(GET|POST|PUT|PATCH) \/api\/leads\/\{id\}/, 'Open / edit a lead'],
-  [/^GET \/api\/leads/, 'Lead list / search', true],
+  [/^GET \/api\/leads\/\{(id|lead)\}$/, 'Open a lead'],
+  [/^(PUT|PATCH) \/api\/leads\/\{(id|lead)\}$/, 'Save a lead'],
+  [/^DELETE \/api\/leads\/\{(id|lead)\}$/, 'Delete a lead'],
+  [/^(GET|POST|PUT|PATCH) \/api\/leads\/\{(id|lead)\}/, 'Open / edit a lead'],
+  [/^GET \/api\/leads$/, 'Lead list / search', true],
+  [/^POST \/api\/leads$/, 'Create a lead'],
   [/^(POST|PUT|PATCH) \/api\/leads/, 'Create / update lead'],
+  [/deals\/grouped-by-stage/, 'Deals board', true],
+  [/deals\/get-more\/by-stage/, 'Deals board: load more'],
+  [/^GET \/api\/deals\/\{(id|deal)\}$/, 'Open a deal'],
   [/listings\/areas/, 'Areas list'],
   [/listings\/property-types/, 'Property types'],
   [/\/api\/listings/, 'Listings'],

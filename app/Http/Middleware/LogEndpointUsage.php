@@ -22,6 +22,7 @@ class LogEndpointUsage
         $user = $request->user();
 
         Log::channel('endpoint_usage')->info($request->route()?->uri() ?? $request->path(), [
+            'method'     => $request->method(),
             'user_id'    => $user?->id,
             'role'       => $user?->roles?->pluck('name')->first(),
             'ip'         => $request->ip(),
@@ -34,7 +35,8 @@ class LogEndpointUsage
             'host'       => $request->getHost(),
             'app_header' => $request->header('X-App-Name'),
 
-            'filters'    => $request->except(['page']),
+            // Query filters only — never log request bodies (lead saves carry phone/email).
+            'filters'    => $request->isMethod('GET') ? \Illuminate\Support\Arr::except($request->query(), ['page']) : null,
         ]);
     } catch (\Throwable $e) {
         // never let logging break the request lifecycle
