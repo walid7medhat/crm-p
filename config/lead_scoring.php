@@ -46,6 +46,9 @@ return [
     */
     'kanban_perf_query_log' => (bool) env('KANBAN_PERF_QUERY_LOG', false),
 
+    // Max lead-board loads per user per minute (throttle:kanban-board). Excess → HTTP 429.
+    'kanban_board_per_minute' => (int) env('KANBAN_BOARD_PER_MINUTE', 30),
+
     /*
     | Heat chip totals only (not the board). 0 disables the cache.
     | Model events drop the version immediately; this TTL covers writes

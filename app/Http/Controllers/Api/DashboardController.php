@@ -1315,7 +1315,10 @@ public function getPropertyTypesWithListings(Request $request)
 
             // Per-user short TTL: badges are user/role/hierarchy scoped. 45s is safe for nav counts.
             // brand_key segment prevents OIA/Luxvant cache bleed for shared Super Admin sessions.
-            $cacheKey = 'sidebar_counts:'.\App\Support\Brand\BrandIsolation::cacheSegment().':u'.$user->id;
+            // Version bumps on any badge-moving change (App\Support\SidebarCounts), so a refetch
+            // after a push is never served the stale 45s entry.
+            $cacheKey = 'sidebar_counts:'.\App\Support\Brand\BrandIsolation::cacheSegment()
+                .':v'.\App\Support\SidebarCounts::version().':u'.$user->id;
             $counts = Cache::remember($cacheKey, 45, function () use ($user) {
                 $currentUser = $user;
                 // Self, direct reports, and their reports. Two parent_id lookups

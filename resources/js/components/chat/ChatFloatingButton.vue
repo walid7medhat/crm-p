@@ -135,12 +135,29 @@ function restoreTabTitle() {
   originalTitle = null
 }
 
+// New messages arrive via Echo (.message.sent) and bump the badge instantly. The poll only
+// corrects drift (messages read on another device/tab), so it is slow while push is live.
+const UNREAD_SAFETY_MS = 5 * 60_000
+const UNREAD_FALLBACK_MS = 60_000
+
+function chatPushIsLive() {
+  if (!echoChannel.value) return false
+  try {
+    const state = window.Echo?.connector?.pusher?.connection?.state
+    return state ? state === 'connected' : true
+  } catch {
+    return true
+  }
+}
+
 function startUnreadPoll() {
   if (pollInterval) return
   pollInterval = setInterval(() => {
     if (document.visibilityState === 'hidden') return
+    const staleAfter = chatPushIsLive() ? UNREAD_SAFETY_MS : UNREAD_FALLBACK_MS
+    if (Date.now() - lastUnreadFetchAt < staleAfter) return
     fetchUnreadCount()
-  }, 60000)
+  }, UNREAD_FALLBACK_MS)
 }
 
 function stopUnreadPoll() {
@@ -154,7 +171,7 @@ function onVisibilityChange() {
     restoreTabTitle()
     if (visible.value) {
       // Quick tab switches don't need a fresh count; Echo covers new messages.
-      if (Date.now() - lastUnreadFetchAt >= 15000) fetchUnreadCount()
+      if (Date.now() - lastUnreadFetchAt >= (chatPushIsLive() ? 60000 : 15000)) fetchUnreadCount()
       startUnreadPoll()
     }
     return
