@@ -2549,7 +2549,9 @@ const mobilePickStageColumn = computed(() => {
 })
 
 const KANBAN_LEADS_CACHE_KEY = 'kanban_leads_stages_cache_v2'
-const KANBAN_LEADS_CACHE_TTL_MS = 5 * 60 * 1000 // keep board visible across refreshes
+/** Soft TTL: prefer fresh cache; still paint older snapshots to avoid an empty board flash. */
+const KANBAN_LEADS_CACHE_TTL_MS = 30 * 60 * 1000
+const KANBAN_LEADS_CACHE_HARD_TTL_MS = 24 * 60 * 60 * 1000
 
 // Namespaced per user id — otherwise switching accounts on the same browser
 // paints the previous user's cached board (including leads they can't see)
@@ -2559,7 +2561,8 @@ function getKanbanCacheKey() {
     return `${KANBAN_LEADS_CACHE_KEY}:${uid}`
 }
 const responsiblePersons = ref([])
-const loading = ref(true)
+// Start false when we can paint from cache on the same tick — avoids a blank skeleton flash.
+const loading = ref(false)
 const isSearching = ref(false)
 const error = ref(null)
 const kanbanContainerRef = ref(null)
@@ -3312,10 +3315,12 @@ function loadCachedColumns() {
         const raw = localStorage.getItem(getKanbanCacheKey())
         if (!raw) return false
         const parsed = JSON.parse(raw)
-        if (!parsed || !Array.isArray(parsed.columns)) return false
+        if (!parsed || !Array.isArray(parsed.columns) || !parsed.columns.length) return false
 
         const now = Date.now()
-        if (parsed.cachedAt && now - parsed.cachedAt > KANBAN_LEADS_CACHE_TTL_MS) {
+        const age = parsed.cachedAt ? now - parsed.cachedAt : 0
+        // Drop only truly ancient snapshots; otherwise paint immediately and refresh.
+        if (age > KANBAN_LEADS_CACHE_HARD_TTL_MS) {
             return false
         }
 
@@ -3338,6 +3343,10 @@ function loadCachedColumns() {
 // Paint a saved board on the first render. Reading it in onMounted is one
 // frame too late, so the loader flashes even when the cards are already here.
 const hadCachedBoard = loadCachedColumns()
+if (!hadCachedBoard) {
+    // Cold visit: show stage shells (or skeleton) instead of the empty-state copy.
+    loading.value = true
+}
 // Stage names from an older visit. Cards stay placeholders until the real response.
 const pendingStageShells = ref(hadCachedBoard ? [] : readCachedStageShells())
 // A resolved prefetch is applied here, before the first render. An in-flight

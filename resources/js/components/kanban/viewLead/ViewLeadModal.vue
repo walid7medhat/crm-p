@@ -305,15 +305,27 @@ const props = defineProps({
     }
 })
 
+function seedMatchesLead(seed, leadId) {
+  return !!(seed && Number(seed.id) === Number(leadId))
+}
+
+function paintFromSeed(seed, leadId) {
+  if (!seedMatchesLead(seed, leadId)) return false
+  lead.value = { ...(lead.value && Number(lead.value.id) === Number(leadId) ? lead.value : {}), ...seed, id: Number(leadId) }
+  if (seed.stage_id) leadStageId.value = seed.stage_id
+  isLoadingLead.value = false
+  // Seeded opens should look complete immediately; secondary rails can still catch up.
+  leadHydrated.value = true
+  return true
+}
+
 // Seed from the kanban card on construction so the first paint is never empty.
 const lead = ref(
-  props.initialLead && Number(props.initialLead.id) === Number(props.leadId)
-    ? { ...props.initialLead }
-    : null
+  seedMatchesLead(props.initialLead, props.leadId) ? { ...props.initialLead } : null
 )
 const isLoadingLead = ref(false)
-/** True after GET /leads/{id} (or a valid per-user cache hit) — gates heavy secondary rails. */
-const leadHydrated = ref(false)
+/** True after seed/cache/GET — gates heavy secondary rails. */
+const leadHydrated = ref(seedMatchesLead(props.initialLead, props.leadId))
 const emit = defineEmits(['update:modelValue', 'stage-updated', 'lead-updated', 'update:leadId'])
 
 const show = ref(props.modelValue)
@@ -329,9 +341,20 @@ let detailExitGuard = false
 let entranceToken = 0
 let contentVisibleTimer = null
 const leadStageId = ref(
-  props.initialLead && Number(props.initialLead.id) === Number(props.leadId)
+  seedMatchesLead(props.initialLead, props.leadId)
     ? (props.initialLead.stage_id ?? null)
     : null
+)
+
+// Keep identity painted when App.vue flips leadId/seed while the modal stays mounted.
+watch(
+  () => [props.leadId, props.initialLead, props.modelValue],
+  ([leadId, seed, open]) => {
+    if (!open) return
+    if (paintFromSeed(seed, leadId)) {
+      detailAnimating.value = false
+    }
+  },
 )
 const activeTab = ref('general')
 const echoListener = ref(null)
@@ -1465,23 +1488,15 @@ const fetchLead = async ({ silent = false } = {}) => {
     const requestGeneration = ++fetchLeadGeneration
     fetchLeadInFlightId = leadIdNum
     const switchingLead = !lead.value || Number(lead.value.id) !== leadIdNum
-    // Only clear hydration when opening a different lead — silent refreshes must not
-    // tear down comments/engagement rails mid-edit.
-    if (switchingLead && !silent) {
-        leadHydrated.value = false
-    }
-
     const seed = props.initialLead
-    const seedMatches = seed && Number(seed.id) === leadIdNum
-    // Paint from local card data synchronously so the modal body appears on the same frame as open.
+    const seedMatches = seedMatchesLead(seed, leadIdNum)
+
+    // Paint seed/cache first so the modal never flashes empty / "Untitled lead".
     if (seedMatches) {
-        if (!lead.value || Number(lead.value.id) !== leadIdNum) {
-            lead.value = { ...seed }
-        } else {
-            lead.value = { ...lead.value, ...seed }
-        }
-        if (seed.stage_id) leadStageId.value = seed.stage_id
-    } else if (!lead.value || Number(lead.value.id) !== leadIdNum) {
+        paintFromSeed(seed, leadIdNum)
+    } else if (switchingLead && !silent) {
+        // Only clear when we have nothing to show for the new id.
+        leadHydrated.value = false
         lead.value = null
     }
 
@@ -1489,19 +1504,16 @@ const fetchLead = async ({ silent = false } = {}) => {
     const cached = getCachedLead(leadIdNum)
     if (cached?.data) {
         applyFreshLeadPayload(cached.data, leadIdNum)
+        leadHydrated.value = true
     }
 
-    // Seed / cache must paint the modal on this frame — never block the click handler
-    // on the network round-trip (production show can still take >1s under load).
+    // Seed / cache must paint the modal on this frame — never block the click handler.
     const hasPaint = !!lead.value
     if (!silent) {
         isLoadingLead.value = !hasPaint
     }
-    // Full cache can hydrate secondary rails; card seed alone must not (engagement SQL).
-    if (hasPaint && cached?.data) {
-        leadHydrated.value = true
-        applyOpenSection()
-    } else if (hasPaint && seedMatches) {
+    if (hasPaint) {
+        detailAnimating.value = false
         applyOpenSection()
     }
 
@@ -2061,23 +2073,17 @@ function onDetailHide(event) {
 }
 
 watch(show, (val, oldVal) => {
-  console.log('[ViewLeadModal] watch show', { val, oldVal, propsLeadId: props.leadId, syncUrl: props.syncUrl, routePath: route.path })
   if (val) {
     activeJump.value = 'details'
     detailExitGuard = false
-    const hasSeed = !!(
-      props.initialLead &&
-      Number(props.initialLead.id) === Number(props.leadId)
-    )
-    // Seeded opens paint immediately — skip motion class that can leave content invisible.
-    if (!prefersReducedMotion() && !hasSeed) detailAnimating.value = true
-    else detailAnimating.value = false
+    const hasSeed = seedMatchesLead(props.initialLead, props.leadId)
+    // Never opacity-hide a seeded open — that looked like a blank page for ~1s.
+    detailAnimating.value = false
+    if (hasSeed) paintFromSeed(props.initialLead, props.leadId)
     modalHostPath.value = route.path
     if (props.leadId) {
       fetchLead()
       initializeLeadListener()
-    } else {
-      console.log('[ViewLeadModal] watch show -> val true but props.leadId falsy, fetchLead NOT called')
     }
     void queueLeadDetailEntrance()
     nextTick(() => bindJumpObserver())

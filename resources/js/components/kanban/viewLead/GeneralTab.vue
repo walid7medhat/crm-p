@@ -149,14 +149,12 @@
 
             </div>
 
+            <!-- Keep the side rail visually quiet until ready — no "Loading…" flash. -->
             <div
                 v-if="canViewCommentsAndActivities && lead?.id && !showCommentsRail"
-                class="lead-feed-deferred"
-                aria-busy="true"
-                aria-live="polite"
-            >
-                Loading conversation…
-            </div>
+                class="lead-feed-deferred lead-feed-deferred--silent"
+                aria-hidden="true"
+            ></div>
 
             <!-- Lead Activity List -->
             <ActivityList
@@ -796,6 +794,15 @@ watch(
     color: #6b7280;
     font-size: 12px;
     font-weight: 550;
+}
+.lead-feed-deferred--silent {
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    font-size: 0;
 }
 
 /* GeneralTab Wrapper Styles */
