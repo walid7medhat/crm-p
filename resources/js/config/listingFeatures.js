@@ -42,6 +42,7 @@ export const LISTING_FEATURE_OPTIONS = [
   { key: 'university_view', label: 'University View', category: 'view' },
   { key: 'pool_view', label: 'Pool View', category: 'view' },
   { key: 'fountain_view', label: 'Fountain View', category: 'view' },
+  { key: 'burj_khalifa_view', label: 'Burj Khalifa View', category: 'view' },
 
   // Rooms
   { key: 'maid_room', label: "Maid Room", category: 'rooms' },

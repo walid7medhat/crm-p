@@ -4021,6 +4021,7 @@ public function getActivityLog($listingId)
         'university_view'    => 'University View',
         'pool_view'          => 'Pool View',
         'fountain_view'      => 'Fountain View',
+        'burj_khalifa_view'  => 'Burj Khalifa View',
 
         // Rooms
         'maid_room'          => 'Maid Room',
