@@ -41,6 +41,12 @@ class Owner extends Model
     {
         return $this->hasMany(\App\Models\Property::class, 'owner_id');
     }
+    /** Listings that belong to this owner. */
+    public function listings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Listing::class, 'owner_id');
+    }
+
     /**
      * Get the user who added this owner
      */

@@ -49,6 +49,12 @@ class OwnerResource extends JsonResource
             
             // Relationships
             'added_by_user' => $this->whenLoaded('addedBy'),
+            'added_by' => $this->whenLoaded('addedBy', fn () => $this->addedBy ? [
+                'id' => $this->addedBy->id,
+                'name' => filled($this->addedBy->display_name) ? $this->addedBy->display_name : $this->addedBy->name,
+            ] : null),
+            'branch' => $this->when(array_key_exists('branch_name', $this->resource->getAttributes()), fn () => $this->resource->getAttribute('branch_name')),
+            'listings_count' => $this->when(isset($this->listings_count), fn () => (int) $this->listings_count),
             'location' => $this->whenLoaded('location'),
         ];
     }

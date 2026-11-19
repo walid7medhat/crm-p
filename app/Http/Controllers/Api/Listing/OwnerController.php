@@ -44,7 +44,7 @@ public function index(Request $request): JsonResponse
         // Per-user version makes the cache key change whenever clearOwnersCacheFor() runs,
         // so file/database drivers (no tag support) still invalidate correctly.
         $version = self::getUserCacheVersion($userId);
-        $cacheKey = self::CACHE_PREFIX . 'user_' . $userId . '_v' . $version . '_' . OwnerVisibility::scopeKey($user) . '_index_' . md5(serialize($request->all()));
+        $cacheKey = self::CACHE_PREFIX . 'user_' . $userId . '_v' . $version . '_' . OwnerVisibility::scopeKey($user) . '_index2_' . md5(serialize($request->all()));
 
         // استخدام cache tags إذا كان مدعوماً
         if (method_exists(Cache::getStore(), 'tags')) {
@@ -119,7 +119,59 @@ public static function bumpUserCacheVersion(int $userId): void
             $query->where('location_id', $request->location_id);
         }
 
-        return $query->orderBy('created_at','desc')->get();
+        $owners = $query
+            ->with('addedBy:id,name,display_name,parent_id')
+            ->withCount('listings')
+            ->orderBy('created_at','desc')
+            ->get();
+
+        // Branch = the "added by" user's branch (Abu Dhabi, Dubai, …).
+        $branches = $this->branchNamesFor($owners->pluck('added_by')->filter()->unique()->all());
+        $owners->each(fn (Owner $o) => $o->setAttribute('branch_name', $branches[(int) $o->added_by] ?? null));
+
+        return $owners;
+    }
+
+    /**
+     * user id → branch name (the user right under super admin above them).
+     * One query for the whole users tree instead of walking parents per owner.
+     *
+     * @param  list<int>  $userIds
+     * @return array<int, string|null>
+     */
+    private function branchNamesFor(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $tree = Cache::remember('owners:user_tree', 600, fn () => User::query()
+            ->get(['id', 'parent_id', 'name'])
+            ->mapWithKeys(fn ($u) => [(int) $u->id => ['p' => $u->parent_id ? (int) $u->parent_id : null, 'n' => $u->name]])
+            ->all());
+
+        $out = [];
+        foreach ($userIds as $id) {
+            $id = (int) $id;
+            $current = $id;
+            $seen = [];
+            $branch = null;
+            while (isset($tree[$current]) && ! isset($seen[$current])) {
+                $seen[$current] = true;
+                $parent = $tree[$current]['p'];
+                if ($parent === null) {
+                    break; // super admin — no branch
+                }
+                if (! isset($tree[$parent]) || $tree[$parent]['p'] === null) {
+                    $branch = $tree[$current]['n'];
+                    break;
+                }
+                $current = $parent;
+            }
+            $out[$id] = $branch ? ucwords(strtolower(trim($branch))) : null;
+        }
+
+        return $out;
     }
 
     /**
