@@ -277,10 +277,11 @@ class RequestMonitorService
         $allMs = [];
         $byUser = [];
         $usersByIp = [];
+        $endpointMs = [];
 
         foreach ($files as $file) {
             $reachedCutoff = false;
-            $this->eachLineBackwards($file, function (string $line) use ($cutoffStr, &$allMs, &$byUser, &$usersByIp, &$reachedCutoff) {
+            $this->eachLineBackwards($file, function (string $line) use ($cutoffStr, &$allMs, &$byUser, &$usersByIp, &$reachedCutoff, &$endpointMs) {
                 if (strlen($line) < 22 || $line[0] !== '[') {
                     return true;
                 }
@@ -289,20 +290,22 @@ class RequestMonitorService
 
                     return false;
                 }
-                if (! str_contains($line, 'stages-with-leads')) {
+                // "[ts] env.INFO: api/route/{param} {json} []" — the message is the route uri.
+                if (! preg_match('/\.INFO: (\S+) (\{.*\})/', $line, $mm)) {
                     return true;
                 }
-                $open = strpos($line, '{');
-                $close = strrpos($line, '}');
-                if ($open === false || $close === false) {
-                    return true;
-                }
-                $ctx = json_decode(substr($line, $open, $close - $open + 1), true);
+                $ctx = json_decode(substr($mm[2], 0, strrpos($mm[2], '}') + 1), true);
                 if (! is_array($ctx) || ! isset($ctx['ms'])) {
                     return true;
                 }
 
                 $ms = (float) $ctx['ms'];
+                $endpointKey = strtoupper((string) ($ctx['method'] ?? 'GET')).' /'.ltrim($mm[1], '/');
+                $endpointMs[$endpointKey][] = $ms;
+
+                if (! str_contains($mm[1], 'stages-with-leads')) {
+                    return true;
+                }
                 $uid = (int) ($ctx['user_id'] ?? 0);
                 $allMs[] = $ms;
 
@@ -365,8 +368,22 @@ class RequestMonitorService
             $ipUsers[$ip] = array_map(fn ($id) => ['id' => $id, 'name' => $names[$id] ?? "User #{$id}"], array_values($ids));
         }
 
+        $endpoints = [];
+        foreach ($endpointMs as $key => $list) {
+            sort($list);
+            $endpoints[] = [
+                'route' => $key,
+                'count' => count($list),
+                'median_ms' => (int) round($this->percentile($list, 0.5)),
+                'p90_ms' => (int) round($this->percentile($list, 0.9)),
+                'max_ms' => (int) round(end($list)),
+            ];
+        }
+        usort($endpoints, fn ($a, $b) => $b['p90_ms'] <=> $a['p90_ms']);
+
         return [
             'available' => (bool) $files,
+            'endpoints' => $endpoints,
             'loads' => count($allMs),
             'avg_ms' => $allMs ? (int) round(array_sum($allMs) / count($allMs)) : 0,
             'median_ms' => (int) round($this->percentile($allMs, 0.5)),

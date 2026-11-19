@@ -56,6 +56,7 @@ const items = computed(() => {
     isAdmin: isAdmin.value,
     isSuperAdmin: isSuperAdmin.value,
     isShowOnlyListing: isShowOnlyListing.value,
+    isHr: user.value?.roles?.includes('hr') ?? false,
     userId: Number(user.value?.id) || 0,
     canAccessListings: isAdmin.value || isShowOnlyListing.value,
     hideListings: user.value?.roles?.includes('accountant') ?? false,

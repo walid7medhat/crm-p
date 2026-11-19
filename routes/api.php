@@ -605,8 +605,8 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/{deal}/deal-type', [DealController::class, 'changeDealType']);
         Route::get('/', [DealController::class, 'index']);
         Route::get('/export/commission-sheet', \App\Http\Controllers\Api\Deal\DealCommissionSheetController::class);
-        Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage']);
-        Route::get('/get-more/by-stage', [DealController::class, 'getDealsByStage']);
+        Route::get('/grouped-by-stage', [DealController::class, 'getDealsGroupedByStage'])->middleware('log.usage');
+        Route::get('/get-more/by-stage', [DealController::class, 'getDealsByStage'])->middleware('log.usage');
         Route::post('/{deal}/assign-responsible-person', [DealController::class, 'assignResponsiblePerson']);
         Route::delete('/documents/{id}', [DealController::class, 'deleteDocument']);
         Route::get('/{id}/history', [DealController::class, 'history']);
@@ -622,7 +622,7 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/comments/{id}', [DealActivityController::class, 'destroyComment']);
         Route::post('/comments/{commentId}/attachments', [DealActivityController::class, 'addCommentAttachments']);
         Route::delete('/comments/{commentId}/attachments/{attachmentId}', [DealActivityController::class, 'destroyCommentAttachment']);
-        Route::get('/{deal}', [DealController::class, 'show']);
+        Route::get('/{deal}', [DealController::class, 'show'])->middleware('log.usage');
         Route::put('/{deal}', [DealController::class, 'update']);
         Route::post('/store/new', [LeadConversionController::class, 'store']);
         Route::post('/{id}/update-stage', [DealController::class, 'updateStage']);
@@ -899,7 +899,8 @@ Route::get('/leads/phone-duplicates', [LeadController::class, 'phoneDuplicates']
 Route::get('/leads/inactive-sales', [LeadController::class, 'inactiveSales']);
 Route::get('/leads/total-count', [LeadController::class, 'totalCount']);
 Route::get('/leads/{lead}/comment-portal-links', [LeadController::class, 'commentPortalLinks']);
-Route::apiResource('leads', LeadController::class);
+// log.usage: response times for list/open/save show up in Request Monitor.
+Route::apiResource('leads', LeadController::class)->middleware('log.usage');
 Route::get('leads/get/duplicate/{lead_id}',[LeadController::class,'getDuplicate']);
 Route::post('/leads/{lead}/change-stage', [LeadController::class, 'changeStage']);
 Route::patch('/leads/{lead}/name', [LeadController::class, 'updateName']);
