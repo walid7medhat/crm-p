@@ -1080,13 +1080,9 @@ const formatMaskedQuestion = (questionData) => {
 }
 async function fetchAssignmentStatus() {
     try {
-        const response = await api.get(
-            '/lead-pool/assignment-status'
-        )
-        
-
-        assignmentStatus.value =
-            response?.data?.data ?? assignmentStatus.value
+        const { fetchLeadPoolAssignmentStatus } = await import('@/composables/leadPoolAssignmentStatus.js')
+        const data = await fetchLeadPoolAssignmentStatus()
+        assignmentStatus.value = data ?? assignmentStatus.value
     } catch (error) {
         console.error(
             'Failed to load assignment status',

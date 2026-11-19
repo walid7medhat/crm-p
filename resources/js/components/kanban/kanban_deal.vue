@@ -573,8 +573,9 @@ const setupKanbanListeners = () => {
 // page) so turning it on/off for an agent takes effect on the next page load.
 async function syncLeadPoolAccess() {
     try {
-        const res = await api.get('/lead-pool/assignment-status')
-        const enabled = res?.data?.data?.enabled
+        const { fetchLeadPoolAssignmentStatus } = await import('@/composables/leadPoolAssignmentStatus.js')
+        const status = await fetchLeadPoolAssignmentStatus()
+        const enabled = status?.enabled
         if (typeof enabled !== 'boolean' || !user.value) return
         if (user.value.lead_pool_enabled === enabled) return
 
