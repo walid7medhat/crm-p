@@ -153,7 +153,7 @@ class BrandResolver
         return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
     }
 
-    /** Non–super-admin users allowed on both companies (config brands.shared_user_ids, default #30). */
+    /** Non–super-admin users allowed on both companies (config brands.shared_user_ids, default #30, #33). */
     public static function isSharedUserId(?int $userId): bool
     {
         return $userId !== null

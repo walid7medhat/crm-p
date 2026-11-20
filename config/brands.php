@@ -27,7 +27,7 @@ return [
     */
     'shared_user_ids' => array_values(array_filter(array_map(
         'intval',
-        explode(',', (string) env('BRAND_SHARED_USER_IDS', '30'))
+        explode(',', (string) env('BRAND_SHARED_USER_IDS', '30,33'))
     ))),
 
     /*

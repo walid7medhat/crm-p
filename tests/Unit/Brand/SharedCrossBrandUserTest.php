@@ -37,6 +37,7 @@ class SharedCrossBrandUserTest extends TestCase
     public function test_user_30_is_shared_by_default(): void
     {
         $this->assertTrue(BrandResolver::isSharedUserId(30));
+        $this->assertTrue(BrandResolver::isSharedUserId(33));
         $this->assertFalse(BrandResolver::isSharedUserId(31));
         $this->assertTrue(BrandResolver::isCrossBrandUser($this->user(30)));
         $this->assertFalse(BrandResolver::isCrossBrandUser($this->user(31)));
@@ -48,6 +49,7 @@ class SharedCrossBrandUserTest extends TestCase
         $luxvant = config('brands.brands.luxvant');
 
         $this->assertTrue($resolver->userMayAccess($luxvant, $this->user(30)));
+        $this->assertTrue($resolver->userMayAccess($luxvant, $this->user(33)));
         $this->assertTrue($resolver->userMayAccess(config('brands.brands.oia'), $this->user(30)));
     }
 
