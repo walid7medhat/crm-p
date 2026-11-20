@@ -538,10 +538,16 @@ class IntegrationController extends Controller
                             'leadgen_id' => $leadgenId,
                         ]);
 
-                        $integration = Integration::where('page_id', $pageId)
-                            ->where('facebook_form_id', $formId)
-                            ->where('status', 'active')
-                            ->first();
+                        // A Meta form id is unique, so the form alone identifies the
+                        // integration (same as get_from_date). Prefer one saved with the
+                        // same page; otherwise accept the form even if the page differs.
+                        $integration = $formId
+                            ? Integration::where('facebook_form_id', $formId)
+                                ->where('status', 'active')
+                                ->orderByRaw('CASE WHEN page_id = ? THEN 0 ELSE 1 END', [(string) $pageId])
+                                ->orderBy('id')
+                                ->first()
+                            : null;
 
                         if (!$integration) {
                             Log::warning('⚠️ No active integration found', [
@@ -549,6 +555,15 @@ class IntegrationController extends Controller
                                 'form_id' => $formId
                             ]);
                             continue;
+                        }
+
+                        if ((string) $integration->page_id !== (string) $pageId) {
+                            Log::info('Webhook form matched an integration saved with another page', [
+                                'integration_id' => $integration->id,
+                                'saved_page_id' => $integration->page_id,
+                                'webhook_page_id' => $pageId,
+                                'form_id' => $formId,
+                            ]);
                         }
 
                         // جلب تفاصيل الليد من Meta API
