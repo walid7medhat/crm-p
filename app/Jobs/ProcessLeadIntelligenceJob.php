@@ -16,7 +16,7 @@ class ProcessLeadIntelligenceJob implements ShouldQueue
 
     public function __construct(public int $leadId)
     {
-        $this->initializeBrandContext();
+        $this->initializeBrandContextForLead($leadId);
     }
 
     public function handle(LeadIntelligenceService $service): void

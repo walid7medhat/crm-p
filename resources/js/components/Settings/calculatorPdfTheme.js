@@ -1,4 +1,14 @@
 /** Shared CRM-branded PDF theme for ROI & ROE calculators */
+import { isLuxvantBrand } from '@/composables/useBrand.js'
+
+/** Calculators show the OIA name on OIA; on Luxvant the brand name is hidden everywhere. */
+export const OIA_BRAND_NAME = 'Oia Properties'
+export const showCalculatorBrand = () => !isLuxvantBrand()
+export const calculatorBrandName = () => (showCalculatorBrand() ? OIA_BRAND_NAME : '')
+/** "Prepared by Oia Properties for …" on OIA, "Prepared for …" on Luxvant. */
+export const preparedByText = () => (showCalculatorBrand() ? `Prepared by ${OIA_BRAND_NAME} for` : 'Prepared for')
+/** PDF file name prefix: "Oia-Properties-ROI-…" on OIA, "ROI-…" on Luxvant. */
+export const calculatorFilePrefix = () => (showCalculatorBrand() ? 'Oia-Properties-' : '')
 export const PDF_WIDTH = 1123
 
 export const C = {
@@ -102,8 +112,10 @@ export function pdfHeader({ reportTitle, clientName, projectLine, todayLabel, ag
     <tr><td colspan="2" style="height:4px;background:linear-gradient(90deg,${C.gold},${C.purple});padding:0;font-size:0;line-height:0;">&nbsp;</td></tr>
     <tr style="background:linear-gradient(135deg,${C.deep} 0%,${C.dark} 55%,${C.purple} 100%);">
       <td style="padding:16px 20px;vertical-align:top;">
-        <div style="font-size:17pt;font-weight:800;color:${C.gold};letter-spacing:.04em;font-family:${FF};">OIA PROPERTIES</div>
-        <div style="font-size:7pt;color:rgba(255,255,255,.65);letter-spacing:.14em;text-transform:uppercase;margin-top:4px;font-family:${FF};">${reportTitle}</div>
+        ${showCalculatorBrand()
+          ? `<div style="font-size:17pt;font-weight:800;color:${C.gold};letter-spacing:.04em;font-family:${FF};">OIA PROPERTIES</div>
+        <div style="font-size:7pt;color:rgba(255,255,255,.65);letter-spacing:.14em;text-transform:uppercase;margin-top:4px;font-family:${FF};">${reportTitle}</div>`
+          : `<div style="font-size:13pt;font-weight:800;color:${C.gold};letter-spacing:.04em;text-transform:uppercase;font-family:${FF};">${reportTitle}</div>`}
       </td>
       <td style="padding:16px 20px;text-align:right;vertical-align:top;">
         <div style="font-size:9pt;font-weight:700;color:#fff;font-family:${FF};">${esc(clientName || 'Client')}</div>
@@ -118,7 +130,7 @@ export function pdfDisclaimer(text) {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:${C.purpleBg};border:1px solid ${C.border};border-radius:8px;">
     <tr><td style="padding:10px 14px;font-size:6.5pt;color:${C.muted};line-height:1.65;font-family:${FF};">
       <strong style="color:${C.dark};">Disclaimer:</strong> ${text}
-      <div style="margin-top:6px;"><strong style="color:${C.navy};">Oia Properties</strong> · oiaproperties.com · Abu Dhabi, UAE · +971 2 444 0089 · 27 years UAE real estate</div>
+      ${showCalculatorBrand() ? `<div style="margin-top:6px;"><strong style="color:${C.navy};">Oia Properties</strong> · oiaproperties.com · Abu Dhabi, UAE · +971 2 444 0089 · 27 years UAE real estate</div>` : ''}
     </td></tr>
   </table>`
 }

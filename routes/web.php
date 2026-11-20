@@ -69,6 +69,11 @@ Broadcast::channel('live-watch', function ($user) {
     return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
 });
 
+// Foreign Access Monitor — real-time alerts (super_admin only).
+Broadcast::channel('foreign-access', function ($user) {
+    return $user && method_exists($user, 'hasRole') && $user->hasRole('super_admin');
+});
+
 Route::get('privacy-policy', function () {
     return view('privacy-policy');
 });

@@ -20,7 +20,7 @@ class ProcessLeadAutoAssignmentJob implements ShouldQueue
 
     public function __construct(public int $leadId)
     {
-        $this->initializeBrandContext();
+        $this->initializeBrandContextForLead($leadId);
     }
 
     public function handle(LeadAssignmentService $service): void

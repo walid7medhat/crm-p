@@ -33,6 +33,13 @@ class BrandScope implements Scope
         $column = $model->qualifyColumn('brand_key');
         $key = app(BrandContext::class)->key();
 
+        // Leads / deals follow their responsible person's company.
+        if (in_array($model->getTable(), BrandIsolation::CRM_TABLES, true)) {
+            BrandIsolation::applyCrmBrandRule($builder, $model->getTable(), $column, $key);
+
+            return;
+        }
+
         if ($key === 'luxvant') {
             if (BrandIsolation::luxvantAllowsUnclassifiedCrmRows($model->getTable())) {
                 $builder->where(function (Builder $q) use ($column) {

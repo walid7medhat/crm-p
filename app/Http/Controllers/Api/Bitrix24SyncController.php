@@ -53,7 +53,7 @@ class Bitrix24SyncController extends Controller
                     fn ($v) => $v > 0
                 );
                 if (!empty($ids)) {
-                    $existingMap = Lead::whereIn('bitrix24_id', $ids)
+                    $existingMap = Lead::withoutBrandScope()->whereIn('bitrix24_id', $ids)
                         ->pluck('id', 'bitrix24_id')
                         ->all();
                 }

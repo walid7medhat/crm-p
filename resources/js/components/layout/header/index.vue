@@ -187,7 +187,7 @@
         </li>
 
         <li
-          v-if="!isHr"
+          v-if="!isHr && calculatorMenuItems.length"
           :class="{
             dropdown: true,
             open: activeDropdown === 'calculator',
@@ -642,7 +642,7 @@
               <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
             </button>
 
-            <button type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('calculator') }" :aria-expanded="moreOpenGroup === 'calculators' ? 'true' : 'false'" @click="toggleMoreGroup('calculators')">
+            <button v-if="calculatorMenuItems.length" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('calculator') }" :aria-expanded="moreOpenGroup === 'calculators' ? 'true' : 'false'" @click="toggleMoreGroup('calculators')">
               <span class="mobile-more-row__icon"><img :src="calculatorIcon" alt="" /></span>
               <span class="mobile-more-row__label">Calculators</span>
               <iconify-icon icon="lucide:chevron-down" class="mobile-more-row__chevron" :class="{ 'is-open': moreOpenGroup === 'calculators' }" />
@@ -1444,6 +1444,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/settings/stage-duplicates-report', label: 'Stage Lead Duplicates', iconSrc: leadsIcon.value });
     system.push({ path: '/settings/account-emails', label: 'Account Emails', icon: 'lucide:mail' });
     system.push({ path: '/settings/location-tracking', label: 'Location Tracking', icon: 'lucide:map-pin' });
+    system.push({ path: '/settings/foreign-access', label: 'Foreign Access Monitor', icon: 'lucide:globe-lock' });
     system.push({ path: '/settings/request-monitor', label: 'Request Monitor', icon: 'lucide:activity' });
     system.push({ path: '/tracking', label: 'Live Watch', icon: 'lucide:radar' });
   }
@@ -1471,7 +1472,8 @@ const settingsSidebarSections = computed(() => {
   });
 });
 
-const calculatorMenuItems = computed(() => [
+// Calculators are OIA-only — hidden on Luxvant.
+const calculatorMenuItems = computed(() => (isLuxvantBrand ? [] : [
   {
     path: '/settings/roi-calculator',
     label: 'ROI',
@@ -1484,7 +1486,7 @@ const calculatorMenuItems = computed(() => [
     name: 'Return on Equity',
     icon: 'lucide:trending-up',
   },
-]);
+]));
 
 const allCalculatorMenuPaths = computed(() => calculatorMenuItems.value.map((i) => i.path));
 

@@ -205,7 +205,7 @@ Route::prefix('auth')->group(function () {
         // Live Watch client heartbeat / navigation (auth required; server no-ops unless monitored).
         Route::get('live-watch/client-config', [LiveWatchClientController::class, 'clientConfig']);
         Route::post('live-watch/heartbeat', [LiveWatchClientController::class, 'heartbeat'])
-            ->middleware('throttle:live-watch-heartbeat');
+            ->middleware(['throttle:live-watch-heartbeat', 'foreign.access.probe']);
         Route::post('live-watch/leave', [LiveWatchClientController::class, 'leave'])
             ->middleware('throttle:live-watch-heartbeat');
         Route::post('live-watch/navigation', [LiveWatchClientController::class, 'navigation'])
@@ -840,6 +840,11 @@ Route::middleware(['jwt.auth'])->group(function () {
         Route::get('/admin/live-watch/presence', [LiveWatchController::class, 'presence']);
         Route::get('/admin/live-watch/users', [LiveWatchController::class, 'users']);
         Route::get('/admin/live-watch/timeline', [LiveWatchController::class, 'timeline']);
+
+        // Foreign Access Monitor (super_admin only — backend role gate).
+        Route::get('/admin/foreign-access', [\App\Http\Controllers\Api\Admin\ForeignAccessController::class, 'index']);
+        Route::get('/admin/foreign-access/{foreignAccess}', [\App\Http\Controllers\Api\Admin\ForeignAccessController::class, 'show']);
+        Route::post('/admin/foreign-access/{foreignAccess}/review', [\App\Http\Controllers\Api\Admin\ForeignAccessController::class, 'markReviewed']);
 
         // Request Monitor: live traffic from the access log + board timings (read-only).
         Route::get('/admin/request-monitor', [\App\Http\Controllers\Api\Admin\RequestMonitorController::class, 'index']);

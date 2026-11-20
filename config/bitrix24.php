@@ -11,6 +11,17 @@ return [
     /** Shared secret for inbound Bitrix24 outbound-webhook (event) calls. */
     'event_token' => env('BITRIX24_EVENT_TOKEN'),
 
+    /**
+     * Branches whose leads are managed in the CRM only: the real-time webhook
+     * ignores Bitrix24 updates for them and does not create new leads for them.
+     * Branch = the top branch user under super admin (e.g. "abu dhabi", "Dubai").
+     * BITRIX24_WEBHOOK_SKIP_BRANCHES="abu dhabi,dubai"   (empty = sync every branch)
+     */
+    'webhook_skip_branches' => array_values(array_filter(array_map(
+        fn ($b) => strtolower(trim($b)),
+        explode(',', (string) env('BITRIX24_WEBHOOK_SKIP_BRANCHES', 'abu dhabi,dubai'))
+    ))),
+
     /** Local user id used when a Bitrix24 user has no local match. */
     // Force a Bitrix24 lead STATUS_ID to a local stage id (wins over name matching).
     // BITRIX24_STATUS_STAGE_MAP="UC_ABC123:10,UC_XYZ789:10"   (10 = Lead Pool)

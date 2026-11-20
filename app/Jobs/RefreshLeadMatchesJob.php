@@ -27,7 +27,7 @@ class RefreshLeadMatchesJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(public int $leadId, public bool $notify = true)
     {
-        $this->initializeBrandContext();
+        $this->initializeBrandContextForLead($leadId);
     }
 
     public function uniqueId(): string

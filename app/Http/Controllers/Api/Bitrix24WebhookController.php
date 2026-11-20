@@ -84,14 +84,16 @@ class Bitrix24WebhookController extends Controller
         if (! $leadId) {
             return;
         }
-        // Abu Dhabi leads are managed in the CRM only — ignore Bitrix24 updates for
-        // them so a Bitrix edit can't move the lead back (e.g. Contacted → New),
-        // and don't create new Abu Dhabi leads from Bitrix24 either (see below).
-        $existing = Lead::with('responsiblePerson')->where('bitrix24_id', $leadId)->first();
-        if ($existing && $this->isAbuDhabiLead($existing)) {
-            Log::channel('bitrix_leads')->info('Bitrix24 webhook skipped (Abu Dhabi lead)', [
+        // Branches in bitrix24.webhook_skip_branches (default: Abu Dhabi + Dubai) are
+        // managed in the CRM only — ignore Bitrix24 updates for them so a Bitrix edit
+        // can't move the lead back (e.g. Contacted → New), and don't create new leads
+        // for them from Bitrix24 either (see below). Any company (OIA or Luxvant).
+        $existing = Lead::withoutBrandScope()->with('responsiblePerson')->where('bitrix24_id', $leadId)->first();
+        if ($existing && ($branch = $this->skippedBranchOfLead($existing))) {
+            Log::channel('bitrix_leads')->info('Bitrix24 webhook skipped (CRM-only branch)', [
                 'bitrix24_id' => $leadId,
                 'lead_id'     => $existing->id,
+                'branch'      => $branch,
             ]);
             return;
         }
@@ -102,11 +104,12 @@ class Bitrix24WebhookController extends Controller
         }
 
         // New lead: its branch comes from the Bitrix24 responsible person (ASSIGNED_BY_ID
-        // mapped to a local user). Abu Dhabi → don't create it in the CRM.
-        if (! $existing && $this->isAbuDhabiBitrixLead($importer, $b24)) {
-            Log::channel('bitrix_leads')->info('Bitrix24 webhook: new lead not created (Abu Dhabi)', [
+        // mapped to a local user). Skipped branch → don't create it in the CRM.
+        if (! $existing && ($branch = $this->skippedBranchOfBitrixLead($importer, $b24))) {
+            Log::channel('bitrix_leads')->info('Bitrix24 webhook: new lead not created (CRM-only branch)', [
                 'bitrix24_id'    => $leadId,
                 'assigned_by_id' => $b24['ASSIGNED_BY_ID'] ?? null,
+                'branch'         => $branch,
             ]);
             return;
         }
@@ -126,40 +129,64 @@ class Bitrix24WebhookController extends Controller
         }
     }
 
-    /**
-     * Same branch rules as LeadAssignmentService::resolveLeadBranchId — explicit
-     * `branch`, then `lead_branch_source`, then the responsible person's branch
-     * (admin_parent, id 25 = "abu dhabi").
-     */
-    private function isAbuDhabiLead(Lead $lead): bool
+    /** Lower-cased branch names whose leads ignore Bitrix24 (config/bitrix24.php). */
+    private function skipBranches(): array
     {
-        $isAbuDhabi = fn ($name) => strtolower(trim((string) $name)) === 'abu dhabi';
+        return (array) config('bitrix24.webhook_skip_branches', ['abu dhabi', 'dubai']);
+    }
 
-        if (trim((string) $lead->branch) !== '') {
-            return $isAbuDhabi($lead->branch);
-        }
-        if ($isAbuDhabi($lead->lead_branch_source)) {
-            return true;
-        }
+    private function skippedName(?string $name): ?string
+    {
+        $name = strtolower(trim((string) $name));
 
-        return (int) ($lead->responsiblePerson?->admin_parent?->id ?? 0) === 25;
+        return $name !== '' && in_array($name, $this->skipBranches(), true) ? $name : null;
     }
 
     /**
-     * A not-yet-imported Bitrix24 lead belongs to Abu Dhabi when its Bitrix responsible
-     * person maps to a local user in the Abu Dhabi branch (User::getBranchNode(), id 25).
+     * Same branch rules as LeadAssignmentService::resolveLeadBranchId — explicit
+     * `branch`, then `lead_branch_source`, then the responsible person's branch
+     * (admin_parent, e.g. id 25 "abu dhabi", id 59 "Dubai").
+     * Returns the skipped branch name, or null when the lead should sync.
+     */
+    private function skippedBranchOfLead(Lead $lead): ?string
+    {
+        if (trim((string) $lead->branch) !== '') {
+            return $this->skippedName($lead->branch);
+        }
+        if ($name = $this->skippedName($lead->lead_branch_source)) {
+            return $name;
+        }
+
+        $admin = $lead->responsiblePerson?->admin_parent;
+        // Legacy: id 25 is the Abu Dhabi branch even if renamed.
+        if ((int) ($admin?->id ?? 0) === 25 && in_array('abu dhabi', $this->skipBranches(), true)) {
+            return 'abu dhabi';
+        }
+
+        return $this->skippedName($admin?->name);
+    }
+
+    /**
+     * A not-yet-imported Bitrix24 lead belongs to a skipped branch when its Bitrix
+     * responsible person maps to a local user in that branch (User::getBranchNode()).
      * Unmapped responsible → unknown branch → still imported, as before.
      */
-    private function isAbuDhabiBitrixLead(Bitrix24LeadImporter $importer, array $b24): bool
+    private function skippedBranchOfBitrixLead(Bitrix24LeadImporter $importer, array $b24): ?string
     {
         $localUserId = $importer->mapBitrixUser($b24['ASSIGNED_BY_ID'] ?? null);
         if (! $localUserId) {
-            return false;
+            return null;
         }
 
         $branch = User::find($localUserId)?->getBranchNode();
+        if (! $branch) {
+            return null;
+        }
+        if ((int) $branch->id === 25 && in_array('abu dhabi', $this->skipBranches(), true)) {
+            return 'abu dhabi';
+        }
 
-        return $branch && ((int) $branch->id === 25 || strtolower(trim((string) $branch->name)) === 'abu dhabi');
+        return $this->skippedName($branch->name);
     }
 
     /** Resolve the owning lead id from an activity (OWNER_TYPE_ID 1 = lead). */

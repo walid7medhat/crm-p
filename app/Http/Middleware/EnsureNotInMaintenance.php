@@ -82,6 +82,19 @@ class EnsureNotInMaintenance
             return true;
         }
 
+        // Inbound lead webhooks (Meta, Bitrix24, Property Finder, websites) must keep
+        // working during maintenance — a 503 makes Meta drop/disable the delivery and
+        // those leads are lost. They verify their own secrets inside the controller.
+        if ($request->is(
+            'api/webhook/facebook',
+            'api/bitrix24/webhook',
+            'api/propertyfinder/webhook',
+            'api/website-lead',
+            'api/website-lead/*',
+        )) {
+            return true;
+        }
+
         if (($request->isMethod('GET') || $request->isMethod('HEAD'))
             && ! $request->is('api/*')
             && ! $request->is('broadcasting/*')

@@ -203,7 +203,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         // re-imports would leave the lead stuck in whatever stage it first
         // landed in — usually the default 'New' stage).
         if ($b24Id > 0) {
-            $existing = Lead::where('bitrix24_id', $b24Id)->first();
+            $existing = Lead::withoutBrandScope()->where('bitrix24_id', $b24Id)->first();
             if ($existing) {
                  $oldStatus = $existing->status_lead;
                 $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
@@ -278,7 +278,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         $b24Id = (int) ($b24Lead['ID'] ?? 0);
 
         if ($b24Id > 0) {
-            $existing = Lead::where('bitrix24_id', $b24Id)->first();
+            $existing = Lead::withoutBrandScope()->where('bitrix24_id', $b24Id)->first();
             if ($existing) {
                 $oldStatus = $existing->status_lead;
                 $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
@@ -1687,6 +1687,23 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             'bitrix24_assigned_user_id'     => isset($b24Lead['ASSIGNED_BY_ID']) ? (int) $b24Lead['ASSIGNED_BY_ID'] : null,
             'created_at'                    => $created->format('Y-m-d H:i:s'),
             'updated_at'                    => $updated->format('Y-m-d H:i:s'),
+        ] + $this->brandColumnFor($responsible ?? $this->fallbackUserId);
+    }
+
+    /**
+     * Imports skip model events (withoutEvents / bulk insert), so stamp the brand
+     * here: a lead assigned to a Luxvant agent is a Luxvant lead, the rest OIA.
+     *
+     * @return array<string, string>
+     */
+    private function brandColumnFor(?int $responsibleId): array
+    {
+        if (! \App\Support\Brand\BrandIsolation::columnReady('leads')) {
+            return [];
+        }
+
+        return [
+            'brand_key' => \App\Support\Brand\BrandCrmScope::isLuxvantMember($responsibleId) ? 'luxvant' : 'oia',
         ];
     }
     private function generateUniqueLeadNumber(int $b24Id): string
@@ -1784,7 +1801,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                     $this->importOne($item['b24']);
                     $stats['existing']++;
                 } else {
-                    $lead = Lead::find($item['local_id']);
+                    $lead = Lead::withoutBrandScope()->find($item['local_id']);
                     if ($lead) {
                         $this->syncStageForExistingLead($lead, $item['b24']);
                         $stats['existing']++;

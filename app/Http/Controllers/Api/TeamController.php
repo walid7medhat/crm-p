@@ -40,6 +40,12 @@ class TeamController extends Controller
                                         });
                                 });
                             })
+                // Shared cross-company user (#30) on the Luxvant host: Luxvant tree only.
+                ->when(
+                    \App\Support\Brand\BrandResolver::isSharedUserId((int) $user->id)
+                        && app(\App\Support\Brand\BrandContext::class)->key() === 'luxvant',
+                    fn ($qq) => $qq->whereIn('id', \App\Support\Brand\BrandCrmScope::luxvantMemberIds() ?: [0])
+                )
                 ->get();
 
             $branches = $this->branchNodesFor($users);
@@ -146,6 +152,16 @@ class TeamController extends Controller
                     $this->loadAncestorChain($parent);
                 }
                 $this->loadAncestorChain($actor);
+
+                // #30 on the Luxvant host may only move Luxvant people within Luxvant.
+                if (\App\Support\Brand\BrandResolver::isSharedUserId((int) $actor->id)
+                    && app(\App\Support\Brand\BrandContext::class)->key() === 'luxvant') {
+                    $luxvant = \App\Support\Brand\BrandCrmScope::luxvantMemberIds();
+                    if (! in_array((int) $employee->id, $luxvant, true)
+                        || ($parent && ! in_array((int) $parent->id, $luxvant, true))) {
+                        return [403, 'You can only change Luxvant employees here.'];
+                    }
+                }
 
                 if ($this->isChartLeader($employee)) {
                     return [422, 'Managers and team leaders stay in place. Move sales employees between teams.'];
