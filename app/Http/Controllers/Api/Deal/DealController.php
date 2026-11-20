@@ -1318,9 +1318,20 @@ class DealController extends Controller
             ], 403);
         }
 
-        // Joint (shared) buyer safety net — the view sends every section's fields, so only
-        // reject what is clearly wrong instead of answering "success" while saving nothing.
-        if ($jointErrors = $this->jointBuyerErrors($deal, $request)) {
+        // Section save from the deal view (edit_section = the card being edited). The view
+        // sends every section's fields, so only the edited section is written and checked:
+        // saving the commission split must not fail on buyer / property / stage rules.
+        // No edit_section (create flow, stage move, mobile) = the old "everything" behaviour.
+        $scope = $this->editSectionScope($request->input('edit_section'));
+
+        // Joint (shared) buyer safety net — only reject what is clearly wrong instead of
+        // answering "success" while saving nothing.
+        if ($scope['parties'] === null || in_array('shared_buyer', $scope['parties'], true)) {
+            $jointErrors = $this->jointBuyerErrors($deal, $request);
+        } else {
+            $jointErrors = [];
+        }
+        if ($jointErrors) {
             return response()->json([
                 'success' => false,
                 'message' => reset($jointErrors),
@@ -1340,7 +1351,14 @@ class DealController extends Controller
                 'property_link', 'property_reference', 'lost_reason', 'eoi_date', 'booking_date', 'spa_date', 
             'security_deposit_date', 'mou_date', 'noc_date'
             ];
-            
+            if ($scope['deal_fields'] !== null) {
+                // Responsible person is shown under every section in the edit form.
+                $dealFields = array_values(array_intersect(
+                    $dealFields,
+                    array_merge($scope['deal_fields'], ['responsible_person_id'])
+                ));
+            }
+
             foreach ($dealFields as $field) {
                 if ($request->has($field) && $request->$field !== null && $request->$field !== '') {
                     $updateData[$field] = $request->$field;
@@ -1361,22 +1379,28 @@ class DealController extends Controller
             }
 
             // Optional commission distribution (metadata only — does not affect base financial fields)
-            DealCommissionDistribution::applyFromRequest($deal->fresh(), $request);
-            $deal->refresh();
-
-            // 2. تحديث الأطراف
-            $this->updatePartiesFromRequest($deal, $request);
-
-            // 3. تحديث الـ Properties — مصفوفة كاملة، أو حقول مسطحة من مودال عرض الصفقة (property_details)
-            if ($request->has('properties')) {
-                $this->syncProperties($deal, $request->properties);
-            } else {
-                $this->syncPrimaryPropertyFromFlatRequest($deal, $request);
+            if ($scope['commission']) {
+                DealCommissionDistribution::applyFromRequest($deal->fresh(), $request);
+                $deal->refresh();
             }
 
-            // 3b. Root-level property files (payment_proof[*], spa_document[*]) —
-            // merged onto the primary property even when properties JSON exists.
-            $this->mergeRootPropertyFilesOntoPrimaryProperty($deal, $request);
+            // 2. تحديث الأطراف
+            if ($scope['parties'] === null || $scope['parties'] !== []) {
+                $this->updatePartiesFromRequest($deal, $request, $scope['parties']);
+            }
+
+            // 3. تحديث الـ Properties — مصفوفة كاملة، أو حقول مسطحة من مودال عرض الصفقة (property_details)
+            if ($scope['properties']) {
+                if ($request->has('properties')) {
+                    $this->syncProperties($deal, $request->properties);
+                } else {
+                    $this->syncPrimaryPropertyFromFlatRequest($deal, $request);
+                }
+
+                // 3b. Root-level property files (payment_proof[*], spa_document[*]) —
+                // merged onto the primary property even when properties JSON exists.
+                $this->mergeRootPropertyFilesOntoPrimaryProperty($deal, $request);
+            }
 
             // 4. رفع المستندات
             if ($request->hasFile('documents')) {
@@ -1432,7 +1456,10 @@ class DealController extends Controller
             }
 
             // 5. تغيير المرحلة
-            if ($request->filled('stage_id')) {
+            // A section save that keeps the same stage is a plain edit: don't re-run the stage
+            // requirements (they belong to other sections and would block e.g. a commission save).
+            $sectionSameStage = $scope['section'] !== null && (int) $request->input('stage_id') === $oldStageId;
+            if ($request->filled('stage_id') && ! $sectionSameStage) {
                 // syncProperties()/syncPrimaryPropertyFromFlatRequest() above write straight to
                 // the DB via $deal->properties() (the query builder) — they never touch $deal's
                 // own cached `properties` relation. If anything earlier in this request already
@@ -1524,7 +1551,7 @@ class DealController extends Controller
      * nationality, date of birth, residency status, city (resident) / country (non-resident)
      * and language. The deal view sends every section's fields on every save, so a joint
      * buyer form that is completely empty is not treated as "adding" one.
-     * Any joint buyer email that is given must be a valid address.
+     * A new or changed joint buyer email must be a valid address (an unchanged stored one is left alone).
      *
      * @return array<string, string>
      */
@@ -1553,7 +1580,8 @@ class DealController extends Controller
         }
         $errors = [];
 
-        $hasJoint = $deal->parties()->where('party_type', 'buyer')->where('party_role', 'secondary')->exists();
+        $joint = $deal->parties()->where('party_type', 'buyer')->where('party_role', 'secondary')->first();
+        $hasJoint = $joint !== null;
         $adding = ! $hasJoint && count(array_filter($values, fn ($v) => $v !== '')) > 0;
 
         if ($adding) {
@@ -1579,7 +1607,12 @@ class DealController extends Controller
             }
         }
 
-        if ($values['email'] !== '' && ! isset($errors['shared_buyer_email']) && ! filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
+        // Only a new or edited email is checked: the view resends the stored value on every
+        // save, so a legacy invalid email must not block saving another section
+        // (e.g. the accountant saving the commission split).
+        $storedEmail = trim((string) ($joint?->email ?? ''));
+        $emailChanged = strcasecmp($values['email'], $storedEmail) !== 0;
+        if ($values['email'] !== '' && $emailChanged && ! isset($errors['shared_buyer_email']) && ! filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['shared_buyer_email'] = 'Enter a valid email address';
         }
 
@@ -1587,9 +1620,58 @@ class DealController extends Controller
     }
 
     /**
+     * What one deal-view section save may write. null values mean "everything" (no section
+     * given, or an unknown one — keeps the old behaviour). Uploaded files are always kept.
+     *
+     * @return array{section: ?string, deal_fields: ?array, parties: ?array, properties: bool, commission: bool}
+     */
+    private function editSectionScope($section): array
+    {
+        $all = ['section' => null, 'deal_fields' => null, 'parties' => null, 'properties' => true, 'commission' => true];
+        $section = is_string($section) ? trim($section) : '';
+        if ($section === '') {
+            return $all;
+        }
+
+        $none = ['section' => $section, 'deal_fields' => [], 'parties' => [], 'properties' => false, 'commission' => false];
+        $partySections = [
+            'buyer' => 'buyer', 'seller' => 'seller', 'tenant' => 'tenant',
+            'landlord' => 'landlord', 'shared_buyer' => 'shared_buyer',
+        ];
+
+        switch ($section) {
+            case 'deal_information':
+            case 'source_deal_name':
+            case 'client_details':
+                return array_merge($none, ['deal_fields' => [
+                    'source', 'deal_name', 'responsible_person_id', 'property_link', 'property_reference', 'lost_reason',
+                ]]);
+            case 'stage_dates':
+                return array_merge($none, ['deal_fields' => [
+                    'eoi_date', 'booking_date', 'spa_date', 'security_deposit_date', 'mou_date', 'noc_date',
+                ]]);
+            case 'deal_financials':
+                return array_merge($none, [
+                    'deal_fields' => ['deal_total_amount', 'deal_commission', 'agent_share', 'company_share', 'currency'],
+                    'commission' => true,
+                ]);
+            case 'property_details':
+            case 'property_documents':
+            case 'add_new_property':
+                return array_merge($none, ['properties' => true]);
+        }
+
+        if (preg_match('/^(shared_buyer|buyer|seller|tenant|landlord)_(details|documents)$/', $section, $m)) {
+            return array_merge($none, ['parties' => $m[2] === 'details' ? [$partySections[$m[1]]] : []]);
+        }
+
+        return $all;
+    }
+
+    /**
      * تحديث الأطراف من الـ Request
      */
-    private function updatePartiesFromRequest($deal, $request)
+    private function updatePartiesFromRequest($deal, $request, ?array $onlyPrefixes = null)
     {
         // prefix => [party_type, party_role]. The shared buyer is the deal's single
         // secondary buyer row (same model lead conversion uses for a co-buyer).
@@ -1600,6 +1682,10 @@ class DealController extends Controller
             'landlord' => ['landlord', 'primary'],
             'shared_buyer' => ['buyer', 'secondary'],
         ];
+
+        if ($onlyPrefixes !== null) {
+            $partyTypes = array_intersect_key($partyTypes, array_flip($onlyPrefixes));
+        }
 
         foreach ($partyTypes as $requestPrefix => [$type, $role]) {
             $partyData = [];
