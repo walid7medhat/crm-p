@@ -76,7 +76,7 @@ class DealCommissionDistribution
 
     /**
      * Apply only when the request explicitly includes commission_distribution.
-     * Missing key → leave metadata unchanged.
+     * Missing key â†’ leave metadata unchanged.
      */
     public static function viewerCanSee(): bool
     {
@@ -158,6 +158,17 @@ class DealCommissionDistribution
         return true;
     }
 
+    /** Number from a raw value; "200,000.00" â†’ 200000.0 ((float) would give 200). */
+    private static function num($value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+        $str = preg_replace('/[^0-9.\-]/', '', str_replace(',', '', (string) $value));
+
+        return is_numeric($str) ? (float) $str : 0.0;
+    }
+
     public static function sanitize(array $raw): array
     {
         $agencyIn = is_array($raw['external_agency'] ?? null) ? $raw['external_agency'] : [];
@@ -173,8 +184,8 @@ class DealCommissionDistribution
                     ? (int) $agent['user_id']
                     : null,
                 'name' => isset($agent['name']) ? (string) $agent['name'] : '',
-                'split_percent' => round((float) ($agent['split_percent'] ?? 0), 2),
-                'amount' => round((float) ($agent['amount'] ?? 0), 2),
+                'split_percent' => round(self::num($agent['split_percent'] ?? 0), 2),
+                'amount' => round(self::num($agent['amount'] ?? 0), 2),
             ];
         }
 
@@ -182,20 +193,20 @@ class DealCommissionDistribution
         $agents = self::fillAgentNames($agents);
 
         return [
-            'gross_amount' => round((float) ($raw['gross_amount'] ?? 0), 2),
+            'gross_amount' => round(self::num($raw['gross_amount'] ?? 0), 2),
             'external_agency' => [
                 'enabled' => (bool) ($agencyIn['enabled'] ?? false),
                 'name' => (string) ($agencyIn['name'] ?? ''),
                 'representing' => (string) ($agencyIn['representing'] ?? ''),
-                'split_percent' => round((float) ($agencyIn['split_percent'] ?? 0), 2),
-                'amount' => round((float) ($agencyIn['amount'] ?? 0), 2),
+                'split_percent' => round(self::num($agencyIn['split_percent'] ?? 0), 2),
+                'amount' => round(self::num($agencyIn['amount'] ?? 0), 2),
                 'referral' => (string) ($agencyIn['referral'] ?? ''),
                 'mou_issued_by' => (string) ($agencyIn['mou_issued_by'] ?? ''),
             ],
             'agents' => $agents,
-            'agents_total_amount' => round((float) ($raw['agents_total_amount'] ?? 0), 2),
-            'oia_retained_amount' => round((float) ($raw['oia_retained_amount'] ?? 0), 2),
-            'available_after_agency' => round((float) ($raw['available_after_agency'] ?? 0), 2),
+            'agents_total_amount' => round(self::num($raw['agents_total_amount'] ?? 0), 2),
+            'oia_retained_amount' => round(self::num($raw['oia_retained_amount'] ?? 0), 2),
+            'available_after_agency' => round(self::num($raw['available_after_agency'] ?? 0), 2),
         ];
     }
 }

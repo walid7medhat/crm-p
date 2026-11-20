@@ -1318,6 +1318,16 @@ class DealController extends Controller
             ], 403);
         }
 
+        // Money fields: accept formatted input ("20,560,000.00", "5 %", "AED 1,000") and
+        // tell the user which field is wrong instead of a 500 "Unable to cast value to a decimal".
+        if ($moneyErrors = $this->normalizeDealNumbers($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => reset($moneyErrors),
+                'errors' => $moneyErrors,
+            ], 422);
+        }
+
         // Section save from the deal view (edit_section = the card being edited). The view
         // sends every section's fields, so only the edited section is written and checked:
         // saving the commission split must not fail on buyer / property / stage rules.
@@ -1614,6 +1624,63 @@ class DealController extends Controller
         $emailChanged = strcasecmp($values['email'], $storedEmail) !== 0;
         if ($values['email'] !== '' && $emailChanged && ! isset($errors['shared_buyer_email']) && ! filter_var($values['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['shared_buyer_email'] = 'Enter a valid email address';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Clean the deal's decimal fields in the request (strip thousands separators, currency,
+     * %, spaces) so the decimal cast never throws. Returns field => message for any value
+     * that still isn't a number.
+     *
+     * @return array<string, string>
+     */
+    private function normalizeDealNumbers(Request $request): array
+    {
+        $labels = [
+            'deal_total_amount' => 'Deal amount',
+            'deal_commission' => 'Deal commission',
+            'agent_share' => 'Agent share',
+            'company_share' => 'Company share',
+        ];
+        $errors = [];
+        $clean = [];
+
+        foreach ($labels as $field => $label) {
+            if (! $request->has($field)) {
+                continue;
+            }
+            $raw = $request->input($field);
+            if ($raw === null || is_array($raw)) {
+                continue;
+            }
+            $str = trim((string) $raw);
+            if ($str === '' || strtolower($str) === 'null') {
+                continue;
+            }
+
+            // Arabic-Indic digits → ASCII, then drop everything but digits, dot and minus.
+            $str = strtr($str, ['٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9', '٫' => '.', '٬' => ',']);
+            $str = preg_replace('/[^0-9.\-]/', '', str_replace(',', '', $str));
+
+            if ($str === '' || ! is_numeric($str)) {
+                $errors[$field] = "{$label} must be a number (you entered \"{$raw}\").";
+                continue;
+            }
+            if ((float) $str < 0) {
+                $errors[$field] = "{$label} cannot be negative.";
+                continue;
+            }
+            if ($field === 'deal_commission' && (float) $str > 100) {
+                $errors[$field] = 'Deal commission is a percentage and cannot be more than 100.';
+                continue;
+            }
+            $clean[$field] = $str;
+        }
+
+        if ($clean) {
+            $request->merge($clean);
         }
 
         return $errors;

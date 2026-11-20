@@ -1274,12 +1274,23 @@ async function saveEditDeal() {
     isEditingDeal.value = false
     activeEditSection.value = null
   } catch (err) {
+    const body = err?.response?.data || {}
     if (err?.response?.status === 422) {
       editShowErrors.value = true
-      editFieldErrors.value = err.response?.data?.errors ?? {}
+      const errors = body.errors && typeof body.errors === 'object' ? body.errors : {}
+      editFieldErrors.value = errors
+      // Tell the user what is wrong, not only a red border they may not see.
+      const firstFieldError = Object.values(errors).flat().find(Boolean)
+      const missing = Array.isArray(body.missing_fields) && body.missing_fields.length
+        ? `Missing: ${body.missing_fields.map((f) => f?.label || f?.field || f).filter(Boolean).slice(0, 5).join(', ')}`
+        : null
+      window.$showNotification?.(firstFieldError || missing || body.message || 'Please check the highlighted fields', 'error')
     } else {
       // 403 / 500 / network used to fail silently — the modal just stayed open.
-      window.$showNotification?.(getApiErrorMessage(err, 'Failed to save deal'), 'error')
+      // A 500 carries the technical reason in `error`; show it so the user can report it.
+      const base = getApiErrorMessage(err, 'Failed to save deal')
+      const detail = typeof body.error === 'string' && body.error && body.error !== base ? ` — ${body.error}` : ''
+      window.$showNotification?.(base + detail, 'error')
     }
     console.error('Failed to save deal', err)
   } finally {
