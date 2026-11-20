@@ -250,8 +250,13 @@ export function useStageTransition() {
     return formData
   }
 
-  async function updateAndChangeStage({ dealId, payload, documents, stageId }) {
+  /**
+   * section = the deal-view card being saved (e.g. 'deal_financials'); the server then only
+   * writes and checks that section. Omit it to save everything (create / stage move).
+   */
+  async function updateAndChangeStage({ dealId, payload, documents, stageId, section = null }) {
     const formData = buildUpdateAndStageFormData({ payload, documents, stageId })
+    if (section) formData.append('edit_section', section)
 
     return axios.post(`/deals/${dealId}/update-and-change-stage`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

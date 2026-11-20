@@ -1238,7 +1238,9 @@ async function saveEditDeal() {
       dealId: props.deal.id,
       payload: editFormData.value,
       documents,
-      stageId
+      stageId,
+      // Only this card is saved/validated server-side (commission save ≠ buyer/property checks).
+      section: activeEditSection.value || null,
     })
     const updated = res?.data?.data ?? res?.data ?? {}
     const selectedResponsibleId = editFormData.value?.responsible_person_id ?? null
