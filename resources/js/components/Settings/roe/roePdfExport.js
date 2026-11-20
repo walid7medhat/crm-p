@@ -11,8 +11,7 @@ import {
   pdfHeader,
   pdfDisclaimer,
   pdfShell,
-  downloadPdfHtml,
-} from '../calculatorPdfTheme.js'
+  downloadPdfHtml, calculatorBrandName, preparedByText, calculatorFilePrefix } from '../calculatorPdfTheme.js'
 
 export function buildRoePdfHtml(r, todayLabel) {
   const f = r.f
@@ -103,7 +102,7 @@ export function buildRoePdfHtml(r, todayLabel) {
 
   const projectLine = `${f.projectName || ''}${f.unitRef ? ` · ${f.unitRef}` : ''}`
   const slug = (f.clientName || 'Client').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-') || 'Client'
-  const filename = `Oia-Properties-ROE-${r.mode}-${slug}-${Date.now()}.pdf`
+  const filename = `${calculatorFilePrefix()}ROE-${r.mode}-${slug}-${Date.now()}.pdf`
 
   const bodyHtml = pdfShell({
     header: pdfHeader({
@@ -111,19 +110,19 @@ export function buildRoePdfHtml(r, todayLabel) {
       clientName: f.clientName,
       projectLine,
       todayLabel,
-      agentName: f.agentName || 'Oia Properties',
+      agentName: f.agentName || calculatorBrandName(),
     }),
     meta: metaGrid([
       ['Client', f.clientName || '—'],
       ['Project', f.projectName || '—'],
       ['Unit', f.unitRef || '—'],
-      ['Agent', f.agentName || 'Oia Properties'],
+      ['Agent', f.agentName || calculatorBrandName() || '—'],
       ['Purchase Type', r.mode === 'offplan' ? 'Off-Plan' : `Ready · ${r.isCash ? 'Cash' : 'Mortgage'}`],
       ['Property Price', fmt(r.pp, cur)],
     ]),
     body,
     disclaimer: pdfDisclaimer(
-      'Prepared by Oia Properties for illustrative purposes only. All projections are forward-looking estimates — not guaranteed. DLD transfer fees (4%), agency commissions, mortgage fees, and service charges are excluded. Not financial or investment advice.',
+      `${preparedByText()} illustrative purposes only. All projections are forward-looking estimates — not guaranteed. DLD transfer fees (4%), agency commissions, mortgage fees, and service charges are excluded. Not financial or investment advice.`,
     ),
   })
 

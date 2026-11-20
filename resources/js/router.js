@@ -6,6 +6,7 @@ import { holdBackgroundApis, releaseBackgroundApis, releaseBackgroundApisAfterBo
 import { prefetchLeadBoard } from './composables/leadBoardPrefetch.js'
 import { confirmRegisteredLeadDrafts } from './composables/useLeadFormDraft.js'
 import { resolveCrmSection, CRM_SECTIONS } from './composables/useLayoutNavigation.js'
+import { isLuxvantBrand } from './composables/useBrand.js'
 /**
  * Route components are lazy-loaded so the initial main bundle no longer pulls
  * every page (HR, kanban, listings, maps, etc.). Auth guards / meta below are
@@ -96,8 +97,8 @@ const baseRoutes = [
   { path: '/suggestion', component: () => import('./pages/suggestions/index.vue'), meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: () => import('./pages/dashboard/investment.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: () => import('./pages/dashboard/city-settings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/settings/roi-calculator', component: () => import('./pages/settings/roi-calculator.vue'), meta: { requiresAuth: true } },
-  { path: '/settings/roe-calculator', component: () => import('./pages/settings/roe-calculator.vue'), meta: { requiresAuth: true } },
+  { path: '/settings/roi-calculator', component: () => import('./pages/settings/roi-calculator.vue'), meta: { requiresAuth: true, oiaOnly: true } },
+  { path: '/settings/roe-calculator', component: () => import('./pages/settings/roe-calculator.vue'), meta: { requiresAuth: true, oiaOnly: true } },
    { path: '/home', component: () => import('./pages/dashboard/home-analytics.vue'), meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
    { path: '/', component: () => import('./pages/dashboard/home-analytics.vue'), meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 
@@ -412,6 +413,12 @@ const router = createRouter({
 
 
 router.beforeEach(async (to, from, next) => {
+  // OIA-only pages (e.g. ROI / ROE calculators) are not available on Luxvant.
+  if (to.matched.some((r) => r.meta?.oiaOnly) && isLuxvantBrand()) {
+    next('/')
+    return
+  }
+
   if (to.fullPath !== from.fullPath) {
     const allowed = await confirmRegisteredLeadDrafts()
     if (!allowed) {
