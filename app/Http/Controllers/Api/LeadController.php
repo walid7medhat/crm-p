@@ -1563,7 +1563,9 @@ class LeadController extends Controller
                     ->orWhere('users.phone', 'like', $like);
             });
         }
-        if(!auth()->user()->hasAnyRole('branch_admin','admin','super_admin')){
+        // Accountants also see inactive users: deal commissions are often settled after the
+        // agent has left, so the deal's responsible person / split agent must stay pickable.
+        if(!auth()->user()->hasAnyRole('branch_admin','admin','super_admin','accountant')){
             $listQuery=$listQuery->where('status','active');
         }
 
