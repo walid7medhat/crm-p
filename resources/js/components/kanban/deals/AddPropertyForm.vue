@@ -188,7 +188,7 @@
       <div class="col-md-6" v-if="showPurchasePrice">
         <label class="form-label-custom">Purchase Price</label>
         <div class="input-group">
-          <b-form-input v-model="formData.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" @keypress="onMoneyKeypress" />
+          <MoneyInput v-model="formData.purchase_price" placeholder="Amount" class="form-control custom-input" />
           <span class="input-group-text">AED</span>
         </div>
       </div>
@@ -257,6 +257,7 @@
 import { ref, computed, watch , onMounted ,onBeforeUnmount ,nextTick } from 'vue'
 import { BFormInput, BSpinner } from 'bootstrap-vue-3'
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
+import MoneyInput from '@/components/common/MoneyInput.vue'
 import vSelect from 'vue-select'
 import axios from 'axios'
 import Swal from 'sweetalert2'
