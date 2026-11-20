@@ -731,7 +731,7 @@
             <span v-else>Purchase Price</span>
             <span v-if="isPurchasePriceRequired" class="text-danger">*</span>
           </label>
-        <div class="input-group"><b-form-input v-model="form.purchase_price" type="text" inputmode="numeric" placeholder="Amount" class="custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" @keypress="onMoneyKeypress" /><span class="input-group-text">AED</span></div></div>
+        <div class="input-group"><MoneyInput v-model="form.purchase_price" placeholder="Amount" class="form-control custom-input" :class="{ 'is-invalid': showErrors && isPurchasePriceRequired && !form.purchase_price }" /><span class="input-group-text">AED</span></div></div>
           <!-- Developer / sales-person fields are primary-only (off-plan); secondary and rental never show them. -->
           <div class="col-md-4" v-if="props.dealType === 'primary'">
             <label class="form-label-custom">Developer</label>
@@ -775,13 +775,10 @@
             <div class="df-base__field">
               <label class="df-base__label">Deal amount</label>
               <div class="df-base__affix" :class="{ 'is-invalid': showErrors && fieldErrors.deal_total_amount }">
-                <input
+                <MoneyInput
                   v-model="form.deal_total_amount"
-                  type="text"
-                  inputmode="numeric"
                   placeholder="0"
                   class="df-base__input"
-                  @keypress="onMoneyKeypress"
                 />
                 <span class="df-base__suffix">AED</span>
               </div>
@@ -864,6 +861,7 @@
 import { ref, watch, computed, onMounted ,onBeforeUnmount } from 'vue'
 import { BFormInput } from 'bootstrap-vue-3'
 import vSelect from 'vue-select'
+import MoneyInput from '@/components/common/MoneyInput.vue'
 import 'vue-select/dist/vue-select.css'
 import DocumentUpload from './DocumentUpload.vue'
 import ResponsiblePersonSelector from '../shared/ResponsiblePersonSelector.vue'
