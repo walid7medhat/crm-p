@@ -330,7 +330,7 @@ class UserController extends Controller
                         $user->status = $newStatus;
                         $user->save();
                         if ($newStatus === 'active') {
-                            Mail::to($user->email)->queue(new AccountActivatedMail($user->email, $user->name));
+                            Mail::to($user->email)->queue(new AccountActivatedMail($user->email, $user->name, $user));
                         }
                         break;
                 }
@@ -1090,7 +1090,8 @@ public function show(User $user): JsonResponse
                 Mail::to($user->email)->queue(
                     new AccountActivatedMail(
                         $user->email,
-                        $user->name
+                        $user->name,
+                        $user
                     )
                 );
             }

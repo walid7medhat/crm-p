@@ -79,7 +79,7 @@ class AccountAccessMailer
      */
     public function send(User $user, ?string $deliverTo = null): void
     {
-        $base = rtrim(config('app.frontend_url', config('app.url')), '/');
+        $base = \App\Support\Brand\BrandUrl::forUser($user); // Luxvant users → Luxvant sign-in page
         $to = $deliverTo ?: $user->email;
 
         try {

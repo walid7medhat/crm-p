@@ -27,6 +27,6 @@ class UserInvitationMail extends Mailable
 
     private function getInvitationUrl(): string
     {
-        return url("/register/{$this->invitation->token}");
+        return \App\Support\Brand\BrandUrl::to("/register/{$this->invitation->token}");
     }
 }

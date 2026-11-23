@@ -136,11 +136,27 @@ class AppServiceProvider extends ServiceProvider
         ]);
     });
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            $base = config('app.frontend_url', config('app.url'));
+            // Luxvant users get a Luxvant link, OIA users an OIA link.
+            $base = \App\Support\Brand\BrandUrl::forUser($notifiable);
             $email = urlencode($notifiable->getEmailForPasswordReset());
 
             return $base.'/reset-password?token='.urlencode($token).'&email='.$email;
         });
+
+        // Every emailed notification: url(...) inside toMail() points at the recipient's
+        // company site (Luxvant / OIA), also when sent from a queue or scheduled job.
+        Event::listen(\Illuminate\Notifications\Events\NotificationSending::class, function ($event) {
+            if ($event->channel === 'mail' && $event->notifiable instanceof \App\Models\User) {
+                \Illuminate\Support\Facades\URL::forceRootUrl(\App\Support\Brand\BrandUrl::forUser($event->notifiable));
+            }
+        });
+        $resetRoot = function ($event) {
+            if ($event->channel === 'mail') {
+                \Illuminate\Support\Facades\URL::forceRootUrl(null);
+            }
+        };
+        Event::listen(\Illuminate\Notifications\Events\NotificationSent::class, $resetRoot);
+        Event::listen(\Illuminate\Notifications\Events\NotificationFailed::class, $resetRoot);
 
         Deal::observe(SalesIntelligenceDealObserver::class);
         Deal::observe(AiSalesIntelligenceDealObserver::class);

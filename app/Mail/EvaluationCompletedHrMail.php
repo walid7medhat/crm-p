@@ -30,7 +30,7 @@ class EvaluationCompletedHrMail extends Mailable
                 'employeeName' => $employeeName,
                 'evaluatorName' => $evaluatorName,
                 'milestoneMonths' => $this->evaluation->milestone_months,
-                'profileUrl' => config('app.frontend_url') . '/hr/employees/' . $this->employee->id,
+                'profileUrl' => \App\Support\Brand\BrandUrl::to('/hr/employees/' . $this->employee->id, $this->employee),
             ]);
 
         $mail->attachData($this->pdfContents, "evaluation-{$this->evaluation->id}.pdf", [
