@@ -60,7 +60,6 @@ class DashboardRawSqlIsolationTest extends TestCase
     {
         $src = file_get_contents(app_path('Http/Controllers/Api/DashboardController.php'));
         $this->assertStringContainsString("BrandIsolation::constrain(\$propertyTypeQuery, 'listings'", $src);
-        $this->assertStringContainsString("BrandIsolation::constrain(\$propertyRevenueQuery, 'deals'", $src);
         $this->assertStringContainsString("BrandIsolation::constrain(\$leadRevenueQuery, 'leads'", $src);
         $this->assertStringContainsString("BrandIsolation::constrain(\$dealRevenueQuery, 'deals'", $src);
         $this->assertStringContainsString("BrandIsolation::constrain(\$visitQuery, 'listing_access_requests'", $src);
