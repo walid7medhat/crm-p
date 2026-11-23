@@ -73,7 +73,8 @@ const baseRoutes = [
 
   { path: '/lead-reports', component: () => import('./pages/lead-reports.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/lead-source-report', component: () => import('./pages/lead-source-report.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true } },
+  // Lead Pool Assignments: super_admin + user 30 (all), `view-lead-pool-report` permission (own branch).
+  { path: '/lead-pool-report', component: () => import('./pages/lead-pool-report.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true, allowUser30: true, allowPermission: 'view-lead-pool-report' } },
   // Lead Pool Settings: super_admin + user 30 (all agents), manage-lead-pool-settings permission (own branch).
   { path: '/lead-pool-settings', component: () => import('./pages/lead-pool-settings.vue'), meta: { requiresAuth: true, requiresLeadPoolManager: true } },
   // Owner Financial Intelligence: super admins + user #30 (OwnerFinancialReport::canView).
@@ -460,7 +461,9 @@ router.beforeEach(async (to, from, next) => {
     !isSuperAdminFromStorage() &&
     !(to.matched.some((r) => r.meta.allowUser33) && isUser33FromStorage()) &&
     !(to.matched.some((r) => r.meta.allowUser30) && isUser30FromStorage()) &&
-    !(to.matched.some((r) => r.meta.allowBranchAdmin) && isBranchAdminFromStorage())
+    !(to.matched.some((r) => r.meta.allowBranchAdmin) && isBranchAdminFromStorage()) &&
+    // Route meta `allowPermission`: users with that permission may open this super-admin page.
+    !to.matched.some((r) => r.meta.allowPermission && hasPermissionFromStorage(r.meta.allowPermission))
   ) {
     next('/')
     return

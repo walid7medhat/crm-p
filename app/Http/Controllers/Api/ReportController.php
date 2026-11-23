@@ -16,6 +16,9 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
+    /** Lead Pool Assignments report for your own branch (super_admin / #30 see all). */
+    public const LEAD_POOL_REPORT_PERMISSION = 'view-lead-pool-report';
+
     /**
      * الحصول على تقرير شامل لجميع المستخدمين
      */
@@ -306,15 +309,18 @@ class ReportController extends Controller
      * Lead Pool self-assignments in a date range (by when the lead was taken —
      * lead_pool_assignments.assigned_at): per user, how many leads they took from the
      * Lead Pool and which stage each of those leads is in NOW, plus the leads themselves.
-     * super_admin + user #30 only (for now).
+     * super_admin + user #30: every taker. `view-lead-pool-report` permission: takers of
+     * their own branch only.
      */
     public function leadPoolAssignmentsReport(Request $request)
     {
         try {
             $user = auth()->user();
-            if (!$user->hasRole('super_admin') && (int) $user->id !== 30) {
-                return ApiResponse::error('Unauthorized - Only super admins can access this report', 403);
+            $seesAll = $user->hasRole('super_admin') || (int) $user->id === 30;
+            if (! $seesAll && ! $user->checkPermissionTo(self::LEAD_POOL_REPORT_PERMISSION)) {
+                return ApiResponse::error('Unauthorized - You do not have access to this report', 403);
             }
+            $branchUserIds = $seesAll ? null : array_map('intval', $user->getBranchUserIds());
 
             $from = $request->filled('date_from') ? Carbon::parse($request->date_from)->startOfDay() : null;
             $to = $request->filled('date_to') ? Carbon::parse($request->date_to)->endOfDay() : null;
@@ -329,6 +335,8 @@ class ReportController extends Controller
                 // Only takers of this company (Luxvant host → Luxvant) and, on OIA, of the
                 // Abu Dhabi / Dubai branch picked in the branch switch.
                 ->tap(fn ($q) => \App\Support\Brand\BrandIsolation::constrainUsers($q, 'u'))
+                // Permission holders: only people of their own branch.
+                ->when($branchUserIds !== null, fn ($q) => $q->whereIn('a.user_id', $branchUserIds))
                 ->orderBy('a.assigned_at', 'desc')
                 ->get([
                     'a.user_id', 'a.lead_id', 'a.assigned_at',
