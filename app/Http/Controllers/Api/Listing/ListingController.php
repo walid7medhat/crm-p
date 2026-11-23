@@ -484,7 +484,15 @@ SQL;
         }
 
 
-          if (!($user->hasRole('super_admin') || $isManagerWithListingTeam || $closedSeeAll || $closedBranchOnly) && $request->boolean('my_listings')) {
+          // Luxvant admins add listings themselves: their "My Listing" = listings they
+          // added or are the agent of (not the whole team under them).
+          $luxvantAdminOwn = $request->boolean('my_listings') && ! $closedSeeAll && ! $closedBranchOnly
+              && ! $user->hasRole('super_admin')
+              && $user->hasAnyRole(['admin', 'branch_admin'])
+              && app(\App\Support\Brand\BrandContext::class)->key() === 'luxvant';
+          if ($luxvantAdminOwn) {
+              $query->where(fn ($q) => $q->where('agent_id', $user->id)->orWhere('added_by', $user->id));
+          } elseif (!($user->hasRole('super_admin') || $isManagerWithListingTeam || $closedSeeAll || $closedBranchOnly) && $request->boolean('my_listings')) {
                     $currentUser = $user;
                     $allIds = User::where(function($q) use ($currentUser) {
                         $q->where('id', $currentUser->id)

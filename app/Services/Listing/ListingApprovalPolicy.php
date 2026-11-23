@@ -21,7 +21,17 @@ class ListingApprovalPolicy
 {
     public function isGlobalApprover(User $user): bool
     {
-        return $user->hasRole('super_admin') || $user->hasRole('admin');
+        return $user->hasRole('super_admin') || $user->hasRole('admin') || $this->isLuxvantAdminApprover($user);
+    }
+
+    /**
+     * On Luxvant, its admins (admin / branch_admin) approve every Luxvant listing —
+     * Luxvant has no Dubai branch admin. Listing queries there only see Luxvant listings.
+     */
+    public function isLuxvantAdminApprover(User $user): bool
+    {
+        return app(\App\Support\Brand\BrandContext::class)->key() === 'luxvant'
+            && $user->hasAnyRole(['admin', 'branch_admin']);
     }
 
     /** branch_admin whose branch (the node right under super admin) is "Dubai". */
@@ -124,12 +134,11 @@ class ListingApprovalPolicy
      */
     public function notifyApprovers(Listing $listing): array
     {
-        if ($listing->isInDubai() && \App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant') {
+        $isLuxvant = \App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant';
+        if ($isLuxvant && $listing->isInDubai()) {
             // Luxvant has no Dubai branch admin: its Dubai listings are approved by
-            // Luxvant admins (or super_admin) only, so they get the notification.
-            $recipients = \App\Support\Brand\BrandIsolation::constrainUsers(User::role('admin'))
-                ->where('status', 'active')
-                ->get();
+            // Luxvant admins / branch admins (or super_admin), so they get the notification.
+            $recipients = $this->luxvantAdmins();
         } elseif ($listing->isInDubai()) {
             $recipients = $this->dubaiApprovers();
         } else {
@@ -142,6 +151,11 @@ class ListingApprovalPolicy
             if ($teamLead && \App\Support\Brand\BrandIsolation::userBelongsToCurrentBrand($teamLead) && $teamLead->hasRole('team_lead') && $teamLead->is_listing_team && $teamLead->status === 'active') {
                 $recipients->push($teamLead);
             }
+
+            // Luxvant admins approve every Luxvant listing, so they hear about these too.
+            if ($isLuxvant) {
+                $recipients = $recipients->merge($this->luxvantAdmins());
+            }
         }
 
         $recipients = $recipients->unique('id');
@@ -150,6 +164,14 @@ class ListingApprovalPolicy
         }
 
         return $recipients->pluck('id')->all();
+    }
+
+    /** Active Luxvant admins / branch admins (current company only). */
+    private function luxvantAdmins(): Collection
+    {
+        return \App\Support\Brand\BrandIsolation::constrainUsers(User::role(['admin', 'branch_admin']))
+            ->where('status', 'active')
+            ->get();
     }
 
     /** Self + direct reports + their reports (what team leads have always been limited to). */

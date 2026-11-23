@@ -1079,7 +1079,9 @@ const tableItems = computed(() => {
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]
 
-  if (!isAdmin.value && !isBranchAdmin.value) {
+  // Luxvant admins add listings themselves, so they get My Listing too (not super_admin).
+  const luxvantAdminLister = isLuxvantBrand && !isSuperAdmin.value;
+  if ((!isAdmin.value && !isBranchAdmin.value) || luxvantAdminLister) {
     items.splice(1, 0, {
       path: '/my-listing',
       label: 'My Listing',
@@ -1095,11 +1097,16 @@ const tableItems = computed(() => {
 const requestsItems = computed(() => {
   const c = sidebarCounts.value;
   if (isAdmin.value ) {
-    return [
+    const adminItems = [
       { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: c?.orders?.all || 0 },
             { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
 
     ]
+    // Luxvant admins approve Luxvant listings (UserResource is_dubai_listing_approver).
+    if (user.value?.is_dubai_listing_approver) {
+      adminItems.push({ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: c?.needapprove?.all || 0 });
+    }
+    return adminItems
   } else if ( isBranchAdmin.value) {
     // Only the Dubai branch admin approves listings (Dubai ones).
     return user.value?.is_dubai_listing_approver
