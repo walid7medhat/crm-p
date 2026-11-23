@@ -30,7 +30,7 @@ class EvaluationRequestMail extends Mailable
                 'managerName' => $managerName,
                 'employeeName' => $employeeName,
                 'milestoneMonths' => $this->evaluation->milestone_months,
-                'formUrl' => config('app.frontend_url') . '/evaluations/' . $this->evaluation->id,
+                'formUrl' => \App\Support\Brand\BrandUrl::to('/evaluations/' . $this->evaluation->id, $this->manager),
             ]);
     }
 }

@@ -123,6 +123,8 @@ return [
             'product_mark' => 'L',
             'document_title' => 'Luxvant CRM',
             'email_domain' => 'luxvant.com',
+            // Site address used in email links (reset password, invitations, notifications).
+            'app_url' => env('LUXVANT_APP_URL', 'https://luxvant.altcrm.com'),
             'hosts' => [
                 'luxvant.altcrm.com',
                 'www.luxvant.altcrm.com',
