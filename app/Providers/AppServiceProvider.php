@@ -135,6 +135,15 @@ class AppServiceProvider extends ServiceProvider
             'error' => $event->exception->getMessage(),
         ]);
     });
+        // Sender name per company: Luxvant recipients see "Luxvant Properties".
+        Event::listen(MessageSending::class, function (MessageSending $event) {
+            try {
+                \App\Support\Brand\BrandMailFrom::apply($event->message);
+            } catch (\Throwable $e) {
+                \Log::warning('Brand mail sender not applied: '.$e->getMessage());
+            }
+        });
+
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
             // Luxvant users get a Luxvant link, OIA users an OIA link.
             $base = \App\Support\Brand\BrandUrl::forUser($notifiable);
@@ -148,11 +157,25 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(\Illuminate\Notifications\Events\NotificationSending::class, function ($event) {
             if ($event->channel === 'mail' && $event->notifiable instanceof \App\Models\User) {
                 \Illuminate\Support\Facades\URL::forceRootUrl(\App\Support\Brand\BrandUrl::forUser($event->notifiable));
+
+                // Header + "Regards," in the email layout use APP_NAME: show the recipient's company.
+                $company = \App\Support\Brand\BrandMailFrom::companyName(
+                    \App\Support\Brand\BrandUrl::brandKeyFor($event->notifiable)
+                );
+                if ($company) {
+                    $this->app->instance('brand.mail.original_app_name', config('app.name'));
+                    config(['app.name' => $company]);
+                }
             }
         });
         $resetRoot = function ($event) {
             if ($event->channel === 'mail') {
                 \Illuminate\Support\Facades\URL::forceRootUrl(null);
+                if ($this->app->bound('brand.mail.original_app_name')) {
+                    config(['app.name' => $this->app->make('brand.mail.original_app_name')]);
+                    $this->app->forgetInstance('brand.mail.original_app_name');
+                    unset($this->app['brand.mail.original_app_name']);
+                }
             }
         };
         Event::listen(\Illuminate\Notifications\Events\NotificationSent::class, $resetRoot);

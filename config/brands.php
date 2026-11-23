@@ -125,6 +125,10 @@ return [
             'email_domain' => 'luxvant.com',
             // Site address used in email links (reset password, invitations, notifications).
             'app_url' => env('LUXVANT_APP_URL', 'https://luxvant.altcrm.com'),
+            // Email sender for Luxvant recipients. Address stays MAIL_FROM_ADDRESS unless set
+            // (a new address must be allowed by the mail server / SPF, or emails go to spam).
+            'mail_from_name' => env('LUXVANT_MAIL_FROM_NAME', 'Luxvant Properties'),
+            'mail_from_address' => env('LUXVANT_MAIL_FROM_ADDRESS'),
             'hosts' => [
                 'luxvant.altcrm.com',
                 'www.luxvant.altcrm.com',

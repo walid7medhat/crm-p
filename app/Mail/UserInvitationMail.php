@@ -25,6 +25,12 @@ class UserInvitationMail extends Mailable
                     ]);
     }
 
+    /** Header / "Thank you," show the company of the site the invite was sent from. */
+    public function send($mailer)
+    {
+        return \App\Support\Brand\BrandMailFrom::withAppName(null, fn () => parent::send($mailer));
+    }
+
     private function getInvitationUrl(): string
     {
         return \App\Support\Brand\BrandUrl::to("/register/{$this->invitation->token}");
