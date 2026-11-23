@@ -1437,7 +1437,7 @@ public function getMatchingListings(Request $request)
         $listing->load(['area.parentRecursive'],'area');
 
         $canEdit = $user ? $user->can('update', $listing) : false;
-        $canDelete = $user ? $user->can('delete', $listing) : false;
+        $canDelete = $user ? $user->canDeleteListing($listing) : false;
         
         $listing->user_permissions = [
             'can_edit' => $canEdit,

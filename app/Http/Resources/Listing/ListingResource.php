@@ -165,7 +165,7 @@ public const FEATURE_LABELS = [
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin') || $user->canEditListings($this->agent_id)
                     // Dubai branch admin edits the Dubai listings they approve.
                     || app(\App\Services\Listing\ListingApprovalPolicy::class)->canEditAsDubaiApprover($user, $this->resource);
-            $canDelete = auth()->user()->hasRole('super_admin');
+            $canDelete = $user->canDeleteListing($this->resource);
             $showDocuments= $user->id == $this->added_by ||
                     ($this->agent_id && $user->id == $this->agent_id) || $user->hasRole('super_admin');
 
