@@ -41,6 +41,32 @@ class Bitrix24LeadImporter
             && (int) $existing->stage_id === (int) self::LOCAL_STAGE_KEYWORD_TO_ID['pool'];
     }
 
+    /**
+     * Bitrix24 moved this lead out of the Lead Pool (someone took / was given it in
+     * Bitrix): hide the previous owner's comments, activities and history from the
+     * new owner — same as a Lead Pool assignment done in the CRM
+     * (LeadController::softDeleteLeadPriorEngagement). Admins still see them (withTrashed).
+     * Must run BEFORE this sync logs its own history / imports comments, so only the
+     * old rows are hidden (importComments skips trashed ids, so they stay hidden).
+     */
+    private function hidePriorEngagementOnLeadPoolExit(Lead $existing, array $b24Lead): void
+    {
+        $poolStageId = (int) self::LOCAL_STAGE_KEYWORD_TO_ID['pool'];
+
+        if ((int) $existing->stage_id !== $poolStageId || $this->keepsLeadPoolStage($existing)) {
+            return;
+        }
+
+        $newStageId = $this->resolveStageId($b24Lead['STATUS_ID'] ?? null);
+        if ($newStageId === null || (int) $newStageId === $poolStageId) {
+            return;
+        }
+
+        LeadComment::where('lead_id', $existing->id)->delete();
+        LeadActivity::where('lead_id', $existing->id)->delete();
+        LeadHistory::where('lead_id', $existing->id)->whereNull('deal_id')->delete();
+    }
+
     /** Cache: SOURCE_ID code => human name */
     private ?array $sourceMap = null;
 
@@ -205,6 +231,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         if ($b24Id > 0) {
             $existing = Lead::where('bitrix24_id', $b24Id)->first();
             if ($existing) {
+                $this->hidePriorEngagementOnLeadPoolExit($existing, $b24Lead);
+
                  $oldStatus = $existing->status_lead;
                 $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
                 
@@ -280,6 +308,8 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
         if ($b24Id > 0) {
             $existing = Lead::where('bitrix24_id', $b24Id)->first();
             if ($existing) {
+                $this->hidePriorEngagementOnLeadPoolExit($existing, $b24Lead);
+
                 $oldStatus = $existing->status_lead;
                 $newStatus = $this->statusName($b24Lead['STATUS_ID'] ?? null);
 
@@ -372,7 +402,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
                 continue;
             }
             $synthId = 6_000_000_000_000_000 + $messageId;
-            if (LeadHistory::where('lead_id', $lead->id)
+            if (LeadHistory::withTrashed()->where('lead_id', $lead->id)
                 ->where('bitrix24_id', $synthId)
                 ->exists()
             ) {
@@ -442,7 +472,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             // Dedup via a synthetic ID: bindings live in a different ID space
             // than timeline.item, so prefix to avoid collision.
             $synthId = 7_000_000_000_000_000 + $timelineId;
-            if (LeadHistory::where('lead_id', $lead->id)
+            if (LeadHistory::withTrashed()->where('lead_id', $lead->id)
                 ->where('bitrix24_id', $synthId)
                 ->exists()
             ) {
@@ -557,7 +587,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
     ): void {
         $synthId = $this->syntheticHistoryId($b24LeadId, $eventKey, $eventTime);
 
-        $exists = LeadHistory::where('lead_id', $lead->id)
+        $exists = LeadHistory::withTrashed()->where('lead_id', $lead->id)
             ->where('bitrix24_id', $synthId)
             ->exists();
         if ($exists) {
@@ -637,7 +667,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             }
 
             // التحقق من التكرار
-            if (LeadHistory::where('lead_id', $lead->id)
+            if (LeadHistory::withTrashed()->where('lead_id', $lead->id)
                 ->where('bitrix24_id', $b24ItemId)
                 ->exists()
             ) {
@@ -909,8 +939,10 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
 
             // Skip already-imported comments (idempotent re-runs), but refresh
             // the body when Bitrix content changed (e.g. previously strip_tags lost links).
+            // withTrashed: comments soft-deleted on Lead Pool re-assignment must stay hidden,
+            // not be re-created as fresh rows the new owner can see.
             if ($b24CommentId > 0) {
-                $existingComment = LeadComment::where('lead_id', $lead->id)
+                $existingComment = LeadComment::withTrashed()->where('lead_id', $lead->id)
                     ->where('bitrix24_id', $b24CommentId)
                     ->first();
                 if ($existingComment) {
@@ -979,7 +1011,7 @@ private const LOCAL_STAGE_KEYWORD_TO_ID = [
             $b24ActivityId = (int) ($a['ID'] ?? 0);
 
             if ($b24ActivityId > 0 &&
-                LeadActivity::where('lead_id', $lead->id)
+                LeadActivity::withTrashed()->where('lead_id', $lead->id)
                     ->where('bitrix24_id', $b24ActivityId)
                     ->exists()
             ) {
@@ -2011,7 +2043,7 @@ public function debugTimeline(int $b24LeadId): void
         $synthId = 9_000_000_000_000_000 + $timelineId;
         
         // التحقق من عدم التكرار
-        if (LeadHistory::where('lead_id', $lead->id)->where('bitrix24_id', $synthId)->exists()) {
+        if (LeadHistory::withTrashed()->where('lead_id', $lead->id)->where('bitrix24_id', $synthId)->exists()) {
             return;
         }
         
@@ -2120,7 +2152,7 @@ public function debugTimeline(int $b24LeadId): void
         
         $synthId = 10_000_000_000_000_000 + $messageId;
         
-        if (LeadHistory::where('lead_id', $lead->id)->where('bitrix24_id', $synthId)->exists()) {
+        if (LeadHistory::withTrashed()->where('lead_id', $lead->id)->where('bitrix24_id', $synthId)->exists()) {
             return;
         }
         
@@ -2209,7 +2241,7 @@ public function debugTimeline(int $b24LeadId): void
                 
                 $syntheticId = $this->generateSyntheticId($b24LeadId, 'MOVED_TIME', $movedTime);
                 
-                if (!LeadHistory::where('lead_id', $lead->id)->where('bitrix24_id', $syntheticId)->exists()) {
+                if (!LeadHistory::withTrashed()->where('lead_id', $lead->id)->where('bitrix24_id', $syntheticId)->exists()) {
                     LeadHistory::create([
                         'lead_id'     => $lead->id,
                         'user_id'     => $userId,
@@ -2240,7 +2272,7 @@ public function debugTimeline(int $b24LeadId): void
                 $userId = $this->mapBitrixUser($b24Lead['MODIFY_BY_ID'] ?? null) ?? $this->fallbackUserId;
                 $syntheticId = $this->generateSyntheticId($b24LeadId, 'DATE_MODIFY', $modifyTime);
                 
-                if (!LeadHistory::where('lead_id', $lead->id)->where('bitrix24_id', $syntheticId)->exists()) {
+                if (!LeadHistory::withTrashed()->where('lead_id', $lead->id)->where('bitrix24_id', $syntheticId)->exists()) {
                     LeadHistory::create([
                         'lead_id'     => $lead->id,
                         'user_id'     => $userId,
@@ -2263,7 +2295,7 @@ public function debugTimeline(int $b24LeadId): void
                 $userId = $this->mapBitrixUser($b24Lead['LAST_ACTIVITY_BY'] ?? null) ?? $this->fallbackUserId;
                 $syntheticId = $this->generateSyntheticId($b24LeadId, 'LAST_ACTIVITY_TIME', $lastActivity);
                 
-                if (!LeadHistory::where('lead_id', $lead->id)->where('bitrix24_id', $syntheticId)->exists()) {
+                if (!LeadHistory::withTrashed()->where('lead_id', $lead->id)->where('bitrix24_id', $syntheticId)->exists()) {
                     LeadHistory::create([
                         'lead_id'     => $lead->id,
                         'user_id'     => $userId,

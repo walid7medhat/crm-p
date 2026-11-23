@@ -1386,9 +1386,14 @@ const mainMenuItems = computed(() => {
 
   // Lead Pool Assignments report: super admins + user #30 (route meta allowUser30,
   // ReportController::leadPoolAssignmentsReport).
-  if (isSuperAdmin.value || Number(user.value?.id) === 30) {
+  // `view-lead-pool-report` permission: the same report, own branch only.
+  const seesAllReports = isSuperAdmin.value || Number(user.value?.id) === 30;
+  const userPermissions = Array.isArray(user.value?.permissions) ? user.value.permissions : [];
+  if (seesAllReports || userPermissions.includes('view-lead-pool-report')) {
     items.push({ path: '/lead-pool-report', label: 'Lead Pool Assignments', iconSrc: insightsIcon.value });
-    // Owner Financial Intelligence: same audience (OwnerFinancialReport::canView).
+  }
+  if (seesAllReports) {
+    // Owner Financial Intelligence: super admins + user #30 (OwnerFinancialReport::canView).
     items.push({ path: '/owner-financial-intelligence', label: 'Owner Financial Intelligence', iconSrc: dealsIcon.value });
   }
 
