@@ -2334,33 +2334,15 @@ public function getPropertyTypesWithListings(Request $request)
         $leadsThis = (clone $activeLeadBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->count();
         $leadsLast = (clone $activeLeadBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
 
-        if ($isBranchAdmin) {
-            $inactiveStageIds = $this->inactiveLeadStageIds();
-            $revenueLeadBase = $leadScope(Lead::query())
-                ->where(function ($q) use ($inactiveStageIds) {
-                    $q->whereNull('stage_id');
-                    if ($inactiveStageIds->isNotEmpty()) {
-                        $q->orWhereNotIn('stage_id', $inactiveStageIds);
-                    }
-                });
-            $revenueSum = fn ($query) => (float) $query->sum(DB::raw('COALESCE(budget_to, budget_from, 0)'));
-            $revenueTotal = $revenueSum(clone $revenueLeadBase);
-            $revenueThis = $revenueSum((clone $revenueLeadBase)->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]));
-            $revenueLast = $revenueSum((clone $revenueLeadBase)->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]));
-        } else {
-            $revenueTotal = (float) $dealScope(Deal::query())->sum('deal_total_amount');
-            $propertyRevenueQuery = DB::table('deal_properties')
-                ->join('deals', 'deals.id', '=', 'deal_properties.deal_id')
-                ->whereNull('deals.deleted_at')
-                ->when(! $isSuperAdmin, fn ($q) => $q->whereIn('deals.responsible_person_id', $scopeIds));
-            \App\Support\Brand\BrandIsolation::constrain($propertyRevenueQuery, 'deals', 'deals.brand_key');
-            $propertyRevenue = (float) $propertyRevenueQuery->sum('deal_properties.purchase_price');
-            if ($propertyRevenue > $revenueTotal) {
-                $revenueTotal = $propertyRevenue;
-            }
-            $revenueThis = (float) $dealScope(Deal::query())->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])->sum('deal_total_amount');
-            $revenueLast = (float) $dealScope(Deal::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('deal_total_amount');
-        }
+        // deal_commission is a percentage (5 = 5%), not a fraction. Deals
+        // missing an amount or a commission rate contribute nothing.
+        $revenueTotal = $this->studioCommissionRevenue($dealScope(Deal::query()));
+        $revenueThis = $this->studioCommissionRevenue(
+            $dealScope(Deal::query())->whereBetween('created_at', [$thisMonthStart, $thisMonthEnd])
+        );
+        $revenueLast = $this->studioCommissionRevenue(
+            $dealScope(Deal::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+        );
 
         $activeListingBase = $listingScope(Listing::query())
             ->where('is_active', true)
@@ -2476,6 +2458,20 @@ public function getPropertyTypesWithListings(Request $request)
             'contacts' => $contacts,
             'calendar' => $calendar,
         ];
+    }
+
+    /**
+     * Commission revenue for deals already limited to the viewer's scope.
+     * deal_commission is stored as a percent (decimal 5,2): 5 means 5%.
+     */
+    private function studioCommissionRevenue($query): float
+    {
+        return (float) $query
+            ->whereNotNull('deal_total_amount')
+            ->where('deal_total_amount', '>', 0)
+            ->whereNotNull('deal_commission')
+            ->where('deal_commission', '>', 0)
+            ->sum(DB::raw('deal_total_amount * deal_commission / 100'));
     }
 
     private function studioPct(float|int $current, float|int $previous): float
