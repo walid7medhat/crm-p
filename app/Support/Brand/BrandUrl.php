@@ -32,16 +32,25 @@ class BrandUrl
      */
     public static function forUser($user): string
     {
+        return self::base(self::brandKeyFor($user));
+    }
+
+    /**
+     * Brand of a recipient; null = the site currently in use (unknown recipient,
+     * super admin, shared users #30 / #33).
+     */
+    public static function brandKeyFor($user): ?string
+    {
         if (! $user instanceof User) {
-            return self::base();
+            return null;
         }
 
         $shared = array_map('intval', (array) config('brands.shared_user_ids', []));
         if (BrandResolver::isSuperAdmin($user) || in_array((int) $user->id, $shared, true)) {
-            return self::base();
+            return null;
         }
 
-        return self::base(BrandIsolation::brandKeyOfUser($user));
+        return BrandIsolation::brandKeyOfUser($user);
     }
 
     /** Full link for a recipient, e.g. BrandUrl::to('/leads/5', $user). */
