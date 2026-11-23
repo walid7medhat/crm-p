@@ -863,6 +863,25 @@ function getOfficeAttribute()
     }
 
 
+    /**
+     * Show the Delete button for a listing — same rule as ListingController::destroy:
+     * super_admin, or the `listings-delete` permission plus owner / agent / canEditListings
+     * (e.g. a listing-team manager).
+     */
+    public function canDeleteListing($listing): bool
+    {
+        if ($this->hasRole('super_admin')) {
+            return true;
+        }
+        if (! $listing || ! $this->checkPermissionTo('listings-delete')) {
+            return false;
+        }
+
+        return (int) $listing->added_by === (int) $this->id
+            || ($listing->agent_id && (int) $listing->agent_id === (int) $this->id)
+            || $this->canEditListings($listing->agent_id);
+    }
+
     public function canEditListings($agent): bool
     {      $canAssignAgent=false;
           if ($this->hasAnyRole(['super_admin','admin'])) {
