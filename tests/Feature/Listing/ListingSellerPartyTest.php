@@ -354,6 +354,31 @@ class ListingSellerPartyTest extends TestCase
         $this->assertNull($landlord->fresh()->deal_id);
     }
 
+    public function test_multi_unit_rental_deal_gets_one_landlord_per_unit(): void
+    {
+        $t = $this->scenario();
+        $this->markRented($t['agentA'], $t['listing1'], ['rented_by' => 'another_agent', 'agent_id' => $t['salesB']->id], 'First', 'Landlord')->assertOk();
+        $this->markRented($t['agentA'], $t['listing2'], ['rented_by' => 'another_agent', 'agent_id' => $t['salesB']->id], 'Second', 'Landlord')->assertOk();
+
+        $dealId = $this->createDeal($t['salesB'], $t['listing1'], 'rental');
+        $deal = Deal::query()->findOrFail($dealId);
+        $deal->properties()->create(['sort_order' => 1, 'listing_id' => $t['listing2']->id]);
+        ListingSellerParty::reconcile($deal);
+
+        $first = DealParty::query()->where('listing_id', $t['listing1']->id)->sole();
+        $second = DealParty::query()->where('listing_id', $t['listing2']->id)->sole();
+        $this->assertSame([$dealId, $dealId], [(int) $first->deal_id, (int) $second->deal_id]);
+        $this->assertSame(['primary', 'secondary'], [$first->party_role, $second->party_role]);
+
+        // Remove the main unit → its landlord goes back to the listing, the other becomes primary.
+        $deal->properties()->where('listing_id', $t['listing1']->id)->delete();
+        $deal->forceFill(['listing_id' => null])->save();
+        ListingSellerParty::reconcile($deal->fresh());
+
+        $this->assertNull($first->fresh()->deal_id);
+        $this->assertSame('primary', $second->fresh()->party_role);
+    }
+
     public function test_rented_by_owner_needs_no_landlord_and_revert_cleans_up(): void
     {
         $t = $this->scenario();
