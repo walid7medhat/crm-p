@@ -929,8 +929,9 @@
           Mark as Sold Out
         </h4>
         <p class="sold-out-modal-subtitle">
-          {{ !soldByChoice ? 'Choose how this property was sold' : 
-             (soldByChoice === 'oia' ? 'Choose the selling agent' : 'Add the new owner details') }}
+          {{ !soldSellerStepDone ? 'Seller details & documents' :
+             (!soldByChoice ? 'Choose how this property was sold' :
+             (soldByChoice === 'oia' ? 'Choose the selling agent' : 'Add the new owner details')) }}
         </p>
       </div>
       <button type="button" class="modal-close" @click="closeSoldOutModal" aria-label="Close">
@@ -939,8 +940,110 @@
     </div>
 
     <div class="modal-body sold-out-modal-body">
+      <!-- Step 0: seller of this sale — saved on the listing and given to the deal
+           created for it (seller party + documents). -->
+      <template v-if="!soldSellerStepDone">
+        <div class="sold-out-add-owner-step sold-seller-step">
+          <p class="sold-seller-intro">
+            <i class="ri-information-line"></i>
+            <span>
+              Saved with the sale and added automatically to the deal for this unit.
+              Only the listing side and admins can see them.
+            </span>
+          </p>
+
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">First Name <span class="text-danger">*</span></label>
+              <input v-model="soldSeller.first_name" type="text" class="form-control"
+                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.first_name }" maxlength="255" />
+              <small v-if="soldSellerShowErrors && soldSellerErrors.first_name" class="sold-seller-error">{{ soldSellerErrors.first_name }}</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Last Name <span class="text-danger">*</span></label>
+              <input v-model="soldSeller.last_name" type="text" class="form-control"
+                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.last_name }" maxlength="255" />
+              <small v-if="soldSellerShowErrors && soldSellerErrors.last_name" class="sold-seller-error">{{ soldSellerErrors.last_name }}</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone <span class="text-danger">*</span></label>
+              <input v-model="soldSeller.phone" type="text" class="form-control"
+                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.phone }" maxlength="50" />
+              <small v-if="soldSellerShowErrors && soldSellerErrors.phone" class="sold-seller-error">{{ soldSellerErrors.phone }}</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input v-model="soldSeller.email" type="email" class="form-control"
+                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.email }" maxlength="255" />
+              <small v-if="soldSellerShowErrors && soldSellerErrors.email" class="sold-seller-error">{{ soldSellerErrors.email }}</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nationality <span class="text-danger">*</span></label>
+              <v-select
+                v-model="soldSeller.nationality"
+                :options="ownerNationalities"
+                placeholder="Select nationality"
+                :class="{ 'sold-seller-select-invalid': soldSellerShowErrors && soldSellerErrors.nationality }"
+              />
+              <small v-if="soldSellerShowErrors && soldSellerErrors.nationality" class="sold-seller-error">{{ soldSellerErrors.nationality }}</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Residency Status <span class="text-danger">*</span></label>
+              <select v-model="soldSeller.residency_status" class="form-control"
+                      :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.residency_status }">
+                <option value="">Select…</option>
+                <option value="resident">Resident</option>
+                <option value="non_resident">Non Resident</option>
+              </select>
+              <small v-if="soldSellerShowErrors && soldSellerErrors.residency_status" class="sold-seller-error">{{ soldSellerErrors.residency_status }}</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date of Birth</label>
+              <input v-model="soldSeller.date_of_birth" type="date" class="form-control" />
+            </div>
+          </div>
+
+          <div class="sold-seller-section-title">Seller Documents</div>
+          <div class="row g-2">
+            <div v-for="docType in soldSellerDocTypes" :key="docType.value" class="col-md-6">
+              <label class="form-label">
+                {{ docType.label }}
+                <span v-if="isSoldSellerDocRequired(docType.value)" class="text-danger">*</span>
+              </label>
+              <input
+                type="file"
+                class="form-control"
+                :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors['doc_' + docType.value] }"
+                multiple
+                accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx"
+                @change="onSoldSellerFiles(docType.value, $event)"
+              />
+              <small v-if="soldSellerShowErrors && soldSellerErrors['doc_' + docType.value]" class="sold-seller-error">
+                {{ soldSellerErrors['doc_' + docType.value] }}
+              </small>
+              <small v-else-if="soldSellerFiles[docType.value]?.length" class="text-muted">
+                {{ soldSellerFiles[docType.value].length }} file(s) selected
+              </small>
+            </div>
+          </div>
+
+          <div class="sold-seller-actions">
+            <button type="button" class="btn-modal btn-modal-secondary" @click="closeSoldOutModal">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn-modal btn-modal-primary"
+              @click="continueSoldSeller"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </template>
+
       <!-- المستوى الأول: الخيارات الرئيسية -->
-      <template v-if="!soldByChoice">
+      <template v-else-if="!soldByChoice">
         <div class="sold-out-options">
           <div class="option-card" @click="selectSoldBy('oia')">
             <div class="option-icon"><i class="ri-building-line"></i></div>
@@ -959,6 +1062,11 @@
             </div>
             <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
+        </div>
+        <div class="text-center mt-3">
+          <button type="button" class="btn-modal btn-modal-secondary" @click="soldSellerStepDone = false">
+            Back
+          </button>
         </div>
       </template>
 
@@ -3461,10 +3569,136 @@ const newOwner = ref({
   additionalDocuments: []
 });
 
+// Seller of the sale (step 0 of the sold-out modal). Sent with every mark-converted call;
+// the backend saves it on the listing and links it to the deal created for this unit.
+const soldSellerStepDone = ref(false);
+const emptySoldSeller = () => ({
+  first_name: '',
+  last_name: '',
+  phone: '',
+  email: '',
+  nationality: null,
+  residency_status: '',
+  date_of_birth: '',
+});
+const soldSeller = ref(emptySoldSeller());
+const soldSellerDocTypes = [
+  { value: 'national_id', label: 'National ID' },
+  { value: 'passport', label: 'Passport' },
+  { value: 'visa', label: 'Visa' },
+  { value: 'title_deed', label: 'Title Deed' },
+];
+const soldSellerFiles = ref({ national_id: [], passport: [], visa: [], title_deed: [] });
+
+// Required seller data (same rules as the backend): name, phone, nationality, residency;
+// Passport always, National ID for residents.
+const soldSellerShowErrors = ref(false);
+const isSoldSellerDocRequired = (type) =>
+  type === 'passport' || (type === 'national_id' && soldSeller.value?.residency_status === 'resident');
+
+const soldSellerErrors = computed(() => {
+  const s = soldSeller.value || {};
+  const blank = (v) => v === null || v === undefined || String(v).trim() === '';
+  const errors = {};
+  if (blank(s.first_name)) errors.first_name = 'First name is required';
+  if (blank(s.last_name)) errors.last_name = 'Last name is required';
+  if (blank(s.phone)) errors.phone = 'Phone is required';
+  if (!blank(s.email) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s.email).trim())) {
+    errors.email = 'Enter a valid email';
+  }
+  if (blank(s.nationality)) errors.nationality = 'Nationality is required';
+  if (blank(s.residency_status)) errors.residency_status = 'Residency status is required';
+  soldSellerDocTypes.forEach(({ value, label }) => {
+    if (isSoldSellerDocRequired(value) && !(soldSellerFiles.value?.[value] || []).length) {
+      errors['doc_' + value] = `${label} is required`;
+    }
+  });
+  return errors;
+});
+
+const continueSoldSeller = () => {
+  soldSellerShowErrors.value = true;
+  if (Object.keys(soldSellerErrors.value).length) {
+    proxy.$showNotification('Please complete the required seller details and documents', 'warning');
+    return;
+  }
+  soldSellerStepDone.value = true;
+};
+
+const onSoldSellerFiles = (type, event) => {
+  soldSellerFiles.value = {
+    ...soldSellerFiles.value,
+    [type]: Array.from(event?.target?.files || []),
+  };
+};
+
+const resetSoldSeller = () => {
+  // Prefill from the current owner — on the "new owner" path the owner is swapped to the
+  // buyer later (/soldBy), so this must happen when the modal opens.
+  const owner = property.value?.owner || null;
+  soldSeller.value = {
+    ...emptySoldSeller(),
+    ...(owner ? {
+      first_name: owner.first_name || '',
+      last_name: owner.last_name || '',
+      phone: owner.phone_number || '',
+      email: owner.email || '',
+      nationality: owner.nationality || null,
+      residency_status: owner.residency_status || '',
+    } : {}),
+  };
+  soldSellerFiles.value = { national_id: [], passport: [], visa: [], title_deed: [] };
+  soldSellerStepDone.value = false;
+  soldSellerShowErrors.value = false;
+};
+
+const appendFormValue = (fd, key, value) => {
+  if (value === null || value === undefined) return;
+  if (value instanceof File) {
+    fd.append(key, value);
+  } else if (Array.isArray(value)) {
+    value.forEach((v, i) => appendFormValue(fd, `${key}[${i}]`, v));
+  } else if (typeof value === 'object') {
+    Object.entries(value).forEach(([k, v]) => appendFormValue(fd, `${key}[${k}]`, v));
+  } else {
+    fd.append(key, value);
+  }
+};
+
+// One place for every "mark as sold" call: payload + seller details + seller documents,
+// as multipart (POST + _method=PATCH so Laravel parses the files).
+const submitMarkConverted = (payload) => {
+  const fd = new FormData();
+  Object.entries(payload || {}).forEach(([k, v]) => appendFormValue(fd, k, v));
+
+  const seller = soldSeller.value || {};
+  if (seller.first_name && seller.first_name.trim()) {
+    Object.entries(seller).forEach(([k, v]) => {
+      if (v !== null && v !== undefined && v !== '') fd.append(`seller_details[${k}]`, v);
+    });
+  }
+
+  let i = 0;
+  Object.entries(soldSellerFiles.value || {}).forEach(([type, files]) => {
+    (files || []).forEach((file) => {
+      fd.append(`seller_documents[${i}][document_type]`, type);
+      fd.append(`seller_documents[${i}][file]`, file);
+      i++;
+    });
+  });
+
+  fd.append('_method', 'PATCH');
+
+  return api.post(`/listings/properties/${property.value.id}/mark-converted`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
 const openSoldOutModal = () => {
   showSoldOutModal.value = true;
   soldByChoice.value = null;
-  selectedSoldByAgent.value = null; 
+  selectedSoldByAgent.value = null;
+  resetSoldSeller();
   closeActionsDropdown();
 };
 
@@ -3581,7 +3815,7 @@ const markAsSoldWithOtherCompany = async () => {
       }
     };
     
-    const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+    const response = await submitMarkConverted(payload);
     
     if (response.data.status) {
       // تحديث البيانات المحلية
@@ -3689,7 +3923,7 @@ const selectSoldBy = async (soldBy) => {
 const markAsSoldByOwner = async () => {
     try {
         const payload = { sold_by: 'owner' };
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        const response = await submitMarkConverted(payload);
         
         if (response.data.status) {
             property.value.status = 'converted';
@@ -3767,7 +4001,7 @@ const markAsSoldByAnotherAgent = async (agentId) => {
             agent_id: agentId
         };
         
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        const response = await submitMarkConverted(payload);
         
         if (response.data.status) {
             property.value.status = 'converted';
@@ -3811,7 +4045,7 @@ const submitAToA = async () => {
             }
         };
         
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        const response = await submitMarkConverted(payload);
         
         if (response.data.status) {
             property.value.status = 'converted';
@@ -4196,7 +4430,7 @@ const submitNewOwnerAndMarkSold = async () => {
                 payload.agent_id = selectedAgent;
             }
             
-            const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+            const response = await submitMarkConverted(payload);
             
             if (response.data?.data || response.data?.status !== false) {
                 property.value.status = 'converted';
@@ -4446,7 +4680,7 @@ const markAsSold = async (soldBy, agentId = null) => {
             payload.agent_id = agentId;
         }
         
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-converted`, payload);
+        const response = await submitMarkConverted(payload);
         
         if (response.data.status) {
             property.value.status = 'converted';
@@ -9840,8 +10074,17 @@ const getHistoryIcon = (event) => {
         markAsSold,
         revertFromConverted,
         openSoldOutModal,
-        showSoldOutModal, 
+        showSoldOutModal,
  soldByChoice,
+        soldSellerStepDone,
+        soldSeller,
+        soldSellerDocTypes,
+        soldSellerFiles,
+        onSoldSellerFiles,
+        soldSellerShowErrors,
+        soldSellerErrors,
+        isSoldSellerDocRequired,
+        continueSoldSeller,
         showAddOwnerModal,
         newOwner,
         isSubmittingOwner,
@@ -14148,6 +14391,85 @@ ease;
 }
 .sold-out-modal-title{
     color:#fff !important;
+}
+
+/* Sold-out modal: fit the viewport — header fixed, body scrolls (seller step is tall). */
+.modal-content.sold-out-modal-content {
+  max-width: 560px;
+  width: 92%;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sold-out-modal-content .sold-out-modal-header {
+  flex-shrink: 0;
+}
+.sold-out-modal-content .sold-out-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Step 0 — seller details & documents */
+.sold-seller-step .sold-seller-intro {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f6f3fa;
+  color: #5b5470;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.sold-seller-step .sold-seller-intro i {
+  font-size: 16px;
+  line-height: 1.2;
+  color: #7b4fa3;
+}
+.sold-seller-step .form-label {
+  margin-bottom: 4px;
+  font-size: 12.5px;
+}
+.sold-seller-step .sold-seller-section-title {
+  margin: 18px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid #eef0f4;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+.sold-seller-step input[type="file"].form-control {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.sold-seller-step .sold-seller-actions {
+  position: sticky;
+  bottom: -1px;
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 0 4px;
+  background: #fff;
+  border-top: 1px solid #eef0f4;
+  z-index: 2;
+}
+.sold-seller-step .sold-seller-actions .btn-modal {
+  flex: 1;
+}
+.sold-seller-step .sold-seller-error {
+  display: block;
+  margin-top: 3px;
+  color: #dc3545;
+  font-size: 11.5px;
+}
+.sold-seller-step .form-control.is-invalid {
+  border-color: #dc3545;
+}
+.sold-seller-step :deep(.sold-seller-select-invalid .vs__dropdown-toggle) {
+  border-color: #dc3545;
 }
 @media (max-width: 768px) {
   .card.card-main.p-0.radius-12.overflow-hidden .property-content .spec-main-value {

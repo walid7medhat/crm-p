@@ -38,6 +38,7 @@ use App\Models\HotDealRequest;
 use App\Services\ListingMapCoordinateResolver;
 use App\Services\VoiceSearchService;
 use App\Services\Listing\ListingApprovalPolicy;
+use App\Support\Listing\ListingSellerParty;
 use Illuminate\Support\Facades\Log;
 use App\Notifications\ListingApproved;
 use App\Notifications\ListingRejected;
@@ -3021,14 +3022,66 @@ public function markAsConverted(Request $request, $id)
             $rules['a_to_a_details.commercial_license'] = 'required|string|max:255';
         }
         
-        $request->validate($rules);
-        
+        // Seller of this sale (same fields as the deal's seller party) + documents. Optional:
+        // when missing, the seller is taken from the listing's owner.
+        // Required: the deal gets this seller automatically, so a sale can't be saved without it.
+        $rules['seller_details'] = 'required|array';
+        $rules['seller_details.first_name'] = 'required|string|max:255';
+        $rules['seller_details.last_name'] = 'required|string|max:255';
+        $rules['seller_details.date_of_birth'] = 'nullable|date';
+        $rules['seller_details.phone'] = 'required|string|max:50';
+        $rules['seller_details.email'] = 'nullable|email|max:255';
+        $rules['seller_details.nationality'] = 'required|string|max:255';
+        $rules['seller_details.residency_status'] = 'required|in:resident,non_resident';
+        $rules['seller_details.city'] = 'nullable|string|max:255';
+        $rules['seller_details.country'] = 'nullable|string|max:255';
+        $rules['seller_details.language'] = 'nullable|string|max:255';
+        $rules['seller_documents'] = 'required|array';
+        $rules['seller_documents.*.document_type'] = 'required|in:' . implode(',', ListingSellerParty::DOCUMENT_TYPES);
+        $rules['seller_documents.*.file'] = 'required|file|max:20480|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx';
+
+        $validator = Validator::make($request->all(), $rules, [
+            'seller_details.required' => 'Seller details are required.',
+            'seller_details.*.required' => 'Seller :attribute is required.',
+            'seller_documents.required' => 'Seller documents are required.',
+        ], [
+            'seller_details.first_name' => 'first name',
+            'seller_details.last_name' => 'last name',
+            'seller_details.phone' => 'phone',
+            'seller_details.nationality' => 'nationality',
+            'seller_details.residency_status' => 'residency status',
+        ]);
+
+        // Required documents: Passport always; National ID for residents.
+        $validator->after(function ($v) use ($request) {
+            $types = collect((array) $request->input('seller_documents', []))
+                ->filter(fn ($doc, $i) => $request->hasFile("seller_documents.{$i}.file"))
+                ->pluck('document_type')
+                ->all();
+
+            if (! in_array('passport', $types, true)) {
+                $v->errors()->add('seller_documents.passport', 'Seller passport is required.');
+            }
+            if ($request->input('seller_details.residency_status') === 'resident'
+                && ! in_array('national_id', $types, true)) {
+                $v->errors()->add('seller_documents.national_id', 'Seller National ID is required for residents.');
+            }
+        });
+
+        if ($validator->fails()) {
+            return ApiResponse::error($validator->errors()->first(), 422, $validator->errors());
+        }
+
         $updateData = [
             'status' => 'converted',
             'sold_by' => $request->sold_by,
             'converted_at' => now(),
             'converted_by' => Auth::id(),
-            'sold_by_agent_id' => $request->agent_id ?? null,
+            // "Sold by me" → the current user sold it (same as markAsRented), so the unit
+            // shows in their deal "Select Unit" picker (sold_by_team filter).
+            'sold_by_agent_id' => $request->sold_by === 'me'
+                ? Auth::id()
+                : ($request->agent_id ?? null),
         ];
         
         // Handle A to A details
@@ -3038,9 +3091,21 @@ public function markAsConverted(Request $request, $id)
             $updateData['sold_by_agent_phone'] = $request->a_to_a_details['agent_phone'];
             $updateData['commercial_license'] = $request->a_to_a_details['commercial_license'];
         }
-        
-        $property->update($updateData);
-        
+
+        $sellerDocuments = [];
+        foreach ((array) $request->input('seller_documents', []) as $i => $doc) {
+            $file = $request->file("seller_documents.{$i}.file");
+            if ($file) {
+                $sellerDocuments[] = ['document_type' => $doc['document_type'] ?? null, 'file' => $file];
+            }
+        }
+
+        DB::transaction(function () use ($property, $updateData, $request, $sellerDocuments) {
+            $property->update($updateData);
+
+            ListingSellerParty::saveForListing($property, $request->input('seller_details'), $sellerDocuments);
+        });
+
         $this->clearCache();
 
         return ApiResponse::success(
@@ -3143,16 +3208,22 @@ public function revertFromConverted($id)
             return ApiResponse::error('Access denied', 403);
         }
 
-        $property->update([
-            'status' => 'active',
-            'sold_by' => null,
-            'converted_at' => null,
-            'converted_by' => null,
-            'sold_by_company_name'=>null,
-            'sold_by_agent_name'=>null,
-            'sold_by_agent_phone'=>null,
-            'commercial_license'=>null,
-        ]);
+        DB::transaction(function () use ($property) {
+            $property->update([
+                'status' => 'active',
+                'sold_by' => null,
+                'sold_by_agent_id' => null,
+                'converted_at' => null,
+                'converted_by' => null,
+                'sold_by_company_name'=>null,
+                'sold_by_agent_name'=>null,
+                'sold_by_agent_phone'=>null,
+                'commercial_license'=>null,
+            ]);
+
+            // Drop the sale's seller unless a deal already uses it (the deal keeps its data).
+            ListingSellerParty::deleteUnlinkedForListing($property);
+        });
 
         $this->clearCache();
 
@@ -3312,6 +3383,25 @@ public function validateUnitNumber(Request $request)
             return ApiResponse::error('Failed to delete document: ' . $e->getMessage());
         }
     }
+    /**
+     * Seller (+ documents) captured when this listing was marked sold out — listing side only.
+     */
+    public function sellerParty($id)
+    {
+        $listing = Listing::findOrFail($id);
+
+        if (! ListingSellerParty::canSeeListingSeller(Auth::user(), (int) $listing->id)) {
+            return ApiResponse::error('Access denied', 403);
+        }
+
+        $party = $listing->sellerParty()->with(['documents', 'documents.uploadedBy'])->first();
+
+        return ApiResponse::success([
+            'party' => $party ? new \App\Http\Resources\Deal\DealPartyResource($party) : null,
+            'deal_id' => $party?->deal_id,
+        ]);
+    }
+
     public function changeOwner(Request $request, $id)
         {
             $request->validate([

@@ -326,6 +326,17 @@
       </div>
     </section>
 
+    <!-- Sold-out listing picked: the seller saved on the listing is added to the deal by the server -->
+    <section v-if="dealType === 'secondary' && shouldHideSeller" class="form-section">
+      <div class="form-card p-3 radius-12 d-flex align-items-start gap-2">
+        <i class="ri-lock-line"></i>
+        <div>
+          <h6 class="section-title mb-1">Seller Details</h6>
+          <small class="text-muted">Seller and documents come from the sold listing and are added to this deal automatically.</small>
+        </div>
+      </div>
+    </section>
+
     <!-- Seller Section (for Secondary only) -->
     <section v-if="dealType === 'secondary' && !shouldHideSeller && isSectionVisible('seller_details')" class="form-section">
       <h6 class="section-title mb-3">Seller Details</h6>

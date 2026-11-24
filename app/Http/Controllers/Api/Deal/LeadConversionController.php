@@ -19,6 +19,7 @@ use App\Events\DealUpdated;
 use App\Events\LeadUpdated;
 use App\Models\DealProperty;
 use App\Support\DealCommissionDistribution;
+use App\Support\Listing\ListingSellerParty;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -386,6 +387,9 @@ class LeadConversionController extends Controller
 
             // ✅ Create parties
             $parties = $this->createDealParties($deal, $request);
+
+            // ✅ Sold-out listing(s): link the seller saved on the listing (same rows, no copy).
+            ListingSellerParty::reconcile($deal);
 
             // ✅ Upload documents
             if ($request->hasFile('documents')) {

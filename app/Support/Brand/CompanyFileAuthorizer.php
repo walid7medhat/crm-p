@@ -298,7 +298,7 @@ class CompanyFileAuthorizer
     {
         return match ($resource) {
             self::TYPE_DEAL => $model instanceof Deal && $user->canViewDeal($model),
-            self::TYPE_DEAL_DOCUMENT => ($model->deal instanceof Deal) && $user->canViewDeal($model->deal),
+            self::TYPE_DEAL_DOCUMENT => $this->canViewDealDocument($user, $model),
             self::TYPE_DEAL_PROPERTY => ($model->deal instanceof Deal) && $user->canViewDeal($model->deal),
             self::TYPE_DEAL_COMMENT_ATTACHMENT => ($model->comment?->deal instanceof Deal)
                 && $user->canViewDeal($model->comment->deal),
@@ -386,6 +386,26 @@ class CompanyFileAuthorizer
         }
 
         return null;
+    }
+
+    /**
+     * Deal documents. Seller files of a sold-out listing (listing_id set) are hidden from
+     * the deal's sales agent and readable by the listing side even before / without the
+     * deal (see ListingSellerParty).
+     */
+    private function canViewDealDocument(User $user, Model $doc): bool
+    {
+        if (! $doc instanceof DealDocument
+            || ! \App\Support\Listing\ListingSellerParty::canSeeDocument($user, $doc)) {
+            return false;
+        }
+
+        if ($doc->deal instanceof Deal && $user->canViewDeal($doc->deal)) {
+            return true;
+        }
+
+        return $doc->listing_id
+            && \App\Support\Listing\ListingSellerParty::canSeeListingSeller($user, (int) $doc->listing_id);
     }
 
     private function dealOwnsPath(Deal $deal, string $path): bool

@@ -10,6 +10,7 @@ class DealDocument extends Model
 
     protected $fillable = [
         'deal_id',
+        'listing_id',
         'deal_party_id',
         'document_category',
         'document_type',
@@ -24,6 +25,11 @@ class DealDocument extends Model
     public function deal()
     {
         return $this->belongsTo(Deal::class);
+    }
+
+    public function listing()
+    {
+        return $this->belongsTo(Listing::class);
     }
 
     public function party()

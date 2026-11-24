@@ -152,6 +152,12 @@ class Listing extends Model
         return $this->belongsTo(Owner::class);
     }
 
+    /** Seller captured when the listing was marked sold out (shared with the deal that links it). */
+    public function sellerParty(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(DealParty::class)->where('party_type', 'seller')->latestOfMany();
+    }
+
     public function developer(): BelongsTo
     {
         return $this->belongsTo(Developer::class);
