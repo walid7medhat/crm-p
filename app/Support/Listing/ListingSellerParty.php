@@ -20,14 +20,16 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Seller captured when a listing is marked "Sold Out".
+ * Listing party captured when an OIA agent closes the listing:
+ *  - "Sold Out" → the SELLER   (given to the secondary deal on that unit)
+ *  - "Rented"   → the LANDLORD (given to the rental deal on that unit)
  *
- * The seller is a normal deal_parties row (party_type = seller) with listing_id set and
- * deal_id NULL; its files are deal_documents rows with the same listing_id. When a
- * secondary deal is created on the listing, the SAME rows get deal_id (+ deal_property_id)
- * — nothing is copied. reconcile() keeps that link in step with the deal's properties.
+ * The party is a normal deal_parties row (party_type seller / landlord) with listing_id set
+ * and deal_id NULL; its files are deal_documents rows with the same listing_id. When the
+ * matching deal is created on the listing, the SAME rows get deal_id (+ deal_property_id) —
+ * nothing is copied. reconcile() keeps that link in step with the deal's properties.
  *
- * Visibility: a listing seller is hidden from the deal's sales agent. Only admin /
+ * Visibility: a listing party is hidden from the deal's sales agent. Only admin /
  * super_admin / accountant and the listing side (OwnerVisibility + approved owner-data
  * access request) may see or edit it.
  */
@@ -40,37 +42,55 @@ class ListingSellerParty
 
     public const DOCUMENT_TYPES = ['national_id', 'passport', 'visa', 'title_deed'];
 
-    /** Roles that always see listing sellers on deals. */
+    /** party_type => deal type that gets it + listing status it comes from. */
+    public const TYPES = [
+        'seller' => ['deal_type' => 'secondary', 'listing_status' => 'converted'],
+        'landlord' => ['deal_type' => 'rental', 'listing_status' => 'rented'],
+    ];
+
+    /** Roles that always see listing parties on deals. */
     public const SEE_ALL_ROLES = ['admin', 'super_admin', 'accountant'];
 
     /** @var array<string, bool> "userId|listingId" => can see */
     private static array $canSeeMemo = [];
 
+    /** Listing party type a deal of this type gets (seller / landlord), or null. */
+    public static function partyTypeForDeal(?string $dealType): ?string
+    {
+        foreach (self::TYPES as $type => $cfg) {
+            if ($cfg['deal_type'] === $dealType) {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
     // ------------------------------------------------------------------
-    // Sold out (listing side)
+    // Sold out / rented (listing side)
     // ------------------------------------------------------------------
 
     /**
-     * Save the seller (and uploaded documents) of a listing being marked sold out.
-     * $details null → taken from the listing's owner.
+     * Save the seller / landlord (and uploaded documents) of a listing being marked sold out
+     * / rented. $details null → taken from the listing's owner.
      *
      * @param  array<int, array{document_type: string, file: UploadedFile}>  $documents
      */
-    public static function saveForListing(Listing $listing, ?array $details, array $documents = []): ?DealParty
+    public static function saveForListing(Listing $listing, ?array $details, array $documents = [], string $type = 'seller'): ?DealParty
     {
         $data = $details !== null ? self::cleanDetails($details) : null;
         $fromOwner = $data === null || ($data['first_name'] ?? '') === '';
         if ($fromOwner) {
-            $data = self::detailsFromOwner(self::sellerOwner($listing));
+            $data = self::detailsFromOwner(self::partyOwner($listing, $type));
         }
         if (! $data || ($data['first_name'] ?? '') === '') {
             return null; // deal_parties.first_name is required; nothing to save
         }
 
-        // Reuse the listing's free seller row; a row already linked to a deal stays with it.
+        // Reuse the listing's free row; a row already linked to a deal stays with it.
         $party = DealParty::query()
             ->where('listing_id', $listing->id)
-            ->where('party_type', 'seller')
+            ->where('party_type', $type)
             ->whereNull('deal_id')
             ->latest('id')
             ->first();
@@ -82,32 +102,32 @@ class ListingSellerParty
                 ...$data,
                 'deal_id' => null,
                 'listing_id' => $listing->id,
-                'party_type' => 'seller',
+                'party_type' => $type,
                 'party_role' => 'primary',
             ]);
         }
 
         foreach ($documents as $doc) {
             $file = $doc['file'] ?? null;
-            $type = $doc['document_type'] ?? null;
-            if ($file instanceof UploadedFile && $file->isValid() && $type) {
-                self::storeUploadedDocument($listing, $party, $type, $file);
+            $docType = $doc['document_type'] ?? null;
+            if ($file instanceof UploadedFile && $file->isValid() && $docType) {
+                self::storeUploadedDocument($listing, $party, $docType, $file);
             }
         }
 
         if ($fromOwner && empty($documents) && ! $party->documents()->exists()) {
-            self::copyOwnerDocuments($listing, $party, self::sellerOwner($listing));
+            self::copyOwnerDocuments($listing, $party, self::partyOwner($listing, $type));
         }
 
         return $party;
     }
 
-    /** Remove the listing's free seller (not linked to a deal) and its files — on revert. */
-    public static function deleteUnlinkedForListing(Listing $listing): void
+    /** Remove the listing's free party (not linked to a deal) and its files — on revert. */
+    public static function deleteUnlinkedForListing(Listing $listing, string $type = 'seller'): void
     {
         $parties = DealParty::query()
             ->where('listing_id', $listing->id)
-            ->where('party_type', 'seller')
+            ->where('party_type', $type)
             ->whereNull('deal_id')
             ->get();
 
@@ -121,19 +141,19 @@ class ListingSellerParty
     }
 
     /**
-     * The listing's seller row — creates it from the owner for listings sold before this
-     * feature existed. Returns null when there's nothing to build it from.
+     * The listing's seller / landlord row — creates it from the owner for listings closed
+     * before this feature existed. Returns null when there's nothing to build it from.
      */
-    public static function ensureFor(Listing $listing): ?DealParty
+    public static function ensureFor(Listing $listing, string $type = 'seller'): ?DealParty
     {
         $party = DealParty::query()
             ->where('listing_id', $listing->id)
-            ->where('party_type', 'seller')
+            ->where('party_type', $type)
             ->orderByRaw('deal_id is null desc')
             ->latest('id')
             ->first();
 
-        return $party ?? self::saveForListing($listing, null);
+        return $party ?? self::saveForListing($listing, null, [], $type);
     }
 
     // ------------------------------------------------------------------
@@ -141,7 +161,8 @@ class ListingSellerParty
     // ------------------------------------------------------------------
 
     /**
-     * Link / unlink listing sellers so they match the deal's current properties.
+     * Link / unlink listing parties so they match the deal's current properties and type
+     * (secondary → sellers of sold-out units, rental → landlords of rented units).
      * Call after anything that creates, edits, removes or reorders deal properties, or
      * changes the deal type.
      */
@@ -149,10 +170,11 @@ class ListingSellerParty
     {
         try {
             $properties = $deal->properties()->get(['id', 'deal_id', 'listing_id', 'sort_order']);
+            $type = self::partyTypeForDeal($deal->deal_type);
 
             /** @var array<int, DealProperty|null> $wanted listing_id => property */
             $wanted = [];
-            if ($deal->deal_type === 'secondary') {
+            if ($type) {
                 foreach ($properties as $property) {
                     if ($property->listing_id && ! array_key_exists((int) $property->listing_id, $wanted)) {
                         $wanted[(int) $property->listing_id] = $property;
@@ -165,14 +187,16 @@ class ListingSellerParty
 
             $linked = DealParty::query()
                 ->where('deal_id', $deal->id)
-                ->where('party_type', 'seller')
+                ->whereIn('party_type', array_keys(self::TYPES))
                 ->whereNotNull('listing_id')
                 ->get();
 
             $toLink = $wanted;
             foreach ($linked as $party) {
                 $listingId = (int) $party->listing_id;
-                if (! array_key_exists($listingId, $wanted) || ! array_key_exists($listingId, $toLink)) {
+                if ($party->party_type !== $type
+                    || ! array_key_exists($listingId, $wanted)
+                    || ! array_key_exists($listingId, $toLink)) {
                     // Unit removed / changed, deal type changed, or a duplicate link.
                     self::unlink($party);
                     continue;
@@ -186,10 +210,10 @@ class ListingSellerParty
 
             foreach ($toLink as $listingId => $property) {
                 $listing = Listing::query()->withoutGlobalScope('branchView')->find($listingId);
-                if (! $listing || $listing->status !== 'converted') {
+                if (! $listing || $listing->status !== self::TYPES[$type]['listing_status']) {
                     continue;
                 }
-                $party = self::ensureFor($listing);
+                $party = self::ensureFor($listing, $type);
                 if (! $party) {
                     continue;
                 }
@@ -203,9 +227,11 @@ class ListingSellerParty
                 self::link($party, $deal, $property);
             }
 
-            self::syncRoles($deal, $properties);
+            if ($type) {
+                self::syncRoles($deal, $properties, $type);
+            }
         } catch (\Throwable $e) {
-            // Never break a deal save because of the seller link.
+            // Never break a deal save because of the listing party link.
             Log::error('ListingSellerParty::reconcile failed', [
                 'deal_id' => $deal->id,
                 'error' => $e->getMessage(),
@@ -238,14 +264,14 @@ class ListingSellerParty
             ->update(['deal_id' => null, 'listing_id' => $party->listing_id]);
     }
 
-    /** Main property's seller is primary, the other listing sellers are secondary. */
-    private static function syncRoles(Deal $deal, Collection $properties): void
+    /** Main property's party is primary, the other listing parties of that type are secondary. */
+    private static function syncRoles(Deal $deal, Collection $properties, string $type): void
     {
         $sortById = $properties->pluck('sort_order', 'id');
 
-        $sellers = DealParty::query()
+        $parties = DealParty::query()
             ->where('deal_id', $deal->id)
-            ->where('party_type', 'seller')
+            ->where('party_type', $type)
             ->whereNotNull('listing_id')
             ->get()
             ->sortBy(fn (DealParty $p) => [
@@ -254,7 +280,7 @@ class ListingSellerParty
             ])
             ->values();
 
-        foreach ($sellers as $i => $party) {
+        foreach ($parties as $i => $party) {
             $role = $i === 0 ? 'primary' : 'secondary';
             if ($party->party_role !== $role) {
                 $party->update(['party_role' => $role]);
@@ -286,7 +312,7 @@ class ListingSellerParty
             }
         }
 
-        // A seller file that is not on a deal belongs to the listing side only.
+        // A listing party file that is not on a deal belongs to the listing side only.
         if ($document->listing_id && ! $document->deal_id) {
             return self::canSeeListingSeller($user, (int) $document->listing_id);
         }
@@ -294,6 +320,7 @@ class ListingSellerParty
         return true;
     }
 
+    /** Can the viewer see the seller / landlord saved on this listing? */
     public static function canSeeListingSeller(?User $user, int $listingId): bool
     {
         if (! $user || ! $listingId) {
@@ -335,12 +362,15 @@ class ListingSellerParty
         return $hidden;
     }
 
-    /** False when the deal has a listing seller the viewer can't see (they may not edit sellers). */
-    public static function mayEditSellers(Deal $deal, ?User $user): bool
+    /**
+     * False when the deal has a listing party of this type (seller / landlord) the viewer
+     * can't see — they may not edit that party type.
+     */
+    public static function mayEditSellers(Deal $deal, ?User $user, string $type = 'seller'): bool
     {
         $listingIds = DealParty::query()
             ->where('deal_id', $deal->id)
-            ->where('party_type', 'seller')
+            ->where('party_type', $type)
             ->whereNotNull('listing_id')
             ->pluck('listing_id');
 
@@ -381,6 +411,16 @@ class ListingSellerParty
         $data['first_name'] = (string) ($data['first_name'] ?? '');
 
         return $data;
+    }
+
+    /** Owner to build the party from: the landlord is the current owner. */
+    private static function partyOwner(Listing $listing, string $type): ?Owner
+    {
+        if ($type === 'landlord') {
+            return $listing->owner_id ? Owner::query()->find($listing->owner_id) : null;
+        }
+
+        return self::sellerOwner($listing);
     }
 
     /**
@@ -429,15 +469,15 @@ class ListingSellerParty
         ];
     }
 
-    private static function documentDirectory(Listing $listing): string
+    private static function documentDirectory(Listing $listing, string $type): string
     {
         // listings/documents/* is sensitive (private disk) and uses the Luxvant storage split.
-        return "listings/documents/{$listing->id}/seller";
+        return "listings/documents/{$listing->id}/{$type}";
     }
 
-    private static function storeUploadedDocument(Listing $listing, DealParty $party, string $type, UploadedFile $file): void
+    private static function storeUploadedDocument(Listing $listing, DealParty $party, string $docType, UploadedFile $file): void
     {
-        $directory = self::documentDirectory($listing);
+        $directory = self::documentDirectory($listing, $party->party_type);
         $mime = $file->getMimeType();
 
         if (in_array($mime, ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'], true)) {
@@ -458,8 +498,8 @@ class ListingSellerParty
             'deal_id' => $party->deal_id,
             'listing_id' => $listing->id,
             'deal_party_id' => $party->id,
-            'document_category' => 'seller',
-            'document_type' => $type,
+            'document_category' => $party->party_type,
+            'document_type' => $docType,
             'file_name' => $file->getClientOriginalName(),
             'file_path' => $path,
             'file_size' => (int) $size,
@@ -490,7 +530,9 @@ class ListingSellerParty
             return; // deal_documents.uploaded_by is required
         }
 
-        foreach ($map as $column => $type) {
+        $logicalDir = self::documentDirectory($listing, $party->party_type);
+
+        foreach ($map as $column => $docType) {
             $source = $owner->{$column} ?? null;
             if (! $source) {
                 continue;
@@ -502,8 +544,8 @@ class ListingSellerParty
                     continue;
                 }
 
-                $directory = BrandIsolation::ensureCompanyStoragePath(self::documentDirectory($listing));
-                $targetDisk = BrandStorage::diskForNewUpload(self::documentDirectory($listing));
+                $directory = BrandIsolation::ensureCompanyStoragePath($logicalDir);
+                $targetDisk = BrandStorage::diskForNewUpload($logicalDir);
                 $target = $directory.'/'.Str::random(32).'.'.pathinfo($source, PATHINFO_EXTENSION);
 
                 $contents = Storage::disk($sourceDisk)->get($source);
@@ -516,8 +558,8 @@ class ListingSellerParty
                     'deal_id' => $party->deal_id,
                     'listing_id' => $listing->id,
                     'deal_party_id' => $party->id,
-                    'document_category' => 'seller',
-                    'document_type' => $type,
+                    'document_category' => $party->party_type,
+                    'document_type' => $docType,
                     'file_name' => basename($source),
                     'file_path' => $target,
                     'file_size' => strlen($contents),

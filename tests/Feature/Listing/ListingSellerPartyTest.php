@@ -291,7 +291,109 @@ class ListingSellerPartyTest extends TestCase
         $this->assertSame('0509999999', $party->phone);
     }
 
+    // ---------------- Rental: landlord (same logic as the seller) ----------------
+
+    public function test_rented_by_oia_agent_requires_landlord_and_links_it_to_the_rental_deal(): void
+    {
+        $t = $this->scenario();
+        $url = "/api/listings/properties/{$t['listing1']->id}/mark-rented";
+
+        // Without landlord → rejected, nothing saved.
+        $this->asUser($t['agentA'])->patch($url, [
+            'rented_by' => 'another_agent', 'agent_id' => $t['salesB']->id, 'rented_date' => now()->toDateString(),
+        ], ['Accept' => 'application/json'])->assertStatus(422);
+        $this->assertNotSame('rented', $t['listing1']->fresh()->status);
+
+        $this->markRented($t['agentA'], $t['listing1'], [
+            'rented_by' => 'another_agent', 'agent_id' => $t['salesB']->id,
+        ], 'Land', 'Lord')->assertOk();
+
+        $landlord = DealParty::query()->where('listing_id', $t['listing1']->id)->sole();
+        $this->assertSame('landlord', $landlord->party_type);
+        $this->assertNull($landlord->deal_id);
+        $docs = DealDocument::query()->where('deal_party_id', $landlord->id)->get();
+        $this->assertCount(2, $docs);
+        $this->assertTrue($docs->every(fn ($d) => $d->document_category === 'landlord'));
+
+        // Listing side sees it; buyer-side sales doesn't.
+        $this->asUser($t['agentA'])->getJson("/api/listings/properties/{$t['listing1']->id}/seller-party?type=landlord")
+            ->assertOk()->assertJsonPath('data.party.first_name', 'Land');
+        $this->asUser($t['salesB'])->getJson("/api/listings/properties/{$t['listing1']->id}/seller-party?type=landlord")
+            ->assertStatus(403);
+
+        // Rental deal → same landlord row linked; hidden from B, visible to super admin.
+        $dealId = $this->createDeal($t['salesB'], $t['listing1'], 'rental');
+        $landlord->refresh();
+        $this->assertSame($dealId, (int) $landlord->deal_id);
+        $this->assertSame('primary', $landlord->party_role);
+        $this->assertSame(2, DealDocument::query()->where('deal_party_id', $landlord->id)->where('deal_id', $dealId)->count());
+        $this->assertSame(1, DealParty::query()->where('deal_id', $dealId)->where('party_type', 'landlord')->count());
+
+        $asB = $this->asUser($t['salesB'])->getJson("/api/deals/{$dealId}")->assertOk();
+        $this->assertTrue($asB->json('data.landlord_hidden'));
+        $this->assertFalse($asB->json('data.seller_hidden'));
+        $this->assertNull($asB->json('data.landlord_name'));
+        $this->assertFalse(collect($asB->json('data.parties'))->contains('party_type', 'landlord'));
+        $this->assertFalse(collect($asB->json('data.documents'))->contains('document_category', 'landlord'));
+
+        // B can't overwrite the landlord.
+        $this->asUser($t['salesB'])->postJson("/api/deals/{$dealId}/update-partial", [
+            'landlord_first_name' => 'Hacked', 'landlord_last_name' => 'Name',
+        ]);
+        $this->assertSame('Land', $landlord->fresh()->first_name);
+
+        ListingSellerParty::resetMemo();
+        $asAdmin = $this->asUser($t['super'])->getJson("/api/deals/{$dealId}")->assertOk();
+        $this->assertFalse($asAdmin->json('data.landlord_hidden'));
+        $this->assertSame('Land Lord', $asAdmin->json('data.landlord_name'));
+
+        // Switching the deal to secondary gives the landlord back to the listing.
+        $deal = Deal::query()->findOrFail($dealId);
+        $deal->forceFill(['deal_type' => 'secondary'])->save();
+        ListingSellerParty::reconcile($deal->fresh());
+        $this->assertNull($landlord->fresh()->deal_id);
+    }
+
+    public function test_rented_by_owner_needs_no_landlord_and_revert_cleans_up(): void
+    {
+        $t = $this->scenario();
+
+        $this->asUser($t['agentA'])->patch("/api/listings/properties/{$t['listing1']->id}/mark-rented", [
+            'rented_by' => 'owner', 'rented_date' => now()->toDateString(),
+        ], ['Accept' => 'application/json'])->assertOk();
+        $this->assertSame('rented', $t['listing1']->fresh()->status);
+        $this->assertSame(0, DealParty::query()->where('listing_id', $t['listing1']->id)->count());
+
+        // Rented by me (OIA agent) with landlord → revert removes the unlinked landlord.
+        $this->markRented($t['agentA'], $t['listing2'], ['rented_by' => 'me'], 'Temp', 'Landlord')->assertOk();
+        $landlord = DealParty::query()->where('listing_id', $t['listing2']->id)->sole();
+        $docIds = DealDocument::query()->where('deal_party_id', $landlord->id)->pluck('id');
+
+        $this->asUser($t['agentA'])->patchJson("/api/listings/properties/{$t['listing2']->id}/revert-rented")->assertOk();
+        $this->assertNull(DealParty::query()->find($landlord->id));
+        $this->assertSame(0, DealDocument::query()->whereIn('id', $docIds)->count());
+    }
+
     // ------------------------------------------------------------------
+
+    private function markRented(User $user, Listing $listing, array $payload, string $first, string $last)
+    {
+        return $this->asUser($user)->patch("/api/listings/properties/{$listing->id}/mark-rented", array_merge([
+            'rented_date' => now()->toDateString(),
+        ], $payload, [
+            'landlord_details' => [
+                'first_name' => $first,
+                'last_name' => $last,
+                'phone' => '0504444444',
+                'nationality' => 'Egypt',
+                'residency_status' => 'resident',
+            ],
+            'landlord_documents' => [
+                ['document_type' => 'passport', 'file' => UploadedFile::fake()->create('passport.pdf', 20, 'application/pdf')],
+                ['document_type' => 'national_id', 'file' => UploadedFile::fake()->create('eid.pdf', 20, 'application/pdf')],
+            ],
+        ]), ['Accept' => 'application/json']);
+    }
 
     private function markSold(User $user, Listing $listing, array $payload, string $first, string $last, string $phone = '0500000000')
     {
@@ -312,29 +414,30 @@ class ListingSellerPartyTest extends TestCase
         ]), ['Accept' => 'application/json']);
     }
 
-    private function createDeal(User $user, Listing $listing): int
+    private function createDeal(User $user, Listing $listing, string $dealType = 'secondary'): int
     {
-        $stage = Stage::query()->where('stage_type', 'deal')->where('deal_type', 'secondary')->orderBy('order')->first();
+        $stage = Stage::query()->where('stage_type', 'deal')->where('deal_type', $dealType)->orderBy('order')->first();
         if (! $stage) {
-            $this->markTestSkipped('Need a secondary deal stage');
+            $this->markTestSkipped("Need a {$dealType} deal stage");
         }
 
+        $client = $dealType === 'rental' ? 'tenant' : 'buyer';
         $response = $this->asUser($user)->postJson('/api/deals/store/new', [
-            'deal_type' => 'secondary',
+            'deal_type' => $dealType,
             'stage_id' => $stage->id,
             'source' => 'Test',
-            'deal_name' => 'Seller link test',
+            'deal_name' => 'Listing party link test',
             'listing_id' => $listing->id,
             'responsible_person_id' => $user->id,
-            'buyer_first_name' => 'Buyer',
-            'buyer_last_name' => 'Person',
-            'buyer_phone' => '0502222222',
-            'buyer_email' => 'buyer@example.test',
-            'buyer_dob' => '1990-01-01',
-            'buyer_nationality' => 'Egypt',
-            'buyer_residency_status' => 'resident',
-            'buyer_city' => 'Dubai',
-            'buyer_language' => 'English',
+            "{$client}_first_name" => 'Client',
+            "{$client}_last_name" => 'Person',
+            "{$client}_phone" => '0502222222',
+            "{$client}_email" => 'client@example.test',
+            "{$client}_dob" => '1990-01-01',
+            "{$client}_nationality" => 'Egypt',
+            "{$client}_residency_status" => 'resident',
+            "{$client}_city" => 'Dubai',
+            "{$client}_language" => 'English',
         ]);
         $response->assertStatus(201);
         ListingSellerParty::resetMemo();
@@ -363,6 +466,8 @@ class ListingSellerPartyTest extends TestCase
                 'agent_id' => $agentA->id,
                 'sold_by' => null,
                 'sold_by_agent_id' => null,
+                'rented_by' => null,
+                'rented_by_agent_id' => null,
             ])->save();
             // Start clean for these listings (rolled back after the test).
             DealDocument::query()->where('listing_id', $listing->id)->delete();
