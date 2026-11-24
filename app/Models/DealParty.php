@@ -10,6 +10,10 @@ class DealParty extends Model
 
     protected $fillable = [
         'deal_id',
+        // Seller captured on "Sold Out": listing_id set, deal_id NULL until a deal links it
+        // (App\Support\Listing\ListingSellerParty).
+        'listing_id',
+        'deal_property_id',
         'party_type',
         'party_role',
         'first_name',
@@ -39,6 +43,22 @@ class DealParty extends Model
     public function documents()
     {
         return $this->hasMany(DealDocument::class, 'deal_party_id');
+    }
+
+    public function listing()
+    {
+        return $this->belongsTo(Listing::class);
+    }
+
+    public function dealProperty()
+    {
+        return $this->belongsTo(DealProperty::class);
+    }
+
+    /** Seller that came from a sold-out listing (shared with the listing, not typed on the deal). */
+    public function isListingSeller(): bool
+    {
+        return $this->listing_id !== null && $this->party_type === 'seller';
     }
 
     // Accessors

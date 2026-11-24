@@ -316,8 +316,14 @@ class DealResource extends JsonResource
                 ? $this->partyDisplayName('landlord')
                 : $this->partyDisplayName('seller'),
 
-            'parties' => DealPartyResource::collection($this->whenLoaded('parties')),
-            'documents' => DealDocumentResource::collection($this->whenLoaded('documents')),
+            // Seller of a sold-out listing is hidden from the deal's sales agent
+            // (admins / accountant / listing side still see it) — ListingSellerParty.
+            'seller_hidden' => $this->hiddenPartyIds() !== [],
+
+            'parties' => DealPartyResource::collection($this->whenLoaded('parties', fn () => $this->visibleParties())),
+            'documents' => DealDocumentResource::collection($this->whenLoaded('documents', fn () => $this->documents
+                ->reject(fn ($doc) => $doc->deal_party_id && in_array((int) $doc->deal_party_id, $this->hiddenPartyIds(), true))
+                ->values())),
             'assigned_at' => $assignmentHistory ? $assignmentHistory->created_at : $this->created_at,
             'lost_reason' => $this->lost_reason,
 
@@ -369,11 +375,37 @@ class DealResource extends JsonResource
         return [];
     }
 
+    /** @var list<int>|null */
+    protected ?array $hiddenPartyIdsCache = null;
+
+    /** Party ids the viewer may not see (listing sellers they have no access to). */
+    protected function hiddenPartyIds(): array
+    {
+        if ($this->hiddenPartyIdsCache === null) {
+            $parties = $this->parties;
+            $this->hiddenPartyIdsCache = $parties
+                ? \App\Support\Listing\ListingSellerParty::hiddenPartyIds($parties, auth()->user())
+                : [];
+        }
+
+        return $this->hiddenPartyIdsCache;
+    }
+
+    protected function visibleParties(): Collection
+    {
+        $hidden = $this->hiddenPartyIds();
+        $parties = $this->parties ?? collect();
+
+        return $hidden === []
+            ? $parties
+            : $parties->reject(fn ($p) => in_array((int) $p->id, $hidden, true))->values();
+    }
+
     protected function partyDisplayName(string $type): ?string
     {
         // Preserve previous buyer_name behavior: lazy-load parties when the
         // relation was not eager-loaded (single-deal show paths).
-        $parties = $this->parties;
+        $parties = $this->visibleParties();
         if (! $parties || $parties->isEmpty()) {
             return null;
         }

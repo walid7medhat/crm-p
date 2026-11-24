@@ -1074,6 +1074,7 @@ Route::get('/properties/{id}/offers', [ListingController::class, 'getOffers']);
                 Route::patch('/{id}/mark-converted', [ListingController::class, 'markAsConverted']);
                 Route::patch('/{id}/revert-converted', [ListingController::class, 'revertFromConverted']);
                 Route::post('/{owner}/soldBy', [ListingController::class, 'changeOwner']);
+                Route::get('/{id}/seller-party', [ListingController::class, 'sellerParty']);
                 // routes/api.php
                 Route::patch('/{id}/mark-rented', [ListingController::class, 'markAsRented']);
                 Route::patch('/{id}/revert-rented', [ListingController::class, 'revertFromRented']);

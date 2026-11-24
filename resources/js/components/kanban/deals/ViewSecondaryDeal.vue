@@ -550,9 +550,76 @@
       </div>
     </div>
 
+    <!-- Seller of a sold-out listing: shared with the listing; hidden from the deal's sales
+         agent (seller_hidden), read-only for admins / accountant / listing side. -->
+    <div class="col-12" v-if="usesListingSeller">
+      <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Seller Details</h6>
+        </div>
+        <div v-if="deal.seller_hidden && !listingSellers.length" class="d-flex align-items-start gap-2 text-muted">
+          <iconify-icon icon="lucide:lock" />
+          <span>Seller details and documents are managed by the listing agent.</span>
+        </div>
+        <div v-else-if="!listingSellers.length" class="text-muted">
+          No seller details were saved on the sold listing.
+        </div>
+        <div v-for="(s, idx) in listingSellers" :key="s.id" :class="{ 'mt-4 pt-3 border-top': idx > 0 }">
+          <p v-if="listingSellers.length > 1" class="fw-semibold mb-2">
+            {{ s.party_role === 'primary' ? 'Main unit seller' : 'Seller ' + (idx + 1) }}
+          </p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Seller Name</label>
+                <p class="info-value mb-0">{{ val([s.first_name, s.last_name].filter(Boolean).join(' ')) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Seller Phone Number</label>
+                <p class="info-value mb-0">{{ val(s.phone) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Seller Email</label>
+                <p class="info-value mb-0">{{ val(s.email) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Seller Nationality</label>
+                <p class="info-value mb-0">{{ val(s.nationality) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6" v-if="s.residency_status">
+              <div class="info-group">
+                <label class="info-label">Seller Residency Status</label>
+                <p class="info-value mb-0">{{ val(s.residency_status) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6" v-if="s.date_of_birth">
+              <div class="info-group">
+                <label class="info-label">Seller Date Of Birth</label>
+                <p class="info-value mb-0">{{ val(s.date_of_birth) }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="info-label">Seller Documents</label>
+            <DealDocumentsReadonly :documents="s.documents || []" />
+          </div>
+        </div>
+        <small v-if="deal.seller_hidden && listingSellers.length" class="d-block text-muted mt-3">
+          Some sellers are managed by the listing agent and are not shown.
+        </small>
+      </div>
+    </div>
+
     <!-- Seller Details -->
-    <div class="col-12" v-if="!deal.listing">
-      
+    <div class="col-12" v-if="!usesListingSeller">
+
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'seller_details' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Seller Details</h6>
@@ -641,7 +708,7 @@
     </div>
 
     <!-- Seller Documents -->
-    <div class="col-12" v-if="!deal.listing">
+    <div class="col-12" v-if="!usesListingSeller">
      
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'seller_documents' }">
          <div class="section-head mb-3">
@@ -899,6 +966,17 @@ watch(() => props.activeEditSection, (section) => {
 const sellerDocuments = computed(() => {
   return seller.value?.documents || []
 })
+
+// Sellers that came from sold-out listings (primary = main unit's seller first).
+const listingSellers = computed(() => {
+  const parties = props.deal?.parties || []
+  return parties
+    .filter(p => p.party_type === 'seller' && p.is_listing_seller)
+    .sort((a, b) => (a.party_role === 'primary' ? 0 : 1) - (b.party_role === 'primary' ? 0 : 1))
+})
+const usesListingSeller = computed(() =>
+  !!props.deal?.listing || !!props.deal?.seller_hidden || listingSellers.value.length > 0
+)
 function tagsDisplay(arr) {
   if (!Array.isArray(arr) || !arr.length) return '----'
   return arr.join(', ')
@@ -923,10 +1001,13 @@ const localMissingSummary = computed(() => {
     [buyer.value.phone, 'Buyer Phone'],
     [buyer.value.email, 'Buyer Email'],
 
-    [seller.value.first_name, 'Seller First Name'],
-    [seller.value.last_name, 'Seller Last Name'],
-    [seller.value.phone, 'Seller Phone'],
-    [seller.value.email, 'Seller Email'],
+    // Listing seller comes from the sold listing (and may be hidden) — not the deal agent's job.
+    ...(usesListingSeller.value ? [] : [
+      [seller.value.first_name, 'Seller First Name'],
+      [seller.value.last_name, 'Seller Last Name'],
+      [seller.value.phone, 'Seller Phone'],
+      [seller.value.email, 'Seller Email'],
+    ]),
   ]
 
   const labels = checks

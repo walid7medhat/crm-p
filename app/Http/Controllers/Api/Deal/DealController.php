@@ -29,6 +29,7 @@ use App\Http\Requests\Deal\UpdatePropertyRequest;
 use App\Http\Resources\Deal\PropertyDocumentResource;
 use App\Models\DealProperty;
 use App\Support\DealCommissionDistribution;
+use App\Support\Listing\ListingSellerParty;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Carbon\Carbon;
@@ -232,6 +233,9 @@ class DealController extends Controller
             if ($request->has('properties')) {
                 $this->syncProperties($deal, $request->properties);
                 $changes['properties'] = 'updated';
+            } else {
+                // listing_id may have changed above.
+                ListingSellerParty::reconcile($deal->fresh());
             }
 
             // تحديث الـ Parties — only parties that belong to this deal
@@ -241,7 +245,7 @@ class DealController extends Controller
                         continue;
                     }
                     $party = $deal->parties()->whereKey($partyData['id'])->first();
-                    if (!$party) {
+                    if (!$party || ! ListingSellerParty::canSee(auth()->user(), $party)) {
                         continue;
                     }
 
@@ -264,6 +268,15 @@ class DealController extends Controller
             if ($request->hasFile('documents')) {
                 foreach ($request->file('documents') as $index => $file) {
                     $docData = $request->documents[$index];
+
+                    // Only attach to a party of this deal the viewer may see.
+                    if (! empty($docData['deal_party_id'])) {
+                        $targetParty = $deal->parties()->whereKey($docData['deal_party_id'])->first();
+                        if (! $targetParty || ! ListingSellerParty::canSee(auth()->user(), $targetParty)) {
+                            continue;
+                        }
+                    }
+
                     $storagePath = "deals/{$deal->id}/{$docData['category']}";
                     
                     $isImage = in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']);
@@ -925,6 +938,11 @@ class DealController extends Controller
             if ($request->filled('seller_country')) $sellerData['country'] = $request->seller_country;
             if ($request->filled('seller_language')) $sellerData['language'] = $request->seller_language;
 
+            // Listing seller hidden from this viewer → leave it untouched (see ListingSellerParty).
+            if (!empty($sellerData) && ! ListingSellerParty::mayEditSellers($deal, auth()->user())) {
+                $sellerData = [];
+            }
+
             if (!empty($sellerData)) {
                 $seller = $deal->parties()
                     ->where('party_type', 'seller')
@@ -1012,6 +1030,9 @@ class DealController extends Controller
             // 6. تحديث الـ Properties
             if ($request->has('properties')) {
                 $this->syncProperties($deal, $request->properties);
+            } else {
+                // deal_type / listing_id may have changed above.
+                ListingSellerParty::reconcile($deal->fresh());
             }
 
             DealHistoryHelper::log($deal->id, [
@@ -1158,6 +1179,10 @@ class DealController extends Controller
 
             // 4. تحديث الـ parties
             $partyTypes = ['buyer', 'seller', 'tenant', 'landlord'];
+            // Sold-out listing's seller hidden from this viewer → never overwrite it.
+            if (! ListingSellerParty::mayEditSellers($deal, auth()->user())) {
+                $partyTypes = array_values(array_diff($partyTypes, ['seller']));
+            }
             foreach ($partyTypes as $type) {
                 if ($request->has($type)) {
                     $partyData = $request->$type;
@@ -1432,6 +1457,11 @@ class DealController extends Controller
                             ->where('party_type', $isSharedBuyer ? 'buyer' : $partyType)
                             ->where('party_role', $isSharedBuyer ? 'secondary' : 'primary')
                             ->first();
+
+                        // Listing seller hidden from this viewer: don't attach files to it.
+                        if ($party && ! ListingSellerParty::canSee(auth()->user(), $party)) {
+                            continue;
+                        }
                     }
 
                     // Safety net against duplicate rows from a retried/re-submitted request
@@ -1754,6 +1784,12 @@ class DealController extends Controller
             $partyTypes = array_intersect_key($partyTypes, array_flip($onlyPrefixes));
         }
 
+        // The seller of a sold-out listing is managed by the listing side; a viewer who can't
+        // see it (the deal's sales agent) must not overwrite it or add a second seller.
+        if (isset($partyTypes['seller']) && ! ListingSellerParty::mayEditSellers($deal, auth()->user())) {
+            unset($partyTypes['seller']);
+        }
+
         foreach ($partyTypes as $requestPrefix => [$type, $role]) {
             $partyData = [];
             $prefix = $requestPrefix . '_';
@@ -1846,7 +1882,8 @@ class DealController extends Controller
 
             $deal = $document->deal;
 
-            if (!$deal || !$this->authorizeAccess($deal)) {
+            if (!$deal || !$this->authorizeAccess($deal)
+                || ! ListingSellerParty::canSeeDocument(auth()->user(), $document)) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
@@ -1916,16 +1953,15 @@ class DealController extends Controller
 
         if ($property) {
             $property->update($data);
-
-            return;
-        }
-
-        // No row yet: create if we have enough to show as a property (area and/or unit)
-        if (($data['area_id'] ?? null) || ($data['unit_no'] ?? null)) {
+        } elseif (($data['area_id'] ?? null) || ($data['unit_no'] ?? null)) {
+            // No row yet: create if we have enough to show as a property (area and/or unit)
             $deal->properties()->create(array_merge($data, [
                 'sort_order' => 0,
             ]));
         }
+
+        // listing_id may have changed → keep the sold-out listing's seller link in step.
+        ListingSellerParty::reconcile($deal);
     }
 
     /**
@@ -2306,6 +2342,10 @@ class DealController extends Controller
 
     // Properties removed from the list.
     $deal->properties()->whereNotIn('id', $keptIds ?: [0])->delete();
+
+    // Link / unlink sold-out listing sellers to match the new unit list (removing a unit
+    // gives its seller back to the listing; the main unit's seller is primary).
+    ListingSellerParty::reconcile($deal);
 }
 
     /**
@@ -2449,6 +2489,9 @@ class DealController extends Controller
         }
 
         $property->save();
+
+        // The unit's listing may have changed → relink the sold-out listing's seller.
+        ListingSellerParty::reconcile($deal);
 
         DB::commit();
 
@@ -2662,6 +2705,9 @@ public function addProperty(Request $request, Deal $deal)
             $property->save();
         }
 
+        // New unit on a sold-out listing → link that listing's seller.
+        ListingSellerParty::reconcile($deal);
+
         DB::commit();
 
         // Load relationships for response
@@ -2809,6 +2855,9 @@ public function changeDealType(Request $request, Deal $deal): JsonResponse
         $deal->deal_type = $newType;
         $deal->stage_id = $newStage->id;
         $deal->save();
+
+        // Listing sellers only belong to secondary deals.
+        ListingSellerParty::reconcile($deal);
 
         // Keep the linked lead in sync if the deal landed on the Lost stage.
         $this->syncLeadStageOnDealLost($deal, (int) $newStage->id);

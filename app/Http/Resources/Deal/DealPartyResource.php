@@ -13,6 +13,10 @@ class DealPartyResource extends JsonResource
             'party_type' => $this->party_type,
             'party_type_name' => $this->getPartyTypeName(),
             'party_role' => $this->party_role,
+            // Seller that came from a sold-out listing (shared with that listing).
+            'listing_id' => $this->listing_id,
+            'deal_property_id' => $this->deal_property_id,
+            'is_listing_seller' => $this->resource->isListingSeller(),
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'full_name' => $this->full_name,
