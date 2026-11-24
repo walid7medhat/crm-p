@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
  * on one (UAE) day, counted per source column (same columns as the team's Excel
  * "Daily Leads Report").
  *
- * Counted: only assignments a user with the branch_admin role made that day — each
- * `assigned` history row whose user_id (who assigned) is a branch admin counts for the
+ * Counted: only assignments a user with the branch_admin role (or the daily-report-assigner
+ * permission) made that day — each `assigned` history row whose user_id (who assigned) is one of them counts for the
  * person it was assigned to (new_person). Not counted: leads created already set to an
  * agent (no assignment), and assignments by anyone else (team lead, auto-assign, super
  * admin, …). History stores the assigned person by name only; see the agent matching in build().
@@ -28,10 +28,14 @@ class DailyLeadsReport
     /** Longest range (in days) one report may cover. */
     public const MAX_RANGE_DAYS = 31;
 
+    /** Permission: may open the report for their own branch (besides super_admin / branch_admin). */
+    public const VIEW_PERMISSION = 'view-daily-leads-report';
+
     public static function canView(?User $user): bool
     {
         return $user !== null
-            && $user->hasAnyRole([...self::FULL_ACCESS_ROLES, 'branch_admin']);
+            && ($user->hasAnyRole([...self::FULL_ACCESS_ROLES, 'branch_admin'])
+                || $user->checkPermissionTo(self::VIEW_PERMISSION));
     }
 
     /**
@@ -86,11 +90,37 @@ class DailyLeadsReport
         return 'src:' . $source;
     }
 
+    /** Permission: this user's assignments count in the report, like a branch admin's. */
+    public const ASSIGNER_PERMISSION = 'daily-report-assigner';
+
+    /**
+     * Users whose assignments are counted: every branch_admin, plus anyone given the
+     * daily-report-assigner permission (directly or through a role).
+     */
+    public static function assignerIds(): array
+    {
+        $ids = User::role('branch_admin')->pluck('id');
+
+        try {
+            $ids = $ids->merge(User::permission(self::ASSIGNER_PERMISSION)->pluck('id'));
+        } catch (\Spatie\Permission\Exceptions\PermissionDoesNotExist) {
+            // migration not run yet — branch admins only
+        }
+
+        return $ids->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
     /** Agents (user ids) this viewer may report on; null = everyone. */
     public static function scopeUserIds(User $viewer): ?array
     {
         if ($viewer->hasAnyRole(self::FULL_ACCESS_ROLES)) {
             return null;
+        }
+
+        // branch_admin: whole branch (leadScopeUserIds). view-daily-leads-report holders
+        // (team leads etc.) also get their whole branch, not just their own team.
+        if (! $viewer->hasRole('branch_admin') && $viewer->checkPermissionTo(self::VIEW_PERMISSION)) {
+            return array_map('intval', $viewer->getBranchUserIds());
         }
 
         return array_map('intval', $viewer->leadScopeUserIds());
@@ -111,10 +141,11 @@ class DailyLeadsReport
         $end = $to->copy()->endOfDay()->format('Y-m-d H:i:s');
         $scope = self::scopeUserIds($viewer);
 
-        $branchAdminIds = User::role('branch_admin')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $branchAdminIds = self::assignerIds();
 
-        // Only assignments made by a branch admin that day (lead_histories.user_id = the user
-        // who assigned). Each one counts for the person the branch admin assigned it to.
+        // Only assignments made by a branch admin (or a daily-report-assigner) that day
+        // (lead_histories.user_id = the user who assigned). Each one counts for the person
+        // it was assigned to.
         $assignments = DB::table('lead_histories as h')
             ->join('leads', 'leads.id', '=', 'h.lead_id')
             ->whereNull('leads.deleted_at')
