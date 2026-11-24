@@ -505,6 +505,17 @@
       </div>
     </section>
 
+    <!-- Rented listing picked: the landlord saved on the listing is added to the deal by the server -->
+    <section v-if="dealType === 'rental' && shouldHideLandlord" class="form-section">
+      <div class="form-card p-3 radius-12 d-flex align-items-start gap-2">
+        <i class="ri-lock-line"></i>
+        <div>
+          <h6 class="section-title mb-1">Landlord Details</h6>
+          <small class="text-muted">Landlord and documents come from the rented listing and are added to this deal automatically.</small>
+        </div>
+      </div>
+    </section>
+
     <!-- Landlord Section (for Rental) -->
     <section v-if="dealType === 'rental' && !shouldHideLandlord && isSectionVisible('landlord_details')" class="form-section">
       <h6 class="section-title mb-3">Landlord Details</h6>

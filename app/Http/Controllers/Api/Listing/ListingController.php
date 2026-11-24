@@ -3026,53 +3026,7 @@ public function markAsConverted(Request $request, $id)
         // the seller (same fields as the deal's seller party) + documents are required and
         // saved with the sale. Owner / A-to-A sales have no OIA deal → no seller step.
         $needsSeller = in_array($request->sold_by, ['me', 'another_agent'], true);
-        if ($needsSeller) {
-            $rules['seller_details'] = 'required|array';
-            $rules['seller_details.first_name'] = 'required|string|max:255';
-            $rules['seller_details.last_name'] = 'required|string|max:255';
-            $rules['seller_details.date_of_birth'] = 'nullable|date';
-            $rules['seller_details.phone'] = 'required|string|max:50';
-            $rules['seller_details.email'] = 'nullable|email|max:255';
-            $rules['seller_details.nationality'] = 'required|string|max:255';
-            $rules['seller_details.residency_status'] = 'required|in:resident,non_resident';
-            $rules['seller_details.city'] = 'nullable|string|max:255';
-            $rules['seller_details.country'] = 'nullable|string|max:255';
-            $rules['seller_details.language'] = 'nullable|string|max:255';
-            $rules['seller_documents'] = 'required|array';
-            $rules['seller_documents.*.document_type'] = 'required|in:' . implode(',', ListingSellerParty::DOCUMENT_TYPES);
-            $rules['seller_documents.*.file'] = 'required|file|max:20480|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx';
-        }
-
-        $validator = Validator::make($request->all(), $rules, [
-            'seller_details.required' => 'Seller details are required.',
-            'seller_details.*.required' => 'Seller :attribute is required.',
-            'seller_documents.required' => 'Seller documents are required.',
-        ], [
-            'seller_details.first_name' => 'first name',
-            'seller_details.last_name' => 'last name',
-            'seller_details.phone' => 'phone',
-            'seller_details.nationality' => 'nationality',
-            'seller_details.residency_status' => 'residency status',
-        ]);
-
-        // Required documents: Passport always; National ID for residents.
-        $validator->after(function ($v) use ($request, $needsSeller) {
-            if (! $needsSeller) {
-                return;
-            }
-            $types = collect((array) $request->input('seller_documents', []))
-                ->filter(fn ($doc, $i) => $request->hasFile("seller_documents.{$i}.file"))
-                ->pluck('document_type')
-                ->all();
-
-            if (! in_array('passport', $types, true)) {
-                $v->errors()->add('seller_documents.passport', 'Seller passport is required.');
-            }
-            if ($request->input('seller_details.residency_status') === 'resident'
-                && ! in_array('national_id', $types, true)) {
-                $v->errors()->add('seller_documents.national_id', 'Seller National ID is required for residents.');
-            }
-        });
+        $validator = $this->listingPartyValidator($request, $rules, $needsSeller ? 'seller' : null);
 
         if ($validator->fails()) {
             return ApiResponse::error($validator->errors()->first(), 422, $validator->errors());
@@ -3098,13 +3052,7 @@ public function markAsConverted(Request $request, $id)
             $updateData['commercial_license'] = $request->a_to_a_details['commercial_license'];
         }
 
-        $sellerDocuments = [];
-        foreach ((array) $request->input('seller_documents', []) as $i => $doc) {
-            $file = $request->file("seller_documents.{$i}.file");
-            if ($file) {
-                $sellerDocuments[] = ['document_type' => $doc['document_type'] ?? null, 'file' => $file];
-            }
-        }
+        $sellerDocuments = $this->listingPartyDocuments($request, 'seller');
 
         DB::transaction(function () use ($property, $updateData, $request, $sellerDocuments, $needsSeller) {
             $property->update($updateData);
@@ -3151,7 +3099,14 @@ public function markAsRented(Request $request, $id)
             $rules['a_to_a_details.commercial_license'] = 'required|string|max:255';
         }
         
-        $request->validate($rules);
+        // Rented by an OIA agent (me / another agent) → a rental deal will be created on this
+        // unit, so the landlord + documents are required and saved with the rental.
+        $needsLandlord = in_array($request->rented_by, ['me', 'another_agent'], true);
+        $validator = $this->listingPartyValidator($request, $rules, $needsLandlord ? 'landlord' : null);
+        if ($validator->fails()) {
+            return ApiResponse::error($validator->errors()->first(), 422, $validator->errors());
+        }
+
         $updateData = [
             'status' => 'rented',
             'rented_by' => $request->rented_by,
@@ -3159,7 +3114,7 @@ public function markAsRented(Request $request, $id)
             'rented_date' => $request->rented_date,
             'rented_owner_id' => $request->owner_id,
         ];
-        
+
         // Handle A to A details
         if ($request->rented_by === 'a_to_a' && $request->has('a_to_a_details')) {
             $updateData['rented_by_company_name'] = $request->a_to_a_details['company_name'];
@@ -3168,7 +3123,15 @@ public function markAsRented(Request $request, $id)
             $updateData['commercial_license'] = $request->a_to_a_details['commercial_license'];
         }
 
-        $property->update($updateData);
+        $landlordDocuments = $this->listingPartyDocuments($request, 'landlord');
+
+        DB::transaction(function () use ($property, $updateData, $request, $landlordDocuments, $needsLandlord) {
+            $property->update($updateData);
+
+            if ($needsLandlord) {
+                ListingSellerParty::saveForListing($property, $request->input('landlord_details'), $landlordDocuments, 'landlord');
+            }
+        });
         $this->clearCache();
 
         return ApiResponse::success(
@@ -3186,17 +3149,23 @@ public function revertFromRented($id)
     try {
         $property = Listing::findOrFail($id);
         
-        $property->update([
-            'status' => 'active',
-            'rented_by' => null,
-            'rented_by_agent_id' => null,
-            'rented_date' => null,
-            'rented_owner_id' => null,
-            'rented_by_company_name'=>null,
-            'rented_by_agent_name'=>null,
-            'rented_by_agent_phone'=>null,
-            'commercial_license'=>null,
-        ]);
+        DB::transaction(function () use ($property) {
+            $property->update([
+                'status' => 'active',
+                'rented_by' => null,
+                'rented_by_agent_id' => null,
+                'rented_date' => null,
+                'rented_owner_id' => null,
+                'rented_by_company_name'=>null,
+                'rented_by_agent_name'=>null,
+                'rented_by_agent_phone'=>null,
+                'commercial_license'=>null,
+            ]);
+
+            // Drop the rental's landlord unless a deal already uses it (the deal keeps its data).
+            ListingSellerParty::deleteUnlinkedForListing($property, 'landlord');
+        });
+        $this->clearCache();
 
         return ApiResponse::success(
             new ListingResource($property->fresh()),
@@ -3392,6 +3361,88 @@ public function validateUnitNumber(Request $request)
         }
     }
     /**
+     * Validator for mark-converted / mark-rented. With $partyType ('seller' / 'landlord') the
+     * "{type}_details" + "{type}_documents" are required: name, phone, nationality,
+     * residency; Passport always, National ID for residents.
+     */
+    private function listingPartyValidator(Request $request, array $rules, ?string $partyType): \Illuminate\Validation\Validator
+    {
+        $messages = [];
+        $attributes = [];
+
+        if ($partyType) {
+            $d = "{$partyType}_details";
+            $docs = "{$partyType}_documents";
+            $label = ucfirst($partyType);
+
+            $rules[$d] = 'required|array';
+            $rules["{$d}.first_name"] = 'required|string|max:255';
+            $rules["{$d}.last_name"] = 'required|string|max:255';
+            $rules["{$d}.date_of_birth"] = 'nullable|date';
+            $rules["{$d}.phone"] = 'required|string|max:50';
+            $rules["{$d}.email"] = 'nullable|email|max:255';
+            $rules["{$d}.nationality"] = 'required|string|max:255';
+            $rules["{$d}.residency_status"] = 'required|in:resident,non_resident';
+            $rules["{$d}.city"] = 'nullable|string|max:255';
+            $rules["{$d}.country"] = 'nullable|string|max:255';
+            $rules["{$d}.language"] = 'nullable|string|max:255';
+            $rules[$docs] = 'required|array';
+            $rules["{$docs}.*.document_type"] = 'required|in:' . implode(',', ListingSellerParty::DOCUMENT_TYPES);
+            $rules["{$docs}.*.file"] = 'required|file|max:20480|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx';
+
+            $messages = [
+                "{$d}.required" => "{$label} details are required.",
+                "{$d}.*.required" => "{$label} :attribute is required.",
+                "{$docs}.required" => "{$label} documents are required.",
+            ];
+            $attributes = [
+                "{$d}.first_name" => 'first name',
+                "{$d}.last_name" => 'last name',
+                "{$d}.phone" => 'phone',
+                "{$d}.nationality" => 'nationality',
+                "{$d}.residency_status" => 'residency status',
+            ];
+        }
+
+        $validator = Validator::make($request->all(), $rules, $messages, $attributes);
+
+        if ($partyType) {
+            $validator->after(function ($v) use ($request, $partyType) {
+                $docs = "{$partyType}_documents";
+                $label = ucfirst($partyType);
+                $types = collect((array) $request->input($docs, []))
+                    ->filter(fn ($doc, $i) => $request->hasFile("{$docs}.{$i}.file"))
+                    ->pluck('document_type')
+                    ->all();
+
+                if (! in_array('passport', $types, true)) {
+                    $v->errors()->add("{$docs}.passport", "{$label} passport is required.");
+                }
+                if ($request->input("{$partyType}_details.residency_status") === 'resident'
+                    && ! in_array('national_id', $types, true)) {
+                    $v->errors()->add("{$docs}.national_id", "{$label} National ID is required for residents.");
+                }
+            });
+        }
+
+        return $validator;
+    }
+
+    /** Uploaded "{type}_documents[i][file|document_type]" as a flat list. */
+    private function listingPartyDocuments(Request $request, string $partyType): array
+    {
+        $out = [];
+        foreach ((array) $request->input("{$partyType}_documents", []) as $i => $doc) {
+            $file = $request->file("{$partyType}_documents.{$i}.file");
+            if ($file) {
+                $out[] = ['document_type' => $doc['document_type'] ?? null, 'file' => $file];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Seller (+ documents) captured when this listing was marked sold out — listing side only.
      */
     public function sellerParty($id)
@@ -3402,7 +3453,14 @@ public function validateUnitNumber(Request $request)
             return ApiResponse::error('Access denied', 403);
         }
 
-        $party = $listing->sellerParty()->with(['documents', 'documents.uploadedBy'])->first();
+        // ?type=landlord → the landlord saved when the listing was marked rented.
+        $type = request('type') === 'landlord' ? 'landlord' : 'seller';
+        $party = \App\Models\DealParty::query()
+            ->where('listing_id', $listing->id)
+            ->where('party_type', $type)
+            ->with(['documents', 'documents.uploadedBy'])
+            ->latest('id')
+            ->first();
 
         return ApiResponse::success([
             'party' => $party ? new \App\Http\Resources\Deal\DealPartyResource($party) : null,

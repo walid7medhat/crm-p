@@ -557,11 +557,11 @@
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Seller Details</h6>
         </div>
-        <div v-if="deal.seller_hidden && !listingSellers.length" class="d-flex align-items-start gap-2 text-muted">
-          <iconify-icon icon="lucide:lock" />
+        <div v-if="deal.seller_hidden && !listingSellers.length" class="seller-locked-note">
+          <iconify-icon icon="lucide:lock" class="seller-locked-icon" />
           <span>Seller details and documents are managed by the listing agent.</span>
         </div>
-        <div v-else-if="!listingSellers.length" class="text-muted">
+        <div v-else-if="!listingSellers.length" class="seller-locked-note">
           No seller details were saved on the sold listing.
         </div>
         <div v-for="(s, idx) in listingSellers" :key="s.id" :class="{ 'mt-4 pt-3 border-top': idx > 0 }">
@@ -612,7 +612,7 @@
           </div>
         </div>
         <small v-if="deal.seller_hidden && listingSellers.length" class="d-block text-muted mt-3">
-          Some sellers are managed by the listing agent and are not shown.
+          <span class="seller-locked-note-sm">Some sellers are managed by the listing agent and are not shown.</span>
         </small>
       </div>
     </div>
@@ -1119,6 +1119,23 @@ function formatDateDisplay(dateValue) {
 </script>
 
 <style scoped>
+/* Listing seller hidden from the deal agent — small muted note */
+.seller-locked-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #8a8f98;
+}
+.seller-locked-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.seller-locked-note-sm {
+  font-size: 11.5px;
+}
+
 .section-title,
 h6.section-title {
   font-size: 16px !important;

@@ -1008,6 +1008,11 @@ class DealController extends Controller
             if ($request->filled('landlord_country')) $landlordData['country'] = $request->landlord_country;
             if ($request->filled('landlord_language')) $landlordData['language'] = $request->landlord_language;
 
+            // Listing landlord hidden from this viewer → leave it untouched (see ListingSellerParty).
+            if (!empty($landlordData) && ! ListingSellerParty::mayEditSellers($deal, auth()->user(), 'landlord')) {
+                $landlordData = [];
+            }
+
             if (!empty($landlordData)) {
                 $landlord = $deal->parties()
                     ->where('party_type', 'landlord')
@@ -1179,9 +1184,11 @@ class DealController extends Controller
 
             // 4. تحديث الـ parties
             $partyTypes = ['buyer', 'seller', 'tenant', 'landlord'];
-            // Sold-out listing's seller hidden from this viewer → never overwrite it.
-            if (! ListingSellerParty::mayEditSellers($deal, auth()->user())) {
-                $partyTypes = array_values(array_diff($partyTypes, ['seller']));
+            // Listing seller / landlord hidden from this viewer → never overwrite it.
+            foreach (array_keys(ListingSellerParty::TYPES) as $listingPartyType) {
+                if (! ListingSellerParty::mayEditSellers($deal, auth()->user(), $listingPartyType)) {
+                    $partyTypes = array_values(array_diff($partyTypes, [$listingPartyType]));
+                }
             }
             foreach ($partyTypes as $type) {
                 if ($request->has($type)) {
@@ -1784,10 +1791,14 @@ class DealController extends Controller
             $partyTypes = array_intersect_key($partyTypes, array_flip($onlyPrefixes));
         }
 
-        // The seller of a sold-out listing is managed by the listing side; a viewer who can't
-        // see it (the deal's sales agent) must not overwrite it or add a second seller.
-        if (isset($partyTypes['seller']) && ! ListingSellerParty::mayEditSellers($deal, auth()->user())) {
-            unset($partyTypes['seller']);
+        // The seller (sold-out listing) / landlord (rented listing) is managed by the listing
+        // side; a viewer who can't see it (the deal's sales agent) must not overwrite it or
+        // add a second one.
+        foreach (array_keys(ListingSellerParty::TYPES) as $listingPartyType) {
+            if (isset($partyTypes[$listingPartyType])
+                && ! ListingSellerParty::mayEditSellers($deal, auth()->user(), $listingPartyType)) {
+                unset($partyTypes[$listingPartyType]);
+            }
         }
 
         foreach ($partyTypes as $requestPrefix => [$type, $role]) {

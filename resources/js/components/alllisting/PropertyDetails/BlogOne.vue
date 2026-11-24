@@ -943,104 +943,21 @@
       <!-- Last step of "Sold by OIA → OIA Agent": seller of this sale — saved on the listing
            and given to the deal created for it (seller party + documents). Required. -->
       <template v-if="showSoldSellerStep">
-        <div class="sold-out-add-owner-step sold-seller-step">
-          <p class="sold-seller-intro">
-            <i class="ri-information-line"></i>
-            <span>
-              Saved with the sale and added automatically to the deal for this unit.
-              Only the listing side and admins can see them.
-            </span>
-          </p>
-
-          <div class="row g-2">
-            <div class="col-md-6">
-              <label class="form-label">First Name <span class="text-danger">*</span></label>
-              <input v-model="soldSeller.first_name" type="text" class="form-control"
-                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.first_name }" maxlength="255" />
-              <small v-if="soldSellerShowErrors && soldSellerErrors.first_name" class="sold-seller-error">{{ soldSellerErrors.first_name }}</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Last Name <span class="text-danger">*</span></label>
-              <input v-model="soldSeller.last_name" type="text" class="form-control"
-                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.last_name }" maxlength="255" />
-              <small v-if="soldSellerShowErrors && soldSellerErrors.last_name" class="sold-seller-error">{{ soldSellerErrors.last_name }}</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Phone <span class="text-danger">*</span></label>
-              <input v-model="soldSeller.phone" type="text" class="form-control"
-                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.phone }" maxlength="50" />
-              <small v-if="soldSellerShowErrors && soldSellerErrors.phone" class="sold-seller-error">{{ soldSellerErrors.phone }}</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Email</label>
-              <input v-model="soldSeller.email" type="email" class="form-control"
-                     :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.email }" maxlength="255" />
-              <small v-if="soldSellerShowErrors && soldSellerErrors.email" class="sold-seller-error">{{ soldSellerErrors.email }}</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Nationality <span class="text-danger">*</span></label>
-              <v-select
-                v-model="soldSeller.nationality"
-                :options="ownerNationalities"
-                placeholder="Select nationality"
-                :class="{ 'sold-seller-select-invalid': soldSellerShowErrors && soldSellerErrors.nationality }"
-              />
-              <small v-if="soldSellerShowErrors && soldSellerErrors.nationality" class="sold-seller-error">{{ soldSellerErrors.nationality }}</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Residency Status <span class="text-danger">*</span></label>
-              <select v-model="soldSeller.residency_status" class="form-control"
-                      :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors.residency_status }">
-                <option value="">Select…</option>
-                <option value="resident">Resident</option>
-                <option value="non_resident">Non Resident</option>
-              </select>
-              <small v-if="soldSellerShowErrors && soldSellerErrors.residency_status" class="sold-seller-error">{{ soldSellerErrors.residency_status }}</small>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Date of Birth</label>
-              <input v-model="soldSeller.date_of_birth" type="date" class="form-control" />
-            </div>
-          </div>
-
-          <div class="sold-seller-section-title">Seller Documents</div>
-          <div class="row g-2">
-            <div v-for="docType in soldSellerDocTypes" :key="docType.value" class="col-md-6">
-              <label class="form-label">
-                {{ docType.label }}
-                <span v-if="isSoldSellerDocRequired(docType.value)" class="text-danger">*</span>
-              </label>
-              <input
-                type="file"
-                class="form-control"
-                :class="{ 'is-invalid': soldSellerShowErrors && soldSellerErrors['doc_' + docType.value] }"
-                multiple
-                accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx"
-                @change="onSoldSellerFiles(docType.value, $event)"
-              />
-              <small v-if="soldSellerShowErrors && soldSellerErrors['doc_' + docType.value]" class="sold-seller-error">
-                {{ soldSellerErrors['doc_' + docType.value] }}
-              </small>
-              <small v-else-if="soldSellerFiles[docType.value]?.length" class="text-muted">
-                {{ soldSellerFiles[docType.value].length }} file(s) selected
-              </small>
-            </div>
-          </div>
-
-          <div class="sold-seller-actions">
-            <button type="button" class="btn-modal btn-modal-secondary" @click="backFromSoldSeller">
-              Back
-            </button>
-            <button
-              type="button"
-              class="btn-modal btn-modal-primary"
-              :disabled="soldSellerSubmitting"
-              @click="continueSoldSeller"
-            >
-              {{ soldSellerSubmitting ? 'Saving…' : (pendingSoldAgentIsMe ? 'Continue' : 'Confirm Sale') }}
-            </button>
-          </div>
-        </div>
+        <ListingPartyStep
+          label="Seller"
+          v-model:details="soldSeller"
+          :files="soldSellerFiles"
+          :doc-types="soldSellerDocTypes"
+          :required-doc-types="soldSellerRequiredDocTypes"
+          :nationalities="ownerNationalities"
+          :errors="soldSellerErrors"
+          :show-errors="soldSellerShowErrors"
+          :submitting="soldSellerSubmitting"
+          :confirm-label="pendingSoldAgentIsMe ? 'Continue' : 'Confirm Sale'"
+          @files="setSoldSellerFiles"
+          @back="backFromSoldSeller"
+          @confirm="continueSoldSeller"
+        />
       </template>
 
       <!-- المستوى الأول: الخيارات الرئيسية -->
@@ -1164,8 +1081,9 @@
           Mark as Rented
         </h4>
         <p class="sold-out-modal-subtitle">
-          {{ !rentedByChoice ? 'Choose how this property was rented' : 
-             (rentedByChoice === 'oia' ? 'Choose the renting agent' : 'Add the new tenant details') }}
+          {{ showLandlordStep ? 'Landlord details & documents' :
+             (!rentedByChoice ? 'Choose how this property was rented' :
+             (rentedByChoice === 'oia' ? 'Choose the renting agent' : 'Add the new tenant details')) }}
         </p>
       </div>
       <button type="button" class="modal-close" @click="closeRentedModal">
@@ -1174,8 +1092,28 @@
     </div>
 
     <div class="modal-body sold-out-modal-body">
+      <!-- Last step of "Rented by OIA → OIA Agent": landlord + documents (required) — saved
+           on the listing and given to the rental deal created for this unit. -->
+      <template v-if="showLandlordStep">
+        <ListingPartyStep
+          label="Landlord"
+          v-model:details="soldSeller"
+          :files="soldSellerFiles"
+          :doc-types="soldSellerDocTypes"
+          :required-doc-types="soldSellerRequiredDocTypes"
+          :nationalities="ownerNationalities"
+          :errors="soldSellerErrors"
+          :show-errors="soldSellerShowErrors"
+          :submitting="soldSellerSubmitting"
+          :confirm-label="pendingSoldAgentIsMe ? 'Continue' : 'Confirm Rental'"
+          @files="setSoldSellerFiles"
+          @back="backFromLandlord"
+          @confirm="continueLandlord"
+        />
+      </template>
+
       <!-- المستوى الأول -->
-      <template v-if="!rentedByChoice">
+      <template v-else-if="!rentedByChoice">
         <div class="sold-out-options">
           <div class="option-card" @click="selectRentedBy('oia')">
             <div class="option-icon"><i class="ri-building-line"></i></div>
@@ -2089,6 +2027,7 @@ import Swal from 'sweetalert2';
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
 import PaymentDetailsSection from '@/components/payment-plans/PaymentDetailsSection.vue';
+import ListingPartyStep from './ListingPartyStep.vue';
 import { LISTING_FEATURE_LABELS } from '@/config/listingFeatures';
 import { isBuildingType } from '@/composables/listingBuilding';
 import { useBrand } from '@/composables/useBrand';
@@ -2101,6 +2040,7 @@ export default {
    components: {
     vSelect,
     PaymentDetailsSection,
+    ListingPartyStep,
     MobilePropertyGallery,
     MobilePropertyAgentBar,
     MobilePropertyActionsSheet,
@@ -3647,11 +3587,45 @@ const backFromSoldSeller = () => {
   showOIAgentSelection.value = true;
 };
 
-const onSoldSellerFiles = (type, event) => {
-  soldSellerFiles.value = {
-    ...soldSellerFiles.value,
-    [type]: Array.from(event?.target?.files || []),
-  };
+const soldSellerRequiredDocTypes = computed(() =>
+  soldSellerDocTypes.map((d) => d.value).filter(isSoldSellerDocRequired)
+);
+
+const setSoldSellerFiles = (type, files) => {
+  soldSellerFiles.value = { ...soldSellerFiles.value, [type]: files || [] };
+};
+
+// ---- Rental: landlord step (same form + rules, reusing the seller state) ----
+// Last step of "Rented by OIA → OIA Agent"; the backend requires it for me / another_agent.
+const showLandlordStep = ref(false);
+
+const continueLandlord = async () => {
+  soldSellerShowErrors.value = true;
+  if (Object.keys(soldSellerErrors.value).length) {
+    proxy.$showNotification('Please complete the required landlord details and documents', 'warning');
+    return;
+  }
+
+  if (pendingSoldAgentIsMe.value) {
+    // Rented by me → next: add the new tenant (that flow submits mark-rented with this landlord).
+    showLandlordStep.value = false;
+    rentedByChoice.value = 'me';
+    return;
+  }
+
+  soldSellerSubmitting.value = true;
+  try {
+    await markAsRentedByAnotherAgent(pendingSoldAgentId.value);
+  } finally {
+    soldSellerSubmitting.value = false;
+  }
+};
+
+// Back from the landlord step → agent selection.
+const backFromLandlord = () => {
+  showLandlordStep.value = false;
+  rentedByChoice.value = 'oia';
+  showOIAgentSelectionRent.value = true;
 };
 
 const resetSoldSeller = () => {
@@ -3671,6 +3645,7 @@ const resetSoldSeller = () => {
   };
   soldSellerFiles.value = { national_id: [], passport: [], visa: [], title_deed: [] };
   showSoldSellerStep.value = false;
+  showLandlordStep.value = false;
   pendingSoldAgentId.value = null;
   soldSellerShowErrors.value = false;
 };
@@ -3688,24 +3663,24 @@ const appendFormValue = (fd, key, value) => {
   }
 };
 
-// One place for every "mark as sold" call: payload + seller details + seller documents,
-// as multipart (POST + _method=PATCH so Laravel parses the files).
-const submitMarkConverted = (payload) => {
+// Close a listing (mark-converted / mark-rented): payload + the seller / landlord details
+// and documents when an OIA agent did it, as multipart (POST + _method=PATCH for the files).
+const submitListingClose = (endpoint, payload, by, partyPrefix) => {
   const fd = new FormData();
   Object.entries(payload || {}).forEach(([k, v]) => appendFormValue(fd, k, v));
 
-  // Seller only for OIA-agent sales (the deal created on this unit gets it).
-  if (['me', 'another_agent'].includes(payload?.sold_by)) {
-    const seller = soldSeller.value || {};
-    Object.entries(seller).forEach(([k, v]) => {
-      if (v !== null && v !== undefined && v !== '') fd.append(`seller_details[${k}]`, v);
+  // Party only for OIA-agent deals (the deal created on this unit gets it).
+  if (['me', 'another_agent'].includes(by)) {
+    const party = soldSeller.value || {};
+    Object.entries(party).forEach(([k, v]) => {
+      if (v !== null && v !== undefined && v !== '') fd.append(`${partyPrefix}_details[${k}]`, v);
     });
 
     let i = 0;
     Object.entries(soldSellerFiles.value || {}).forEach(([type, files]) => {
       (files || []).forEach((file) => {
-        fd.append(`seller_documents[${i}][document_type]`, type);
-        fd.append(`seller_documents[${i}][file]`, file);
+        fd.append(`${partyPrefix}_documents[${i}][document_type]`, type);
+        fd.append(`${partyPrefix}_documents[${i}][file]`, file);
         i++;
       });
     });
@@ -3713,10 +3688,16 @@ const submitMarkConverted = (payload) => {
 
   fd.append('_method', 'PATCH');
 
-  return api.post(`/listings/properties/${property.value.id}/mark-converted`, fd, {
+  return api.post(`/listings/properties/${property.value.id}/${endpoint}`, fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+// Every "mark as sold" call (seller) / "mark as rented" call (landlord).
+const submitMarkConverted = (payload) =>
+  submitListingClose('mark-converted', payload, payload?.sold_by, 'seller');
+const submitMarkRented = (payload) =>
+  submitListingClose('mark-rented', payload, payload?.rented_by, 'landlord');
 
 const openSoldOutModal = () => {
   showSoldOutModal.value = true;
@@ -3885,7 +3866,7 @@ const markAsRentedWithOtherCompany = async () => {
       }
     };
     
-    const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+    const response = await submitMarkRented(payload);
     
     if (response.data.status) {
       // تحديث البيانات المحلية
@@ -4106,6 +4087,7 @@ const openRentedModal = () => {
     rentedByChoice.value = null;
     selectedRentedByAgent.value = null;
     rentedDate.value = new Date().toISOString().split('T')[0];
+    resetSoldSeller(); // landlord form, prefilled from the owner
     closeActionsDropdown();
 };
 
@@ -4159,7 +4141,7 @@ const markAsRentedByOwner = async () => {
     
     try {
         const payload = { rented_by: 'owner', rented_date: rentedDate.value };
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        const response = await submitMarkRented(payload);
         
         if (response.data.status) {
             property.value.status = 'rented';
@@ -4198,19 +4180,12 @@ const markAsRentedByOIAgent = async () => {
         return;
     }
     
-    const currentUser = getCurrentUser();
-    const isCurrentUser = selectedRentedByAgent.value === currentUser?.id;
-    
+    // Last step: landlord details + documents (required). continueLandlord() then goes on to
+    // "Rented by Me" (add new tenant) or submits "Rented by Another Agent".
+    pendingSoldAgentId.value = selectedRentedByAgent.value;
     showOIAgentSelectionRent.value = false;
-    
-    if (isCurrentUser) {
-        // نفس المستخدم = me
-        rentedByChoice.value = 'me';
-        // الـ form هيظهر عشان يضيف المستأجر
-    } else {
-        // مستخدم آخر = another_agent - ننفذ مباشرة
-        await markAsRentedByAnotherAgent(selectedRentedByAgent.value);
-    }
+    soldSellerShowErrors.value = false;
+    showLandlordStep.value = true;
 };
 
 const markAsRentedByAnotherAgent = async (agentId) => {
@@ -4221,7 +4196,7 @@ const markAsRentedByAnotherAgent = async (agentId) => {
             rented_date: rentedDate.value
         };
         
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        const response = await submitMarkRented(payload);
         
         if (response.data.status) {
             property.value.status = 'rented';
@@ -4270,7 +4245,7 @@ const submitAToAForRent = async () => {
             }
         };
         
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        const response = await submitMarkRented(payload);
         
         if (response.data.status) {
             property.value.status = 'rented';
@@ -4336,7 +4311,7 @@ const markAsRented = async (rentedBy, agentId = null, ownerId = null) => {
             payload.owner_id = ownerId;
         }
         
-        const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+        const response = await submitMarkRented(payload);
         
         if (response.data.status) {
             property.value.status = 'rented';
@@ -4422,7 +4397,7 @@ const submitNewOwnerAndMarkSold = async () => {
             }
             payload.owner_id = createdOwner.id;
             
-            const response = await api.patch(`/listings/properties/${property.value.id}/mark-rented`, payload);
+            const response = await submitMarkRented(payload);
             
             if (response.data?.data || response.data?.status !== false) {
                 property.value.status = 'rented';
@@ -10101,11 +10076,14 @@ const getHistoryIcon = (event) => {
         soldSeller,
         soldSellerDocTypes,
         soldSellerFiles,
-        onSoldSellerFiles,
+        setSoldSellerFiles,
+        soldSellerRequiredDocTypes,
         soldSellerShowErrors,
         soldSellerErrors,
-        isSoldSellerDocRequired,
         continueSoldSeller,
+        showLandlordStep,
+        continueLandlord,
+        backFromLandlord,
         showAddOwnerModal,
         newOwner,
         isSubmittingOwner,
@@ -14432,66 +14410,6 @@ ease;
   overflow-y: auto;
 }
 
-/* Step 0 — seller details & documents */
-.sold-seller-step .sold-seller-intro {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  margin: 0 0 16px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #f6f3fa;
-  color: #5b5470;
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-.sold-seller-step .sold-seller-intro i {
-  font-size: 16px;
-  line-height: 1.2;
-  color: #7b4fa3;
-}
-.sold-seller-step .form-label {
-  margin-bottom: 4px;
-  font-size: 12.5px;
-}
-.sold-seller-step .sold-seller-section-title {
-  margin: 18px 0 8px;
-  padding-top: 14px;
-  border-top: 1px solid #eef0f4;
-  font-size: 14px;
-  font-weight: 700;
-  color: #333;
-}
-.sold-seller-step input[type="file"].form-control {
-  padding: 6px 8px;
-  font-size: 12px;
-}
-.sold-seller-step .sold-seller-actions {
-  position: sticky;
-  bottom: -1px;
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px 0 4px;
-  background: #fff;
-  border-top: 1px solid #eef0f4;
-  z-index: 2;
-}
-.sold-seller-step .sold-seller-actions .btn-modal {
-  flex: 1;
-}
-.sold-seller-step .sold-seller-error {
-  display: block;
-  margin-top: 3px;
-  color: #dc3545;
-  font-size: 11.5px;
-}
-.sold-seller-step .form-control.is-invalid {
-  border-color: #dc3545;
-}
-.sold-seller-step :deep(.sold-seller-select-invalid .vs__dropdown-toggle) {
-  border-color: #dc3545;
-}
 @media (max-width: 768px) {
   .card.card-main.p-0.radius-12.overflow-hidden .property-content .spec-main-value {
     font-size: 15px !important;

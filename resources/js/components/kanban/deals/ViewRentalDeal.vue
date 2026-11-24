@@ -200,9 +200,76 @@
       </div>
     </div>
 
+    <!-- Landlord of a rented listing: shared with the listing; hidden from the deal's sales
+         agent (landlord_hidden), read-only for admins / accountant / listing side. -->
+    <div class="col-12" v-if="usesListingLandlord">
+      <div class="view-card p-3 radius-12">
+        <div class="section-head mb-3">
+          <h6 class="section-title mb-0">Landlord Details</h6>
+        </div>
+        <div v-if="deal.landlord_hidden && !listingLandlords.length" class="listing-party-note">
+          <iconify-icon icon="lucide:lock" class="listing-party-note-icon" />
+          <span>Landlord details and documents are managed by the listing agent.</span>
+        </div>
+        <div v-else-if="!listingLandlords.length" class="listing-party-note">
+          No landlord details were saved on the rented listing.
+        </div>
+        <div v-for="(l, idx) in listingLandlords" :key="l.id" :class="{ 'mt-4 pt-3 border-top': idx > 0 }">
+          <p v-if="listingLandlords.length > 1" class="fw-semibold mb-2">
+            {{ l.party_role === 'primary' ? 'Main unit landlord' : 'Landlord ' + (idx + 1) }}
+          </p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Landlord Name</label>
+                <p class="info-value mb-0">{{ val([l.first_name, l.last_name].filter(Boolean).join(' ')) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Landlord Phone Number</label>
+                <p class="info-value mb-0">{{ val(l.phone) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Landlord Email</label>
+                <p class="info-value mb-0">{{ val(l.email) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-group">
+                <label class="info-label">Landlord Nationality</label>
+                <p class="info-value mb-0">{{ val(l.nationality) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6" v-if="l.residency_status">
+              <div class="info-group">
+                <label class="info-label">Landlord Residency Status</label>
+                <p class="info-value mb-0">{{ val(l.residency_status) }}</p>
+              </div>
+            </div>
+            <div class="col-md-6" v-if="l.date_of_birth">
+              <div class="info-group">
+                <label class="info-label">Landlord Date Of Birth</label>
+                <p class="info-value mb-0">{{ val(l.date_of_birth) }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="info-label">Landlord Documents</label>
+            <DealDocumentsReadonly :documents="l.documents || []" />
+          </div>
+        </div>
+        <small v-if="deal.landlord_hidden && listingLandlords.length" class="d-block text-muted mt-3 listing-party-note-sm">
+          Some landlords are managed by the listing agent and are not shown.
+        </small>
+      </div>
+    </div>
+
     <!-- Landlord Details -->
-    <div class="col-12" v-if="!deal.listing">
-      
+    <div class="col-12" v-if="!usesListingLandlord">
+
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'landlord_details' }">
         <div class="section-head mb-3">
           <h6 class="section-title mb-0">Landlord Details</h6>
@@ -285,7 +352,7 @@
     </div>
 
     <!-- Landlord Documents -->
-    <div class="col-12" v-if="!deal.listing">
+    <div class="col-12" v-if="!usesListingLandlord">
       
       <div class="view-card p-3 radius-12" :class="{ 'section-highlight': activeEditSection === 'landlord_documents' }">
         <div class="section-head mb-3">
@@ -666,6 +733,17 @@ const landlordDocuments = computed(() => {
   return d.landlord_documents || []
 })
 
+// Landlords that came from rented listings (primary = main unit's landlord first).
+const listingLandlords = computed(() => {
+  const parties = props.deal?.parties || []
+  return parties
+    .filter(p => p.party_type === 'landlord' && p.is_listing_seller)
+    .sort((a, b) => (a.party_role === 'primary' ? 0 : 1) - (b.party_role === 'primary' ? 0 : 1))
+})
+const usesListingLandlord = computed(() =>
+  !!props.deal?.listing || !!props.deal?.landlord_hidden || listingLandlords.value.length > 0
+)
+
 // All stage-required fields up to the current stage, from the backend validator;
 // localMissingSummary is only a fallback if that request fails.
 const { completeness: missingSummary } = useDealCompleteness(() => props.deal, () => localMissingSummary.value)
@@ -684,11 +762,13 @@ const localMissingSummary = computed(() => {
     [d.tenant_phone, 'Tenant Phone'],
     [d.tenant_email, 'Tenant Email'],
 
-    // landlord
-    [d.landlord_first_name, 'Landlord First Name'],
-    [d.landlord_last_name, 'Landlord Last Name'],
-    [d.landlord_phone, 'Landlord Phone'],
-    [d.landlord_email, 'Landlord Email'],
+    // landlord — comes from the rented listing (and may be hidden) → not the deal agent's job
+    ...(usesListingLandlord.value ? [] : [
+      [d.landlord_first_name, 'Landlord First Name'],
+      [d.landlord_last_name, 'Landlord Last Name'],
+      [d.landlord_phone, 'Landlord Phone'],
+      [d.landlord_email, 'Landlord Email'],
+    ]),
   ]
 
   const labels = checks
@@ -732,6 +812,23 @@ watch(() => props.inlineEditLookup, (newVal) => {
 </script>
 
 <style scoped>
+/* Listing landlord hidden from the deal agent — small muted note */
+.listing-party-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #8a8f98;
+}
+.listing-party-note-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.listing-party-note-sm {
+  font-size: 11.5px;
+}
+
 .section-title,
 h6.section-title {
   font-size: 16px !important;

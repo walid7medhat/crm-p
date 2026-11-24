@@ -318,7 +318,8 @@ class DealResource extends JsonResource
 
             // Seller of a sold-out listing is hidden from the deal's sales agent
             // (admins / accountant / listing side still see it) — ListingSellerParty.
-            'seller_hidden' => $this->hiddenPartyIds() !== [],
+            'seller_hidden' => $this->hasHiddenPartyOfType('seller'),
+            'landlord_hidden' => $this->hasHiddenPartyOfType('landlord'),
 
             'parties' => DealPartyResource::collection($this->whenLoaded('parties', fn () => $this->visibleParties())),
             'documents' => DealDocumentResource::collection($this->whenLoaded('documents', fn () => $this->documents
@@ -389,6 +390,17 @@ class DealResource extends JsonResource
         }
 
         return $this->hiddenPartyIdsCache;
+    }
+
+    protected function hasHiddenPartyOfType(string $type): bool
+    {
+        $hidden = $this->hiddenPartyIds();
+        if ($hidden === []) {
+            return false;
+        }
+
+        return ($this->parties ?? collect())
+            ->contains(fn ($p) => $p->party_type === $type && in_array((int) $p->id, $hidden, true));
     }
 
     protected function visibleParties(): Collection

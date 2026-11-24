@@ -55,10 +55,13 @@ class DealParty extends Model
         return $this->belongsTo(DealProperty::class);
     }
 
-    /** Seller that came from a sold-out listing (shared with the listing, not typed on the deal). */
+    /**
+     * Seller of a sold-out listing / landlord of a rented listing (shared with the listing,
+     * not typed on the deal) — see ListingSellerParty.
+     */
     public function isListingSeller(): bool
     {
-        return $this->listing_id !== null && $this->party_type === 'seller';
+        return $this->listing_id !== null && in_array($this->party_type, ['seller', 'landlord'], true);
     }
 
     // Accessors
