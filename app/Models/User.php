@@ -509,8 +509,49 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         return $newLeadStageId ? (int) $newLeadStageId : null;
     }
 
+    /** "Shared Leads" stage: a lead of one branch shared with another (leads.branch = the other branch). */
+    public const SHARED_LEADS_STAGE_ID = 9;
+
     /**
-     * Lead visibility by responsible person ($scopeIds), plus the branch_admin extra above.
+     * admin / branch_admin also see Shared Leads-stage leads shared WITH their branch
+     * (e.g. owned by Dubai, leads.branch = "Abu Dhabi" → Abu Dhabi admins see it too).
+     * Returns their branch name as stored in leads.branch (lower-case), or null.
+     */
+    public function sharedLeadsBranchName(): ?string
+    {
+        if ($this->sharedLeadsBranchMemo !== false) {
+            return $this->sharedLeadsBranchMemo;
+        }
+
+        $name = null;
+        if ($this->hasAnyRole(['admin', 'branch_admin']) && ($node = $this->getBranchNode())) {
+            // Branch nodes: #25 "abu dhabi", #59 "Dubai" (same ids as LeadAssignmentService).
+            $name = match ((int) $node->id) {
+                25 => 'abu dhabi',
+                59 => 'dubai',
+                default => strtolower(trim((string) $node->name)),
+            } ?: null;
+        }
+
+        return $this->sharedLeadsBranchMemo = $name;
+    }
+
+    /** Per-request memo for sharedLeadsBranchName() (false = not computed yet). */
+    protected string|null|false $sharedLeadsBranchMemo = false;
+
+    /** Lead is in Shared Leads and shared with this admin's / branch admin's branch. */
+    public function seesSharedLead(Lead $lead): bool
+    {
+        $branch = $this->sharedLeadsBranchName();
+
+        return $branch !== null
+            && (int) $lead->stage_id === self::SHARED_LEADS_STAGE_ID
+            && strtolower(trim((string) $lead->branch)) === $branch;
+    }
+
+    /**
+     * Lead visibility by responsible person ($scopeIds), plus the branch_admin extra above
+     * and Shared Leads shared with the viewer's branch (sharedLeadsBranchName()).
      * Use instead of a plain whereIn('responsible_person_id', $scopeIds).
      */
     public function applyLeadResponsibleScope($leadsQuery, array $scopeIds): void
@@ -523,18 +564,27 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         }
 
         $newLeadStageId = $this->unassignedNewLeadStageId();
-        if (! $newLeadStageId) {
+        $sharedBranch = $this->sharedLeadsBranchName();
+        if (! $newLeadStageId && ! $sharedBranch) {
             $leadsQuery->whereIn('responsible_person_id', $scopeIds);
 
             return;
         }
 
-        $leadsQuery->where(function ($q) use ($scopeIds, $newLeadStageId) {
-            $q->whereIn('responsible_person_id', $scopeIds)
-                ->orWhere(function ($q) use ($newLeadStageId) {
+        $leadsQuery->where(function ($q) use ($scopeIds, $newLeadStageId, $sharedBranch) {
+            $q->whereIn('responsible_person_id', $scopeIds);
+            if ($newLeadStageId) {
+                $q->orWhere(function ($q) use ($newLeadStageId) {
                     $q->where('responsible_person_id', 1)
                         ->where('stage_id', $newLeadStageId);
                 });
+            }
+            if ($sharedBranch) {
+                $q->orWhere(function ($q) use ($sharedBranch) {
+                    $q->where('stage_id', self::SHARED_LEADS_STAGE_ID)
+                        ->whereRaw('LOWER(TRIM(branch)) = ?', [$sharedBranch]);
+                });
+            }
         });
     }
 
@@ -592,6 +642,11 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
             // "reassigned leads no longer belong to whoever merely added them" rule.
             return $lead->responsible_person_id === $this->id;
         }
+        // Shared Leads shared with this admin's / branch admin's branch.
+        if ($this->seesSharedLead($lead)) {
+            return true;
+        }
+
         if ($this->hasRole('admin')) {
             $branchAdmin = $this->admin_parent;
 

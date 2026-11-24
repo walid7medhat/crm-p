@@ -2484,9 +2484,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                 // their own), so isManagedBy() below — which walks down from $user — never
                 // recognizes a lead in their own branch. Give them the same admin-level
                 // history access as 'admin', but only for leads actually within their branch.
-                $isBranchAdminForLead = $user->hasRole('branch_admin')
+                $isBranchAdminForLead = ($user->hasRole('branch_admin')
                     && $lead->responsible_person_id
-                    && in_array($lead->responsible_person_id, $user->getBranchUserIds());
+                    && in_array($lead->responsible_person_id, $user->getBranchUserIds()))
+                    // Shared Leads shared with their branch.
+                    || $user->seesSharedLead($lead);
                 $isAdmin = $user->hasAnyRole(['admin', 'super_admin']) || $isBranchAdminForLead;
                 $isResponsible = (int) $lead->responsible_person_id === (int) $user->id;
                 $isManager = $lead->isManagedBy($user);

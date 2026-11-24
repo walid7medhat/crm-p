@@ -38,16 +38,13 @@ class Stage extends Model
             elseif ($user->hasAnyRole(['manager', 'team_lead','admin', 'branch_admin']) || $user->seesBranchLeads()) {
                 $subordinatesIds = $user->leadScopeUserIds();
 
-                $leads = $leads->where(function($query) use ($subordinatesIds, $user) {
-                    $query->whereIn('responsible_person_id',array_merge( $subordinatesIds,[$user->id]))
-                          ->orWhereIn('added_by', $subordinatesIds);
-                                });
+                // Same rule as the lead list / kanban: current responsible person only (a lead
+                // reassigned to another branch leaves this count), + Shared Leads shared with
+                // the viewer's branch and branch_admin's unassigned New Leads.
+                $user->applyLeadResponsibleScope($leads, array_merge($subordinatesIds, [$user->id]));
             }
             else {
-                $leads = $leads->where(function($query) use ($user) {
-                            $query->where('responsible_person_id', $user->id)
-                                ->orWhere('added_by', $user->id);
-                        });
+                $leads = $leads->where('responsible_person_id', $user->id);
             }
             return $leads->orderBy('updated_at','desc');
     }
