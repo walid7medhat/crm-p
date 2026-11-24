@@ -3014,23 +3014,26 @@ public function markAsConverted(Request $request, $id)
             $rules['a_to_a_details.commercial_license'] = 'required|string|max:255';
         }
         
-        // Seller of this sale (same fields as the deal's seller party) + documents. Optional:
-        // when missing, the seller is taken from the listing's owner.
-        // Required: the deal gets this seller automatically, so a sale can't be saved without it.
-        $rules['seller_details'] = 'required|array';
-        $rules['seller_details.first_name'] = 'required|string|max:255';
-        $rules['seller_details.last_name'] = 'required|string|max:255';
-        $rules['seller_details.date_of_birth'] = 'nullable|date';
-        $rules['seller_details.phone'] = 'required|string|max:50';
-        $rules['seller_details.email'] = 'nullable|email|max:255';
-        $rules['seller_details.nationality'] = 'required|string|max:255';
-        $rules['seller_details.residency_status'] = 'required|in:resident,non_resident';
-        $rules['seller_details.city'] = 'nullable|string|max:255';
-        $rules['seller_details.country'] = 'nullable|string|max:255';
-        $rules['seller_details.language'] = 'nullable|string|max:255';
-        $rules['seller_documents'] = 'required|array';
-        $rules['seller_documents.*.document_type'] = 'required|in:' . implode(',', ListingSellerParty::DOCUMENT_TYPES);
-        $rules['seller_documents.*.file'] = 'required|file|max:20480|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx';
+        // Sold by an OIA agent (me / another agent) → a deal will be created on this unit, so
+        // the seller (same fields as the deal's seller party) + documents are required and
+        // saved with the sale. Owner / A-to-A sales have no OIA deal → no seller step.
+        $needsSeller = in_array($request->sold_by, ['me', 'another_agent'], true);
+        if ($needsSeller) {
+            $rules['seller_details'] = 'required|array';
+            $rules['seller_details.first_name'] = 'required|string|max:255';
+            $rules['seller_details.last_name'] = 'required|string|max:255';
+            $rules['seller_details.date_of_birth'] = 'nullable|date';
+            $rules['seller_details.phone'] = 'required|string|max:50';
+            $rules['seller_details.email'] = 'nullable|email|max:255';
+            $rules['seller_details.nationality'] = 'required|string|max:255';
+            $rules['seller_details.residency_status'] = 'required|in:resident,non_resident';
+            $rules['seller_details.city'] = 'nullable|string|max:255';
+            $rules['seller_details.country'] = 'nullable|string|max:255';
+            $rules['seller_details.language'] = 'nullable|string|max:255';
+            $rules['seller_documents'] = 'required|array';
+            $rules['seller_documents.*.document_type'] = 'required|in:' . implode(',', ListingSellerParty::DOCUMENT_TYPES);
+            $rules['seller_documents.*.file'] = 'required|file|max:20480|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx';
+        }
 
         $validator = Validator::make($request->all(), $rules, [
             'seller_details.required' => 'Seller details are required.',
@@ -3045,7 +3048,10 @@ public function markAsConverted(Request $request, $id)
         ]);
 
         // Required documents: Passport always; National ID for residents.
-        $validator->after(function ($v) use ($request) {
+        $validator->after(function ($v) use ($request, $needsSeller) {
+            if (! $needsSeller) {
+                return;
+            }
             $types = collect((array) $request->input('seller_documents', []))
                 ->filter(fn ($doc, $i) => $request->hasFile("seller_documents.{$i}.file"))
                 ->pluck('document_type')
@@ -3092,10 +3098,12 @@ public function markAsConverted(Request $request, $id)
             }
         }
 
-        DB::transaction(function () use ($property, $updateData, $request, $sellerDocuments) {
+        DB::transaction(function () use ($property, $updateData, $request, $sellerDocuments, $needsSeller) {
             $property->update($updateData);
 
-            ListingSellerParty::saveForListing($property, $request->input('seller_details'), $sellerDocuments);
+            if ($needsSeller) {
+                ListingSellerParty::saveForListing($property, $request->input('seller_details'), $sellerDocuments);
+            }
         });
 
         $this->clearCache();

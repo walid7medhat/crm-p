@@ -82,31 +82,31 @@ class ListingSellerPartyTest extends TestCase
         $nationalId = fn () => ['document_type' => 'national_id', 'file' => UploadedFile::fake()->create('n.pdf', 10, 'application/pdf')];
 
         // No seller at all.
-        $this->asUser($t['agentA'])->patch($url, ['sold_by' => 'owner'], $headers)->assertStatus(422);
+        $this->asUser($t['agentA'])->patch($url, ['sold_by' => 'me'], $headers)->assertStatus(422);
 
         // Missing phone.
         $this->asUser($t['agentA'])->patch($url, [
-            'sold_by' => 'owner',
+            'sold_by' => 'me',
             'seller_details' => array_merge($details, ['phone' => '']),
             'seller_documents' => [$passport(), $nationalId()],
         ], $headers)->assertStatus(422)->assertJsonValidationErrors(['seller_details.phone']);
 
         // No documents.
         $this->asUser($t['agentA'])->patch($url, [
-            'sold_by' => 'owner',
+            'sold_by' => 'me',
             'seller_details' => $details,
         ], $headers)->assertStatus(422);
 
         // Resident without National ID.
         $this->asUser($t['agentA'])->patch($url, [
-            'sold_by' => 'owner',
+            'sold_by' => 'me',
             'seller_details' => $details,
             'seller_documents' => [$passport()],
         ], $headers)->assertStatus(422)->assertJsonValidationErrors(['seller_documents.national_id']);
 
         // Non-resident without passport.
         $this->asUser($t['agentA'])->patch($url, [
-            'sold_by' => 'owner',
+            'sold_by' => 'me',
             'seller_details' => array_merge($details, ['residency_status' => 'non_resident']),
             'seller_documents' => [$nationalId()],
         ], $headers)->assertStatus(422)->assertJsonValidationErrors(['seller_documents.passport']);
@@ -117,7 +117,7 @@ class ListingSellerPartyTest extends TestCase
 
         // Non-resident with passport only is enough.
         $this->asUser($t['agentA'])->patch($url, [
-            'sold_by' => 'owner',
+            'sold_by' => 'me',
             'seller_details' => array_merge($details, ['residency_status' => 'non_resident']),
             'seller_documents' => [$passport()],
         ], $headers)->assertOk();
@@ -132,6 +132,30 @@ class ListingSellerPartyTest extends TestCase
         $this->markSold($t['agentA'], $t['listing1'], ['sold_by' => 'me'], 'Me', 'Seller')->assertOk();
 
         $this->assertSame($t['agentA']->id, (int) $t['listing1']->fresh()->sold_by_agent_id);
+    }
+
+    // Owner / A-to-A sales have no OIA deal → no seller step, nothing required or saved.
+    public function test_owner_and_a_to_a_sales_need_no_seller(): void
+    {
+        $t = $this->scenario();
+        $headers = ['Accept' => 'application/json'];
+
+        $this->asUser($t['agentA'])->patch("/api/listings/properties/{$t['listing1']->id}/mark-converted", [
+            'sold_by' => 'owner',
+        ], $headers)->assertOk();
+
+        $this->asUser($t['agentA'])->patch("/api/listings/properties/{$t['listing2']->id}/mark-converted", [
+            'sold_by' => 'a_to_a',
+            'a_to_a_details' => [
+                'company_name' => 'Other Co', 'agent_name' => 'Agent X',
+                'agent_phone' => '0503333333', 'commercial_license' => 'CL-1',
+            ],
+        ], $headers)->assertOk();
+
+        $this->assertSame('converted', $t['listing1']->fresh()->status);
+        $this->assertSame('converted', $t['listing2']->fresh()->status);
+        $this->assertSame(0, DealParty::query()
+            ->whereIn('listing_id', [$t['listing1']->id, $t['listing2']->id])->count());
     }
 
     // Chapter 2 + 3 — B creates the deal; same rows are linked; B can't see them, admin can.
@@ -221,7 +245,7 @@ class ListingSellerPartyTest extends TestCase
     public function test_revert_deletes_unlinked_seller_but_keeps_deal_data(): void
     {
         $t = $this->scenario();
-        $this->markSold($t['agentA'], $t['listing1'], ['sold_by' => 'owner'], 'Free', 'Seller')->assertOk();
+        $this->markSold($t['agentA'], $t['listing1'], ['sold_by' => 'me'], 'Free', 'Seller')->assertOk();
         $this->markSold($t['agentA'], $t['listing2'], ['sold_by' => 'another_agent', 'agent_id' => $t['salesB']->id], 'Linked', 'Seller')->assertOk();
         $dealId = $this->createDeal($t['salesB'], $t['listing2']);
 

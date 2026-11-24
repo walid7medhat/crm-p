@@ -929,7 +929,7 @@
           Mark as Sold Out
         </h4>
         <p class="sold-out-modal-subtitle">
-          {{ !soldSellerStepDone ? 'Seller details & documents' :
+          {{ showSoldSellerStep ? 'Seller details & documents' :
              (!soldByChoice ? 'Choose how this property was sold' :
              (soldByChoice === 'oia' ? 'Choose the selling agent' : 'Add the new owner details')) }}
         </p>
@@ -940,9 +940,9 @@
     </div>
 
     <div class="modal-body sold-out-modal-body">
-      <!-- Step 0: seller of this sale — saved on the listing and given to the deal
-           created for it (seller party + documents). -->
-      <template v-if="!soldSellerStepDone">
+      <!-- Last step of "Sold by OIA → OIA Agent": seller of this sale — saved on the listing
+           and given to the deal created for it (seller party + documents). Required. -->
+      <template v-if="showSoldSellerStep">
         <div class="sold-out-add-owner-step sold-seller-step">
           <p class="sold-seller-intro">
             <i class="ri-information-line"></i>
@@ -1028,15 +1028,16 @@
           </div>
 
           <div class="sold-seller-actions">
-            <button type="button" class="btn-modal btn-modal-secondary" @click="closeSoldOutModal">
-              Cancel
+            <button type="button" class="btn-modal btn-modal-secondary" @click="backFromSoldSeller">
+              Back
             </button>
             <button
               type="button"
               class="btn-modal btn-modal-primary"
+              :disabled="soldSellerSubmitting"
               @click="continueSoldSeller"
             >
-              Continue
+              {{ soldSellerSubmitting ? 'Saving…' : (pendingSoldAgentIsMe ? 'Continue' : 'Confirm Sale') }}
             </button>
           </div>
         </div>
@@ -1062,11 +1063,6 @@
             </div>
             <div class="option-arrow"><i class="ri-arrow-right-s-line"></i></div>
           </div>
-        </div>
-        <div class="text-center mt-3">
-          <button type="button" class="btn-modal btn-modal-secondary" @click="soldSellerStepDone = false">
-            Back
-          </button>
         </div>
       </template>
 
@@ -3562,9 +3558,15 @@ const newOwner = ref({
   additionalDocuments: []
 });
 
-// Seller of the sale (step 0 of the sold-out modal). Sent with every mark-converted call;
-// the backend saves it on the listing and links it to the deal created for this unit.
-const soldSellerStepDone = ref(false);
+// Seller of the sale — last step of "Sold by OIA → OIA Agent" (after the agent is picked).
+// Sent only with OIA-agent sales (me / another_agent); the backend requires it, saves it on
+// the listing and links it to the deal created for this unit.
+const showSoldSellerStep = ref(false);
+const pendingSoldAgentId = ref(null);
+const soldSellerSubmitting = ref(false);
+const pendingSoldAgentIsMe = computed(() =>
+  !!pendingSoldAgentId.value && pendingSoldAgentId.value === getCurrentUser()?.id
+);
 const emptySoldSeller = () => ({
   first_name: '',
   last_name: '',
@@ -3609,13 +3611,33 @@ const soldSellerErrors = computed(() => {
   return errors;
 });
 
-const continueSoldSeller = () => {
+const continueSoldSeller = async () => {
   soldSellerShowErrors.value = true;
   if (Object.keys(soldSellerErrors.value).length) {
     proxy.$showNotification('Please complete the required seller details and documents', 'warning');
     return;
   }
-  soldSellerStepDone.value = true;
+
+  if (pendingSoldAgentIsMe.value) {
+    // Sold by me → next: add the new owner (that flow submits mark-converted with this seller).
+    showSoldSellerStep.value = false;
+    soldByChoice.value = 'me';
+    return;
+  }
+
+  soldSellerSubmitting.value = true;
+  try {
+    await markAsSoldByAnotherAgent(pendingSoldAgentId.value);
+  } finally {
+    soldSellerSubmitting.value = false;
+  }
+};
+
+// Back from the seller step → agent selection.
+const backFromSoldSeller = () => {
+  showSoldSellerStep.value = false;
+  soldByChoice.value = 'oia';
+  showOIAgentSelection.value = true;
 };
 
 const onSoldSellerFiles = (type, event) => {
@@ -3641,7 +3663,8 @@ const resetSoldSeller = () => {
     } : {}),
   };
   soldSellerFiles.value = { national_id: [], passport: [], visa: [], title_deed: [] };
-  soldSellerStepDone.value = false;
+  showSoldSellerStep.value = false;
+  pendingSoldAgentId.value = null;
   soldSellerShowErrors.value = false;
 };
 
@@ -3664,21 +3687,22 @@ const submitMarkConverted = (payload) => {
   const fd = new FormData();
   Object.entries(payload || {}).forEach(([k, v]) => appendFormValue(fd, k, v));
 
-  const seller = soldSeller.value || {};
-  if (seller.first_name && seller.first_name.trim()) {
+  // Seller only for OIA-agent sales (the deal created on this unit gets it).
+  if (['me', 'another_agent'].includes(payload?.sold_by)) {
+    const seller = soldSeller.value || {};
     Object.entries(seller).forEach(([k, v]) => {
       if (v !== null && v !== undefined && v !== '') fd.append(`seller_details[${k}]`, v);
     });
-  }
 
-  let i = 0;
-  Object.entries(soldSellerFiles.value || {}).forEach(([type, files]) => {
-    (files || []).forEach((file) => {
-      fd.append(`seller_documents[${i}][document_type]`, type);
-      fd.append(`seller_documents[${i}][file]`, file);
-      i++;
+    let i = 0;
+    Object.entries(soldSellerFiles.value || {}).forEach(([type, files]) => {
+      (files || []).forEach((file) => {
+        fd.append(`seller_documents[${i}][document_type]`, type);
+        fd.append(`seller_documents[${i}][file]`, file);
+        i++;
+      });
     });
-  });
+  }
 
   fd.append('_method', 'PATCH');
 
@@ -3972,18 +3996,12 @@ const markAsSoldByOIAgent = async () => {
         return;
     }
     
-    const currentUser = getCurrentUser();
-    const isCurrentUser = selectedSoldByAgent.value === currentUser?.id;
-    
+    // Last step: seller details + documents (required). continueSoldSeller() then goes on to
+    // "Sold by Me" (add new owner) or submits "Sold by Another Agent".
+    pendingSoldAgentId.value = selectedSoldByAgent.value;
     showOIAgentSelection.value = false;
-    
-    if (isCurrentUser) {
-        // نفس المستخدم = Sold by Me
-        soldByChoice.value = 'me';
-    } else {
-        // مستخدم آخر = Sold by Another Agent
-        await markAsSoldByAnotherAgent(selectedSoldByAgent.value);
-    }
+    soldSellerShowErrors.value = false;
+    showSoldSellerStep.value = true;
 };
 
 // بيع عن طريق Agent آخر
@@ -10034,7 +10052,10 @@ const getHistoryIcon = (event) => {
         openSoldOutModal,
         showSoldOutModal,
  soldByChoice,
-        soldSellerStepDone,
+        showSoldSellerStep,
+        pendingSoldAgentIsMe,
+        soldSellerSubmitting,
+        backFromSoldSeller,
         soldSeller,
         soldSellerDocTypes,
         soldSellerFiles,
