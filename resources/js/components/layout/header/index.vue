@@ -1417,10 +1417,11 @@ const mainMenuItems = computed(() => {
     items.push({ path: '/settings/lead-scoring', label: 'Lead Scoring', iconSrc: leadsIcon.value });
   }
 
-  // Daily Leads Report (DailyLeadsReport::canView): super_admin (every agent)
-  // and branch_admin (their own branch).
+  // Daily Leads Report (DailyLeadsReport::canView): super_admin (every agent),
+  // branch_admin and view-daily-leads-report holders (their own branch).
   const roles = user.value?.roles || [];
-  if (roles.includes('super_admin') || roles.includes('branch_admin')) {
+  const perms = user.value?.permissions || [];
+  if (roles.includes('super_admin') || roles.includes('branch_admin') || perms.includes('view-daily-leads-report')) {
     items.push({ path: '/daily-leads-report', label: 'Daily Leads Report', iconSrc: insightsIcon.value });
   }
 
