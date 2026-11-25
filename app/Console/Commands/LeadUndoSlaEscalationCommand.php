@@ -17,12 +17,15 @@ use Illuminate\Support\Facades\Schema;
  *    made after the escalation (storage/app/sla-undo-report-*.csv).
  * 2. Asks for confirmation. Only on "yes" it applies, per lead:
  *    - owner back to the rep before the (first) escalation
- *    - stage back to the stage the lead had before it entered the escalation stage
- *      (e.g. New Lead → Assigned gives New Lead); revert flags / Lead Pool count undone
+ *    - stage back to the stage the lead was in at the moment of escalation
+ *      (read from history); revert flags / Lead Pool count undone
  *    - lead fields edited after the escalation back to their old value
  *    - comments (with replies/attachments/mentions) and activities added after the
  *      escalation permanently deleted; first_contacted_at reset
- *    - one `sla_escalation_undone` history entry holding a full copy of the deleted rows
+ *    - history from the escalation entry onwards deleted (except KEEP_HISTORY_LEAD_IDS /
+ *      --keep-history, which keep their history and get one `sla_escalation_undone` entry)
+ *    - merged-after-escalation leads un-merged
+ *    - a full copy of the lead row and every deleted row goes to storage/app/sla-undo-backup-*.jsonl
  *
  * Skipped (listed in the report): deleted/merged leads, blocked/missing old owner, lead
  * already with the old owner, already undone, or reassigned by hand after the escalation.
@@ -58,6 +61,9 @@ class LeadUndoSlaEscalationCommand extends Command
 
     /** @var array<string, int> */
     protected array $leadColumns = [];
+
+    /** @var resource|null backup file handle while applying */
+    protected $backup = null;
 
     public function handle(): int
     {
@@ -124,11 +130,7 @@ class LeadUndoSlaEscalationCommand extends Command
                 $oldOwnerId = (int) ($firstC['old_person_id'] ?? 0);
 
                 $after = $lead ? $this->changesAfter($leadId, $first) : [];
-                $targetStageId = null;
-                if ($lead) {
-                    $atEscalation = $this->stageAtEscalation($after, (int) $lead->stage_id);
-                    $targetStageId = $atEscalation ? ($this->stageBefore($leadId, (int) $first->id, $atEscalation) ?? $atEscalation) : null;
-                }
+                $targetStageId = $lead ? $this->stageAtEscalation($after, (int) $lead->stage_id) : null;
                 $fieldRestore = $this->fieldsBeforeEscalation($after);
                 $notes = count(array_filter($after, fn ($e) => $e['type'] !== 'history'));
 
@@ -139,14 +141,14 @@ class LeadUndoSlaEscalationCommand extends Command
                 $merged = $lead && $lead->merged_into_lead_id;
                 $deleteHistory = ! isset($keepHistory[$leadId]);
                 $historyCount = $deleteHistory
-                    ? DB::table('lead_histories')->where('lead_id', $leadId)->where('id', '>', $first->id)->count()
+                    ? DB::table('lead_histories')->where('lead_id', $leadId)->where('id', '>=', $first->id)->count()
                     : 0;
 
                 $plan = $reason ? 'SKIP: '.$reason : 'RESTORE → '.$this->userName($oldOwnerId).' / '.$stageBack
                     .($merged ? ' / UNMERGE from #'.$lead->merged_into_lead_id : '')
                     .($fieldRestore ? ' / fields: '.implode(', ', array_keys($fieldRestore)) : '')
                     .($notes ? " / delete {$notes} comment(s)+activity(ies)" : '')
-                    .($deleteHistory ? " / delete {$historyCount} history row(s)" : ' / KEEP history');
+                    .($deleteHistory ? " / delete {$historyCount} history row(s) incl. the escalation" : ' / KEEP history');
 
                 $head = [
                     $leadId, $lead->lead_name ?? '(deleted)', (string) $first->created_at,
@@ -209,6 +211,8 @@ class LeadUndoSlaEscalationCommand extends Command
         }
 
         // ---------- 3. apply ----------
+        $backupPath = storage_path('app/sla-undo-backup-'.now()->format('Ymd-His').'.jsonl');
+        $this->backup = fopen($backupPath, 'a');
         $done = 0;
         $changed = [];
         $bar = $this->output->createProgressBar(count($plans));
@@ -218,6 +222,8 @@ class LeadUndoSlaEscalationCommand extends Command
         }
         $bar->finish();
         $this->newLine();
+        fclose($this->backup);
+        $this->info('Backup of everything changed/deleted (one line per lead): '.$backupPath);
 
         if ($done > 0) {
             LeadKanbanHeatCache::bump();
@@ -251,13 +257,18 @@ class LeadUndoSlaEscalationCommand extends Command
                 $update['brand_key'] = 'oia';
             }
 
+            if (isset($this->leadColumns['last_sla_escalation_at'])) {
+                $update['last_sla_escalation_at'] = null;
+            }
+
+            // full copy of everything changed/deleted → backup file (not into lead history)
+            $backup = ['lead_id' => $leadId, 'lead_before' => (array) $lead];
             $history = [
                 'action' => 'sla_escalation_undone',
                 'old_person_id' => $p['current_owner'],
                 'old_person' => $this->userName($p['current_owner']),
                 'new_person_id' => $p['old_owner'],
                 'new_person' => $this->userName($p['old_owner']),
-                'escalation_history_id' => $p['escalation_id'],
                 'note' => 'Restored to its state before SLA escalation',
             ];
 
@@ -282,16 +293,16 @@ class LeadUndoSlaEscalationCommand extends Command
                 $history['restored_fields'] = $restored;
             }
 
-            // permanently delete comments + activities added after the escalation, keeping a copy in history
+            // permanently delete comments + activities added after the escalation (copy in backup file)
             foreach (['lead_comments' => 'comments', 'lead_activities' => 'activities'] as $table => $key) {
                 $rows = DB::table($table)->where('lead_id', $leadId)->where('created_at', '>=', $p['since'])->get();
                 if ($rows->isEmpty()) {
                     continue;
                 }
                 $ids = $rows->pluck('id')->all();
-                $history['deleted_'.$key] = $rows->map(fn ($r) => (array) $r)->all();
+                $backup['deleted_'.$key] = $rows->map(fn ($r) => (array) $r)->all();
                 if ($table === 'lead_comments') {
-                    $history['deleted_comment_attachments'] = DB::table('comment_attachments')->whereIn('comment_id', $ids)->get()->map(fn ($r) => (array) $r)->all();
+                    $backup['deleted_comment_attachments'] = DB::table('comment_attachments')->whereIn('comment_id', $ids)->get()->map(fn ($r) => (array) $r)->all();
                     DB::table($table)->whereIn('id', $ids)->whereNotNull('parent_id')->delete();
                 }
                 DB::table($table)->whereIn('id', $ids)->delete();
@@ -310,23 +321,28 @@ class LeadUndoSlaEscalationCommand extends Command
                 }
             }
 
-            // history written after the (first) escalation, keeping a copy in the undo entry
+            DB::table('leads')->where('id', $leadId)->update($update);
+
             if ($p['delete_history']) {
-                $rows = DB::table('lead_histories')->where('lead_id', $leadId)->where('id', '>', $p['escalation_id'])->orderBy('id')->get();
+                // the escalation entry itself + everything after it → history looks like it never happened
+                $rows = DB::table('lead_histories')->where('lead_id', $leadId)->where('id', '>=', $p['escalation_id'])->orderBy('id')->get();
                 if ($rows->isNotEmpty()) {
-                    $history['deleted_history'] = $rows->map(fn ($r) => (array) $r)->all();
+                    $backup['deleted_history'] = $rows->map(fn ($r) => (array) $r)->all();
                     DB::table('lead_histories')->whereIn('id', $rows->pluck('id')->all())->delete();
                 }
+            } else {
+                // history kept for this lead → add one entry saying it was restored
+                DB::table('lead_histories')->insert([
+                    'lead_id' => $leadId,
+                    'user_id' => null,
+                    'changes' => json_encode($history, JSON_UNESCAPED_UNICODE),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
-            DB::table('leads')->where('id', $leadId)->update($update);
-            DB::table('lead_histories')->insert([
-                'lead_id' => $leadId,
-                'user_id' => null,
-                'changes' => json_encode($history, JSON_UNESCAPED_UNICODE),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $backup['lead_update'] = $update;
+            fwrite($this->backup, json_encode($backup, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL);
 
             return true;
         });
@@ -409,28 +425,6 @@ class LeadUndoSlaEscalationCommand extends Command
         }
 
         return $currentStageId ?: null;
-    }
-
-    /** The stage the lead came from when it last moved into $stageId before the escalation (null if history doesn't show it). */
-    protected function stageBefore(int $leadId, int $escalationHistoryId, int $stageId): ?int
-    {
-        $stageName = mb_strtolower($this->stageNameById[$stageId] ?? '');
-        $moves = DB::table('lead_histories')
-            ->where('lead_id', $leadId)->where('id', '<', $escalationHistoryId)
-            ->whereRaw("JSON_EXTRACT(changes, '$.new_stage') IS NOT NULL")
-            ->orderByDesc('id')->limit(50)->pluck('changes');
-        foreach ($moves as $json) {
-            $c = json_decode($json, true) ?: [];
-            if (mb_strtolower((string) ($c['new_stage'] ?? '')) !== $stageName) {
-                continue;
-            }
-            $from = mb_strtolower((string) ($c['old_stage'] ?? ''));
-            if ($from !== '' && $from !== $stageName && isset($this->stageIdByName[$from])) {
-                return $this->stageIdByName[$from];
-            }
-        }
-
-        return null;
     }
 
     /** Lead columns edited after the escalation → their value before the first such edit. */
