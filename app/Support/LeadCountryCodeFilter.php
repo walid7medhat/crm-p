@@ -5,7 +5,7 @@ namespace App\Support;
 use Illuminate\Http\Request;
 
 /**
- * Lead search "Country Code" — super_admin + admin only.
+ * Lead search "Country Code" — super_admin, admin and branch_admin only.
  *
  * Matches leads whose phone (work_phone or work_phone_2) starts with the dial code,
  * written as +971, 971 or 00971. Uses work_phone_digits (indexed, formatting stripped)
@@ -18,7 +18,7 @@ class LeadCountryCodeFilter
 {
     public static function canUse($user): bool
     {
-        return LeadIntegrationFilter::canUse($user);
+        return $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'branch_admin']);
     }
 
     /**
