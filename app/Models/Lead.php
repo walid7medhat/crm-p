@@ -12,6 +12,7 @@ use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
 use App\Services\LeadKanbanHeatCache;
 use App\Services\WebPush\LeadAssignmentTestNotifier;
+use App\Services\Zapier\ZapierLeadWebhook;
 use App\Models\LeadScoringSetting;
 use App\Traits\AltCRMLeadTrait;
 use App\Support\Brand\Concerns\BrandOwned;
@@ -140,6 +141,7 @@ protected const NON_ENGAGEMENT_FIELDS = [
                     $lead->responsible_person_id,
                     (int) $lead->id
                 );
+                ZapierLeadWebhook::queueIfEligible($lead);
                 LeadKanbanHeatCache::bump();
             //       if ($lead->shouldSyncToAltCRM()) {
             //     $lead->sendToAltCRM();
@@ -179,6 +181,10 @@ protected const NON_ENGAGEMENT_FIELDS = [
                         $lead->responsible_person_id,
                         (int) $lead->id
                     );
+                }
+
+                if ($lead->wasChanged('stage_id')) {
+                    ZapierLeadWebhook::queueIfEligible($lead);
                 }
 
                 if ($lead->wasChanged(['status_lead', 'stage_id', 'interaction_result', 'responsible_person_id', 'revert'])) {

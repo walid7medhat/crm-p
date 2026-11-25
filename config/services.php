@@ -87,6 +87,18 @@ return [
     ],
 
     /*
+    | Zapier lead webhook. OIA leads entering one of these lead stages are POSTed
+    | (id, phone, email, stage) to the URL. Empty URL = disabled.
+    */
+    'zapier_lead_webhook' => [
+        'url' => env('ZAPIER_LEAD_WEBHOOK_URL'),
+        'stages' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('ZAPIER_LEAD_WEBHOOK_STAGES', 'Qualified,Converted'))
+        ))),
+    ],
+
+    /*
     | Web Push. The private key stays server-side. Any active user is eligible.
     */
     'web_push' => [
