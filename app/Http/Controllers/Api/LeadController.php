@@ -2463,7 +2463,14 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
             ->values();
 
         return ApiResponse::success($items, 'Duplicated Leads retrieved successfully');
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('getDuplicate failed', [
+            'lead_id' => $lead_id,
+            'user_id' => auth()->id(),
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile() . ':' . $e->getLine(),
+            'trace'   => $e->getTraceAsString(),
+        ]);
         return ApiResponse::error('Failed to retrieve leads: ' . $e->getMessage());
     }
 }
