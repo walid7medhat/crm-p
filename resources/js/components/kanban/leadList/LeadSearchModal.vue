@@ -4349,6 +4349,12 @@ const canUseCreatedBy = computed(() =>
     (user.value?.roles || []).some(role => CREATED_BY_ROLES.includes(role))
 )
 
+// Lead search "Country Code" — super admin, admin and branch admin (API enforces too).
+const COUNTRY_CODE_ROLES = ['super_admin', 'admin', 'branch_admin']
+const canUseCountryCode = computed(() =>
+    (user.value?.roles || []).some(role => COUNTRY_CODE_ROLES.includes(role))
+)
+
 const creatorList = ref([])
 
 const pinnedCreators = ref([])
@@ -4577,13 +4583,17 @@ const searchFieldsConfig = computed(() => {
 
             { id: 'integration_id', label: 'Campaign ID', formKey: 'integrationId', queryKey: 'integration_id', type: 'text', placeholder: 'ID from Integrations page, or Meta Ad ID (comma for several)' },
 
-            { id: 'country_code', label: 'Country Code', formKey: 'countryCode', queryKey: 'country_code', type: 'text', placeholder: 'e.g. +971 (comma for several)' },
-
             { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
 
             { id: 'office', label: 'Branch', formKey: 'office', queryKey: 'office_branch', type: 'select', options: officeOptions.value, multiple: true }
 
         )
+
+    }
+
+    if (canUseCountryCode.value) {
+
+        fields.push({ id: 'country_code', label: 'Country Code', formKey: 'countryCode', queryKey: 'country_code', type: 'text', placeholder: 'e.g. +971 (comma for several)' })
 
     }
 
@@ -4870,7 +4880,7 @@ const searchFieldSections = [
 
         title: 'Lead Information',
 
-        // country_code: super_admin/admin only (searchFieldsConfig adds it only for them).
+        // country_code: super_admin/admin/branch_admin only (searchFieldsConfig adds it only for them).
         fieldIds: ['lead_name','first_name',  'work_phone', 'country_code', 'email', 'created_on', 'assigned_on', 'modified_on']
 
     },
@@ -6052,8 +6062,8 @@ async function applySearch(options = {}) {
             ? String(form.value.integrationId).replace(/\s+/g, '')
             : undefined,
 
-        // Country Code — super_admin + admin only (backend enforces too).
-        country_code: (user.value?.roles?.includes('super_admin') || user.value?.roles?.includes('admin')) && String(form.value.countryCode || '').trim()
+        // Country Code — super_admin, admin, branch_admin (backend enforces too).
+        country_code: canUseCountryCode.value && String(form.value.countryCode || '').trim()
             ? String(form.value.countryCode).replace(/\s+/g, '')
             : undefined,
 
