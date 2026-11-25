@@ -2069,18 +2069,11 @@ class LeadAssignmentService
     public function processSlaEscalations(?LeadAssignmentSetting $settings = null): int
     {
         $settings ??= LeadAssignmentSetting::current();
-        if ($settings->system_disabled || !$settings->sla_escalation_enabled) {
+        if ($this->slaEscalationBlocked($settings)) {
             return 0;
         }
 
         $sla = (int) ($settings->sla_minutes ?? 0);
-        if ($sla === 0) {
-            return 0;
-        }
-        if ($sla < 5) {
-            return 0;
-        }
-
         $assignedStageId = $this->resolveAssignedStageId($settings);
         if (!$assignedStageId) {
             return 0;
@@ -2138,6 +2131,13 @@ class LeadAssignmentService
                 return null;
             }
 
+            // The batch loaded settings once. Re-read this brand's row immediately
+            // before ownership changes so a disable mid-run cannot write history.
+            $settings = LeadAssignmentSetting::current();
+            if ($this->slaEscalationBlocked($settings)) {
+                return null;
+            }
+
             /** @var User $agent */
             $agent = $winner['user'];
             $oldPersonId = $lead->responsible_person_id;
@@ -2186,6 +2186,17 @@ class LeadAssignmentService
         });
 
         return $assignmentLog !== null;
+    }
+
+    /**
+     * Shared kill switch for the SLA batch and for each lead inside that batch.
+     */
+    protected function slaEscalationBlocked(LeadAssignmentSetting $settings): bool
+    {
+        return (bool) $settings->system_disabled
+            || ! (bool) $settings->auto_assign
+            || ! (bool) $settings->sla_escalation_enabled
+            || (int) ($settings->sla_minutes ?? 0) < 5;
     }
 
     /**
