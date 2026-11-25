@@ -522,9 +522,18 @@ const isAdminOrSuper = isSuperAdmin || currentUserRoles.includes('admin')
 // Duplicate badge: super_admin, admin, branch_admin.
 const canSeeDuplicates = isAdminOrSuper || currentUserRoles.includes('branch_admin')
 
-// "Assign To…" (pick an agent): super_admin and admin — which agents they may pick is
-// decided by the server (LeadPoolAssignmentService::agentsQuery).
-const canAssignToOthers = isAdminOrSuper
+// "Assign To…" (pick an agent): super_admin or the assign-lead-pool-to-others permission —
+// which agents they may pick is decided by the server (LeadPoolAssignmentService::agentsQuery).
+const currentUserPermissions = (() => {
+    try {
+        const raw = localStorage.getItem('user')
+        const parsed = raw ? JSON.parse(raw) : null
+        return Array.isArray(parsed?.permissions) ? parsed.permissions : []
+    } catch {
+        return []
+    }
+})()
+const canAssignToOthers = isSuperAdmin || currentUserPermissions.includes('assign-lead-pool-to-others')
 const showAssignToModal = ref(false)
 
 function enterSelectMode() {

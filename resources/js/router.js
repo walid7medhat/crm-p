@@ -108,6 +108,7 @@ const baseRoutes = [
   { path: '/property-form', component: () => import('./pages/listings/property-form.vue'), meta: { requiresAuth: true } },
   { path: '/listings/overview', redirect: '/' },
   { path: '/my-listing', component: () => import('./pages/listings/my-listing.vue'), meta: { requiresAuth: true } },
+  { path: '/saved-listings', component: () => import('./pages/listings/saved-listings.vue'), meta: { requiresAuth: true } },
   { path: '/archive', component: () => import('./pages/listings/archive.vue'), meta: { requiresAuth: true } },
   { path: '/alllisting', component: () => import('./components/alllisting/AllLsting.vue'), meta: { requiresAuth: true } },
   {

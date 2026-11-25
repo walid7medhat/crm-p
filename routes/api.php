@@ -1004,6 +1004,9 @@ Route::delete('/search-alerts/{searchAlert}',[ListingController::class, 'destroy
     });
 
 Route::prefix('listings')->group(function(){
+    Route::get('/saved', [\App\Http\Controllers\Api\Listing\SavedListingController::class, 'index']);
+    Route::get('/saved/ids', [\App\Http\Controllers\Api\Listing\SavedListingController::class, 'ids']);
+    Route::post('/saved/{listing}', [\App\Http\Controllers\Api\Listing\SavedListingController::class, 'toggle']);
     // Voice search — Admin / Super Admin only (Phase 1 foundation)
     Route::post('/voice-search', [ListingController::class, 'voiceSearch'])
         ->middleware('role:super_admin|admin');
