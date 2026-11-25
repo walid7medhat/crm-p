@@ -938,12 +938,7 @@ class StageController extends Controller
             if ($request->filled('email')) {
                 $q->where('email', $request->email);
             }
-            if ($request->filled('work_phone')) {
-                $q->where(function ($query) use ($request) {
-                    $query->where('work_phone', $request->work_phone)
-                          ->orWhere('work_phone_2', $request->work_phone);
-                });
-            }
+            \App\Support\PhoneSearch::applyWorkPhone($q, $request);
             if ($addedByIds = $this->requestedAddedByIds($request)) {
                 $q->whereIn('added_by', $addedByIds);
             }
@@ -1169,12 +1164,7 @@ class StageController extends Controller
             if ($request->filled('email')) {
                 $leadsQuery->where('email', $request->email);
             }
-            if ($request->filled('work_phone')) {
-                $leadsQuery->where(function ($query) use ($request) {
-                    $query->where('work_phone', $request->work_phone)
-                          ->orWhere('work_phone_2', $request->work_phone);
-                });
-            }
+            \App\Support\PhoneSearch::applyWorkPhone($leadsQuery, $request);
             if ($addedByIds = $this->requestedAddedByIds($request)) {
                 $leadsQuery->whereIn('added_by', $addedByIds);
             }
