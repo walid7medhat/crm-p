@@ -2179,7 +2179,7 @@ function isInsideSearchUi(target) {
     // to <body> from inside LeadSearchModal/DealSearchModal, so it lives
     // outside both `anchor` and `panel` below and must be matched by class).
     if (target.closest(
-        '.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal, .budget-dropdown'
+        '.lead-search-dropdown-outer, .lead-search-dropdown-panel, .lead-search-date-backdrop, .lr-date-modal, .budget-dropdown, .lead-search-phone__menu'
     )) {
         return true;
     }

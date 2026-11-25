@@ -153,12 +153,7 @@ class LeadController extends Controller
                 if ($request->filled('email')) {
                     $leadsQuery->where('email', $request->email);
                 }
-                if ($request->filled('work_phone')) {
-                    $leadsQuery->where(function ($query) use ($request) {
-                        $query->where('work_phone', $request->work_phone)
-                              ->orWhere('work_phone_2', $request->work_phone);
-                    });
-                }
+                \App\Support\PhoneSearch::applyWorkPhone($leadsQuery, $request);
                 // UAE calendar days (Today / Yesterday / range) — see UaeDateRange.
                 UaeDateRange::apply($leadsQuery, 'created_at', $request->created_from, $request->created_to, $request->created_at);
                 // Lead search "Modified On" — a real change in the lead's history on those days.
