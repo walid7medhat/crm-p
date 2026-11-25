@@ -395,10 +395,10 @@ const canDeleteAll = computed(() => {
 const isSuperAdminUser = computed(() => user.value?.roles?.includes('super_admin') ?? false)
 const isAdminOrSuperAdminUser = computed(() => {
     const roles = user.value?.roles ?? []
-    return roles.includes('admin') || roles.includes('super_admin')
+    return roles.includes('admin') || roles.includes('super_admin') || roles.includes('branch_admin')
 })
 
-// Lead Pool (stage_id = 10) comments/activities are admin and super_admin only.
+// Lead Pool (stage_id = 10) comments/activities are admin, super_admin and branch_admin only.
 const isLeadPoolLead = computed(() => Number(props.lead?.stage_id) === 10)
 // Quality Status/Call Result/Lead Type badges stay super_admin-only on Lead Pool.
 // Kept separate from canViewCommentsAndActivities so the two can diverge.

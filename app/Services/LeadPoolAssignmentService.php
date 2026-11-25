@@ -366,7 +366,11 @@ class LeadPoolAssignmentService
             ->role(self::AGENT_ROLES);
 
         if (! $this->seesAllAgents($user)) {
-            $query->whereIn('id', $user->getAllSubordinatesIds());
+            // branch_admin (and assign-branch-leads) pick from their whole branch;
+            // everyone else from their own team.
+            $query->whereIn('id', $user->canAssignInWholeBranch()
+                ? $user->getBranchUserIds()
+                : $user->getAllSubordinatesIds());
         }
 
         return $query;

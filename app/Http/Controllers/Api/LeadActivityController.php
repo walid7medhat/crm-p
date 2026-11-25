@@ -905,8 +905,9 @@ public function destroyAllActivitieComments($leadId)
 }
 
     /**
-     * Lead Pool (stage_id = 10) comments and activities are readable by admin and super_admin only.
-     * canViewLead() is checked separately and is not bypassed by these roles.
+     * Lead Pool (stage_id = 10) comments and activities are readable by admin, super_admin and
+     * branch_admin only. canViewLead() is checked separately and is not bypassed by these roles
+     * (branch_admin stays limited to their own branch's leads there).
      */
     private function denyLeadPoolConversationRead(Lead $lead)
     {
@@ -914,7 +915,7 @@ public function destroyAllActivitieComments($leadId)
             return null;
         }
 
-        if (auth()->user()->hasRole(['admin', 'super_admin'])) {
+        if (auth()->user()->hasRole(['admin', 'super_admin', 'branch_admin'])) {
             return null;
         }
 

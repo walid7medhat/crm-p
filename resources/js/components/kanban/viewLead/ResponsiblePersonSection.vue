@@ -180,7 +180,7 @@ const currentUser = (() => {
 })()
 const isAdminOrSuperAdmin = computed(() => {
     const roles = currentUser?.roles || []
-    return roles.includes('super_admin') || roles.includes('admin')
+    return roles.includes('super_admin') || roles.includes('admin') || roles.includes('branch_admin')
 })
 const isLeadPoolLead = computed(() => Number(props.lead?.stage_id) === 10)
 const shouldHideSection = computed(() => {

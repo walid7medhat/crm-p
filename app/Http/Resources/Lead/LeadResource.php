@@ -523,7 +523,8 @@ protected function resolveOriginalBranch(): ?string
     $data['can_view_history'] = $isResponsible || $isManager;
 
     // Lead Pool (stage id = 10): الكروت مخفية عن أي حد غير الأدمن
-    if ((int) $this->stage_id === 10) {
+    // (branch_admin sees them like admin — owner, created/assigned info).
+    if ((int) $this->stage_id === 10 && ! $user->hasRole('branch_admin')) {
         $data['responsible_person'] = null;
         $data['parent'] = null;
         $data['added_by_user'] = null;
