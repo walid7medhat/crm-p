@@ -30,9 +30,13 @@ use Illuminate\Support\Facades\Schema;
 class LeadUndoSlaEscalationCommand extends Command
 {
     protected $signature = 'leads:undo-sla-escalation
-                            {--since= : Escalations on/after this date (YYYY-MM-DD)}';
+                            {--since= : Escalations on/after this date (YYYY-MM-DD)}
+                            {--keep-history= : Comma-separated lead ids whose history after the escalation is NOT deleted}';
 
     protected $description = 'Put leads moved by SLA escalation back to their state before it (dry run + confirm)';
+
+    /** Leads whose history after the escalation is never deleted (on top of --keep-history). */
+    protected const KEEP_HISTORY_LEAD_IDS = [206296, 213079];
 
     /** Columns never written by the field restore (owner/stage/timers are handled separately). */
     protected const FIELD_RESTORE_SKIP = [
@@ -63,6 +67,11 @@ class LeadUndoSlaEscalationCommand extends Command
 
             return self::FAILURE;
         }
+
+        $keepHistory = array_flip(array_merge(
+            self::KEEP_HISTORY_LEAD_IDS,
+            array_filter(array_map('intval', explode(',', (string) $this->option('keep-history'))))
+        ));
 
         $this->warnIfSlaStillOn();
         $this->loadStages();
@@ -127,10 +136,17 @@ class LeadUndoSlaEscalationCommand extends Command
                 $ownerNow = $lead ? $this->userName((int) $lead->responsible_person_id) : '-';
                 $stageNow = $lead ? ($this->stageNameById[(int) $lead->stage_id] ?? '-') : '-';
                 $stageBack = $targetStageId ? ($this->stageNameById[$targetStageId] ?? '-') : '-';
+                $merged = $lead && $lead->merged_into_lead_id;
+                $deleteHistory = ! isset($keepHistory[$leadId]);
+                $historyCount = $deleteHistory
+                    ? DB::table('lead_histories')->where('lead_id', $leadId)->where('id', '>', $first->id)->count()
+                    : 0;
 
                 $plan = $reason ? 'SKIP: '.$reason : 'RESTORE → '.$this->userName($oldOwnerId).' / '.$stageBack
+                    .($merged ? ' / UNMERGE from #'.$lead->merged_into_lead_id : '')
                     .($fieldRestore ? ' / fields: '.implode(', ', array_keys($fieldRestore)) : '')
-                    .($notes ? " / delete {$notes} comment(s)+activity(ies)" : '');
+                    .($notes ? " / delete {$notes} comment(s)+activity(ies)" : '')
+                    .($deleteHistory ? " / delete {$historyCount} history row(s)" : ' / KEEP history');
 
                 $head = [
                     $leadId, $lead->lead_name ?? '(deleted)', (string) $first->created_at,
@@ -151,8 +167,9 @@ class LeadUndoSlaEscalationCommand extends Command
                 }
 
                 $rows[] = [
-                    $leadId, mb_strimwidth((string) $lead->lead_name, 0, 26, '…'), $ownerNow, $this->userName($oldOwnerId),
+                    $leadId.($merged ? ' (merged)' : ''), mb_strimwidth((string) $lead->lead_name, 0, 26, '…'), $ownerNow, $this->userName($oldOwnerId),
                     $stageNow, $stageBack, $fieldRestore ? count($fieldRestore) : '-', $notes ?: '-',
+                    $deleteHistory ? ($historyCount ?: '-') : 'keep',
                 ];
                 $plans[] = [
                     'lead_id' => $leadId,
@@ -163,13 +180,15 @@ class LeadUndoSlaEscalationCommand extends Command
                     'escalation_id' => (int) $first->id,
                     'since' => (string) $first->created_at,
                     'fields' => $fieldRestore,
+                    'unmerge' => $merged,
+                    'delete_history' => $deleteHistory,
                 ];
             }
         }
         fclose($csv);
 
         if ($rows !== []) {
-            $this->table(['Lead', 'Name', 'Owner now', 'Back to', 'Stage now', 'Stage back to', 'Fields', 'Notes to delete'], $rows);
+            $this->table(['Lead', 'Name', 'Owner now', 'Back to', 'Stage now', 'Stage back to', 'Fields', 'Notes to delete', 'History to delete'], $rows);
         }
         foreach ($skipped as $why => $ids) {
             $this->line('Skipped '.count($ids)." ({$why}): ".implode(', ', array_slice($ids, 0, 30)).(count($ids) > 30 ? ' …' : ''));
@@ -183,7 +202,7 @@ class LeadUndoSlaEscalationCommand extends Command
         }
 
         // ---------- 2. confirm ----------
-        if (! $this->confirm(count($plans).' lead(s) will be restored. Comments/activities added after the escalation are PERMANENTLY deleted. Continue?', false)) {
+        if (! $this->confirm(count($plans).' lead(s) will be restored. Comments, activities and history added after the escalation are PERMANENTLY deleted. Continue?', false)) {
             $this->warn('Cancelled — nothing changed.');
 
             return self::SUCCESS;
@@ -279,6 +298,25 @@ class LeadUndoSlaEscalationCommand extends Command
             }
             if ($lead->first_contacted_at && (string) $lead->first_contacted_at >= $p['since']) {
                 $update['first_contacted_at'] = null;
+            }
+
+            // merged after the escalation → make it a normal lead again
+            if ($p['unmerge'] && $lead->merged_into_lead_id) {
+                $history['unmerged_from_lead_id'] = (int) $lead->merged_into_lead_id;
+                foreach (['merged_into_lead_id', 'merged_at', 'merged_by', 'merged_original_stage_id', 'merge_type'] as $col) {
+                    if (isset($this->leadColumns[$col])) {
+                        $update[$col] = null;
+                    }
+                }
+            }
+
+            // history written after the (first) escalation, keeping a copy in the undo entry
+            if ($p['delete_history']) {
+                $rows = DB::table('lead_histories')->where('lead_id', $leadId)->where('id', '>', $p['escalation_id'])->orderBy('id')->get();
+                if ($rows->isNotEmpty()) {
+                    $history['deleted_history'] = $rows->map(fn ($r) => (array) $r)->all();
+                    DB::table('lead_histories')->whereIn('id', $rows->pluck('id')->all())->delete();
+                }
             }
 
             DB::table('leads')->where('id', $leadId)->update($update);
@@ -435,8 +473,8 @@ class LeadUndoSlaEscalationCommand extends Command
 
     protected function skipReason(?object $lead, int $oldOwnerId, array $lastC, object $last): ?string
     {
-        if (! $lead || $lead->deleted_at || $lead->merged_into_lead_id) {
-            return 'lead deleted or merged';
+        if (! $lead || $lead->deleted_at) {
+            return 'lead deleted';
         }
         if ($oldOwnerId <= 0 || ! isset($this->users[$oldOwnerId])) {
             return 'old owner unknown or deleted';
