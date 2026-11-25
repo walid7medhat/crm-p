@@ -13,6 +13,7 @@ use App\Jobs\ProcessLeadIntelligenceJob;
 use App\Services\LeadKanbanHeatCache;
 use App\Services\WebPush\DubaiNewLeadNotifier;
 use App\Services\WebPush\LeadAssignmentTestNotifier;
+use App\Services\Zapier\ZapierLeadWebhook;
 use App\Models\LeadScoringSetting;
 use App\Traits\AltCRMLeadTrait;
 use App\Support\Brand\Concerns\BrandOwned;
@@ -142,6 +143,7 @@ protected const NON_ENGAGEMENT_FIELDS = [
                     (int) $lead->id
                 );
                 app(DubaiNewLeadNotifier::class)->notifyIfEligible($lead);
+                ZapierLeadWebhook::queueIfEligible($lead);
                 LeadKanbanHeatCache::bump();
             //       if ($lead->shouldSyncToAltCRM()) {
             //     $lead->sendToAltCRM();
@@ -185,6 +187,10 @@ protected const NON_ENGAGEMENT_FIELDS = [
 
                 if ($lead->wasChanged(['stage_id', 'branch', 'lead_branch_source', 'responsible_person_id'])) {
                     app(DubaiNewLeadNotifier::class)->notifyIfEligible($lead, onlyIfNewlyEligible: true);
+                }
+
+                if ($lead->wasChanged('stage_id')) {
+                    ZapierLeadWebhook::queueIfEligible($lead);
                 }
 
                 if ($lead->wasChanged(['status_lead', 'stage_id', 'interaction_result', 'responsible_person_id', 'revert'])) {
