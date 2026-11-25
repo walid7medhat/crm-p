@@ -280,6 +280,20 @@
 
                             />
 
+                            <LeadSearchPhoneField
+
+                                v-else-if="field.id === 'country_code'"
+
+                                v-model:country="form.countryCode"
+
+                                country-only
+
+                                show-country
+
+                                placeholder="e.g. +971 (comma for several)"
+
+                            />
+
                             <b-form-input
 
                                 v-else-if="field.type === 'text' && field.id !== 'budget_to'"
@@ -1358,6 +1372,20 @@
 
                             />
 
+                            <LeadSearchPhoneField
+
+                                v-else-if="field.id === 'country_code'"
+
+                                v-model:country="form.countryCode"
+
+                                country-only
+
+                                show-country
+
+                                placeholder="e.g. +971 (comma for several)"
+
+                            />
+
                             <b-form-input
 
                                 v-else-if="field.type === 'text' && field.id !== 'budget_to'"
@@ -2371,6 +2399,7 @@ import 'vue-select/dist/vue-select.css'
 import FilterFieldSettingsModal from './FilterFieldSettingsModal.vue'
 
 import CrmPhoneInput from '@/components/common/CrmPhoneInput.vue'
+import LeadSearchPhoneField from './LeadSearchPhoneField.vue'
 
 import api from '@/plugins/axios'
 
@@ -4349,8 +4378,8 @@ const canUseCreatedBy = computed(() =>
     (user.value?.roles || []).some(role => CREATED_BY_ROLES.includes(role))
 )
 
-// Lead search "Country Code" — super admin, admin and branch admin (API enforces too).
-const COUNTRY_CODE_ROLES = ['super_admin', 'admin', 'branch_admin']
+// Lead search "Country Code" — super admin and admin only (API enforces too).
+const COUNTRY_CODE_ROLES = ['super_admin', 'admin']
 const canUseCountryCode = computed(() =>
     (user.value?.roles || []).some(role => COUNTRY_CODE_ROLES.includes(role))
 )
@@ -4880,7 +4909,7 @@ const searchFieldSections = [
 
         title: 'Lead Information',
 
-        // country_code: super_admin/admin/branch_admin only (searchFieldsConfig adds it only for them).
+        // country_code: super_admin and admin only (searchFieldsConfig adds it only for them).
         fieldIds: ['lead_name','first_name',  'work_phone', 'country_code', 'email', 'created_on', 'assigned_on', 'modified_on']
 
     },
@@ -5149,9 +5178,25 @@ function onDocumentClick(event) {
 
 
 
+function formatCountryCodeFilter(raw) {
+    const text = String(raw || '').trim()
+    if (!text) return null
+    if (/^(international|intl|non-uae|non_uae|!uae)$/i.test(text)) {
+        return 'International · Excluding UAE'
+    }
+    return text.split(',').map((part) => {
+        const dial = part.replace(/\D/g, '').replace(/^00/, '')
+        return dial ? `+${dial}` : part.trim()
+    }).filter(Boolean).join(', ')
+}
+
 function getDisplayValue(field, rawValue) {
 
     if (rawValue === null || rawValue === undefined || rawValue === '') return null
+
+    if (field.id === 'country_code') {
+        return formatCountryCodeFilter(rawValue)
+    }
 
     if (field.id === 'created_on') {
 
@@ -6062,7 +6107,7 @@ async function applySearch(options = {}) {
             ? String(form.value.integrationId).replace(/\s+/g, '')
             : undefined,
 
-        // Country Code — super_admin, admin, branch_admin (backend enforces too).
+        // Country Code — super_admin and admin only (backend enforces too).
         country_code: canUseCountryCode.value && String(form.value.countryCode || '').trim()
             ? String(form.value.countryCode).replace(/\s+/g, '')
             : undefined,
@@ -9540,6 +9585,20 @@ onBeforeUnmount(() => {
         box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16) !important;
     }
 
+    .lead-search--desk :deep(.lead-search-phone__control) {
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        border-radius: 8px !important;
+        border: 1px solid #eadff0 !important;
+        background: #fff !important;
+    }
+
+    .lead-search--desk :deep(.lead-search-phone__code),
+    .lead-search--desk :deep(.lead-search-phone__input) {
+        font-size: 12px !important;
+    }
+
     .lead-search--desk :deep(.crm-phone-input) {
         width: 100%;
         max-width: 100%;
@@ -10072,6 +10131,24 @@ onBeforeUnmount(() => {
         opacity: 1 !important;
         visibility: visible !important;
         z-index: 1 !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .lead-search-phone__control {
+        min-height: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        border: 1px solid #ece7f2 !important;
+        background: #f7f4fa !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .lead-search-phone__code {
+        background: transparent;
+        font-size: 15px !important;
+    }
+
+    .lead-search-dropdown-panel--sheet .search-section-card .lead-search-phone__input {
+        font-size: 16px !important;
+        background: transparent;
     }
 
     .lead-search-dropdown-panel--sheet .search-section-card .crm-phone-input.crm-phone-input--dropdown-open,
