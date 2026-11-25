@@ -14,7 +14,6 @@
       @click="$emit('open', $event, property)"
     >
       <div class="property-card" :class="{ 'inactive-card': dimInactive && !property.is_active }">
-        <!-- Image -->
         <div class="property-image position-relative">
           <span v-if="compareMode" class="property-compare-mark" :class="{ 'is-on': compareSelected }">
             <span class="property-compare-mark__box" aria-hidden="true"></span>
@@ -48,9 +47,6 @@
             <span v-if="!property.is_active" class="badge-inactive">
               <i class="ri-eye-off-fill me-1"></i>Inactive
             </span>
-            <span v-if="property.listing_status" class="status-badge">
-              {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
-            </span>
             <span v-if="property.completion_status === 'Under Construction'" class="badge-offplan">
               <i class="ri-building-line me-1"></i>Off Plan
             </span>
@@ -66,61 +62,83 @@
             <span v-if="rejected" class="badge-sold bg-danger">
               <i class="ri-close-circle-fill me-1"></i>Rejected
             </span>
-            <span v-else-if="needsApproval" class="badge-sold bg-danger">
-              <i class="ri-time-line me-1"></i>Need Approve
+            <span v-else-if="needsApproval" class="badge-approval">
+              Need Approval
             </span>
             <span v-if="needsBreakdown" class="badge-missing-breakdown">
               <i class="ri-error-warning-line me-1"></i>No breakdown
             </span>
           </div>
 
-          <span class="badge-images" v-if="property.total_images > 1 || (property.gallery_images && property.gallery_images.length)">
-            <i class="ri-image-line me-1"></i>{{ property.total_images || property.gallery_images.length }}
+          <button
+            type="button"
+            class="card-heart"
+            :class="{ 'is-saved': saved }"
+            :aria-label="saved ? 'Open saved listings' : 'Save listing'"
+            @click.stop.prevent="onHeart"
+          >
+            <i :class="saved ? 'ri-heart-fill' : 'ri-heart-line'"></i>
+          </button>
+          <span v-if="property.listing_status" class="listing-purpose">
+            {{ property.listing_status === 'sale' ? 'For Sale' : 'For Rent' }}
           </span>
         </div>
 
-        <!-- Content -->
-        <div class="property-content p-3">
-          <div class="d-flex align-items-end mb-1">
-            <h6 class="property-price mb-0 me-1">{{ formatPrice(property.price) }}</h6>
-            <small class="text-muted price-unit">AED</small>
-          </div>
-
-          <h6 class="property-title mb-2">{{ property.title || 'No Title' }}</h6>
-          <p class="property-location mb-3" :title="property.area">
-            <i class="ri-map-pin-line me-1"></i>{{ property.area }}
-          </p>
-
-          <div class="property-details d-flex justify-content-between text-muted small mb-3">
-            <span class="d-flex justify-content-between icons">
-              <img :src="propertyIcon" class="imgicon" />
-              <span>{{ getPropertyType(property) }}</span>
+        <div class="property-content">
+          <div class="headline-row">
+            <span class="property-title">
+              <i class="ri-community-line" aria-hidden="true"></i>
+              <span>{{ property.title || 'No Title' }}</span>
             </span>
-            <span class="d-flex justify-content-between icons" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bedrooms !== null && property.number_of_bedrooms !== undefined">
-              <img :src="bedIcon" class="imgicon" />
-              <span>{{ property.number_of_bedrooms == 0 ? 'Studio' : property.number_of_bedrooms }}</span>
-            </span>
-            <span class="d-flex justify-content-between icons" v-if="!hidesBedsBaths(property.property_type) && property.number_of_bathrooms !== null && property.number_of_bathrooms !== undefined && property.number_of_bathrooms != 0">
-              <img :src="bathIcon" class="imgicon" />
-              <span>{{ property.number_of_bathrooms || 0 }}</span>
-            </span>
-            <span class="d-flex justify-content-between icons">
-              <img :src="sqftIcon" class="imgicon" />
-              <span>{{ property.size_sqft || property.size_sqmt || 0 }} {{ getAreaUnit(property) }}</span>
-            </span>
-          </div>
-          <div class="d-flex align-items-end justify-between">
-            <p class="property-agent text-muted small mb-2" v-if="property.agent">
-              Listed by: {{ agentLabel }}
-            </p>
-            <div class="property-listed-date mb-2">
-              <i class="ri-calendar-line me-1"></i>
-              <small class="text-muted">Updated at: {{ formatDate(property.updated_at) }}</small>
+            <div class="price-row">
+              <span class="property-price">{{ formatPrice(property.price) }}</span>
+              <span class="price-currency">AED</span>
+              <span v-if="property.listing_status && property.listing_status !== 'sale'" class="price-period">/ year</span>
             </div>
           </div>
-          <span class="view-more-btn">
-            View Details
-          </span>
+          <p class="property-location" :title="property.area">
+            <i class="ri-map-pin-line"></i>
+            <span>{{ property.area || '—' }}</span>
+          </p>
+
+          <div class="spec-box">
+            <div class="spec-item">
+              <img :src="propertyIcon" alt="" />
+              <span>{{ getPropertyType(property) }}</span>
+            </div>
+            <div class="spec-item">
+              <img :src="bedIcon" alt="" />
+              <span>{{ bedLabel(property) }}</span>
+            </div>
+            <div class="spec-item">
+              <img :src="bathIcon" alt="" />
+              <span>{{ bathLabel(property) }}</span>
+            </div>
+            <div class="spec-item">
+              <img :src="sqftIcon" alt="" />
+              <span>{{ formatSize(property) }}</span>
+            </div>
+          </div>
+
+          <div class="card-footer-row">
+            <div class="agent-block" v-if="property.agent">
+              <span class="agent-avatar">{{ agentInitials() }}</span>
+              <div class="agent-copy">
+                <span class="property-agent">{{ agentLabel }}</span>
+                <span class="property-listed-date">
+                  <i class="ri-calendar-line"></i>
+                  Updated {{ formatDate(property.updated_at) }}
+                </span>
+              </div>
+            </div>
+            <div v-else class="agent-block">
+              <span class="property-listed-date">
+                <i class="ri-calendar-line"></i>
+                Updated {{ formatDate(property.updated_at) }}
+              </span>
+            </div>
+            <span class="view-more-btn">Details <i class="ri-arrow-right-line"></i></span>
+          </div>
         </div>
       </div>
     </a>
@@ -137,7 +155,9 @@
 </template>
 
 <script>
+import api from '@/plugins/axios';
 import { listingPurpose } from '@/composables/propertyCompareSelection';
+import { isListingSaved, loadSavedListingIds, rememberSavedListing } from '@/composables/savedListings';
 import { hidesBedsBaths } from '@/composables/listingPropertyType';
 import {
   listingNeedsPaymentBreakdownHighlight,
@@ -161,15 +181,26 @@ export default {
     breakdownAction: { type: Boolean, default: false },
     isRejected: { type: Function, default: null },
     dimInactive: { type: Boolean, default: false },
+    savedPage: { type: Boolean, default: false },
   },
-  emits: ['open', 'breakdown'],
+  emits: ['open', 'breakdown', 'unsaved'],
   data() {
     return {
       propertyIcon: '/assets/icons/property-icon.svg',
       bedIcon: '/assets/icons/bedroom-icon.svg',
       bathIcon: '/assets/icons/bathroom-icon.svg',
       sqftIcon: '/assets/icons/area-size.svg',
+      saved: false,
+      saving: false,
     };
+  },
+  watch: {
+    'property.id': {
+      immediate: true,
+      handler() {
+        this.syncSaved();
+      },
+    },
   },
   computed: {
     imageSrc() {
@@ -237,6 +268,56 @@ export default {
     getAreaUnit(property) {
       return property.size_sqft ? 'Sqft' : 'Sqm';
     },
+    bedLabel(property) {
+      if (hidesBedsBaths(property.property_type)) return '—';
+      if (property.number_of_bedrooms === null || property.number_of_bedrooms === undefined || property.number_of_bedrooms === '') return '—';
+      if (Number(property.number_of_bedrooms) === 0) return 'Studio';
+      const n = Number(property.number_of_bedrooms);
+      return `${n} Bed${n === 1 ? '' : 's'}`;
+    },
+    bathLabel(property) {
+      if (hidesBedsBaths(property.property_type)) return '—';
+      const n = Number(property.number_of_bathrooms);
+      if (!Number.isFinite(n) || n <= 0) return '—';
+      return `${n} Bath${n === 1 ? '' : 's'}`;
+    },
+    formatSize(property) {
+      const raw = property.size_sqft || property.size_sqmt || 0;
+      const n = Number(String(raw).replace(/,/g, ''));
+      const value = Number.isFinite(n) ? new Intl.NumberFormat().format(n) : '0';
+      return `${value} ${property.size_sqft ? 'ft²' : 'm²'}`;
+    },
+    agentInitials() {
+      const name = this.getAgentName(this.property.agent) || '';
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (!parts.length || parts[0] === 'Unknown') return 'SA';
+      return ((parts[0][0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+    },
+    async syncSaved() {
+      if (!this.property?.id) return;
+      try {
+        await loadSavedListingIds();
+        this.saved = isListingSaved(this.property.id);
+      } catch {
+        this.saved = false;
+      }
+    },
+    async onHeart() {
+      if (this.saving || !this.property?.id) return;
+      if (this.saved && !this.savedPage) {
+        this.$router.push('/saved-listings');
+        return;
+      }
+      this.saving = true;
+      try {
+        const response = await api.post(`/listings/saved/${this.property.id}`);
+        this.saved = !!response?.data?.data?.saved;
+        rememberSavedListing(this.property.id, this.saved);
+        if (this.savedPage && !this.saved) this.$emit('unsaved', this.property);
+      } finally {
+        this.saving = false;
+      }
+    },
     getAgentName(agent) {
       if (!agent) return 'Unknown Agent';
       if (agent.name) return agent.name;
@@ -249,11 +330,18 @@ export default {
 </script>
 
 <style scoped>
+.property-image {
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  border: none;
+}
+
 .property-image img {
-  height: 230px;
-  transition: transform 0.4s ease;
+  height: 196px;
+  width: 100%;
+  display: block;
+  transition: transform 0.4s ease, opacity 0.3s ease;
   opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
 .property-image img.loaded {
@@ -271,84 +359,279 @@ export default {
   background: #fff;
   border-radius: 18px;
   overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1px solid #e8e3ee;
+  box-shadow: 0 8px 18px -14px rgba(40, 20, 60, 0.28);
 }
 
 .property-agent {
-  font-size: 0.75rem;
-  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1c1730;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .property-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.1);
+  border-color: color-mix(in srgb, var(--color-primary, #733e87) 28%, #e8e3ee);
+  box-shadow: 0 14px 28px -16px rgba(80, 30, 110, 0.35);
 }
 
 .property-card:hover .property-image img {
   transform: scale(1.03);
 }
 
-.badge-images {
+.listing-purpose {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: #fff;
-  color: #333;
-  font-size: 0.8rem;
-  padding: 4px 9px;
-  border-radius: 10px;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  color: #1c1730;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 10px rgba(20, 10, 40, 0.12);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.listing-purpose {
+  left: 10px;
 }
 
 .property-content {
   background: #fff;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.price-row,
+.property-title,
+.property-location,
+.spec-item span,
+.property-agent,
+.property-listed-date {
+  text-shadow: none;
+}
+
+.headline-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.price-currency,
+.price-period {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9aa0a6;
 }
 
 .property-price {
-  font-size: 1.1rem;
+  font-size: 16px;
   font-weight: 600;
-  color: #1d1d1d;
-  letter-spacing: -0.2px;
-}
-
-.price-unit {
-  font-size: 0.75rem;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
 }
 
 .property-title {
-  font-size: 0.9rem !important;
-  font-weight: 500;
-  color: #2a2a2a;
-  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.25;
+  text-align: left;
 }
 
-.property-location {
-  font-size: 0.8rem;
-  color: #777;
+.property-title i {
+  flex-shrink: 0;
+  color: #8a8494;
+  font-size: 14px;
+}
+
+.property-title span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.view-more-btn {
-  display: inline-block;
-  text-align: center;
+.property-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 12px;
+  color: #6b6578;
+  overflow: hidden;
+}
+
+.property-location span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-location i {
+  color: #8a8494;
+  flex-shrink: 0;
+}
+
+.spec-box {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
   width: 100%;
+  min-width: 0;
+  margin-top: 2px;
+  padding: 8px 2px;
+  border: 1px solid #ece7f1;
+  border-radius: 12px;
+  background: #faf9fb;
+  box-sizing: border-box;
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 4px;
+  border-right: 1px solid #ece7f1;
+  text-align: center;
+}
+
+.spec-item:last-child {
+  border-right: none;
+}
+
+.spec-item img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.spec-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: #3f3a48;
+}
+
+.card-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.agent-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agent-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f3e9fb;
+  border: 1px solid #e4d4ef;
+  color: var(--color-primary, #733e87);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.agent-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.card-heart {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #4b5563;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.card-heart.is-saved {
+  color: var(--color-primary, #733e87);
+}
+
+.view-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 4px;
+  height: 32px;
+  margin-top: 0;
+  padding: 0 12px;
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
-  font-weight: 500;
-  border-radius: 10px;
-  padding: 8px 0;
-  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  font-size: 12px;
   text-decoration: none;
-  transition: all 0.3s;
+  text-shadow: none;
 }
 
 .view-more-btn:hover {
-  background: #581c87;
+  filter: brightness(1.05);
   color: #fff;
 }
 
@@ -377,70 +660,91 @@ export default {
 
 .status-badges {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 10px;
+  left: 10px;
+  right: 44px;
   display: flex;
   flex-direction: row;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.badge-sold {
-  background: #28a745;
-  color: white;
+.badge-sold,
+.badge-archived,
+.badge-inactive,
+.badge-off_plan,
+.badge-offplan,
+.badge-ready,
+.badge-occupancy_status,
+.badge-missing-breakdown,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
   padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.badge-sold {
+  background: #16a34a;
+  color: white;
 }
 
 .badge-archived {
-  background: #ffc107;
-  color: #212529;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
+  background: #f5c542;
+  color: #1c1730;
 }
 
 .badge-inactive {
-  background: #6c757d;
+  background: #6b6578;
   color: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
 }
 
 .property-listing-card {
   position: relative;
   height: 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.property-listing-card--missing-breakdown {
+  border: none;
+  background: transparent;
+  padding: 0;
 }
 
 .property-listing-card--missing-breakdown .property-card {
-  box-shadow: 0 0 0 2px #fbbf24, 0 4px 14px rgba(251, 191, 36, 0.25);
-  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 28%);
+  border-color: #f5c542;
+  box-shadow: none;
+  background: #fff;
 }
 
 .badge-missing-breakdown {
   background: #f59e0b;
   color: #1f2937;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
 }
 
 .breakdown-quick-btn {
-  display: block;
-  width: calc(100% - 1.5rem);
-  margin: 0 0.75rem 0.75rem;
-  border: 1px solid #fbbf24;
-  background: #fffbeb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 24px);
+  margin: 8px 12px 0;
+  box-sizing: border-box;
+  border: 1px solid #f5c542;
+  border-radius: 10px;
+  background: #fff8e8;
   color: #92400e;
   font-weight: 600;
-  font-size: 0.8rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+  box-shadow: none;
 }
 
 .breakdown-quick-btn:hover {
@@ -451,6 +755,8 @@ export default {
 
 .property-card-link {
   display: block;
+  width: 100%;
+  min-width: 0;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
@@ -458,8 +764,7 @@ export default {
 }
 
 .property-card-link:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
 }
 
 .property-card-link:hover .property-card {
@@ -467,60 +772,59 @@ export default {
 }
 
 .property-card-link .view-more-btn {
-  display: inline-block;
+  display: inline-flex;
   pointer-events: none;
 }
 .icons {
   gap: 2px;
 }
 .badge-off_plan {
-  background: #B60F1C;
+  background: #e11d48;
   color: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
 }
 .badge-offplan {
-  background: #ffc107;
-  color: #212529;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
+  background: #f5c542;
+  color: #1c1730;
 }
 
 .badge-ready {
-  background: #28a745;
+  background: #16a34a;
   color: white;
+}
+
+.badge-approval {
+  display: inline-flex;
+  align-items: center;
   padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: var(--gradient-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
 }
 .badge-occupancy_status {
-  background: #EDEBEB !important;
-  color: #0B0736 !important;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
+  background: #ffffff !important;
+  color: #1c1730 !important;
+  border-color: #ece7f1 !important;
+  text-shadow: none;
 }
 
 .status-badge {
   background: var(--gradient-primary) !important;
   color: #ffffff !important;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 500;
 }
 
 .property-listed-date {
-  font-size: 0.75rem;
-  margin-bottom: 0 !important;
-  display: flex;
+  font-size: 11px;
+  margin: 0 !important;
+  display: inline-flex;
   align-items: center;
+  gap: 4px;
+  color: #8a8494;
 }
 
 .property-listed-date i {
