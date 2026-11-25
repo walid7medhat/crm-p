@@ -911,7 +911,7 @@ public function activitiesWithTrashed()
             $ids = array_values(array_filter($ids, fn ($id) => ($keys[$id] ?? '') === $own));
         }
 
-        return $ids === [] ? collect() : Lead::query()->whereIn('id', $ids)->orderBy('id')->get();
+        return $ids === [] ? new \Illuminate\Database\Eloquent\Collection() : Lead::query()->whereIn('id', $ids)->orderBy('id')->get();
     }
 
         public function convertedToDeal()
