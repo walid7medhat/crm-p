@@ -1876,7 +1876,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $service = app(LeadPoolAssignmentService::class);
         if (! $service->canAssignToOthers($user)) {
-            return ApiResponse::error('Only super admin and admin can assign Lead Pool leads to others', 403);
+            return ApiResponse::error('You do not have permission to assign Lead Pool leads to others', 403);
         }
 
         return ApiResponse::success(
@@ -2020,11 +2020,11 @@ public function changeStage(Request $request, Lead $lead): JsonResponse
                     );
                 }
             } else {
-                // Assign to someone else: super_admin / admin only, no limits, and only to an
-                // agent they may pick (super_admin & users 30 / 33 → anyone, other admins →
-                // own team).
+                // Assign to someone else: super_admin or the assign-lead-pool-to-others
+                // permission, no limits, and only to an agent they may pick (super_admin &
+                // users 30 / 33 → anyone, others → own team).
                 if (! $poolService->canAssignToOthers($user)) {
-                    return ApiResponse::error('Only super admin and admin can assign Lead Pool leads to someone else', 403);
+                    return ApiResponse::error('You do not have permission to assign Lead Pool leads to someone else', 403);
                 }
                 if (! $poolService->canAssignTo($user, $poolAssigneeId)) {
                     return ApiResponse::error('You can only assign Lead Pool leads to agents in your team', 403);

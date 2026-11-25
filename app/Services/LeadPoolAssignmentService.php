@@ -32,6 +32,9 @@ class LeadPoolAssignmentService
     /** Permission to manage the Lead Pool settings of one's own branch (given per user / role). */
     public const SETTINGS_PERMISSION = 'manage-lead-pool-settings';
 
+    /** Permission to assign Lead Pool leads to other agents ("Assign To…"). super_admin always can. */
+    public const ASSIGN_OTHERS_PERMISSION = 'assign-lead-pool-to-others';
+
     /** Roles that can receive Lead Pool leads from an admin. */
     public const AGENT_ROLES = ['sales', 'team_lead', 'manager'];
 
@@ -340,14 +343,14 @@ class LeadPoolAssignmentService
     |--------------------------------------------------------------------------
     | Assigning Lead Pool leads to someone else
     |--------------------------------------------------------------------------
-    | super_admin and admin only, with no limits. super_admin and ALL_AGENTS_ADMIN_IDS
-    | (users 30, 33) pick from every active agent; any other admin only from their own
-    | team (getAllSubordinatesIds).
+    | super_admin, or anyone with the assign-lead-pool-to-others permission, with no
+    | limits. super_admin and ALL_AGENTS_ADMIN_IDS (users 30, 33) pick from every active
+    | agent; anyone else only from their own team (getAllSubordinatesIds).
     */
 
     public function canAssignToOthers(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin']);
+        return $user->hasRole('super_admin') || $user->can(self::ASSIGN_OTHERS_PERMISSION);
     }
 
     public function seesAllAgents(User $user): bool
