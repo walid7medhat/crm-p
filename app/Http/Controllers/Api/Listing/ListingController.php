@@ -2735,7 +2735,7 @@ public function updatePaymentBreakdown(Request $request, $id): JsonResponse
         ]);
 
         $isRent = strtolower(trim((string) $listing->listing_status)) === 'rent';
-        if (! $isRent && ListingRequest::isUnderConstructionStatus($listing->completion_status)) {
+        if (! $isRent && ! ListingRequest::breakdownOptional() && ListingRequest::isUnderConstructionStatus($listing->completion_status)) {
             $sellingForCheck = $validated['selling_price'] ?? $validated['price'] ?? $listing->price;
             $opForCheck = array_key_exists('original_price', $validated)
                 ? $validated['original_price']

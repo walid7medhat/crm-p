@@ -2022,6 +2022,7 @@ import { requiresPlotSize } from "@/composables/listingPlotSize";
 import { hidesBedsBaths } from "@/composables/listingPropertyType";
 import { showsAllAreaFloorPlans } from "@/composables/listingProjectFloorPlans";
 import { isBuildingType } from "@/composables/listingBuilding";
+import { isLuxvantBrand } from "@/composables/useBrand";
 import { isDubaiArea, developerNocFee, isOffPlanStatus, withDefaultDealCostLines, nocVatAmount } from "@/utils/dealCostRules";
 
 import Swal from "sweetalert2";
@@ -2733,6 +2734,8 @@ const breakdownIncompleteError = computed(() => {
 
 const publishPaymentBreakdownBlocked = computed(() => {
   if (!showBreakdownFeatures.value) return false;
+  // Luxvant: original price and payment breakdown are optional — never block publishing.
+  if (isLuxvantBrand()) return false;
   if (paymentPlanMissingForPublish.value) return true;
   if (form.value.payment_plans != null && form.value.payment_plans !== '' && !isPaymentPlanSelectionParseValid.value) return true;
   if (hasMixedInstallmentTypes.value) return true;
@@ -4321,8 +4324,8 @@ const handleSubmit = async (action = 'draft') => {
     }
 
     if (action !== 'draft') {
-      if (showBreakdownFeatures.value) {
-              // ✅ للـ Under Construction (ليس للإيجار): original_price مطلوب
+      if (showBreakdownFeatures.value && !isLuxvantBrand()) {
+              // ✅ للـ Under Construction (ليس للإيجار): original_price مطلوب (not for Luxvant)
               if (!form.value.original_price || parsePriceInputDigits(form.value.original_price) <= 0) {
                 proxy.$showNotification("❌ Please enter original price for under construction properties!", "error");
                 isSubmitting.value = false;

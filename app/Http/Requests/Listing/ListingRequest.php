@@ -243,6 +243,12 @@ $listingId = $this->route('property');
         '100%' => 100,
     ];
 
+    /** Luxvant: original price and payment breakdown are optional (never required to publish / save). */
+    public static function breakdownOptional(): bool
+    {
+        return \App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant';
+    }
+
     public static function isUnderConstructionStatus($status): bool
     {
         $s = str_replace('_', ' ', strtolower(trim((string) $status)));
@@ -331,7 +337,7 @@ $listingId = $this->route('property');
             $isPublish = $this->input('action') === 'publish';
 
             $isRent = strtolower(trim((string) $this->input('listing_status'))) === 'rent';
-            if ($isPublish && ! $isRent && self::isUnderConstructionStatus($this->input('completion_status'))) {
+            if ($isPublish && ! $isRent && ! self::breakdownOptional() && self::isUnderConstructionStatus($this->input('completion_status'))) {
                 $error = self::paymentBreakdownError(
                     $this->input('payment_plan'),
                     $this->input('payment_breakdown'),
