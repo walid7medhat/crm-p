@@ -2508,7 +2508,7 @@ const budgetDropdownPanelRef = ref(null)
 
 const budgetDropdownStyle = ref({})
 
-const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'integration_id', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
+const selectedLeadFieldIds = ref(['lead_name','first_name',  'created_on', 'assigned_on', 'work_phone', 'country_code', 'integration_id', 'responsible_person', 'office', 'email', 'source', 'lead_branch_source', 'team','stage','quality_status', 'interaction_result'])
 
 const activePill = ref(props.initialActivePill || 'leads-in-progress')
 
@@ -2957,6 +2957,8 @@ const queryToFormKeys = {
 
     integration_id: 'integrationId',
 
+    country_code: 'countryCode',
+
     email: 'email',
 
     bedrooms: 'bedrooms',
@@ -3065,6 +3067,7 @@ function syncFormFromQuery(query) {
         branchSource: '',
         workPhone: '',
         integrationId: '',
+        countryCode: '',
         email: '',
         bedrooms: '',
         leadName: '',
@@ -3400,6 +3403,8 @@ const form = ref({
     workPhone: '',
 
     integrationId: '',
+
+    countryCode: '',
 
     email: '',
 
@@ -4572,6 +4577,8 @@ const searchFieldsConfig = computed(() => {
 
             { id: 'integration_id', label: 'Campaign ID', formKey: 'integrationId', queryKey: 'integration_id', type: 'text', placeholder: 'ID from Integrations page, or Meta Ad ID (comma for several)' },
 
+            { id: 'country_code', label: 'Country Code', formKey: 'countryCode', queryKey: 'country_code', type: 'text', placeholder: 'e.g. +971 (comma for several)' },
+
             { id: 'lead_branch_source', label: 'Lead Branch Source', formKey: 'branchSource', queryKey: 'lead_branch_source', type: 'select', options: [] },
 
             { id: 'office', label: 'Branch', formKey: 'office', queryKey: 'office_branch', type: 'select', options: officeOptions.value, multiple: true }
@@ -4863,7 +4870,8 @@ const searchFieldSections = [
 
         title: 'Lead Information',
 
-        fieldIds: ['lead_name','first_name',  'work_phone', 'email', 'created_on', 'assigned_on', 'modified_on']
+        // country_code: super_admin/admin only (searchFieldsConfig adds it only for them).
+        fieldIds: ['lead_name','first_name',  'work_phone', 'country_code', 'email', 'created_on', 'assigned_on', 'modified_on']
 
     },
 
@@ -6044,6 +6052,11 @@ async function applySearch(options = {}) {
             ? String(form.value.integrationId).replace(/\s+/g, '')
             : undefined,
 
+        // Country Code — super_admin + admin only (backend enforces too).
+        country_code: (user.value?.roles?.includes('super_admin') || user.value?.roles?.includes('admin')) && String(form.value.countryCode || '').trim()
+            ? String(form.value.countryCode).replace(/\s+/g, '')
+            : undefined,
+
         email: form.value.email || undefined,
 
         bedrooms: form.value.bedrooms ?? undefined,
@@ -6751,6 +6764,7 @@ function resetFormValues() {
 
         workPhone: '',
         integrationId: '',
+        countryCode: '',
 
         email: '',
 
@@ -7304,6 +7318,7 @@ watch(
         form.value.firstName,
         form.value.workPhone,
         form.value.integrationId,
+        form.value.countryCode,
         form.value.email,
     ].map((v) => String(v || '').trim()).join('\0'),
     () => {
@@ -7467,11 +7482,13 @@ const restoreSavedFields = async () => {
                 const validFields = parsed.filter(id => allFieldIds.includes(id))
                 // One-time: show newly added fields (Campaign ID) for users whose saved list predates them.
                 try {
-                    const NEW_FIELDS_FLAG = 'selectedLeadFields:added:integration_id'
-                    if (!localStorage.getItem(NEW_FIELDS_FLAG) && allFieldIds.includes('integration_id')) {
-                        if (!validFields.includes('integration_id')) validFields.push('integration_id')
-                        localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(validFields))
-                        localStorage.setItem(NEW_FIELDS_FLAG, '1')
+                    for (const newFieldId of ['integration_id', 'country_code']) {
+                        const NEW_FIELDS_FLAG = `selectedLeadFields:added:${newFieldId}`
+                        if (!localStorage.getItem(NEW_FIELDS_FLAG) && allFieldIds.includes(newFieldId)) {
+                            if (!validFields.includes(newFieldId)) validFields.push(newFieldId)
+                            localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(validFields))
+                            localStorage.setItem(NEW_FIELDS_FLAG, '1')
+                        }
                     }
                 } catch (e) { /* storage blocked — field still selectable in settings */ }
                 console.log('Valid fields after filtering:', validFields)

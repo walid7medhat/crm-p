@@ -2949,6 +2949,7 @@ function buildLeadSearchApiParams(q = {}) {
         ...(q.work_phone && { work_phone: q.work_phone }),
         ...(q.email && { email: q.email }),
         ...(q.integration_id && { integration_id: q.integration_id }),
+        ...(q.country_code && { country_code: q.country_code }),
         ...(q.bedrooms !== undefined && q.bedrooms !== null && q.bedrooms !== '' && { bedrooms: q.bedrooms }),
         ...(q.team_id != null && q.team_id !== '' && { team_id: q.team_id }),
         ...(q.budget_from != null && q.budget_from !== '' && { budget_from: q.budget_from }),

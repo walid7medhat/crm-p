@@ -917,6 +917,8 @@ class StageController extends Controller
 
         // Lead search "Integration ID" — super_admin + admin only.
         \App\Support\LeadIntegrationFilter::apply($baseLeadsQuery, $request, $user);
+        // Lead search "Country Code" — super_admin + admin only.
+        \App\Support\LeadCountryCodeFilter::apply($baseLeadsQuery, $request, $user);
 
         // ================= apply all filters (unchanged logic) =================
         $baseLeadsQuery->where(function ($q) use ($request) {
@@ -1151,6 +1153,7 @@ class StageController extends Controller
 
             // Lead search "Integration ID" — super_admin + admin only.
             \App\Support\LeadIntegrationFilter::apply($leadsQuery, request(), $user);
+            \App\Support\LeadCountryCodeFilter::apply($leadsQuery, request(), $user);
 
             // ================= نفس الفلاتر =================
             if ($request->filled('changed_by')) {
@@ -1577,7 +1580,8 @@ public function getOffices()
 
             // Lead search "Integration ID" — super_admin + admin only.
             \App\Support\LeadIntegrationFilter::apply($leadsQuery, request(), $user);
-            
+            \App\Support\LeadCountryCodeFilter::apply($leadsQuery, request(), $user);
+
             $leads = $leadsQuery
                 ->orderBy('updated_at', 'desc')
                 ->orderBy('id', 'desc')
