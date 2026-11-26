@@ -2985,7 +2985,7 @@ const mobilePurposeLabel = computed(() => {
 const mobileListingTitle = computed(() => {
   const p = property.value;
   if (!p) return '';
-  return p.project?.title || p.area?.area_title || p.title || p.reference_number || '';
+  return p.project?.title || p.area?.title || p.area?.name || p.title || p.reference_number || '';
 });
 
 // UAE residential rent is quoted as an annual figure. Show that as a period
@@ -3002,40 +3002,36 @@ const rentPriceMeta = computed(() => {
   };
 });
 
-const mobileLocationLabel = computed(() => {
-  const p = property.value;
-  if (!p) return '';
-  const parts = [];
-  if (p.area?.area_title && p.area.area_title !== mobileListingTitle.value) {
-    parts.push(p.area.area_title);
-  } else if (p.area?.title && p.area.title !== mobileListingTitle.value) {
-    parts.push(p.area.title);
-  }
-  // Location line = area only (the developer has its own "Developer" row in the details).
-  return parts.filter(Boolean).join(', ') || p.area?.area_title || p.area?.title || p.title || '';
-});
+// Same full area path as desktop, with no name repeated from the title.
+const mobileLocationLabel = computed(() => desktopLocationLabel.value);
 
 const desktopListingTitle = computed(() => {
   const p = property.value;
   if (!p) return '';
-  if (p.project?.title && p.area?.area_title && p.project.title !== p.area.area_title) {
-    return `${p.project.title}, ${p.area.area_title}`;
-  }
-  return p.project?.title || p.area?.area_title || p.title || p.reference_number || '';
+  // Title = project name only; the full area path goes on the line below it.
+  return p.project?.title || p.area?.title || p.area?.name || p.title || p.reference_number || '';
 });
 
+// Full area path (country → … → leaf), each name once, without repeating the title.
 const desktopLocationLabel = computed(() => {
   const p = property.value;
   if (!p) return '';
   const hierarchy = Array.isArray(p.area?.hierarchy) ? p.area.hierarchy : [];
-  if (hierarchy.length) {
-    return hierarchy.map((h) => h.area_title || h.title || h.name).filter(Boolean).join(', ');
+  let names = hierarchy.map((h) => h?.title || h?.name || h?.area_title);
+  if (!names.filter(Boolean).length) {
+    // area_title is the full path, leaf first ("Leaf, Parent, …, City").
+    names = String(p.area?.area_title || p.area?.title || '').split(',').reverse();
   }
+  const key = (s) => String(s || '').trim().toLowerCase();
+  const seen = new Set([key(desktopListingTitle.value)]);
   const parts = [];
-  if (p.area?.parent?.area_title) parts.push(p.area.parent.area_title);
-  if (p.area?.area_title) parts.push(p.area.area_title);
-  else if (p.area?.title) parts.push(p.area.title);
-  return [...new Set(parts.filter(Boolean))].join(', ') || mobileLocationLabel.value;
+  names.forEach((n) => {
+    const name = String(n || '').trim();
+    if (!name || seen.has(key(name))) return;
+    seen.add(key(name));
+    parts.push(name);
+  });
+  return parts.join(', ');
 });
 
 const desktopSpecTiles = computed(() => {
