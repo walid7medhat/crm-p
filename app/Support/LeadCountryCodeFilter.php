@@ -5,12 +5,15 @@ namespace App\Support;
 use Illuminate\Http\Request;
 
 /**
- * Lead search "Country Code" — super_admin, admin and branch_admin only.
+ * Lead search "Country Code" — super_admin and admin only.
  *
  * Matches leads whose phone (work_phone or work_phone_2) starts with the dial code,
  * written as +971, 971 or 00971. Uses work_phone_digits (indexed, formatting stripped)
- * for the primary phone. Numbers saved in local form (e.g. 050…) carry no country code
- * and are not matched.
+ * for the primary phone. UAE (971) also matches local numbers (050…, 04…, and the
+ * other UAE mobile and landline trunks) once formatting is stripped.
+ *
+ * ?country_code=international returns every lead that is not a UAE phone, in any
+ * stored shape (+971, 971, 00971, 050…, 04…).
  *
  * Accepts one value or a comma list: ?country_code=971 or ?country_code=+971,+966
  */
@@ -18,7 +21,7 @@ class LeadCountryCodeFilter
 {
     public static function canUse($user): bool
     {
-        return $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'branch_admin']);
+        return $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin']);
     }
 
     /**
@@ -49,9 +52,37 @@ class LeadCountryCodeFilter
         return array_values($codes);
     }
 
+    /**
+     * Special selector value. Exclusive: mixed with dial codes, International wins.
+     */
+    public static function wantsInternational(Request $request): bool
+    {
+        $raw = $request->input('country_code');
+        if ($raw === null || $raw === '') {
+            return false;
+        }
+
+        $parts = is_array($raw) ? $raw : explode(',', (string) $raw);
+        foreach ($parts as $part) {
+            $token = strtolower(trim((string) $part));
+            $token = ltrim($token, '+');
+            if (in_array($token, ['international', 'intl', 'non-uae', 'non_uae', '!uae'], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function apply($query, Request $request, $user): void
     {
         if (! self::canUse($user)) {
+            return;
+        }
+
+        if (self::wantsInternational($request)) {
+            PhoneSearch::applyExcludeUae($query);
+
             return;
         }
 
@@ -64,11 +95,7 @@ class LeadCountryCodeFilter
 
         $query->where(function ($q) use ($table, $codes) {
             foreach ($codes as $code) {
-                $q->orWhere($table.'.work_phone_digits', 'like', $code.'%')
-                    ->orWhere($table.'.work_phone_digits', 'like', '00'.$code.'%')
-                    ->orWhere($table.'.work_phone_2', 'like', '+'.$code.'%')
-                    ->orWhere($table.'.work_phone_2', 'like', $code.'%')
-                    ->orWhere($table.'.work_phone_2', 'like', '00'.$code.'%');
+                PhoneSearch::orDialCode($q, $table, $code);
             }
         });
     }
