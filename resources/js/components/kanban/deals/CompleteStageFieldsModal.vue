@@ -2226,8 +2226,17 @@ const hasListingId = computed(() => {
   const fromForm = formData.value?.listing_id ?? formData.value?.listing?.id
   if (fromForm) return true
   const fromDeal = props.deal?.listing_id ?? props.deal?.listing?.id
-  return !!fromDeal
+  if (fromDeal) return true
+  // Units picked per property live on deal_properties.listing_id (deal.listing_id may be null).
+  return (props.deal?.properties || []).some((p) => p?.listing_id)
 })
+
+// Seller / landlord saved by the listing side: the API hides it (`*_hidden`) from users without
+// access, and marks it `is_listing_seller` for those who can see it. Never editable here.
+const hasListingParty = (type) => {
+  if (props.deal?.[`${type}_hidden`]) return true
+  return (props.deal?.parties || []).some((p) => p?.party_type === type && p?.is_listing_seller)
+}
 
 // Data from API
 const users = ref([])
@@ -5541,16 +5550,18 @@ const shouldHideSeller = computed(() => {
   const dealType = normalizedDealType.value
   // في Primary، أخفِ Seller
   if (dealType === 'primary' || dealType === 'rental') return true
-  // Secondary: hide when a listing is attached (seller = listing's owner).
-  return dealType === 'secondary' && hasListingId.value
+  // Secondary: hide when a listing is attached (seller = listing's owner), or when the seller
+  // came from the listing side (hidden from this user / read-only for admins).
+  return dealType === 'secondary' && (hasListingId.value || hasListingParty('seller'))
 })
 
 const shouldHideLandlord = computed(() => {
   const dealType = normalizedDealType.value
   // في Primary، أخفِ Landlord
   if (dealType === 'primary' || dealType === 'secondary') return true
-  // Rental: hide when a listing is attached (landlord = listing's owner).
-  return dealType === 'rental' && hasListingId.value
+  // Rental: hide when a listing is attached (landlord = listing's owner), or when the landlord
+  // came from the listing side.
+  return dealType === 'rental' && (hasListingId.value || hasListingParty('landlord'))
 })
 
 const shouldHideTenant = computed(() => {

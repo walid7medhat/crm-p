@@ -210,6 +210,31 @@ class ListingSellerPartyTest extends TestCase
         $this->assertFalse(ListingSellerParty::canSeeListingSeller($t['salesB'], $t['listing1']->id));
     }
 
+    // Chapter 3b — a seller from the listing side never blocks a stage change, even when the
+    // deal itself carries no listing_id (unit stored only on the property / already cleared).
+    public function test_listing_seller_never_blocks_stage_change(): void
+    {
+        $t = $this->scenario();
+        $this->markSold($t['agentA'], $t['listing1'], [
+            'sold_by' => 'another_agent', 'agent_id' => $t['salesB']->id,
+        ], 'Seller', 'One')->assertOk();
+        $dealId = $this->createDeal($t['salesB'], $t['listing1']);
+
+        // Strip every listing reference from the deal + its properties; only the linked party stays.
+        Deal::withoutGlobalScopes()->whereKey($dealId)->update(['listing_id' => null]);
+        \App\Models\DealProperty::query()->where('deal_id', $dealId)->update(['listing_id' => null]);
+
+        $deal = Deal::withoutGlobalScopes()->findOrFail($dealId);
+        $guard = app(\App\Services\DealStageValidatorService::class);
+
+        $this->actingAs($t['salesB']);
+        foreach (Stage::query()->orderBy('order')->pluck('id') as $stageId) {
+            $result = $guard->validateStageChange($deal->fresh(), (int) $stageId, 'secondary');
+            $sellerFields = array_filter($result['missing_fields'], fn ($f) => str_starts_with($f, 'seller_'));
+            $this->assertSame([], array_values($sellerFields), "stage {$stageId} still requires seller fields");
+        }
+    }
+
     // Chapter 4 — multi-property: one seller per sold unit, main unit's seller primary.
     public function test_multi_property_deal_gets_one_seller_per_unit(): void
     {
