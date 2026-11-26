@@ -1367,8 +1367,15 @@ const showCrmListingsDropdown = computed(() =>
   !isShowOnlyListing.value,
 );
 
-const showCrmListingsFlat = computed(() =>
+// Plain "Listings" link / dock tab: only for users holding `listings-list`
+// (super admins always pass).
+const canListListings = computed(() =>
   !isAccountant.value &&
+  (user.value?.roles?.includes('super_admin') || proxy.$hasPermission('listings-list')),
+);
+
+const showCrmListingsFlat = computed(() =>
+  canListListings.value &&
   !isListingsDropdownAdmin.value &&
   !isShowOnlyListing.value,
 );
@@ -1580,7 +1587,7 @@ const mobileDockItems = computed(() => {
     },
   ];
 
-  if (isAdmin.value || isShowOnlyListing.value) {
+  if ((isAdmin.value && canListListings.value) || isShowOnlyListing.value) {
     items.push({
       path: '/alllisting',
       label: 'Listings',
