@@ -3009,7 +3009,7 @@ const rentPriceMeta = computed(() => {
   };
 });
 
-// Same full area path as desktop, with no name repeated from the title.
+// Same location text as desktop (and the listing card).
 const mobileLocationLabel = computed(() => desktopLocationLabel.value);
 
 const desktopListingTitle = computed(() => {
@@ -3019,25 +3019,14 @@ const desktopListingTitle = computed(() => {
   return p.project?.title || p.area?.name || p.title || p.reference_number || '';
 });
 
-// Full location, card order ("Leaf, Parent, …, City, Country"),
-// with each name once and without repeating the title.
+// Like the listing card (leaf first), but the full path up to the city and country,
+// e.g. "Park View, Marina District, Saadiyat Island, Abu Dhabi, UAE".
 const desktopLocationLabel = computed(() => {
   const p = property.value;
   if (!p) return '';
   const hierarchy = Array.isArray(p.area?.hierarchy) ? p.area.hierarchy : [];
-  const names = hierarchy.length
-    ? hierarchy.map((h) => h?.name).reverse()
-    : String(p.area?.area_title || p.area?.title || '').split(',');
-  const key = (s) => String(s || '').trim().toLowerCase();
-  const seen = new Set([key(desktopListingTitle.value)]);
-  const parts = [];
-  names.forEach((n) => {
-    const name = String(n || '').trim();
-    if (!name || seen.has(key(name))) return;
-    seen.add(key(name));
-    parts.push(name);
-  });
-  return parts.join(', ');
+  const names = hierarchy.map((h) => String(h?.name || '').trim()).filter(Boolean).reverse();
+  return names.join(', ') || p.area?.title || p.area?.name || '';
 });
 
 const desktopSpecTiles = computed(() => {
