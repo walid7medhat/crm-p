@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Deal;
+use App\Models\DealParty;
 use Illuminate\Support\Facades\Log;
 
 class DealStageValidatorService
@@ -26,7 +27,12 @@ class DealStageValidatorService
     $resolvedType = $deal->deal_type ?: $dealType;
     
     // ✅ استخدام listing_id من الـ Request إذا وجد، وإلا استخدم الموجود في الـ Deal
-    $effectiveListingId = $listingId ?? $deal->listing_id;
+    // A unit picked in the property card / stage modal is stored on deal_properties.listing_id
+    // (deals.listing_id can stay NULL), so fall back to the first property that has a listing —
+    // otherwise seller/landlord fields are required while the UI hides them.
+    $effectiveListingId = $listingId
+        ?? $deal->listing_id
+        ?? $deal->properties()->whereNotNull('listing_id')->orderBy('sort_order')->value('listing_id');
 
     Log::info('DealStageValidatorService - validation', [
         'deal_id' => $deal->id,
@@ -90,7 +96,24 @@ $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal
     // ✅ تمرير effectiveListingId و resolvedType للتصفية
     $filteredMissingFields = $this->filterFieldsByListingAndType($missingFields, $effectiveListingId, $resolvedType);
     $filteredMissingByStage = $this->filterMissingByStageByListingAndType($missingByStage, $effectiveListingId, $resolvedType);
-    
+
+    // Seller / landlord supplied by the listing side (linked at Sold Out / Rented) is never
+    // editable on the deal — hidden from the deal's agent, read-only for admins — so it must
+    // never block a stage change, with or without deals.listing_id.
+    $listingPartyTypes = $this->listingPartyTypes($deal);
+    if ($listingPartyTypes !== []) {
+        $filteredMissingFields = $this->dropPartyFields($filteredMissingFields, $listingPartyTypes);
+        $filteredMissingByStage = collect($filteredMissingByStage)
+            ->map(function ($stage) use ($listingPartyTypes) {
+                $stage['missing_fields'] = $this->dropPartyFields($stage['missing_fields'] ?? [], $listingPartyTypes);
+
+                return $stage;
+            })
+            ->filter(fn ($stage) => ! empty($stage['missing_fields']))
+            ->values()
+            ->all();
+    }
+
     $finalValid = empty($filteredMissingFields);
 
     return [
@@ -109,6 +132,35 @@ $missingFields = $this->filterBedroomsFieldsByPropertyType($missingFields, $deal
     ];
 }
     
+    /** Party types (seller / landlord) on this deal that come from a listing. */
+    private function listingPartyTypes(Deal $deal): array
+    {
+        if (! $deal->exists) {
+            return [];
+        }
+
+        return DealParty::query()
+            ->where('deal_id', $deal->id)
+            ->whereNotNull('listing_id')
+            ->whereIn('party_type', ['seller', 'landlord'])
+            ->distinct()
+            ->pluck('party_type')
+            ->all();
+    }
+
+    private function dropPartyFields(array $fields, array $partyTypes): array
+    {
+        return array_values(array_filter($fields, function ($field) use ($partyTypes) {
+            foreach ($partyTypes as $type) {
+                if (str_starts_with((string) $field, $type.'_')) {
+                    return false;
+                }
+            }
+
+            return true;
+        }));
+    }
+
     /**
      * تحديد ما إذا كان يجب إخفاء Seller
      */

@@ -134,8 +134,8 @@
 
                 <div v-if="task.reference || task.reference_image_url" class="mk-details__block">
                   <span class="mk-label">Reference</span>
-                  <a v-if="task.reference_image_url" class="mk-ref-shot" :href="task.reference_image_url" target="_blank" rel="noopener">
-                    <img :src="task.reference_image_url" alt="Reference image" />
+                  <a v-if="task.reference_image_url" class="mk-ref-shot" :href="task.reference_image_url" target="_blank" rel="noopener" @click.prevent="openFileInNewTab(task.reference_image_url)">
+                    <img v-if="fileSrc(task.reference_image_url)" :src="fileSrc(task.reference_image_url)" alt="Reference image" />
                   </a>
                   <p v-if="task.reference" class="mk-details__text" v-html="linkify(task.reference)" />
                 </div>
@@ -317,6 +317,7 @@ import api from '@/plugins/axios'
 import MkAvatar from './shared/MkAvatar.vue'
 import MkSelect from './shared/MkSelect.vue'
 import { showCrmToast } from '@/utils/crmToast.js'
+import { useAuthorizedFileUrls, openFileInNewTab } from '@/composables/useAuthorizedFile'
 import {
   MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, PLATFORMS, LINK_KINDS, HISTORY_ACTIONS,
   formatDate, timeAgo, apiError, chipStyle,DEPARTMENTS
@@ -331,6 +332,9 @@ const props = defineProps({
   initialTab: { type: String, default: 'details' },
 })
 const emit = defineEmits(['update:modelValue', 'updated', 'deleted', 'moved', 'edit', 'schedule'])
+
+// Private reference images are signed /company-files/serve URLs that need the JWT.
+const { src: fileSrc } = useAuthorizedFileUrls()
 
 const task = ref(null)
 const loading = ref(false)

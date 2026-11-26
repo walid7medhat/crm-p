@@ -155,7 +155,7 @@
         <label for="mk-ref">Reference</label>
         <input id="mk-ref" v-model.trim="form.reference" class="mk-input" placeholder="Brief, reference link or inspiration" />
         <div v-if="referencePreview" class="mk-ref">
-          <img :src="referencePreview" alt="Reference image" />
+          <img v-if="fileSrc(referencePreview)" :src="fileSrc(referencePreview)" alt="Reference image" />
         </div>
         <div class="mk-ref__actions">
           <label class="mk-btn mk-btn--ghost mk-btn--sm">
@@ -202,6 +202,7 @@ import MemberPicker from './shared/MemberPicker.vue'
 import MkSelect from './shared/MkSelect.vue'
 import AdvancedDatePicker from '@/components/shared/AdvancedDatePicker.vue'
 import { showCrmToast } from '@/utils/crmToast.js'
+import { useAuthorizedFileUrls } from '@/composables/useAuthorizedFile'
 import { MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, apiError, chipStyle,DEPARTMENTS } from '@/config/marketingConfig.js'
 
 const props = defineProps({
@@ -227,6 +228,8 @@ const titleInput = ref(null)
 const errors = reactive({ title: '', link: '', department: '', reference: '' })
 const referenceFile = ref(null)
 const referencePreview = ref('')
+// Saved private images are signed URLs fetched with the JWT; local picks are blob: URLs (passed through).
+const { src: fileSrc } = useAuthorizedFileUrls()
 const removeReferenceImage = ref(false)
 const form = reactive(blankForm())
 
