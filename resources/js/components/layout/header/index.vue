@@ -92,7 +92,7 @@
         </li>
 
         <li
-          
+          v-if="showCrmDropdown"
           :class="{
             dropdown: true,
             open: activeDropdown === 'crm',
@@ -187,7 +187,7 @@
         </li>
 
         <li
-          v-if="!isHr && calculatorMenuItems.length"
+          v-if="!isHr && canSeeCalculators"
           :class="{
             dropdown: true,
             open: activeDropdown === 'calculator',
@@ -590,7 +590,7 @@
             </button>
           </div>
 
-          <div v-if="!isHr" class="mobile-more-card">
+          <div v-if="showCrmDropdown || (!isHr && canSeeCalculators)" class="mobile-more-card">
             <p class="mobile-more-sheet__section">CRM</p>
             <button v-if="canShowLeadsTab" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarCrmSectionActive(CRM_SECTIONS.LEAD) }" @click="onMoreLead">
               <span class="mobile-more-row__icon"><img :src="leadsIcon" alt="" /></span>
@@ -642,7 +642,7 @@
               <iconify-icon icon="lucide:chevron-right" class="mobile-more-row__go" />
             </button>
 
-            <button v-if="calculatorMenuItems.length" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('calculator') }" :aria-expanded="moreOpenGroup === 'calculators' ? 'true' : 'false'" @click="toggleMoreGroup('calculators')">
+            <button v-if="canSeeCalculators" type="button" class="mobile-more-row" :class="{ 'is-active': isSidebarModuleActive('calculator') }" :aria-expanded="moreOpenGroup === 'calculators' ? 'true' : 'false'" @click="toggleMoreGroup('calculators')">
               <span class="mobile-more-row__icon"><img :src="calculatorIcon" alt="" /></span>
               <span class="mobile-more-row__label">Calculators</span>
               <iconify-icon icon="lucide:chevron-down" class="mobile-more-row__chevron" :class="{ 'is-open': moreOpenGroup === 'calculators' }" />
@@ -1381,6 +1381,13 @@ const showCrmListingsFlat = computed(() =>
 );
 
 
+// CRM sidebar dropdown: hide it entirely when it would have no items inside
+// (no Leads/Deals access and no Listings access).
+const showCrmDropdown = computed(() =>
+  !isHr.value &&
+  (canShowLeadsTab.value || showCrmListingsDropdown.value || showCrmListingsFlat.value),
+);
+
 // Always the real All Listing page — never the cached/remembered last-visited listings
 // path, so the sidebar "Listings" link is predictable regardless of what was last viewed.
 const crmListingsFlatPath = computed(() => '/alllisting');
@@ -1493,8 +1500,12 @@ const settingsSidebarSections = computed(() => {
   });
 });
 
-// Calculators are OIA-only — hidden on Luxvant.
-const calculatorMenuItems = computed(() => (isLuxvantBrand ? [] : [
+// Calculators (ROI / ROE): OIA-only (hidden on Luxvant), and only for users who can see Listings.
+const canSeeCalculators = computed(() =>
+  !isLuxvantBrand && (canListListings.value || isShowOnlyListing.value),
+);
+
+const calculatorMenuItems = computed(() => (!canSeeCalculators.value ? [] : [
   {
     path: '/settings/roi-calculator',
     label: 'ROI',
