@@ -2985,7 +2985,7 @@ const mobilePurposeLabel = computed(() => {
 const mobileListingTitle = computed(() => {
   const p = property.value;
   if (!p) return '';
-  return p.project?.title || p.area?.title || p.area?.name || p.title || p.reference_number || '';
+  return p.project?.title || p.area?.name || p.title || p.reference_number || '';
 });
 
 // UAE residential rent is quoted as an annual figure. Show that as a period
@@ -3008,20 +3008,16 @@ const mobileLocationLabel = computed(() => desktopLocationLabel.value);
 const desktopListingTitle = computed(() => {
   const p = property.value;
   if (!p) return '';
-  // Title = project name only; the full area path goes on the line below it.
-  return p.project?.title || p.area?.title || p.area?.name || p.title || p.reference_number || '';
+  // Same as the listing card: project name as the title, area path below it.
+  return p.project?.title || p.area?.name || p.title || p.reference_number || '';
 });
 
-// Full area path (country → … → leaf), each name once, without repeating the title.
+// Same text as the listing card (area.title: "Leaf, Parent, …, City"),
+// with each name once and without repeating the title.
 const desktopLocationLabel = computed(() => {
   const p = property.value;
   if (!p) return '';
-  const hierarchy = Array.isArray(p.area?.hierarchy) ? p.area.hierarchy : [];
-  let names = hierarchy.map((h) => h?.title || h?.name || h?.area_title);
-  if (!names.filter(Boolean).length) {
-    // area_title is the full path, leaf first ("Leaf, Parent, …, City").
-    names = String(p.area?.area_title || p.area?.title || '').split(',').reverse();
-  }
+  const names = String(p.area?.title || p.area?.area_title || '').split(',');
   const key = (s) => String(s || '').trim().toLowerCase();
   const seen = new Set([key(desktopListingTitle.value)]);
   const parts = [];
