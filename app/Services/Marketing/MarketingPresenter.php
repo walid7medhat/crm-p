@@ -68,7 +68,15 @@ class MarketingPresenter
             'channels' => (object) ($task->channels ?? []),
             'tov' => $task->tov,
             'reference' => $task->reference,
-            'reference_image_url' => $task->reference_image ? asset('storage/'.$task->reference_image) : null,
+            // marketing/references is a sensitive prefix: new uploads live on the private
+            // company disk and need a signed company-files URL; old ones stay on /storage.
+            'reference_image_url' => $task->reference_image
+                ? app(\App\Support\Brand\CompanyFileService::class)->urlForLegacyPath(
+                    $task->reference_image,
+                    \App\Support\Brand\CompanyFileAuthorizer::TYPE_MARKETING_TASK,
+                    (int) $task->id,
+                )
+                : null,
             'notes' => $task->notes,
             'is_approved' => $task->is_approved,
             'approved_by' =>User::resolveDisplayName( $task->approver),

@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <img v-if="task.reference_image_url" class="mk-card__ref" :src="task.reference_image_url" alt="Reference" />
+    <img v-if="refSrc" class="mk-card__ref" :src="refSrc" alt="Reference" />
 
     <p v-if="task.category === 'content' && task.notes" class="mk-card__note">{{ task.notes }}</p>
 
@@ -74,6 +74,7 @@
 <script setup>
 import { computed } from 'vue'
 import MkAvatar from './shared/MkAvatar.vue'
+import { useAuthorizedFileUrls } from '@/composables/useAuthorizedFile'
 import {
   MARKETING_CATEGORIES, CONTENT_TYPES, DELIVERABLES, CHANNELS, formatDate, isoDate,DEPARTMENTS
 } from '@/config/marketingConfig.js'
@@ -83,6 +84,10 @@ const props = defineProps({
   stageDone: { type: Boolean, default: false },
 })
 defineEmits(['open', 'delete'])
+
+// Private reference images come as signed /company-files/serve URLs that need the JWT.
+const { src: fileSrc } = useAuthorizedFileUrls()
+const refSrc = computed(() => fileSrc(props.task.reference_image_url))
 
 const category = computed(() => MARKETING_CATEGORIES[props.task.category] || MARKETING_CATEGORIES.production)
 const type = computed(() => (props.task.category === 'production' ? CONTENT_TYPES[props.task.type] : null))
