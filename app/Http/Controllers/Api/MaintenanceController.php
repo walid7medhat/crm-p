@@ -15,10 +15,19 @@ class MaintenanceController extends Controller
     {
         $payload = $service->statusPayload();
         $user = $this->optionalUser($request);
-        $payload['affects_me'] = $service->subjectIsAffected($user)
+        $affectsMe = $service->subjectIsAffected($user)
             && ! ($user && $user->hasRole('super_admin') && ! $this->isImpersonating());
 
-        return ApiResponse::success($payload, 'Maintenance status');
+        return ApiResponse::success([
+            'enabled' => (bool) ($payload['enabled'] ?? false),
+            'scope' => $payload['scope'] ?? 'all',
+            'branch_user_ids' => $payload['branch_user_ids'] ?? [],
+            'title' => $payload['title'] ?? null,
+            'message' => $payload['message'] ?? null,
+            'estimated_return' => $payload['estimated_return'] ?? null,
+            'updated_at' => $payload['updated_at'] ?? null,
+            'affects_me' => $affectsMe,
+        ], 'Maintenance status');
     }
 
     public function show(Request $request, MaintenanceModeService $service): JsonResponse
@@ -27,12 +36,10 @@ class MaintenanceController extends Controller
             return ApiResponse::error('Only a super admin can manage maintenance mode.', 403);
         }
 
-        $row = $service->current();
-        $payload = $service->toPublicArray($row);
-        $payload['updated_by'] = $row->updated_by;
-        $payload['available_branches'] = $service->availableBranches();
-
-        return ApiResponse::success($payload, 'Maintenance settings');
+        return ApiResponse::success(
+            $service->toAdminArray($service->current()),
+            'Maintenance settings'
+        );
     }
 
     public function update(Request $request, MaintenanceModeService $service): JsonResponse
@@ -43,9 +50,14 @@ class MaintenanceController extends Controller
 
         $validated = $request->validate([
             'is_enabled' => ['sometimes', 'boolean'],
-            'scope' => ['sometimes', 'string', 'in:all,branches'],
+            'scope' => ['sometimes', 'string', 'in:all,branches,users'],
             'branch_user_ids' => ['sometimes', 'nullable', 'array'],
             'branch_user_ids.*' => ['integer'],
+            'except_admin_role' => ['sometimes', 'boolean'],
+            'except_user_ids' => ['sometimes', 'nullable', 'array', 'max:50'],
+            'except_user_ids.*' => ['integer'],
+            'target_user_ids' => ['sometimes', 'nullable', 'array', 'max:50'],
+            'target_user_ids.*' => ['integer'],
             'title' => ['sometimes', 'nullable', 'string', 'max:160'],
             'message' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'estimated_return' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -56,14 +68,27 @@ class MaintenanceController extends Controller
         }
 
         try {
-            $payload = $service->update($validated, $request->user());
+            $service->update($validated, $request->user());
         } catch (\InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 422);
         }
 
-        $payload['available_branches'] = $service->availableBranches();
+        return ApiResponse::success(
+            $service->toAdminArray($service->current()),
+            'Maintenance settings updated'
+        );
+    }
 
-        return ApiResponse::success($payload, 'Maintenance settings updated');
+    public function users(Request $request, MaintenanceModeService $service): JsonResponse
+    {
+        if (! $this->assertSuperAdmin($request)) {
+            return ApiResponse::error('Only a super admin can manage maintenance mode.', 403);
+        }
+
+        return ApiResponse::success(
+            $service->searchUsers((string) $request->query('search', '')),
+            'Maintenance user search'
+        );
     }
 
     private function assertSuperAdmin(Request $request): bool

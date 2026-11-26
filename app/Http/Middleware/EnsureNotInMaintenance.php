@@ -12,8 +12,9 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 /**
  * HTTP maintenance gate (all brands/hosts).
  *
- * - Scope "all": block everyone except Super Admin (and allowlisted infra).
+ * - Scope "all": block everyone except Super Admin, the optional admin-role exemption, and picked people.
  * - Scope "branches": block only users under selected CRM branches; public APIs stay up.
+ * - Scope "users": block only the selected people; everyone else and public APIs stay up.
  * Bypass ONLY Spatie hasRole('super_admin') and never while impersonating.
  */
 class EnsureNotInMaintenance

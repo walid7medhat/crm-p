@@ -56,7 +56,9 @@ function applyPayload(payload) {
     affectsMe.value = payload.affects_me
   } else if (!payload.enabled) {
     affectsMe.value = false
-  } else if (payload.scope === 'all') {
+  } else if (payload.scope === 'branches' || payload.scope === 'users') {
+    affectsMe.value = false
+  } else if (payload.scope === 'all' || !payload.scope) {
     affectsMe.value = !!resolveAuthToken() && !isStoredSuperAdmin()
   }
   bootstrapped.value = true
@@ -70,8 +72,7 @@ const shouldBlockUi = computed(() => {
   if (!enabled.value) return false
   if (!resolveAuthToken()) return false
   if (isStoredSuperAdmin()) return false
-  if (scope.value === 'branches') return !!affectsMe.value
-  return true
+  return !!affectsMe.value
 })
 
 export function useMaintenanceMode() {

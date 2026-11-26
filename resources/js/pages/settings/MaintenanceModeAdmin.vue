@@ -5,7 +5,7 @@
         <p class="mm__eyebrow">System</p>
         <!-- Not <h1>: global CRM CSS forces h1 { font-size: var(--h1) !important } -->
         <p class="mm__title" role="heading" aria-level="1">Maintenance Mode</p>
-        <p class="mm__sub">Lock all branches or only the ones you select.</p>
+        <p class="mm__sub">Lock everyone, selected branches, or only the people you pick.</p>
       </div>
       <div class="mm__status" :class="enabled ? 'is-on' : 'is-off'">
         <span class="mm__dot" />
@@ -19,7 +19,7 @@
       <div class="mm__toggle-row">
         <div>
           <p class="mm__label">Status</p>
-          <p class="mm__help">Super Admin always bypasses.</p>
+          <p class="mm__help">Super Admin always stays online.</p>
         </div>
         <button
           type="button"
@@ -48,6 +48,13 @@
           <span>
             <strong>Selected branches</strong>
             <small>Only chosen branches</small>
+          </span>
+        </label>
+        <label class="mm__radio" :class="{ 'is-active': form.scope === 'users' }">
+          <input v-model="form.scope" type="radio" value="users" />
+          <span>
+            <strong>Selected people</strong>
+            <small>Only the people you pick</small>
           </span>
         </label>
       </fieldset>
@@ -110,6 +117,104 @@
         </ul>
       </div>
 
+      <div v-if="form.scope === 'users'" class="mm__people">
+        <div class="mm__branches-head">
+          <p class="mm__label">People in maintenance</p>
+        </div>
+        <p class="mm__help mm__help--tight">
+          Search by name or email and pick who should see maintenance. You can pick an individual admin.
+          Super Admin always stays online.
+        </p>
+        <div v-if="targetPeople.length" class="mm__selected">
+          <p class="mm__selected-label">Selected ({{ targetPeople.length }})</p>
+          <div class="mm__chips">
+            <button
+              v-for="person in targetPeople"
+              :key="'target-' + person.id"
+              type="button"
+              class="mm__chip"
+              :disabled="busy"
+              :title="'Remove ' + person.name"
+              @click="removePerson('target', person.id)"
+            >
+              <span>{{ personLabel(person) }}</span>
+              <span class="mm__chip-x" aria-hidden="true">×</span>
+            </button>
+          </div>
+        </div>
+        <p v-else class="mm__help mm__help--tight">No one selected yet. Maintenance will not turn on until you pick someone.</p>
+        <div class="mm__search">
+          <input
+            v-model="userQuery"
+            type="search"
+            placeholder="Search name or email"
+            :disabled="busy"
+            @input="onSearchUsers"
+          />
+          <p v-if="searchingUsers" class="mm__help">Searching…</p>
+          <ul v-else-if="userResults.length" class="mm__results">
+            <li v-for="person in userResults" :key="'res-' + person.id">
+              <button type="button" :disabled="busy" @click="addPerson('target', person)">
+                <span>{{ person.name }}</span>
+                <small>{{ person.email }}<template v-if="person.role"> · {{ person.role }}</template></small>
+              </button>
+            </li>
+          </ul>
+          <p v-else-if="userQuery.trim() && !searchingUsers" class="mm__help">No matching people.</p>
+        </div>
+      </div>
+
+      <div v-else class="mm__people">
+        <div class="mm__branches-head">
+          <p class="mm__label">Who stays online</p>
+        </div>
+        <p class="mm__help mm__help--tight">Super Admin always stays online.</p>
+        <label class="mm__check" :class="{ 'is-active': form.except_admin_role }">
+          <input v-model="form.except_admin_role" type="checkbox" :disabled="busy" />
+          <span>
+            <strong>Except the admin role</strong>
+            <small>Every user with the admin role keeps working. Search below to keep one more person online.</small>
+          </span>
+        </label>
+        <p class="mm__label mm__label--space">Also except someone</p>
+        <div v-if="exceptPeople.length" class="mm__selected">
+          <p class="mm__selected-label">Excepted ({{ exceptPeople.length }})</p>
+          <div class="mm__chips">
+            <button
+              v-for="person in exceptPeople"
+              :key="'except-' + person.id"
+              type="button"
+              class="mm__chip"
+              :disabled="busy"
+              :title="'Remove ' + person.name"
+              @click="removePerson('except', person.id)"
+            >
+              <span>{{ personLabel(person) }}</span>
+              <span class="mm__chip-x" aria-hidden="true">×</span>
+            </button>
+          </div>
+        </div>
+        <div class="mm__search">
+          <input
+            v-model="userQuery"
+            type="search"
+            placeholder="Search name or email"
+            :disabled="busy"
+            @input="onSearchUsers"
+          />
+          <p v-if="searchingUsers" class="mm__help">Searching…</p>
+          <ul v-else-if="userResults.length" class="mm__results">
+            <li v-for="person in userResults" :key="'exres-' + person.id">
+              <button type="button" :disabled="busy" @click="addPerson('except', person)">
+                <span>{{ person.name }}</span>
+                <small>{{ person.email }}<template v-if="person.role"> · {{ person.role }}</template></small>
+              </button>
+            </li>
+          </ul>
+          <p v-else-if="userQuery.trim() && !searchingUsers" class="mm__help">No matching people.</p>
+        </div>
+      </div>
+
       <label class="mm__field">
         <span>Title</span>
         <input v-model="form.title" type="text" maxlength="160" :disabled="busy" placeholder="We'll Be Back Soon" />
@@ -166,6 +271,9 @@
           <div v-if="form.scope === 'branches' && selectedBranches.length" class="mm__modal-chips">
             <span v-for="b in selectedBranches" :key="'c-' + b.id" class="mm__chip mm__chip--static">{{ b.name }}</span>
           </div>
+          <div v-if="form.scope === 'users' && targetPeople.length" class="mm__modal-chips">
+            <span v-for="person in targetPeople" :key="'tc-' + person.id" class="mm__chip mm__chip--static">{{ personLabel(person) }}</span>
+          </div>
           <div class="mm__actions">
             <button type="button" class="mm__btn mm__btn--danger" :disabled="busy" @click="confirmEnable">
               Activate
@@ -179,7 +287,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import api from '@/plugins/axios'
 import { useMaintenanceMode } from '@/composables/useMaintenanceMode'
 import MaintenanceScreen from '@/components/maintenance/MaintenanceScreen.vue'
@@ -197,10 +305,17 @@ const branches = ref([])
 const form = reactive({
   scope: 'all',
   branch_user_ids: [],
+  except_admin_role: false,
   title: "We'll Be Back Soon",
   message: 'The CRM is temporarily unavailable while we perform scheduled maintenance.',
   estimated_return: '',
 })
+const exceptPeople = ref([])
+const targetPeople = ref([])
+const userQuery = ref('')
+const userResults = ref([])
+const searchingUsers = ref(false)
+let userSearchTimer = null
 
 const selectedBranches = computed(() =>
   branches.value.filter((b) => form.branch_user_ids.includes(Number(b.id)))
@@ -212,14 +327,37 @@ const statusLabel = computed(() => {
     const n = form.branch_user_ids.length
     return `On · ${n} branch${n === 1 ? '' : 'es'}`
   }
+  if (form.scope === 'users') {
+    const n = targetPeople.value.length
+    return `On · ${n} ${n === 1 ? 'person' : 'people'}`
+  }
+  if (form.except_admin_role || exceptPeople.value.length) return 'On · All · exceptions'
   return 'On · All'
 })
 
 const confirmBody = computed(() => {
-  if (form.scope === 'branches') {
-    return 'Only users in the selected branches below will be blocked. Other branches stay online.'
+  if (form.scope === 'users') {
+    const n = targetPeople.value.length
+    return n === 1
+      ? 'Only this person will see maintenance. Everyone else stays online.'
+      : `Only these ${n} people will see maintenance. Everyone else stays online.`
   }
-  return 'Everyone except Super Admin will be blocked. Webhooks and registration will stop too.'
+  if (form.scope === 'branches') {
+    return 'Only users in the selected branches below will be blocked. People you except stay online.'
+  }
+  const extras = ['Super Admin']
+  if (form.except_admin_role) extras.push('the admin role')
+  if (exceptPeople.value.length === 1) extras.push('1 selected person')
+  if (exceptPeople.value.length > 1) extras.push(`${exceptPeople.value.length} selected people`)
+  const who = extras.length === 1
+    ? extras[0]
+    : `${extras.slice(0, -1).join(', ')} and ${extras[extras.length - 1]}`
+  return `${who} will stay online. Everyone else will be blocked, including webhooks and registration.`
+})
+
+watch(() => form.scope, () => {
+  userQuery.value = ''
+  userResults.value = []
 })
 
 function flash(text, isError = false) {
@@ -244,19 +382,80 @@ function clearBranches() {
   form.branch_user_ids = []
 }
 
+function personLabel(person) {
+  return person.role ? `${person.name} · ${person.role}` : person.name
+}
+
 function applyServerData(data) {
   enabled.value = !!data.enabled
-  form.scope = data.scope === 'branches' ? 'branches' : 'all'
+  form.scope = data.scope === 'branches' || data.scope === 'users' ? data.scope : 'all'
   form.branch_user_ids = Array.isArray(data.branch_user_ids)
     ? data.branch_user_ids.map((id) => Number(id))
     : []
+  form.except_admin_role = !!data.except_admin_role
+  exceptPeople.value = Array.isArray(data.except_users) ? data.except_users.map(normalizePerson) : []
+  targetPeople.value = Array.isArray(data.target_users) ? data.target_users.map(normalizePerson) : []
   form.title = data.title || form.title
   form.message = data.message || form.message
   form.estimated_return = data.estimated_return || ''
   if (Array.isArray(data.available_branches)) {
     branches.value = data.available_branches
   }
+  userResults.value = []
+  userQuery.value = ''
   applyPayload(data)
+}
+
+function normalizePerson(person) {
+  return {
+    id: Number(person.id),
+    name: person.name || person.email || `User ${person.id}`,
+    email: person.email || '',
+    role: person.role || '',
+  }
+}
+
+function addPerson(listName, person) {
+  const list = listName === 'target' ? targetPeople : exceptPeople
+  const row = normalizePerson(person)
+  if (!list.value.some((item) => item.id === row.id)) {
+    list.value = [...list.value, row]
+  }
+  userResults.value = userResults.value.filter((item) => Number(item.id) !== row.id)
+}
+
+function removePerson(listName, id) {
+  const list = listName === 'target' ? targetPeople : exceptPeople
+  list.value = list.value.filter((item) => item.id !== Number(id))
+}
+
+function onSearchUsers() {
+  clearTimeout(userSearchTimer)
+  const term = userQuery.value.trim()
+  if (term.length < 1) {
+    userResults.value = []
+    searchingUsers.value = false
+    return
+  }
+  userSearchTimer = setTimeout(() => searchUsers(term), 250)
+}
+
+async function searchUsers(term) {
+  searchingUsers.value = true
+  try {
+    const res = await api.get('/maintenance/users', { params: { search: term } })
+    const selected = new Set(
+      (form.scope === 'users' ? targetPeople.value : exceptPeople.value).map((person) => person.id)
+    )
+    userResults.value = (res?.data?.data || [])
+      .map(normalizePerson)
+      .filter((person) => !selected.has(person.id))
+  } catch (e) {
+    userResults.value = []
+    flash(e?.response?.data?.message || 'Search failed.', true)
+  } finally {
+    searchingUsers.value = false
+  }
 }
 
 async function load() {
@@ -292,6 +491,9 @@ function settingsPayload(extra = {}) {
   return {
     scope: form.scope,
     branch_user_ids: form.scope === 'branches' ? form.branch_user_ids : [],
+    except_admin_role: form.scope !== 'users' && form.except_admin_role,
+    except_user_ids: form.scope === 'users' ? [] : exceptPeople.value.map((person) => person.id),
+    target_user_ids: form.scope === 'users' ? targetPeople.value.map((person) => person.id) : [],
     title: form.title,
     message: form.message,
     estimated_return: form.estimated_return || null,
@@ -303,7 +505,11 @@ function onToggleClick() {
   if (busy.value) return
   if (!enabled.value) {
     if (form.scope === 'branches' && !form.branch_user_ids.length) {
-      flash('Select at least one branch, or choose All branches.', true)
+      flash('Select at least one branch, or choose another scope.', true)
+      return
+    }
+    if (form.scope === 'users' && !targetPeople.value.length) {
+      flash('Search and select at least one person.', true)
       return
     }
     confirmOpen.value = true
@@ -319,6 +525,10 @@ function confirmEnable() {
 function saveAnnouncement() {
   if (form.scope === 'branches' && !form.branch_user_ids.length && enabled.value) {
     flash('Select at least one branch while maintenance is ON.', true)
+    return
+  }
+  if (form.scope === 'users' && !targetPeople.value.length && enabled.value) {
+    flash('Select at least one person while maintenance is ON.', true)
     return
   }
   put(settingsPayload())
@@ -667,6 +877,100 @@ onMounted(load)
   background: color-mix(in srgb, var(--mm-accent) 14%, #fff);
   border-radius: 999px;
   padding: 2px 6px;
+}
+
+.mm__people {
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.mm__label--space {
+  margin-top: 10px;
+}
+
+.mm__check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #fafbfc;
+  cursor: pointer;
+}
+
+.mm__check.is-active {
+  border-color: color-mix(in srgb, var(--mm-accent) 35%, #e2e8f0);
+  background: color-mix(in srgb, var(--mm-accent) 8%, #fff);
+}
+
+.mm__check strong {
+  display: block;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  color: #1e293b !important;
+}
+
+.mm__check small {
+  display: block;
+  margin-top: 1px;
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+  line-height: 1.35;
+}
+
+.mm__search {
+  position: relative;
+}
+
+.mm__search input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: #0f172a;
+  background: #fbfafc;
+}
+
+.mm__results {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #e8e6ee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.mm__results button {
+  width: 100%;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.mm__results button small {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.mm__results button:hover {
+  background: color-mix(in srgb, var(--mm-accent) 8%, #fff);
 }
 
 .mm__field {

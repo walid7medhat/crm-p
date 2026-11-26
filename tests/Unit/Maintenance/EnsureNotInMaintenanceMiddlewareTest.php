@@ -24,7 +24,13 @@ class EnsureNotInMaintenanceMiddlewareTest extends TestCase
             $this->markTestSkipped('platform_maintenance_settings not migrated');
         }
         Cache::forget(MaintenanceModeService::CACHE_KEY);
-        app(MaintenanceModeService::class)->current()->forceFill(['is_enabled' => true])->save();
+        $fill = ['is_enabled' => true, 'scope' => 'all', 'branch_user_ids' => []];
+        if (Schema::hasColumn('platform_maintenance_settings', 'except_admin_role')) {
+            $fill['except_admin_role'] = false;
+            $fill['except_user_ids'] = [];
+            $fill['target_user_ids'] = [];
+        }
+        app(MaintenanceModeService::class)->current()->forceFill($fill)->save();
         app(MaintenanceModeService::class)->forgetCache();
     }
 
