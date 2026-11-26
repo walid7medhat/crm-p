@@ -16,7 +16,7 @@ class MaintenanceController extends Controller
         $payload = $service->statusPayload();
         $user = $this->optionalUser($request);
         $affectsMe = $service->subjectIsAffected($user)
-            && ! ($user && $user->hasRole('super_admin') && ! $this->isImpersonating());
+            && ! $this->sessionBypassesMaintenance($user);
 
         return ApiResponse::success([
             'enabled' => (bool) ($payload['enabled'] ?? false),
@@ -112,10 +112,26 @@ class MaintenanceController extends Controller
         }
     }
 
-    private function isImpersonating(): bool
+    private function sessionBypassesMaintenance(?\App\Models\User $user): bool
+    {
+        if ($this->switchedBySuperAdmin()) {
+            return true;
+        }
+
+        return $user && $user->hasRole('super_admin');
+    }
+
+    private function switchedBySuperAdmin(): bool
     {
         try {
-            return (bool) JWTAuth::getPayload()->get('impersonated_by');
+            $actorId = (int) JWTAuth::getPayload()->get('impersonated_by');
+            if ($actorId <= 0) {
+                return false;
+            }
+
+            $actor = \App\Models\User::query()->find($actorId);
+
+            return $actor && $actor->hasRole('super_admin');
         } catch (\Throwable) {
             return false;
         }

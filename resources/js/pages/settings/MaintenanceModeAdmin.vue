@@ -19,7 +19,7 @@
       <div class="mm__toggle-row">
         <div>
           <p class="mm__label">Status</p>
-          <p class="mm__help">Super Admin always stays online.</p>
+          <p class="mm__help">Super Admin stays online, including after switching into another account.</p>
         </div>
         <button
           type="button"

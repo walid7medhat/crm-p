@@ -195,7 +195,7 @@ class GlobalMaintenanceModeTest extends TestCase
             ->assertJsonPath('maintenance', true);
     }
 
-    public function test_impersonation_token_cannot_bypass(): void
+    public function test_super_admin_switch_stays_online_during_maintenance(): void
     {
         $this->enableMaintenance();
         $sa = $this->makeUser('super_admin');
@@ -203,6 +203,25 @@ class GlobalMaintenanceModeTest extends TestCase
 
         // Mimic AuthController::impersonate — JWT subject is the target user.
         $token = JWTAuth::claims(['impersonated_by' => (int) $sa->id])->fromUser($agent);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/auth/notifications');
+        $this->assertNotSame(503, $response->status());
+        $this->assertNotTrue($response->json('maintenance'));
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/maintenance/status')
+            ->assertOk()
+            ->assertJsonPath('data.affects_me', false);
+    }
+
+    public function test_switch_by_non_super_admin_still_sees_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $actor = $this->makeUser('admin');
+        $agent = $this->makeUser('sales');
+
+        $token = JWTAuth::claims(['impersonated_by' => (int) $actor->id])->fromUser($agent);
 
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/auth/notifications')
