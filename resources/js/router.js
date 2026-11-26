@@ -98,19 +98,19 @@ const baseRoutes = [
   { path: '/suggestion', component: () => import('./pages/suggestions/index.vue'), meta: { requiresAuth: true } },
   { path: '/investment-analysis', component: () => import('./pages/dashboard/investment.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
   { path: '/settings/city-investments', component: () => import('./pages/dashboard/city-settings.vue'), meta: { requiresAuth: true, requiresSuperAdmin: true } },
-  { path: '/settings/roi-calculator', component: () => import('./pages/settings/roi-calculator.vue'), meta: { requiresAuth: true, oiaOnly: true } },
-  { path: '/settings/roe-calculator', component: () => import('./pages/settings/roe-calculator.vue'), meta: { requiresAuth: true, oiaOnly: true } },
+  { path: '/settings/roi-calculator', component: () => import('./pages/settings/roi-calculator.vue'), meta: { requiresAuth: true, oiaOnly: true, requiresListings: true } },
+  { path: '/settings/roe-calculator', component: () => import('./pages/settings/roe-calculator.vue'), meta: { requiresAuth: true, oiaOnly: true, requiresListings: true } },
    { path: '/home', component: () => import('./pages/dashboard/home-analytics.vue'), meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
    { path: '/', component: () => import('./pages/dashboard/home-analytics.vue'), meta: { requiresAuth: true, dashboardHome: true, analyticsHome: true } },
 
   { path: '/table-basic', component: () => import('./pages/table/table-basic.vue'), meta: { requiresAuth: true } },
   { path: '/table-data', component: () => import('./pages/table/table-data.vue'), meta: { requiresAuth: true } },
-  { path: '/property-form', component: () => import('./pages/listings/property-form.vue'), meta: { requiresAuth: true } },
+  { path: '/property-form', component: () => import('./pages/listings/property-form.vue'), meta: { requiresAuth: true, requiresListings: true, requiresPermission: 'listings-create', strictPermission: true } },
   { path: '/listings/overview', redirect: '/' },
-  { path: '/my-listing', component: () => import('./pages/listings/my-listing.vue'), meta: { requiresAuth: true } },
-  { path: '/saved-listings', component: () => import('./pages/listings/saved-listings.vue'), meta: { requiresAuth: true } },
-  { path: '/archive', component: () => import('./pages/listings/archive.vue'), meta: { requiresAuth: true } },
-  { path: '/alllisting', component: () => import('./components/alllisting/AllLsting.vue'), meta: { requiresAuth: true } },
+  { path: '/my-listing', component: () => import('./pages/listings/my-listing.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/saved-listings', component: () => import('./pages/listings/saved-listings.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/archive', component: () => import('./pages/listings/archive.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/alllisting', component: () => import('./components/alllisting/AllLsting.vue'), meta: { requiresAuth: true, requiresListings: true } },
   {
     path: '/property-compare',
     name: 'property.compare',
@@ -121,10 +121,10 @@ const baseRoutes = [
       return '/alllisting'
     },
   },
-  { path: '/notify-me', component: () => import('./pages/listings/notify-me.vue'), meta: { requiresAuth: true } },
-  { path: '/properties-map', component: () => import('./pages/listings/property-map.vue'), meta: { requiresAuth: true } },
-  { path: '/property-details/:id', name: 'property.show', component: () => import('./components/alllisting/PropertyShow.vue'), meta: { requiresAuth: true } },
-  { path: '/properties/:id/edit', name: 'property.edit', component: () => import('./pages/listings/edit-form.vue'), meta: { requiresAuth: true } },
+  { path: '/notify-me', component: () => import('./pages/listings/notify-me.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/properties-map', component: () => import('./pages/listings/property-map.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/property-details/:id', name: 'property.show', component: () => import('./components/alllisting/PropertyShow.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/properties/:id/edit', name: 'property.edit', component: () => import('./pages/listings/edit-form.vue'), meta: { requiresAuth: true, requiresListings: true } },
   { path: '/need-approve-requests', name: 'property.approve', component: () => import('./pages/listings/PendingApprovalsTable.vue'), meta: { requiresAuth: true } },
 
   { path: '/assign-role', component: () => import('./pages/roleAccess/assign-role.vue'), meta: { requiresAuth: true } },
@@ -169,9 +169,9 @@ const baseRoutes = [
   { path: '/roles/:id/edit', component: () => import('./pages/roles/form.vue'), name: 'edit-role', meta: { requiresAuth: true } },
   { path: '/roles/:id', component: () => import('./pages/roles/details.vue'), name: 'list-role', meta: { requiresAuth: true } },
 
-  { path: '/my-requests', component: () => import('./pages/listings/my_requests.vue'), meta: { requiresAuth: true } },
-  { path: '/my-orders', component: () => import('./pages/listings/my_order.vue'), meta: { requiresAuth: true } },
-  { path: '/my-viewings', component: () => import('./pages/listings/my_viewings.vue'), meta: { requiresAuth: true } },
+  { path: '/my-requests', component: () => import('./pages/listings/my_requests.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/my-orders', component: () => import('./pages/listings/my_order.vue'), meta: { requiresAuth: true, requiresListings: true } },
+  { path: '/my-viewings', component: () => import('./pages/listings/my_viewings.vue'), meta: { requiresAuth: true, requiresListings: true } },
   { path: '/all-requests', name: 'all-requests', component: () => import('./pages/listings/AllRequests.vue'), meta: { requiresAuth: true } },
   { path: '/hotDeal-requests',name:'hotDeal-requests', component: () => import('./pages/listings/hot_deal_requests.vue'), meta: { requiresAuth: true } },
   
@@ -404,6 +404,24 @@ const hasPermissionFromStorage = (permission) => {
   }
 }
 
+/**
+ * Same rule as the sidebar/nav Listings link: super_admin, the "only show listings"
+ * role, or anyone holding `listings-list` (the admin role alone is not enough).
+ */
+const canSeeListingsFromStorage = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return false
+    const u = JSON.parse(raw)
+    const roles = Array.isArray(u.roles) ? u.roles : []
+    if (roles.includes('accountant')) return false
+    const permissions = Array.isArray(u.permissions) ? u.permissions : []
+    return roles.includes('super_admin') || roles.includes('only show listings') || permissions.includes('listings-list')
+  } catch {
+    return false
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -480,6 +498,12 @@ router.beforeEach(async (to, from, next) => {
 
   // accountant: Leads (Converted) + Deals only — no Listings pages at all.
   if (isAccountantFromStorage() && resolveCrmSection(to.path) === CRM_SECTIONS.LISTINGS) {
+    next('/')
+    return
+  }
+
+  // Listings pages + calculators: blocked by URL too, not just hidden in the nav.
+  if (to.matched.some((r) => r.meta.requiresListings) && !canSeeListingsFromStorage()) {
     next('/')
     return
   }
