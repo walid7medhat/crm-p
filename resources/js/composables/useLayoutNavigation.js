@@ -677,9 +677,9 @@ export function buildTopModuleNav(ctx = {}) {
   // to a page the user is bounced out of.
   // Leads & Deals: /kanban and /kanban_deal require `show-leads` (admins always pass).
   const canSeeLeadsAndDeals = !ctx.isShowOnlyListing && !ctx.isHr && (!!ctx.isAdmin || can('show-leads'));
-  // Listings: hidden for roles without the module (e.g. accountant); otherwise admins,
-  // listing-only users, or anyone with `listings-list`.
-  const canSeeListings = !ctx.hideListings && (!!ctx.isAdmin || !!ctx.isShowOnlyListing || can('listings-list'));
+  // Listings: hidden for roles without the module (e.g. accountant); otherwise only super
+  // admins, listing-only users, or anyone holding `listings-list` (admins need it too).
+  const canSeeListings = !ctx.hideListings && (!!ctx.isSuperAdmin || !!ctx.isShowOnlyListing || can('listings-list'));
 
   const items = [
     { id: 'dashboard', label: 'Dashboard', path: '/', matchPaths: ['/', '/home'] },
