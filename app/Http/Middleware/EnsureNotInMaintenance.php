@@ -12,9 +12,11 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 /**
  * HTTP maintenance gate (all brands/hosts).
  *
- * - Scope "all": block everyone except Super Admin (and allowlisted infra).
+ * - Scope "all": block everyone except Super Admin, the optional admin-role exemption, and picked people.
  * - Scope "branches": block only users under selected CRM branches; public APIs stay up.
- * Bypass ONLY Spatie hasRole('super_admin') and never while impersonating.
+ * - Scope "users": block only the selected people; everyone else and public APIs stay up.
+ * Bypass Spatie hasRole('super_admin'), including a Switch account session
+ * started by a super admin (JWT claim impersonated_by).
  */
 class EnsureNotInMaintenance
 {
@@ -125,19 +127,30 @@ class EnsureNotInMaintenance
 
     private function canBypass(?User $user): bool
     {
-        if (! $user) {
-            return false;
+        if ($this->switchedBySuperAdmin()) {
+            return true;
         }
 
+        return $user && $user->hasRole('super_admin');
+    }
+
+    /**
+     * Switch account stamps impersonated_by with the actor id.
+     * Only a super admin actor keeps the switched session out of maintenance.
+     */
+    private function switchedBySuperAdmin(): bool
+    {
         try {
-            $impersonatedBy = JWTAuth::getPayload()->get('impersonated_by');
-            if ($impersonatedBy) {
+            $actorId = (int) JWTAuth::getPayload()->get('impersonated_by');
+            if ($actorId <= 0) {
                 return false;
             }
-        } catch (\Throwable) {
-            // fall through
-        }
 
-        return $user->hasRole('super_admin');
+            $actor = User::query()->find($actorId);
+
+            return $actor && $actor->hasRole('super_admin');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

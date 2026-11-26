@@ -145,6 +145,7 @@ Route::get('brand', [BrandController::class, 'show']);
 // Global maintenance — status is public (SPA poll / login page); manage is super_admin only.
 Route::get('maintenance/status', [\App\Http\Controllers\Api\MaintenanceController::class, 'status']);
 Route::middleware(['jwt.auth', 'role:super_admin'])->prefix('maintenance')->group(function () {
+    Route::get('/users', [\App\Http\Controllers\Api\MaintenanceController::class, 'users']);
     Route::get('/', [\App\Http\Controllers\Api\MaintenanceController::class, 'show']);
     Route::put('/', [\App\Http\Controllers\Api\MaintenanceController::class, 'update']);
 });

@@ -38,6 +38,11 @@ class GlobalMaintenanceModeTest extends TestCase
             $update['scope'] = 'all';
             $update['branch_user_ids'] = json_encode([]);
         }
+        if (Schema::hasColumn('platform_maintenance_settings', 'except_admin_role')) {
+            $update['except_admin_role'] = false;
+            $update['except_user_ids'] = json_encode([]);
+            $update['target_user_ids'] = json_encode([]);
+        }
         PlatformMaintenanceSetting::query()->update($update);
         app(MaintenanceModeService::class)->forgetCache();
         app(BrandContext::class)->set(config('brands.brands.oia'));
@@ -201,7 +206,7 @@ class GlobalMaintenanceModeTest extends TestCase
             ->assertJsonPath('maintenance', true);
     }
 
-    public function test_impersonation_token_cannot_bypass(): void
+    public function test_super_admin_switch_stays_online_during_maintenance(): void
     {
         $this->enableMaintenance();
         $sa = $this->makeUser('super_admin');
@@ -209,6 +214,25 @@ class GlobalMaintenanceModeTest extends TestCase
 
         // Mimic AuthController::impersonate — JWT subject is the target user.
         $token = JWTAuth::claims(['impersonated_by' => (int) $sa->id])->fromUser($agent);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/auth/notifications');
+        $this->assertNotSame(503, $response->status());
+        $this->assertNotTrue($response->json('maintenance'));
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/maintenance/status')
+            ->assertOk()
+            ->assertJsonPath('data.affects_me', false);
+    }
+
+    public function test_switch_by_non_super_admin_still_sees_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $actor = $this->makeUser('admin');
+        $agent = $this->makeUser('sales');
+
+        $token = JWTAuth::claims(['impersonated_by' => (int) $actor->id])->fromUser($agent);
 
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/auth/notifications')
@@ -288,6 +312,116 @@ class GlobalMaintenanceModeTest extends TestCase
         $this->assertNotTrue($other->json('maintenance'));
 
         // Partial scope keeps public integrations available (not maintenance 503).
+        $public = $this->postJson('/api/bitrix24/webhook', []);
+        $this->assertNotSame(503, $public->status());
+        $this->assertNotTrue($public->json('maintenance'));
+    }
+
+    public function test_admin_role_can_be_exempted_without_exempting_other_roles(): void
+    {
+        if (! Schema::hasColumn('platform_maintenance_settings', 'except_admin_role')) {
+            $this->markTestSkipped('people scope columns missing');
+        }
+
+        $sa = $this->makeUser('super_admin');
+        $admin = $this->makeUser('admin');
+        $agent = $this->makeUser('sales');
+
+        $this->asUser($sa)->putJson('/api/maintenance', [
+            'is_enabled' => true,
+            'scope' => 'all',
+            'except_admin_role' => true,
+        ])->assertOk()
+            ->assertJsonPath('data.except_admin_role', true);
+
+        $adminResponse = $this->asUser($admin)->getJson('/api/auth/notifications');
+        $this->assertNotSame(503, $adminResponse->status());
+        $this->assertNotTrue($adminResponse->json('maintenance'));
+
+        $this->asUser($agent)->getJson('/api/auth/notifications')
+            ->assertStatus(503)
+            ->assertJsonPath('maintenance', true);
+
+        $this->asUser($admin)->getJson('/api/maintenance/status')
+            ->assertOk()
+            ->assertJsonPath('data.affects_me', false);
+    }
+
+    public function test_specific_person_can_be_exempted_by_search_selection(): void
+    {
+        if (! Schema::hasColumn('platform_maintenance_settings', 'except_user_ids')) {
+            $this->markTestSkipped('people scope columns missing');
+        }
+
+        $sa = $this->makeUser('super_admin');
+        $kept = $this->makeUser('sales');
+        $kept->forceFill(['name' => 'Kept Agent Unique'])->save();
+        $blocked = $this->makeUser('sales');
+
+        $this->asUser($sa)->getJson('/api/maintenance/users?search=Kept%20Agent%20Unique')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $kept->id]);
+
+        $this->asUser($blocked)->getJson('/api/maintenance/users?search=Kept')->assertForbidden();
+
+        $this->asUser($sa)->putJson('/api/maintenance', [
+            'is_enabled' => true,
+            'scope' => 'all',
+            'except_admin_role' => false,
+            'except_user_ids' => [$kept->id, $sa->id],
+        ])->assertOk()
+            ->assertJsonPath('data.except_user_ids', [$kept->id]);
+
+        $keptResponse = $this->asUser($kept)->getJson('/api/auth/notifications');
+        $this->assertNotSame(503, $keptResponse->status());
+        $this->assertNotTrue($keptResponse->json('maintenance'));
+
+        $this->asUser($blocked)->getJson('/api/auth/notifications')
+            ->assertStatus(503)
+            ->assertJsonPath('maintenance', true);
+    }
+
+    public function test_selected_people_scope_blocks_only_that_person(): void
+    {
+        if (! Schema::hasColumn('platform_maintenance_settings', 'target_user_ids')) {
+            $this->markTestSkipped('people scope columns missing');
+        }
+
+        $sa = $this->makeUser('super_admin');
+        $target = $this->makeUser('admin');
+        $other = $this->makeUser('sales');
+
+        $this->asUser($sa)->putJson('/api/maintenance', [
+            'is_enabled' => true,
+            'scope' => 'users',
+            'target_user_ids' => [],
+        ])->assertStatus(422);
+
+        $this->asUser($sa)->putJson('/api/maintenance', [
+            'is_enabled' => true,
+            'scope' => 'users',
+            'target_user_ids' => [$target->id],
+            'title' => 'Only one person',
+        ])->assertOk()
+            ->assertJsonPath('data.scope', 'users')
+            ->assertJsonPath('data.target_user_ids', [$target->id]);
+
+        $this->asUser($target)->getJson('/api/auth/notifications')
+            ->assertStatus(503)
+            ->assertJsonPath('maintenance', true);
+
+        $this->asUser($target)->getJson('/api/maintenance/status')
+            ->assertOk()
+            ->assertJsonPath('data.affects_me', true);
+
+        $otherResponse = $this->asUser($other)->getJson('/api/auth/notifications');
+        $this->assertNotSame(503, $otherResponse->status());
+        $this->assertNotTrue($otherResponse->json('maintenance'));
+
+        $this->asUser($other)->getJson('/api/maintenance/status')
+            ->assertOk()
+            ->assertJsonPath('data.affects_me', false);
+
         $public = $this->postJson('/api/bitrix24/webhook', []);
         $this->assertNotSame(503, $public->status());
         $this->assertNotTrue($public->json('maintenance'));

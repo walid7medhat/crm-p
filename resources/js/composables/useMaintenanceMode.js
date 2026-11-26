@@ -42,6 +42,18 @@ function isStoredSuperAdmin() {
   }
 }
 
+function isSwitchedBySuperAdmin() {
+  try {
+    const raw = localStorage.getItem('impersonator_user')
+    if (!raw) return false
+    const user = JSON.parse(raw)
+    const roles = user?.roles || []
+    return Array.isArray(roles) && roles.includes('super_admin')
+  } catch {
+    return false
+  }
+}
+
 function applyPayload(payload) {
   if (!payload || typeof payload !== 'object') return
   enabled.value = !!payload.enabled
@@ -56,8 +68,10 @@ function applyPayload(payload) {
     affectsMe.value = payload.affects_me
   } else if (!payload.enabled) {
     affectsMe.value = false
-  } else if (payload.scope === 'all') {
-    affectsMe.value = !!resolveAuthToken() && !isStoredSuperAdmin()
+  } else if (payload.scope === 'branches' || payload.scope === 'users') {
+    affectsMe.value = false
+  } else if (payload.scope === 'all' || !payload.scope) {
+    affectsMe.value = !!resolveAuthToken() && !isStoredSuperAdmin() && !isSwitchedBySuperAdmin()
   }
   bootstrapped.value = true
 }
@@ -69,9 +83,8 @@ function applyPayload(payload) {
 const shouldBlockUi = computed(() => {
   if (!enabled.value) return false
   if (!resolveAuthToken()) return false
-  if (isStoredSuperAdmin()) return false
-  if (scope.value === 'branches') return !!affectsMe.value
-  return true
+  if (isStoredSuperAdmin() || isSwitchedBySuperAdmin()) return false
+  return !!affectsMe.value
 })
 
 export function useMaintenanceMode() {
