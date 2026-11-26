@@ -3019,12 +3019,15 @@ const desktopListingTitle = computed(() => {
   return p.project?.title || p.area?.name || p.title || p.reference_number || '';
 });
 
-// Same text as the listing card (area.title: "Leaf, Parent, …, City"),
+// Full location, card order ("Leaf, Parent, …, City, Country"),
 // with each name once and without repeating the title.
 const desktopLocationLabel = computed(() => {
   const p = property.value;
   if (!p) return '';
-  const names = String(p.area?.title || p.area?.area_title || '').split(',');
+  const hierarchy = Array.isArray(p.area?.hierarchy) ? p.area.hierarchy : [];
+  const names = hierarchy.length
+    ? hierarchy.map((h) => h?.name).reverse()
+    : String(p.area?.area_title || p.area?.title || '').split(',');
   const key = (s) => String(s || '').trim().toLowerCase();
   const seen = new Set([key(desktopListingTitle.value)]);
   const parts = [];
