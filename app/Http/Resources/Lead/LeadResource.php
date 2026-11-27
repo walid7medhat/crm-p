@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\LeadHistory;
 use App\Models\User;
 use App\Services\Bitrix24\Bitrix24FieldLabels;
+use App\Support\LeadTracking;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
 
@@ -425,6 +426,8 @@ $branchName =
             'can_delete' => auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin')),
             'raw_meta_data' => $rawMetaData,
             'facebook_questions_answers' => $facebookFields,
+            // gclid / utm_* / landing_page from WordPress — super_admin / admin only, never user #30.
+            'tracking' => LeadTracking::canView(auth()->user()) ? LeadTracking::forLead($this->resource) : null,
             'parent' => $this->formatLeadUser($assignedBy),
             'assigned_at' => $assignmentHistory ? $assignmentHistory->created_at : $this->created_at,
             'last_activity_at' => $finalLastActivityAt,

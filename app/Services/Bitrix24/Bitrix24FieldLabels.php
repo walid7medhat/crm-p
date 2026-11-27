@@ -121,6 +121,11 @@ class Bitrix24FieldLabels
             return true;
         }
 
+        // Ad tracking (gclid / utm_* / landing_page) has its own admin-only section.
+        if (\App\Support\LeadTracking::isTrackingKey($fieldName)) {
+            return true;
+        }
+
         if (preg_match('/^UF_CRM_/i', (string) $fieldName)) {
             return (bool) preg_match('/^\s*\d{1,5}(\s*,\s*\d{1,5})*\s*$/', (string) $value);
         }
