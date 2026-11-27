@@ -1562,6 +1562,7 @@ const sortOptions = [
       { id: 'kitchen', label: 'Kitchen' },
       { id: 'furnishing', label: 'Furnishing' },
       { id: 'extras', label: 'Extras' },
+      { id: 'amenities', label: 'Amenities' },
     ];
     const FEATURE_PREVIEW = 8;
     const filteredMobileFeatures = computed(() => {

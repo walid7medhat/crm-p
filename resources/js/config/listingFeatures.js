@@ -43,6 +43,7 @@ export const LISTING_FEATURE_OPTIONS = [
   { key: 'pool_view', label: 'Pool View', category: 'view' },
   { key: 'fountain_view', label: 'Fountain View', category: 'view' },
   { key: 'burj_khalifa_view', label: 'Burj Khalifa View', category: 'view' },
+  { key: 'lake_view', label: 'Lake View', category: 'view' },
 
   // Rooms
   { key: 'maid_room', label: "Maid Room", category: 'rooms' },
@@ -78,6 +79,24 @@ export const LISTING_FEATURE_OPTIONS = [
   // Extras
   { key: 'private_pool', label: 'Private Pool', category: 'extras' },
   { key: 'private_gym', label: 'Private Gym', category: 'extras' },
+
+  // Amenities
+  { key: 'beach', label: 'Beach', category: 'amenities' },
+  { key: 'private_beach', label: 'Private Beach', category: 'amenities' },
+  { key: 'shared_pool', label: 'Shared Pool', category: 'amenities' },
+  { key: 'pets_allowed', label: 'Pets Allowed', category: 'amenities' },
+  { key: 'shared_gym', label: 'Shared Gym', category: 'amenities' },
+  { key: 'central_ac', label: 'Central AC', category: 'amenities' },
+  { key: 'bbq_area', label: 'BBQ Area', category: 'amenities' },
+  { key: 'parking', label: 'Parking', category: 'amenities' },
+  { key: 'covered_parking', label: 'Covered Parking', category: 'amenities' },
+  { key: 'security', label: 'Security', category: 'amenities' },
+  { key: 'concierge', label: 'Concierge', category: 'amenities' },
+  { key: 'shared_spa', label: 'Shared Spa', category: 'amenities' },
+  { key: 'childrens_play_area', label: "Children's Play Area", category: 'amenities' },
+  { key: 'childrens_pool', label: "Children's Pool", category: 'amenities' },
+  { key: 'lobby_in_building', label: 'Lobby in Building', category: 'amenities' },
+  { key: 'vastu_compliant', label: 'Vastu-compliant', category: 'amenities' },
 ];
 
 /** Map of key → label, useful for quick lookups. */
