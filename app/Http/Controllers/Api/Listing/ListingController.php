@@ -4213,6 +4213,7 @@ public function getActivityLog($listingId)
         'pool_view'          => 'Pool View',
         'fountain_view'      => 'Fountain View',
         'burj_khalifa_view'  => 'Burj Khalifa View',
+        'lake_view'          => 'Lake View',
 
         // Rooms
         'maid_room'          => 'Maid Room',
@@ -4248,6 +4249,24 @@ public function getActivityLog($listingId)
         // Extras
         'private_pool'       => 'Private Pool',
         'private_gym'        => 'Private Gym',
+
+        // Amenities
+        'beach'               => 'Beach',
+        'private_beach'       => 'Private Beach',
+        'shared_pool'         => 'Shared Pool',
+        'pets_allowed'        => 'Pets Allowed',
+        'shared_gym'          => 'Shared Gym',
+        'central_ac'          => 'Central AC',
+        'bbq_area'            => 'BBQ Area',
+        'parking'             => 'Parking',
+        'covered_parking'     => 'Covered Parking',
+        'security'            => 'Security',
+        'concierge'           => 'Concierge',
+        'shared_spa'          => 'Shared Spa',
+        'childrens_play_area' => "Children's Play Area",
+        'childrens_pool'      => "Children's Pool",
+        'lobby_in_building'   => 'Lobby in Building',
+        'vastu_compliant'     => 'Vastu-compliant',
     ];
 
     $importantFields = [
