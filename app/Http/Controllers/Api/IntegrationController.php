@@ -18,6 +18,7 @@ use App\Helpers\LeadHistoryHelper;
 use App\Models\LeadHistory;
 use App\Events\LeadUpdated;
 use App\Services\LeadAssignmentService;
+use App\Support\LeadTracking;
 
 class IntegrationController extends Controller
 {
@@ -935,10 +936,16 @@ public function store_wordpress(Request $request)
 
     unset($data['responsible_person_id'], $data['responsible_person'], $data['secret'], $data['api_key']);
 
+    // gclid / utm_* / landing_page go to their own columns (admins only), not the questions list.
+    $tracking = LeadTracking::extract($data);
+
 $fieldData = [];
 foreach ($data as $key => $value) {
 
     if (in_array($key, ['responsible_person_id','responsible_person','lead_name','source','secret','api_key'])) {
+        continue;
+    }
+    if (LeadTracking::isTrackingKey($key)) {
         continue;
     }
 
@@ -973,6 +980,8 @@ $fieldMappings = [
         'raw_meta_data' => json_encode($fieldMappings),
     ]);
  $lead->lead_branch_source=$lead->responsiblePerson?->admin_parent?->name;
+    // Not mass-assignable on purpose (lead update must not change them).
+    $lead->forceFill($tracking);
           $lead->save();
 
     Log::channel('wordpress_leads')->info('WordPress lead created', [

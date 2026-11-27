@@ -196,6 +196,22 @@
                 No additional information
             </div>
         </div>
+        <!-- Ad tracking from WordPress — the API only sends it to super_admin / admin (not user #30). -->
+        <div v-if="trackingRows.length" class="info-section">
+            <div class="info-section-title">Ad Tracking</div>
+            <div class="info-group" v-for="row in trackingRows" :key="row.key">
+                <label class="form-label-custom">{{ row.label }}</label>
+                <div class="info-value" style="word-break: break-all;">
+                    <a
+                        v-if="row.key === 'landing_page' && /^https?:\/\//i.test(row.value)"
+                        :href="row.value"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >{{ row.value }}</a>
+                    <span v-else>{{ row.value }}</span>
+                </div>
+            </div>
+        </div>
  <!-- ✅ WhatsApp Qualification Section -->
         <div v-if="lead?.whatsapp_qualification && lead.whatsapp_qualification.length > 0" class="info-section whatsapp-qualification-section">
             <div class="info-section-title">WhatsApp Qualification</div>
@@ -969,6 +985,24 @@ const questionRows = computed(() => {
     if (html) rows.push({ key: `meta-${question}`, question, html })
   })
   return rows
+})
+
+const TRACKING_LABELS = {
+  gclid: 'GCLID',
+  utm_source: 'UTM Source',
+  utm_medium: 'UTM Medium',
+  utm_campaign: 'UTM Campaign',
+  utm_term: 'UTM Term',
+  utm_content: 'UTM Content',
+  landing_page: 'Landing Page',
+}
+
+const trackingRows = computed(() => {
+  const tracking = props.lead?.tracking
+  if (!tracking) return []
+  return Object.entries(TRACKING_LABELS)
+    .filter(([key]) => tracking[key] != null && String(tracking[key]).trim() !== '')
+    .map(([key, label]) => ({ key, label, value: String(tracking[key]) }))
 })
 
 const commentPortalLinks = ref([])
