@@ -63,7 +63,8 @@ class ActivityReminderNotification extends Notification implements ShouldQueue
     {
         return $this->isDeal()
             ? '/kanban_deal?deal=' . $this->activity->deal_id
-            : '/leads/' . $this->activity->lead_id . '?tab=activities';
+            // The SPA has no /leads/{id} page (blank screen); ?lead= opens the lead on any page.
+            : '/?lead=' . $this->activity->lead_id . '&focus=activity';
     }
 
     /** lead_id / lead_number, or deal_id / deal_number. */

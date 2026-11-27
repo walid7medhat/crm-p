@@ -46,7 +46,8 @@ class CommentMentionNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         $leadName = $this->lead->lead_name ?: "Lead #{$this->lead->lead_number}";
-        $url = url('/leads/' . $this->lead->id . '#comment-' . $this->comment->id);
+        // The SPA has no /leads/{id} page (blank screen); ?lead= opens the lead on any page.
+        $url = url('/?lead=' . $this->lead->id . '&focus=comments');
         
         return (new MailMessage)
             ->subject($this->getSubject())
