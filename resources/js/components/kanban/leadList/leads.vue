@@ -431,7 +431,15 @@
                                                             <!-- Work Phone -->
                                                             <div v-else-if="field.key === 'work_phone' && task?.work_phone" class="info-item mb-8">
                                                                 <div class="info-label text-secondary-light text-xs">Phone</div>
-                                                                <div class="info-value">{{ task.work_phone.slice(0,8) + '....' }}</div>
+                                                                <div class="info-value info-value--phone">
+                                                                    <span
+                                                                        v-if="phoneCountryFlag(task)"
+                                                                        class="phone-country-flag"
+                                                                        :title="phoneCountryTitle(task)"
+                                                                        aria-hidden="true"
+                                                                    >{{ phoneCountryFlag(task) }}</span>
+                                                                    <span>{{ task.work_phone.slice(0,8) + '....' }}</span>
+                                                                </div>
                                                             </div>
                                                             
                                                             <!-- Email -->
@@ -1445,6 +1453,7 @@ import {
 import { normalizePublicStorageUrl } from '@/composables/usePublicStorageUrl.js'
 import { formatLeadBudgetRange } from '@/utils/budgetInput'
 import { maskQuestionAnswer } from '@/utils/maskPhones'
+import { phoneCountryFlagFromPhone, phoneCountryTitleFromPhone } from '@/utils/phoneCountryFlag'
 import { shouldSuppressLeadUpdateNotification, normalizeLeadRealtimeEvent, buildCrmLeadNotificationEvent } from '@/utils/leadRealtimeNotifications.js'
 import Swal from 'sweetalert2'
 
@@ -5441,6 +5450,14 @@ function listPhone(task) {
     return value.length > 8 ? `${value.slice(0, 8)}…` : value
 }
 
+function phoneCountryFlag(task) {
+    return phoneCountryFlagFromPhone(task?.work_phone)
+}
+
+function phoneCountryTitle(task) {
+    return phoneCountryTitleFromPhone(task?.work_phone)
+}
+
 function formatListStamp(dateString) {
     if (!dateString) return ''
     const date = new Date(dateString)
@@ -8152,6 +8169,21 @@ const fetchRevertNotifications = async () => {
     font-size: 11px;
     line-height: 12px;
     color: #353535;
+}
+
+.info-value--phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.phone-country-flag {
+    flex: 0 0 auto;
+    font-size: 11px;
+    line-height: 1;
+    cursor: default;
+    user-select: none;
 }
 
 .border-neutral-200 {

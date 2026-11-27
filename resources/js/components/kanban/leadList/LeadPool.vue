@@ -274,7 +274,15 @@
                             </div>
                             <div v-else-if="field.key === 'work_phone' && lead.work_phone" class="info-item mb-8">
                                 <div class="info-label text-secondary-light text-xs">Phone</div>
-                                <div class="info-value">{{ lead.work_phone.slice(0,8) + '....' }}</div>
+                                <div class="info-value info-value--phone">
+                                    <span
+                                        v-if="phoneCountryFlag(lead)"
+                                        class="phone-country-flag"
+                                        :title="phoneCountryTitle(lead)"
+                                        aria-hidden="true"
+                                    >{{ phoneCountryFlag(lead) }}</span>
+                                    <span>{{ lead.work_phone.slice(0,8) + '....' }}</span>
+                                </div>
                             </div>
                             <div v-else-if="field.key === 'email' && lead.email" class="info-item mb-8">
                                 <div class="info-label text-secondary-light text-xs">Email</div>
@@ -378,6 +386,7 @@ import { ref, onMounted, onUnmounted, computed, defineAsyncComponent } from 'vue
 import { useRoute } from 'vue-router'
 import api from '@/plugins/axios'
 import { maskQuestionAnswer } from '@/utils/maskPhones'
+import { phoneCountryFlagFromPhone, phoneCountryTitleFromPhone } from '@/utils/phoneCountryFlag'
 import Swal from 'sweetalert2'
 import DuplicateLeadsModal from './DuplicateLeadsModal.vue'
 import { openLeadView, onLeadViewUpdated } from '@/composables/useLeadViewModal.js'
@@ -1063,6 +1072,14 @@ const formatDate = (dateString) => {
     })
 }
 
+function phoneCountryFlag(lead) {
+  return phoneCountryFlagFromPhone(lead?.work_phone)
+}
+
+function phoneCountryTitle(lead) {
+  return phoneCountryTitleFromPhone(lead?.work_phone)
+}
+
 const formatMaskedEmail = (email) => {
     const raw = String(email || '').trim()
     if (!raw) return ''
@@ -1470,6 +1487,21 @@ defineExpose({
     font-size: 11px;
     line-height: 1.3;
     color: #353535;
+}
+
+.lead-pool-wrapper .info-value--phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.lead-pool-wrapper .phone-country-flag {
+    flex: 0 0 auto;
+    font-size: 11px;
+    line-height: 1;
+    cursor: default;
+    user-select: none;
 }
 
 .lead-pool-wrapper .avatar-sm {
