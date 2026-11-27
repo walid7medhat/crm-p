@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\DealActivity;
 use App\Models\LeadActivity;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -9,6 +10,11 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 
+/**
+ * Reminder for a lead activity or a deal activity (sent by activities:send-reminders).
+ * Lead reminders carry lead_id, deal reminders carry deal_id; the bell opens the
+ * matching record from that key.
+ */
 class ActivityReminderNotification extends Notification implements ShouldQueue
 {
     use Queueable;
@@ -18,145 +24,154 @@ class ActivityReminderNotification extends Notification implements ShouldQueue
     public $isLeadOwner;
 
     /**
-     * Create a new notification instance.
+     * @param  bool  $isLeadOwner  true when sent to the record's responsible person rather than the activity owner.
      */
-    public function __construct(LeadActivity $activity, string $timeframe, bool $isLeadOwner = false)
+    public function __construct(LeadActivity|DealActivity $activity, string $timeframe, bool $isLeadOwner = false)
     {
         $this->activity = $activity;
         $this->timeframe = $timeframe;
         $this->isLeadOwner = $isLeadOwner;
     }
 
-    /**
-     * Get the notification's delivery channels.
-     */
     public function via(object $notifiable): array
     {
         return ['database', 'broadcast', 'mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
+    private function isDeal(): bool
+    {
+        return $this->activity instanceof DealActivity;
+    }
+
+    private function recordLabel(): string
+    {
+        return $this->isDeal() ? 'deal' : 'lead';
+    }
+
+    private function recordName(): string
+    {
+        if ($this->isDeal()) {
+            $deal = $this->activity->deal;
+            return $deal?->deal_name ?: ('Deal #' . ($deal?->deal_number ?? $this->activity->deal_id));
+        }
+
+        $lead = $this->activity->lead;
+        return $lead?->name ?: ('Lead #' . ($lead?->lead_number ?? $this->activity->lead_id));
+    }
+
+    private function path(): string
+    {
+        return $this->isDeal()
+            ? '/kanban_deal?deal=' . $this->activity->deal_id
+            : '/leads/' . $this->activity->lead_id . '?tab=activities';
+    }
+
+    /** lead_id / lead_number, or deal_id / deal_number. */
+    private function recordKeys(): array
+    {
+        if ($this->isDeal()) {
+            return [
+                'deal_id' => $this->activity->deal_id,
+                'deal_name' => $this->recordName(),
+                'deal_number' => $this->activity->deal?->deal_number,
+            ];
+        }
+
+        return [
+            'lead_id' => $this->activity->lead_id,
+            'lead_name' => $this->recordName(),
+            'lead_number' => $this->activity->lead?->lead_number,
+        ];
+    }
+
+    private function reminderTime(string $format): string
+    {
+        return $this->activity->reminder_date
+            ->copy()
+            ->setTimezone(config('app.timezone'))
+            ->format($format);
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
-        $lead = $this->activity->lead;
-        $activityUser = $this->activity->user;
-        $reminderTime = $this->activity->reminder_date->format('F j, Y \a\t g:i A');
-        
-        $subject = $this->getSubject();
-        $message = $this->getMessage();
-        
-        $url = url('/leads/' . $lead->id . '?tab=activities');
-        
         return (new MailMessage)
-            ->subject($subject)
+            ->subject($this->getSubject())
             ->greeting('Hello ' . $notifiable->name . '!')
-            ->line($message)
-            ->line('Lead: ' . $lead->name)
+            ->line($this->getMessage())
+            ->line(ucfirst($this->recordLabel()) . ': ' . $this->recordName())
             ->line('Activity: ' . $this->activity->title)
-            ->line('Scheduled for: ' . $reminderTime)
-            ->line('Assigned to: ' . $activityUser->name)
-            ->action('View Activity', $url)
+            ->line('Scheduled for: ' . $this->reminderTime('F j, Y \a\t g:i A'))
+            ->line('Assigned to: ' . ($this->activity->user?->name ?? '—'))
+            ->action('View Activity', url($this->path()))
             ->line('Thank you for using our CRM system!');
     }
 
-    /**
-     * Get the database representation of the notification.
-     */
     public function toDatabase(object $notifiable): array
     {
-        $lead = $this->activity->lead;
-        
-        return [
+        return array_merge([
             'type' => 'activity_reminder',
             'activity_id' => $this->activity->id,
-            'lead_id' => $lead->id,
-            'lead_name' => $lead->name,
-            'lead_number' => $lead->lead_number,
             'activity_title' => $this->activity->title,
             'reminder_date' => $this->activity->reminder_date->toISOString(),
             'timeframe' => $this->timeframe,
             'is_lead_owner' => $this->isLeadOwner,
             'assigned_user_id' => $this->activity->user_id,
-            'assigned_user_name' => $this->activity->user->name,
+            'assigned_user_name' => $this->activity->user?->name,
             'message' => $this->getMessage(),
-            'timestamp' => now()->toISOString()
-        ];
+            'url' => $this->path(),
+            'timestamp' => now()->toISOString(),
+        ], $this->recordKeys());
     }
 
-    /**
-     * Get the broadcast representation of the notification.
-     */
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
-        $lead = $this->activity->lead;
-        
-        return new BroadcastMessage([
+        $keys = $this->recordKeys();
+        $record = $this->isDeal()
+            ? ['deal' => ['id' => $keys['deal_id'], 'name' => $keys['deal_name'], 'deal_number' => $keys['deal_number']]]
+            : ['lead' => ['id' => $keys['lead_id'], 'name' => $keys['lead_name'], 'lead_number' => $keys['lead_number']]];
+
+        return new BroadcastMessage(array_merge([
             'type' => 'activity_reminder',
             'activity' => [
                 'id' => $this->activity->id,
                 'title' => $this->activity->title,
                 'reminder_date' => $this->activity->reminder_date->toISOString(),
-                'reminder_date_formatted' => $this->activity->reminder_date->format('M j, Y g:i A'),
-            ],
-            'lead' => [
-                'id' => $lead->id,
-                'name' => $lead->name,
-                'lead_number' => $lead->lead_number,
+                'reminder_date_formatted' => $this->reminderTime('M j, Y g:i A'),
             ],
             'timeframe' => $this->timeframe,
             'is_lead_owner' => $this->isLeadOwner,
             'message' => $this->getMessage(),
             'timestamp' => now()->toISOString(),
-            'url' => '/leads/' . $lead->id . '?tab=activities'
-        ]);
+            'url' => $this->path(),
+        ], $record));
     }
 
-    /**
-     * Get notification subject.
-     */
     private function getSubject(): string
     {
-        $timeframeText = ucfirst($this->timeframe);
-        $prefix = $this->isLeadOwner ? 'Lead Activity Reminder: ' : 'Activity Reminder: ';
-        
-        return $prefix . $timeframeText . ' - ' . $this->activity->title;
+        $prefix = $this->isLeadOwner
+            ? (ucfirst($this->recordLabel()) . ' Activity Reminder: ')
+            : 'Activity Reminder: ';
+
+        return $prefix . ucfirst($this->timeframe) . ' - ' . $this->activity->title;
     }
 
-    /**
-     * Get notification message.
-     */
     private function getMessage(): string
     {
-        $lead = $this->activity->lead;
-        $activityUser = $this->activity->user;
-        $reminderTime = $this->activity->reminder_date->format('F j, Y \a\t g:i A');
-        
-        $leadName = $lead->name ?: "Lead #{$lead->lead_number}";
-        $assignedTo = $activityUser->name;
-        
-        $prefix = $this->isLeadOwner ? 
-            "There's an activity scheduled for your lead" : 
-            "You have a scheduled activity";
-            
-        $timeframeMessage = '';
-        
-        switch ($this->timeframe) {
-            case 'today':
-                $timeframeMessage = 'happening today';
-                break;
-            case 'tomorrow':
-                $timeframeMessage = 'scheduled for tomorrow';
-                break;
-            case 'overdue':
-                $timeframeMessage = 'that is overdue';
-                break;
-            default:
-                $timeframeMessage = 'coming up';
-                break;
-        }
-        
-        return "{$prefix} '{$this->activity->title}' {$timeframeMessage} for lead '{$leadName}' at {$reminderTime}. Assigned to: {$assignedTo}.";
+        $label = $this->recordLabel();
+        $prefix = $this->isLeadOwner
+            ? "There's an activity scheduled for your {$label}"
+            : 'You have a scheduled activity';
+
+        $timeframeMessage = match ($this->timeframe) {
+            'today' => 'happening today',
+            'tomorrow' => 'scheduled for tomorrow',
+            'overdue' => 'that is overdue',
+            default => 'coming up',
+        };
+
+        $assignedTo = $this->activity->user?->name ?? '—';
+
+        return "{$prefix} '{$this->activity->title}' {$timeframeMessage} for {$label} '{$this->recordName()}' at "
+            . $this->reminderTime('F j, Y \a\t g:i A') . ". Assigned to: {$assignedTo}.";
     }
 }

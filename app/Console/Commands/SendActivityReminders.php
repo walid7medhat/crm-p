@@ -2,101 +2,114 @@
 
 namespace App\Console\Commands;
 
+use App\Models\DealActivity;
 use App\Models\LeadActivity;
 use App\Models\User;
 use App\Notifications\ActivityReminderNotification;
 use Illuminate\Console\Command;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Sends due reminders for lead and deal activities. Runs every minute (bootstrap/app.php).
+ * An activity is due when next_reminder_at <= now; after sending, next_reminder_at
+ * moves to the next future offset, or null when none is left.
+ */
 class SendActivityReminders extends Command
 {
     protected $signature = 'activities:send-reminders {--test}';
-    protected $description = 'Send activity reminders based on reminder times';
+    protected $description = 'Send lead and deal activity reminders based on reminder times';
 
     public function handle()
     {
-        $this->info('Checking due activity reminders...');
-        Log::info('SendActivityReminders: Checking due activity reminders.');
-        Log::info('SendActivityReminders: '.Carbon::now());
+        Log::info('SendActivityReminders: checking due reminders at ' . now());
 
-        $activities = $this->getDueReminders();
-
-        if ($activities->isEmpty()) {
-            $this->info('No reminders to send.');
-            Log::info('SendActivityReminders: No due reminders found.');
-            return;
-        }
-
-        foreach ($activities as $activity) {
-            try {
-                $this->info("Sending reminder for activity #{$activity->id} to user #{$activity->user_id}");
-                Log::info("SendActivityReminders: Sending reminder for activity #{$activity->id} to user #{$activity->user_id}");
-
-                $timeframe = $this->getTimeframe($activity);
-                $activity->user->notify(new ActivityReminderNotification($activity, $timeframe, false));
-
-                if ($activity->lead->responsible_person_id && $activity->lead->responsible_person_id != $activity->user_id) {
-                        $responsibleUser = User::find($activity->lead->responsible_person_id);
-                        if ($responsibleUser) {
-                            $responsibleUser->notify(new ActivityReminderNotification($activity, $timeframe, true));
-                        }
-                    }
-
-                $this->markReminderSent($activity);
-                $this->info("✅ Reminder sent for activity #{$activity->id}");
-                Log::info("SendActivityReminders: Reminder marked sent for activity #{$activity->id}");
-
-            } catch (\Exception $e) {
-                $this->error("❌ Failed activity #{$activity->id}: {$e->getMessage()}");
-                Log::error("SendActivityReminders: Failed to send reminder for activity #{$activity->id}. Error: {$e->getMessage()}", [
-                    'exception' => $e
-                ]);
-            }
-        }
-    }
-
-    private function getDueReminders()
-    {
-        $activities = LeadActivity::with(['user', 'lead'])
+        $leadActivities = LeadActivity::with(['user', 'lead'])
+            ->whereNotNull('next_reminder_at')
             ->where('next_reminder_at', '<=', now())
             ->where('is_completed', false)
             ->get();
 
-        Log::info("SendActivityReminders: Found {$activities->count()} due activities.");
-        return $activities;
+        $dealActivities = DealActivity::with(['user', 'deal'])
+            ->whereNotNull('next_reminder_at')
+            ->where('next_reminder_at', '<=', now())
+            ->where('is_completed', false)
+            ->get();
+
+        $total = $leadActivities->count() + $dealActivities->count();
+        Log::info("SendActivityReminders: found {$leadActivities->count()} lead and {$dealActivities->count()} deal activities due.");
+
+        if ($total === 0) {
+            $this->info('No reminders to send.');
+            return;
+        }
+
+        foreach ($leadActivities as $activity) {
+            $this->sendFor($activity, $activity->lead?->responsible_person_id);
+        }
+
+        foreach ($dealActivities as $activity) {
+            $this->sendFor($activity, $activity->deal?->responsible_person_id);
+        }
     }
 
-    private function markReminderSent(LeadActivity $activity)
+    private function sendFor(LeadActivity|DealActivity $activity, ?int $responsibleId): void
     {
-        $activity->last_reminded_at = now();
+        $kind = $activity instanceof DealActivity ? 'deal' : 'lead';
+        $record = $kind === 'deal' ? $activity->deal : $activity->lead;
 
-        $next = collect($activity->reminders)
-            ->map(fn ($m) => Carbon::parse($activity->reminder_date)->subMinutes($m))
-            ->filter(fn ($t) => $t->isFuture())
-            ->sort()
-            ->first();
+        try {
+            // Parent record or owner gone: nothing to remind about, stop retrying.
+            if (!$record || !$activity->user) {
+                $this->advance($activity, "missing {$kind} or user");
+                return;
+            }
 
-        $activity->next_reminder_at = $next;
+            $timeframe = $this->getTimeframe($activity);
+            $activity->user->notify(new ActivityReminderNotification($activity, $timeframe, false));
 
-        $activity->save();
+            if ($responsibleId && $responsibleId != $activity->user_id) {
+                User::find($responsibleId)?->notify(new ActivityReminderNotification($activity, $timeframe, true));
+            }
 
-        Log::info("SendActivityReminders: Activity #{$activity->id} next reminder set to " . ($next?->toDateTimeString() ?? 'none'));
+            $this->advance($activity);
+            $this->info("Reminder sent for {$kind} activity #{$activity->id}");
+        } catch (\Throwable $e) {
+            // Advance anyway so one bad row does not re-send to the user every minute.
+            $this->advance($activity, $e->getMessage());
+            $this->error("Failed {$kind} activity #{$activity->id}: {$e->getMessage()}");
+            Log::error("SendActivityReminders: failed {$kind} activity #{$activity->id}: {$e->getMessage()}", ['exception' => $e]);
+        }
     }
-    private function getTimeframe($activity)
-{
-    $now = now();
-    $reminder = $activity->reminder_date;
 
-    if ($reminder->isPast()) {
-        return 'overdue';
-    } elseif ($reminder->isToday()) {
-        return 'today';
-    } elseif ($reminder->isTomorrow()) {
-        return 'tomorrow';
-    } else {
+    /** Move this activity to its next reminder (or none). */
+    private function advance(LeadActivity|DealActivity $activity, ?string $reason = null): void
+    {
+        $activity->advanceToNextReminder();
+        $activity->saveQuietly();
+
+        Log::info(sprintf(
+            'SendActivityReminders: %s #%d next reminder %s%s',
+            class_basename($activity),
+            $activity->id,
+            $activity->next_reminder_at?->toDateTimeString() ?? 'none',
+            $reason ? " ({$reason})" : ''
+        ));
+    }
+
+    private function getTimeframe(LeadActivity|DealActivity $activity): string
+    {
+        $reminder = $activity->reminder_date;
+
+        if ($reminder->isPast()) {
+            return 'overdue';
+        }
+        if ($reminder->isToday()) {
+            return 'today';
+        }
+        if ($reminder->isTomorrow()) {
+            return 'tomorrow';
+        }
+
         return 'upcoming';
     }
-}
-
 }
