@@ -29,7 +29,18 @@ class LeadTracking
 
     public static function isTrackingKey(?string $key): bool
     {
-        return in_array(strtolower(trim((string) $key)), self::FIELDS, true);
+        return in_array(self::normalizeKey($key), self::FIELDS, true);
+    }
+
+    /**
+     * "UTM_Source" → "utm_source". Elementor forwards unlabeled (hidden) fields as
+     * "No_Label_<id>", the same way name/email arrive as No_Label_name / No_Label_email.
+     */
+    public static function normalizeKey(?string $key): string
+    {
+        $key = strtolower(trim((string) $key));
+
+        return preg_replace('/^no[_ ]label[_ ]/', '', $key);
     }
 
     /**
@@ -42,12 +53,13 @@ class LeadTracking
     {
         $out = [];
         foreach ($payload as $key => $value) {
-            $field = strtolower(trim((string) $key));
+            $field = self::normalizeKey($key);
             if (! in_array($field, self::FIELDS, true) || ! is_scalar($value)) {
                 continue;
             }
             $value = trim((string) $value);
-            if ($value === '') {
+            // Empty, or an ad placeholder Google didn't fill in (e.g. "{campaignname}").
+            if ($value === '' || preg_match('/^\{[^}]*\}$/', $value)) {
                 continue;
             }
             $out[$field] = mb_substr($value, 0, $field === 'landing_page' ? 2000 : 500);

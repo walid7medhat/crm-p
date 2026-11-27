@@ -43,7 +43,7 @@ class WordpressLeadTrackingTest extends TestCase
             'Budget' => '2M',
             'gclid' => 'Cj0KCQ-test',
             'UTM_Source' => 'google',
-            'utm_medium' => 'cpc',
+            'No_Label_utm_medium' => 'cpc',
             'utm_campaign' => 'dubai-hills',
             'utm_term' => 'villa dubai',
             'utm_content' => 'ad-1',
@@ -60,6 +60,7 @@ class WordpressLeadTrackingTest extends TestCase
         $this->assertSame('villa dubai', $lead->utm_term);
         $this->assertSame('ad-1', $lead->utm_content);
         $this->assertSame('https://example.com/dubai-hills?x=1', $lead->landing_page);
+        $this->assertSame([], LeadTracking::extract(['utm_campaign' => '{campaignname}']));
 
         $names = array_column(json_decode($lead->raw_meta_data, true)['field_data'], 'name');
         $this->assertContains('Budget', $names);
