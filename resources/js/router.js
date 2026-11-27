@@ -107,6 +107,17 @@ const baseRoutes = [
   { path: '/table-data', component: () => import('./pages/table/table-data.vue'), meta: { requiresAuth: true } },
   { path: '/property-form', component: () => import('./pages/listings/property-form.vue'), meta: { requiresAuth: true, requiresListings: true, requiresPermission: 'listings-create', strictPermission: true } },
   { path: '/listings/overview', redirect: '/' },
+  // Old email links (activity reminders, comment mentions) pointed at /leads/{id},
+  // which has no page. Send them to the lead popup on the right section.
+  {
+    path: '/leads/:id(\\d+)',
+    redirect: (to) => {
+      const focus = to.query.tab === 'activities'
+        ? 'activity'
+        : (to.hash?.startsWith('#comment') ? 'comments' : undefined)
+      return { path: '/', query: { lead: to.params.id, ...(focus ? { focus } : {}) }, hash: '' }
+    },
+  },
   { path: '/my-listing', component: () => import('./pages/listings/my-listing.vue'), meta: { requiresAuth: true, requiresListings: true } },
   { path: '/saved-listings', component: () => import('./pages/listings/saved-listings.vue'), meta: { requiresAuth: true, requiresListings: true } },
   { path: '/archive', component: () => import('./pages/listings/archive.vue'), meta: { requiresAuth: true, requiresListings: true } },

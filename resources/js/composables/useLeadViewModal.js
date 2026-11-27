@@ -99,6 +99,7 @@ function clearLeadQuery() {
   if (!router || !route?.query?.lead) return
   const query = { ...route.query }
   delete query.lead
+  delete query.focus
   router.replace({ query }).catch(() => {})
 }
 
@@ -127,7 +128,9 @@ export function checkUrlForLead() {
   if (leadId && !showLeadViewModal.value) {
     const id = Number(leadId)
     if (!isNaN(id) && id > 0) {
-      openLeadView(id)
+      // Email links add ?focus=activity (or comments…) to land on that section.
+      const focus = typeof route.query.focus === 'string' ? route.query.focus : null
+      openLeadView(id, null, focus ? { focus } : {})
       return id
     }
   }
