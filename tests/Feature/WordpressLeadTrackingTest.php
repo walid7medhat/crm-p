@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * gclid / utm_* / landing_page from WordPress: saved in their own columns, kept out of the
- * questions list, and visible only to super_admin / admin (never user #30).
+ * questions list, and visible only to super_admin and user #33.
  */
 class WordpressLeadTrackingTest extends TestCase
 {
@@ -72,15 +72,11 @@ class WordpressLeadTrackingTest extends TestCase
     {
         $lead = (new Lead)->forceFill(['utm_source' => 'google', 'gclid' => 'abc']);
 
-        $superAdmin = $this->userWithRole('super_admin', 990001);
-        $admin = $this->userWithRole('admin', 990002);
-        $sales = $this->userWithRole('sales', 990003);
-        $user30 = $this->userWithRole('admin', 30);
-
-        $this->assertTrue(LeadTracking::canView($superAdmin));
-        $this->assertTrue(LeadTracking::canView($admin));
-        $this->assertFalse(LeadTracking::canView($sales));
-        $this->assertFalse(LeadTracking::canView($user30));
+        $this->assertTrue(LeadTracking::canView($this->userWithRole('super_admin', 990001)));
+        $this->assertTrue(LeadTracking::canView($this->userWithRole('sales', 33)));
+        $this->assertFalse(LeadTracking::canView($this->userWithRole('admin', 990002)));
+        $this->assertFalse(LeadTracking::canView($this->userWithRole('admin', 30)));
+        $this->assertFalse(LeadTracking::canView($this->userWithRole('sales', 990003)));
         $this->assertFalse(LeadTracking::canView(null));
 
         $this->assertSame('google', LeadTracking::forLead($lead)['utm_source']);
@@ -91,7 +87,7 @@ class WordpressLeadTrackingTest extends TestCase
     {
         $user = \Mockery::mock(User::class)->makePartial();
         $user->id = $id;
-        $user->shouldReceive('hasAnyRole')->andReturnUsing(
+        $user->shouldReceive('hasRole')->andReturnUsing(
             fn ($roles) => in_array($role, (array) $roles, true)
         );
 
