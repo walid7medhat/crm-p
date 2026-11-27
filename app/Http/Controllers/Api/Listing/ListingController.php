@@ -4092,13 +4092,23 @@ public function watermark(Request $request)
     if ($watermarkPath !== null) {
         try {
             $watermark = Image::make($watermarkPath);
-            // Luxvant logo is 1024px wide — scale it to ~35% of the photo width.
-            // OIA keeps its original watermark size (unchanged behaviour).
-            $maxW = (int) round($image->width() * 0.35);
-            if (\App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant' && $maxW > 0 && $watermark->width() > $maxW) {
-                $watermark->resize($maxW, null, function ($c) {
-                    $c->aspectRatio();
-                });
+            // Scale the mark to a fixed share of the photo so it looks the same on every
+            // image, whatever the photo's resolution (a native-size mark looked huge on
+            // small photos and tiny on large ones). Also cap its height for wide panoramas.
+            $ratio = \App\Support\Brand\BrandIsolation::trustedKey() === 'luxvant' ? 0.35 : 0.30;
+            $targetW = (int) round($image->width() * $ratio);
+            $maxH = (int) round($image->height() * 0.40);
+            if ($targetW > 0 && $watermark->width() > 0) {
+                $scaledH = (int) round($watermark->height() * $targetW / $watermark->width());
+                if ($maxH > 0 && $scaledH > $maxH) {
+                    $watermark->resize(null, $maxH, function ($c) {
+                        $c->aspectRatio();
+                    });
+                } else {
+                    $watermark->resize($targetW, null, function ($c) {
+                        $c->aspectRatio();
+                    });
+                }
             }
             $watermark->opacity(70);
             $image->insert($watermark, 'center');
