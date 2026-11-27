@@ -21,7 +21,8 @@ class ActivityResource extends JsonResource
             'user_parent_name' => User::resolveDisplayName($this->user?->parent),
             'user_branch_name' => User::resolveDisplayName($this->user?->office),
             'title' => $this->title,
-            'reminder_date' => $this->reminder_date->format('Y-m-d H:i:s'),
+            // With offset (+04:00) so the browser shows the time the user picked.
+            'reminder_date' => $this->reminder_date->toIso8601String(),
             'is_completed' => $this->is_completed,
             'status' => $this->is_completed ? 'Completed' : ($this->reminder_date < now() ? 'Overdue' : 'Pending'),
             'reminders'=>$this->reminders,
