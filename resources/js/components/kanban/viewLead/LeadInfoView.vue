@@ -196,7 +196,7 @@
                 No additional information
             </div>
         </div>
-        <!-- Ad tracking from WordPress — the API only sends it to super_admin / admin (not user #30). -->
+        <!-- Ad tracking from WordPress — the API only sends it to super_admin and user #33. -->
         <div v-if="trackingRows.length" class="info-section">
             <div class="info-section-title">Ad Tracking</div>
             <div class="info-group" v-for="row in trackingRows" :key="row.key">

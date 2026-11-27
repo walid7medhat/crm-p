@@ -9,7 +9,7 @@ use App\Models\User;
  * Ad-click tracking that WordPress sends with a website lead (gclid, utm_*, landing_page).
  *
  * Stored in dedicated lead columns, never shown as a form "question", and only visible
- * to super_admin / admin, except user #30.
+ * to super_admin and user #33.
  */
 class LeadTracking
 {
@@ -24,8 +24,8 @@ class LeadTracking
         'landing_page',
     ];
 
-    /** Users who never see tracking, whatever their role. */
-    public const EXCLUDED_USER_IDS = [30];
+    /** Users who see tracking without being super_admin. */
+    public const EXTRA_VIEWER_IDS = [33];
 
     public static function isTrackingKey(?string $key): bool
     {
@@ -59,8 +59,7 @@ class LeadTracking
     public static function canView(?User $user): bool
     {
         return $user !== null
-            && ! in_array((int) $user->id, self::EXCLUDED_USER_IDS, true)
-            && $user->hasAnyRole(['super_admin', 'admin']);
+            && (in_array((int) $user->id, self::EXTRA_VIEWER_IDS, true) || $user->hasRole('super_admin'));
     }
 
     /** @return array<string, string|null>|null null when the lead has no tracking at all */

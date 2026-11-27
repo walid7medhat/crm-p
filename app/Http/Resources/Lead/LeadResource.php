@@ -426,7 +426,7 @@ $branchName =
             'can_delete' => auth()->check() && (auth()->user()->hasRole('super_admin') || auth()->user()->hasRole('admin')),
             'raw_meta_data' => $rawMetaData,
             'facebook_questions_answers' => $facebookFields,
-            // gclid / utm_* / landing_page from WordPress — super_admin / admin only, never user #30.
+            // gclid / utm_* / landing_page from WordPress — super_admin and user #33 only.
             'tracking' => LeadTracking::canView(auth()->user()) ? LeadTracking::forLead($this->resource) : null,
             'parent' => $this->formatLeadUser($assignedBy),
             'assigned_at' => $assignmentHistory ? $assignmentHistory->created_at : $this->created_at,
