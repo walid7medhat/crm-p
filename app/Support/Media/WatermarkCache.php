@@ -19,7 +19,7 @@ use App\Support\Security\WatermarkMediaGate;
 class WatermarkCache
 {
     /** Bump when the rendering itself changes (rotation, size, quality). */
-    private const VERSION = 'v1';
+    private const VERSION = 'v2';
 
     private const DIR = 'wm-cache';
 
