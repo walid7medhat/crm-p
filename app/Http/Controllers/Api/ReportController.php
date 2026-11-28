@@ -413,8 +413,9 @@ class ReportController extends Controller
     }
 
     /**
-     * "Export Leads" page (super_admin): preview of the leads matching the search text —
-     * total count + the newest 50 rows. Search rule: App\Exports\LeadSearchExport.
+     * "Export Leads" page (super_admin): preview of the leads the kanban lead search finds
+     * for these search params — total count + the newest 50 rows. Search rule:
+     * App\Exports\LeadSearchExport.
      */
     public function leadSearchPreview(Request $request)
     {
@@ -422,13 +423,12 @@ class ReportController extends Controller
             return ApiResponse::error('Unauthorized - Only super admins can export leads', 403);
         }
 
-        $term = trim((string) $request->input('q', ''));
-        if (mb_strlen($term) < 2) {
-            return ApiResponse::error('Type at least 2 characters to search.', 422);
+        if (! $this->hasLeadSearchCriteria($request)) {
+            return ApiResponse::error('Add at least one search filter.', 422);
         }
 
-        $query = \App\Exports\LeadSearchExport::searchQuery($term);
-        $total = (clone $query)->reorder()->count();
+        $query = \App\Exports\LeadSearchExport::searchQuery($request, auth()->user());
+        $total = (clone $query)->reorder()->count('leads.id');
         $rows = $query->limit(50)->get()->map(fn ($lead) => [
             'id' => $lead->id,
             'lead_name' => $lead->lead_name,
@@ -449,17 +449,24 @@ class ReportController extends Controller
             return ApiResponse::error('Unauthorized - Only super admins can export leads', 403);
         }
 
-        $term = trim((string) $request->input('q', ''));
-        if (mb_strlen($term) < 2) {
-            return ApiResponse::error('Type at least 2 characters to search.', 422);
+        if (! $this->hasLeadSearchCriteria($request)) {
+            return ApiResponse::error('Add at least one search filter.', 422);
         }
 
-        $slug = \Illuminate\Support\Str::slug($term) ?: 'search';
+        $slug = \Illuminate\Support\Str::slug((string) $request->input('search', '')) ?: 'search';
 
         return Excel::download(
-            new \App\Exports\LeadSearchExport($term),
+            new \App\Exports\LeadSearchExport(\App\Exports\LeadSearchExport::searchQuery($request, auth()->user())),
             "leads-{$slug}-" . now()->format('Y-m-d') . '.xlsx'
         );
+    }
+
+    /** The Export Leads page never exports every lead: at least one search param must be set. */
+    private function hasLeadSearchCriteria(Request $request): bool
+    {
+        return collect($request->query())
+            ->filter(fn ($value) => is_array($value) ? array_filter($value, 'filled') !== [] : filled($value))
+            ->isNotEmpty();
     }
 
     /**
