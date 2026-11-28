@@ -41,6 +41,8 @@ class KanbanLeadCardResource extends JsonResource
             'leads.work_phone_2',
             'leads.email',
             'leads.lead_source',
+            'leads.source_client_name',
+            'leads.source_relation',
             'leads.lead_branch_source',
             'leads.source_information',
             'leads.status_lead',
@@ -366,6 +368,11 @@ class KanbanLeadCardResource extends JsonResource
             'work_phone_2' => $this->work_phone_2,
             'email' => $this->email,
             'lead_source' => $this->lead_source,
+            // Referral from an existing client: card shows a single-person icon, and under it
+            // the icon of that client's own lead source.
+            'source_client_name' => $this->source_client_name,
+            'is_existing_client_referral' => Lead::isExistingClientRelation($this->source_relation),
+            'referrer_lead_source' => Lead::referrerLeadSource($this->source_relation),
             'lead_branch_source' => Lead::branchLabel($this->lead_branch_source),
             'source_information' => $this->source_information,
             'status_lead' => $this->status_lead,

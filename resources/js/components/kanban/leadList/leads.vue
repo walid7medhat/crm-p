@@ -571,7 +571,7 @@
                                                                                 @click.stop="openPersonProfile(task, 'activity', $event)"
                                                                             />
                                                                         </div>
-                                                                        <LeadSourceMark :source="task.lead_source" />
+                                                                        <LeadSourceMark :source="task.lead_source" :lead="task" />
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -627,7 +627,7 @@
                                                                     <iconify-icon icon="lucide:message-circle" aria-hidden="true"></iconify-icon>
                                                                 </span>
                                                                 <span v-if="task.lead_source" class="card-foot-source" :title="task.lead_source">
-                                                                    <LeadSourceMark :source="task.lead_source" />
+                                                                    <LeadSourceMark :source="task.lead_source" :lead="task" />
                                                                 </span>
                                                             </div>
                                                         </div>
