@@ -1369,7 +1369,11 @@ public function getPropertyTypesWithListings(Request $request)
                     'listings' => [
                         'all' => Listing::where('is_active', true)->where('is_archived', false)->whereNotIn('status', ['converted', 'draft', 'rented'])
                             ->where('approved', true)->count(),
-                        'my' => Listing::whereIn('agent_id', $user_hierarchy)->count(),
+                        // Luxvant admins: listings they added / are agent of (same as their My Listing page).
+                        'my' => (! $user->hasRole('super_admin') && $user->hasAnyRole(['admin', 'branch_admin'])
+                                && app(\App\Support\Brand\BrandContext::class)->key() === 'luxvant')
+                            ? Listing::where(fn ($q) => $q->where('agent_id', $user->id)->orWhere('added_by', $user->id))->count()
+                            : Listing::whereIn('agent_id', $user_hierarchy)->count(),
                         'archive' => Listing::where('status', 'archived')->count(),
                     ],
                     'requests' => [

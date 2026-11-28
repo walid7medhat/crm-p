@@ -39,7 +39,7 @@ class EnsureBrandAccess
         // except for the shared Platform Super Admin.
         $tokenBrandKey = $this->tokenBrandKey();
         if ($tokenBrandKey !== null && $tokenBrandKey !== $hostBrandKey) {
-            if (!BrandResolver::isSuperAdmin($user)) {
+            if (!BrandResolver::isCrossBrandUser($user)) {
                 Log::warning('brand jwt mismatch rejected', [
                     'token_brand' => $tokenBrandKey,
                     'host_brand' => $hostBrandKey,

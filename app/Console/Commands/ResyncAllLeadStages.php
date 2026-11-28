@@ -12,7 +12,8 @@ class ResyncAllLeadStages extends Command
 {
     protected $signature = 'leads:resync-stages
         {--only-stage= : Only resync leads currently on this local stage_id (optional, faster)}
-        {--fresh : Ignore any saved progress and start over from the first lead}';
+        {--fresh : Ignore any saved progress and start over from the first lead}
+        {--brand= : Only one company\'s leads (oia|luxvant). Default: all leads of both companies}';
 
     protected $description = 'Re-fetch STATUS_ID for all leads from Bitrix24 and correct their local stage_id using the fixed resolver';
 
@@ -22,9 +23,10 @@ class ResyncAllLeadStages extends Command
      * everything from lead #1. Namespaced per --only-stage filter since that
      * changes which leads are in scope.
      */
-    private function progressKey(?string $onlyStage): string
+    private function progressKey(?string $onlyStage, ?string $brand = null): string
     {
-        return 'leads:resync-stages:last_id:' . ($onlyStage !== null ? $onlyStage : 'all');
+        return 'leads:resync-stages:last_id:' . ($onlyStage !== null ? $onlyStage : 'all')
+            . ($brand ? ':'.$brand : '');
     }
 
     public function handle(Bitrix24Client $client)
@@ -35,7 +37,14 @@ class ResyncAllLeadStages extends Command
     $onlyStage = $this->option('only-stage');
     $fresh = (bool) $this->option('fresh');
 
-    $progressKey = $this->progressKey($onlyStage);
+    $brand = $this->option('brand') ? strtolower((string) $this->option('brand')) : null;
+    if ($brand !== null && ! is_array(config('brands.brands.'.$brand))) {
+        $this->error("Unknown brand [{$brand}]. Use oia or luxvant.");
+
+        return 1;
+    }
+
+    $progressKey = $this->progressKey($onlyStage, $brand);
 
     if ($fresh) {
         Cache::forget($progressKey);
@@ -44,7 +53,18 @@ class ResyncAllLeadStages extends Command
 
     $lastId = $fresh ? 0 : (int) Cache::get($progressKey, 0);
 
-    $query = Lead::query()
+    if ($brand !== null) {
+        // Run as that company: Lead::query() is limited to its leads.
+        app(\App\Support\Brand\BrandContext::class)->set(config('brands.brands.'.$brand));
+        \App\Support\Brand\BrandCrmScope::reset();
+        $query = Lead::query();
+        $this->info("Only {$brand} leads.");
+    } else {
+        // Both companies share one Bitrix portal — check every lead.
+        $query = Lead::withoutBrandScope();
+    }
+
+    $query
         ->select('id', 'stage_id', 'bitrix24_id') // 🔥 مهم جدًا
         ->whereNotNull('bitrix24_id');
 

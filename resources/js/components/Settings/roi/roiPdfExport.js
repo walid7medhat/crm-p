@@ -12,8 +12,7 @@ import {
   pdfDisclaimer,
   pdfShell,
   downloadPdfHtml,
-  exportPdfFromElement,
-} from '../calculatorPdfTheme.js'
+  exportPdfFromElement, calculatorBrandName, preparedByText, calculatorFilePrefix } from '../calculatorPdfTheme.js'
 
 export { exportPdfFromElement as exportRoiPdfFromElement } from '../calculatorPdfTheme.js'
 
@@ -103,7 +102,7 @@ export function buildRoiPdfHtml(r, todayLabel) {
   const projectLine = `${f.projectName || ''}${f.unitRef ? ` · ${f.unitRef}` : ''}`
   const emirateSlug = E.label.replace(/\s/g, '-')
   const clientSlug = (f.clientName || 'Client').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-') || 'Client'
-  const filename = `Oia-Properties-ROI-${emirateSlug}-${clientSlug}-${Date.now()}.pdf`
+  const filename = `${calculatorFilePrefix()}ROI-${emirateSlug}-${clientSlug}-${Date.now()}.pdf`
 
   const bodyHtml = pdfShell({
     header: pdfHeader({
@@ -111,19 +110,19 @@ export function buildRoiPdfHtml(r, todayLabel) {
       clientName: f.clientName,
       projectLine,
       todayLabel,
-      agentName: f.agentName || 'Oia Properties',
+      agentName: f.agentName || calculatorBrandName(),
     }),
     meta: metaGrid([
       ['Client', f.clientName || '—'],
       ['Project', f.projectName || '—'],
       ['Unit', f.unitRef || '—'],
-      ['Agent', f.agentName || 'Oia Properties'],
+      ['Agent', f.agentName || calculatorBrandName() || '—'],
       ['Emirate', `${E.label} · ${r.isCash ? 'Cash' : 'Mortgage'}`],
       ['Property Price', fmt(r.pp, c)],
     ]),
     body,
     disclaimer: pdfDisclaimer(
-      'Prepared by Oia Properties for illustrative purposes only. All projections are estimates — not guaranteed. Figures exclude VAT and applicable municipal fees. Not financial, legal, or investment advice.',
+      `${preparedByText()} illustrative purposes only. All projections are estimates — not guaranteed. Figures exclude VAT and applicable municipal fees. Not financial, legal, or investment advice.`,
     ),
   })
 

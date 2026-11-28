@@ -234,6 +234,16 @@ class User extends Authenticatable implements JWTSubject, CanResetPasswordContra
         // the previous recursive version walked `children` node-by-node, which
         // triggered a lazy-loaded query for every single subordinate (huge N+1
         // on any manager/team_lead with a deep or wide team).
+        // Shared cross-company user (#30) on the Luxvant host: their team is all of Luxvant,
+        // the same way they oversee all of OIA on the OIA host.
+        if (\App\Support\Brand\BrandResolver::isSharedUserId((int) $this->id)
+            && app(\App\Support\Brand\BrandContext::class)->key() === 'luxvant') {
+            return array_values(array_unique(array_merge(
+                [(int) $this->id],
+                \App\Support\Brand\BrandCrmScope::luxvantMemberIds()
+            )));
+        }
+
         $ids = [$this->id];
         $visited = [$this->id => true];
         $queue = [$this->id];

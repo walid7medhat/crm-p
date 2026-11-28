@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import { isLuxvantBrand } from '@/composables/useBrand.js';
 
 /** Route prefixes grouped by main sidebar module */
 export const LAYOUT_MODULES = {
@@ -504,8 +505,9 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
     const canList = !hasPermission || hasPermission('listings-list');
     const { listingTabCounts = {} } = ctx;
 
-    // Agents get their own My Listing tab; admins / super admins see All Listings only.
-    const showMyListings = !isAdmin && !isSuperAdmin;
+    // Agents get their own My Listing tab; admins / super admins see All Listings only —
+    // except Luxvant admins, who add listings themselves.
+    const showMyListings = (!isAdmin && !isSuperAdmin) || (isLuxvantBrand() && !isSuperAdmin);
 
     const tabs = [];
 
@@ -569,7 +571,8 @@ export function buildCrmSectionHeaderTabs(section, ctx = {}) {
       
       // ✅ إضافة Need Approval Listings للأدمن (نفس البرمشن)
       // branch_admin: approves Dubai listings (the API only returns the ones they may approve).
-      if ( user.roles?.includes('super_admin') || user.roles?.includes('branch_admin') || (user?.is_listing_team &&
+      // is_dubai_listing_approver is also true for Luxvant admins (they approve Luxvant listings).
+      if ( user.roles?.includes('super_admin') || user.roles?.includes('branch_admin') || user?.is_dubai_listing_approver || (user?.is_listing_team &&
           (
            user.roles?.includes('manager') ||
            user.roles?.includes('team_lead')))) {

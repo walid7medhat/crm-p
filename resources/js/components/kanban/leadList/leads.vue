@@ -3024,7 +3024,6 @@ function onBoardVisibilityChange() {
 const pollingInterval = ref(null)
 const isFetching = ref(false)
 const abortController = ref(null)
-const moreLeadsAbortController = ref(null)
 const fetchDebounceTimer = ref(null)
 let fetchGeneration = 0
 /** In-flight board request fingerprint — skip duplicate watcher emits only while pending. */
@@ -3050,6 +3049,18 @@ function buildBoardFetchFingerprint(params = {}) {
 }
 
 let moreLeadsGeneration = 0
+/** One in-flight load-more per stage: { [stageId]: { controller, token } } */
+const moreLeadsRequests = {}
+let moreLeadsToken = 0
+
+function abortAllMoreLeads() {
+    for (const stageId of Object.keys(moreLeadsRequests)) {
+        moreLeadsRequests[stageId].controller.abort()
+        delete moreLeadsRequests[stageId]
+    }
+    // Aborted requests must not leave their column stuck in "loading".
+    loadingMoreLeads.value = {}
+}
 
 // Stage editing state
 const editingStageId = ref(null)
@@ -3444,10 +3455,7 @@ const executeFetchLeads = async (options = {}) => {
         abortController.value.abort()
     }
     // Cancel in-flight load-more so a stale page cannot append after a new search.
-    if (moreLeadsAbortController.value) {
-        moreLeadsAbortController.value.abort()
-        moreLeadsAbortController.value = null
-    }
+    abortAllMoreLeads()
     moreLeadsGeneration += 1
 
     const generation = ++fetchGeneration
@@ -3672,13 +3680,14 @@ async function fetchMoreLeadsFromApi(stageId) {
         [stageId]: true
     }
 
-    if (moreLeadsAbortController.value) {
-        moreLeadsAbortController.value.abort()
-    }
-    moreLeadsAbortController.value = new AbortController()
-    const generation = ++moreLeadsGeneration
-    const signal = moreLeadsAbortController.value.signal
-    
+    // Per-stage request: loading one column must not cancel another column's page.
+    const controller = new AbortController()
+    const token = ++moreLeadsToken
+    moreLeadsRequests[stageId] = { controller, token }
+    const generation = moreLeadsGeneration
+    const signal = controller.signal
+    let appendedCount = 0
+
     try {
         const nextPage = (stage.pagination?.current_page || 1) + 1
 
@@ -3707,9 +3716,12 @@ async function fetchMoreLeadsFromApi(stageId) {
             // ضيف الـ leads الجديدة تحت القديمة — skip ones already shown (a lead that moved
             // between pages, or arrived live via websocket, must not appear twice).
             const shownIds = new Set(columns.value[columnIndex].leads.map(l => String(l?.id)))
+            const fresh = newLeads.filter(l => !shownIds.has(String(l?.id)))
+            // Empty page from the server = nothing to retry; count it as "appended" to stop.
+            appendedCount = newLeads.length === 0 ? -1 : fresh.length
             columns.value[columnIndex].leads = sortLeadsByUpdatedAt([
                 ...columns.value[columnIndex].leads,
-                ...newLeads.filter(l => !shownIds.has(String(l?.id))),
+                ...fresh,
             ])
             
             // تحديث الـ pagination
@@ -3740,13 +3752,23 @@ async function fetchMoreLeadsFromApi(stageId) {
         }
         console.error('Error loading more leads:', error)
         $showNotification('Failed to load more leads', 'error')
+        return
     } finally {
-        if (generation === moreLeadsGeneration) {
+        // Always release this stage's flag unless a newer request for the same stage took over.
+        if (moreLeadsRequests[stageId]?.token === token) {
+            delete moreLeadsRequests[stageId]
             loadingMoreLeads.value = {
                 ...loadingMoreLeads.value,
                 [stageId]: false
             }
         }
+    }
+
+    // Whole page was already on screen (moved/live leads): the column didn't grow, so no
+    // further scroll event will fire at the bottom — fetch the next page right away.
+    if (generation === moreLeadsGeneration && appendedCount === 0
+        && stagePagination.value[stageId]?.hasMorePages) {
+        fetchMoreLeadsFromApi(stageId)
     }
 }
 

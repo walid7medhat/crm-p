@@ -12,7 +12,10 @@ use Minishlink\WebPush\WebPush;
 
 class LeadAssignmentWebPushSender
 {
-    public function sendToUser(int $userId, int $leadId): void
+    /**
+     * @param  array{type?: string, title?: string, body?: string, url?: string}  $overrides
+     */
+    public function sendToUser(int $userId, int $leadId, array $overrides = []): void
     {
         if (! $this->isEligibleUser($userId)) {
             return;
@@ -42,7 +45,7 @@ class LeadAssignmentWebPushSender
         ]);
         $webPush->setReuseVAPIDHeaders(true);
 
-        $payload = json_encode($this->payload($leadId), JSON_THROW_ON_ERROR);
+        $payload = json_encode($this->payload($leadId, $overrides), JSON_THROW_ON_ERROR);
         foreach ($subscriptions as $subscription) {
             $webPush->queueNotification(
                 Subscription::create([
@@ -63,9 +66,10 @@ class LeadAssignmentWebPushSender
     /**
      * Routing only. No customer name, phone, or email.
      *
+     * @param  array{type?: string, title?: string, body?: string, url?: string}  $overrides
      * @return array{type: string, title: string, body: string, lead_id?: int, url?: string}
      */
-    public function payload(int $leadId): array
+    public function payload(int $leadId, array $overrides = []): array
     {
         $payload = [
             'type' => 'lead_assignment',
@@ -76,6 +80,12 @@ class LeadAssignmentWebPushSender
         if ($leadId > 0) {
             $payload['lead_id'] = $leadId;
             $payload['url'] = $this->leadViewUrl($leadId);
+        }
+
+        foreach (['type', 'title', 'body', 'url'] as $key) {
+            if (isset($overrides[$key]) && is_string($overrides[$key]) && $overrides[$key] !== '') {
+                $payload[$key] = $overrides[$key];
+            }
         }
 
         return $payload;

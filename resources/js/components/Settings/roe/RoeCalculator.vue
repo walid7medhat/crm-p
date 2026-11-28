@@ -10,7 +10,7 @@
             <span class="roi-calc__logo-acronym">ROE</span>
             <span class="roi-calc__logo-name">Calculator</span>
           </div>
-          <div class="roi-calc__tag">Oia Properties · Return on Equity Analysis</div>
+          <div class="roi-calc__tag"><template v-if="showBrand">Oia Properties · </template>Return on Equity Analysis</div>
         </div>
       </div>
       <div class="roi-calc__nav-right">
@@ -130,7 +130,7 @@
             {{ exportingPdf ? 'Generating PDF…' : 'Download PDF Report' }}
           </button>
         </div>
-        <p class="roi-calc__credit">Oia Properties · 27 years UAE real estate<br>oiaproperties.com · Abu Dhabi, UAE</p>
+        <p v-if="showBrand" class="roi-calc__credit">Oia Properties · 27 years UAE real estate<br>oiaproperties.com · Abu Dhabi, UAE</p>
       </aside>
 
       <main class="roi-calc__panel">
@@ -147,7 +147,7 @@
               <div class="roi-calc__eyebrow">{{ result.mode === 'offplan' ? 'Off-Plan Investment Analysis' : `Ready Property · ${result.isCash ? 'Cash Purchase' : 'Mortgage Finance'}` }}</div>
               <div class="roi-calc__client">{{ form.clientName || 'Client' }}</div>
               <p class="roi-calc__meta">{{ form.projectName }}<span v-if="form.unitRef"> · {{ form.unitRef }}</span></p>
-              <p class="roi-calc__meta2">{{ fmt(result.pp, result.cur) }} · {{ form.agentName || 'Oia Properties' }} · {{ today }}</p>
+              <p class="roi-calc__meta2">{{ fmt(result.pp, result.cur) }}<template v-if="form.agentName || showBrand"> · {{ form.agentName || 'Oia Properties' }}</template> · {{ today }}</p>
             </div>
             <div class="roi-calc__rhead-icon-wrap">
               <iconify-icon icon="lucide:building-2" class="roi-calc__rhead-icon" />
@@ -322,7 +322,7 @@
           </template>
 
           <p class="roi-calc__disc">
-            <b>Disclaimer:</b> Prepared by Oia Properties for illustrative purposes only. All figures are estimates — not guaranteed. DLD fees (4%), agency commissions, mortgage fees, and service charges excluded. Not financial or investment advice.
+            <b>Disclaimer:</b> {{ showBrand ? 'Prepared by Oia Properties for' : 'Prepared for' }} illustrative purposes only. All figures are estimates — not guaranteed. DLD fees (4%), agency commissions, mortgage fees, and service charges excluded. Not financial or investment advice.
           </p>
         </div>
       </main>
@@ -337,6 +337,9 @@
 </template>
 
 <script setup>
+import { showCalculatorBrand } from '../calculatorPdfTheme.js'
+/** Brand name is shown on OIA, hidden on Luxvant. */
+const showBrand = showCalculatorBrand()
 import { onMounted, ref, nextTick } from 'vue'
 import RoiSection from '../roi/RoiSection.vue'
 import RoiField from '../roi/RoiField.vue'

@@ -1,3 +1,5 @@
+import { isLuxvantBrand } from '@/composables/useBrand';
+
 /** Parse payment_breakdown from API (array or JSON string). */
 export function parsePaymentBreakdown(raw) {
   if (raw == null || raw === '') return [];
@@ -29,6 +31,8 @@ export function listingHasPaymentBreakdown(property) {
 
 /** Off-plan SALE listing with no installment breakdown rows yet. Rent listings never need one. */
 export function listingNeedsPaymentBreakdownHighlight(property) {
+  // Luxvant: the breakdown is optional, so a listing without one isn't flagged as missing it.
+  if (isLuxvantBrand()) return false;
   if (String(property?.listing_status ?? '').trim().toLowerCase() === 'rent') return false;
   if (!isUnderConstructionListing(property)) return false;
   return !listingHasPaymentBreakdown(property);

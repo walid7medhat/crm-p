@@ -1080,7 +1080,9 @@ const tableItems = computed(() => {
     { path: '/notify-me', label: 'Notify me', colorClass: 'text-info-main w-auto', count: 0 ,permission: 'listings-list'},
   ]
 
-  if (!isAdmin.value && !isBranchAdmin.value) {
+  // Luxvant admins add listings themselves, so they get My Listing too (not super_admin).
+  const luxvantAdminLister = isLuxvantBrand && !isSuperAdmin.value;
+  if ((!isAdmin.value && !isBranchAdmin.value) || luxvantAdminLister) {
     items.splice(1, 0, {
       path: '/my-listing',
       label: 'My Listing',
@@ -1096,11 +1098,16 @@ const tableItems = computed(() => {
 const requestsItems = computed(() => {
   const c = sidebarCounts.value;
   if (isAdmin.value ) {
-    return [
+    const adminItems = [
       { path: '/all-requests', label: 'All Requests', colorClass: 'text-white w-auto', count: c?.orders?.all || 0 },
             { path: '/my-viewings', label: 'Viewings', colorClass: 'text-white w-auto', count: 0, permission: 'listings-list' },
 
     ]
+    // Luxvant admins approve Luxvant listings (UserResource is_dubai_listing_approver).
+    if (user.value?.is_dubai_listing_approver) {
+      adminItems.push({ path: '/need-approve-requests', label: 'Need Approval Listings', colorClass: 'text-white w-auto', count: c?.needapprove?.all || 0 });
+    }
+    return adminItems
   } else if ( isBranchAdmin.value) {
     // Only the Dubai branch admin approves listings (Dubai ones).
     return user.value?.is_dubai_listing_approver
@@ -1465,6 +1472,7 @@ const settingsSidebarSections = computed(() => {
     system.push({ path: '/settings/stage-duplicates-report', label: 'Stage Lead Duplicates', iconSrc: leadsIcon.value });
     system.push({ path: '/settings/account-emails', label: 'Account Emails', icon: 'lucide:mail' });
     system.push({ path: '/settings/location-tracking', label: 'Location Tracking', icon: 'lucide:map-pin' });
+    system.push({ path: '/settings/foreign-access', label: 'Foreign Access Monitor', icon: 'lucide:globe-lock' });
     system.push({ path: '/settings/request-monitor', label: 'Request Monitor', icon: 'lucide:activity' });
     system.push({ path: '/tracking', label: 'Live Watch', icon: 'lucide:radar' });
   }
@@ -1492,8 +1500,10 @@ const settingsSidebarSections = computed(() => {
   });
 });
 
-// Calculators (ROI / ROE) only for users who can see Listings.
-const canSeeCalculators = computed(() => canListListings.value || isShowOnlyListing.value);
+// Calculators (ROI / ROE): OIA-only (hidden on Luxvant), and only for users who can see Listings.
+const canSeeCalculators = computed(() =>
+  !isLuxvantBrand && (canListListings.value || isShowOnlyListing.value),
+);
 
 const calculatorMenuItems = computed(() => (!canSeeCalculators.value ? [] : [
   {

@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import Swal from 'sweetalert2';
 import { parsePriceInputDigits } from '@/utils/priceInputFormat';
+import { isLuxvantBrand } from '@/composables/useBrand';
 import {
   PAYMENT_PLAN_PARSE_ERROR,
   paymentPlanSelectionLabel,
@@ -374,6 +375,8 @@ const nocRequiredAed = computed(() => {
 
   const publishPaymentBreakdownBlocked = computed(() => {
     if (!isUnderConstruction.value) return false;
+    // Luxvant: original price and payment breakdown are optional — never block publishing.
+    if (isLuxvantBrand()) return false;
     if (paymentPlanMissingForPublish.value) return true;
     if (form.value.payment_plans != null && form.value.payment_plans !== '' && !isPaymentPlanSelectionParseValid.value) {
       return true;

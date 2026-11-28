@@ -11,6 +11,7 @@ use App\Models\KanbanSetting;
 use App\Jobs\ProcessLeadAutoAssignmentJob;
 use App\Jobs\ProcessLeadIntelligenceJob;
 use App\Services\LeadKanbanHeatCache;
+use App\Services\WebPush\DubaiNewLeadNotifier;
 use App\Services\WebPush\LeadAssignmentTestNotifier;
 use App\Services\Zapier\ZapierLeadWebhook;
 use App\Models\LeadScoringSetting;
@@ -192,6 +193,7 @@ protected const NON_ENGAGEMENT_FIELDS = [
                     $lead->responsible_person_id,
                     (int) $lead->id
                 );
+                app(DubaiNewLeadNotifier::class)->notifyIfEligible($lead);
                 ZapierLeadWebhook::queueIfEligible($lead);
                 LeadKanbanHeatCache::bump();
             //       if ($lead->shouldSyncToAltCRM()) {
@@ -232,6 +234,10 @@ protected const NON_ENGAGEMENT_FIELDS = [
                         $lead->responsible_person_id,
                         (int) $lead->id
                     );
+                }
+
+                if ($lead->wasChanged(['stage_id', 'branch', 'lead_branch_source', 'responsible_person_id'])) {
+                    app(DubaiNewLeadNotifier::class)->notifyIfEligible($lead, onlyIfNewlyEligible: true);
                 }
 
                 if ($lead->wasChanged('stage_id')) {
@@ -956,7 +962,7 @@ public function activitiesWithTrashed()
             $ids = array_values(array_filter($ids, fn ($id) => ($keys[$id] ?? '') === $own));
         }
 
-        return $ids === [] ? collect() : Lead::query()->whereIn('id', $ids)->orderBy('id')->get();
+        return $ids === [] ? new \Illuminate\Database\Eloquent\Collection() : Lead::query()->whereIn('id', $ids)->orderBy('id')->get();
     }
 
         public function convertedToDeal()

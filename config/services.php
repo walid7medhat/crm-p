@@ -87,6 +87,17 @@ return [
     ],
 
     /*
+    | Dubai New Lead stage watchers. Fired when a Dubai lead enters New Lead.
+    */
+    'dubai_new_lead_alert' => [
+        'enabled' => filter_var(env('DUBAI_NEW_LEAD_ALERT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'user_ids' => array_values(array_filter(array_map(
+            'intval',
+            explode(',', (string) env('DUBAI_NEW_LEAD_ALERT_USER_IDS', '1541,195'))
+        ))),
+    ],
+
+    /*
     | Zapier lead webhook. OIA leads entering one of these lead stages are POSTed
     | (id, phone, email, stage) to the URL. Empty URL = disabled.
     */
@@ -105,6 +116,14 @@ return [
         'subject' => env('WEB_PUSH_VAPID_SUBJECT', 'mailto:admin@oiaproperties.com'),
         'public_key' => env('WEB_PUSH_VAPID_PUBLIC_KEY'),
         'private_key' => env('WEB_PUSH_VAPID_PRIVATE_KEY'),
+    ],
+
+    // Meta (Facebook lead ads). Read through config() so `config:cache` never blanks them.
+    'meta' => [
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'access_token' => env('META_ACCESS_TOKEN'),
+        'webhook_verify_token' => env('META_WEBHOOK_VERIFY_TOKEN', 'oia777'),
     ],
 
 ];
