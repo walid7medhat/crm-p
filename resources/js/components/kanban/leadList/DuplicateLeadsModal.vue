@@ -200,7 +200,7 @@ const calculatePosition = async () => {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '500px',
+            width: '320px',
             maxWidth: 'calc(100vw - 32px)',
             zIndex: 1050
         }
@@ -223,9 +223,9 @@ const calculatePosition = async () => {
         const spaceBelow = viewportHeight - rect.bottom
         const spaceAbove = rect.top
         
-        // Real panel width (content is 416px), never wider than the viewport.
-        const popupWidth = Math.min(416, viewportWidth - 32)
-        const estimatedHeight = Math.min(400, duplicateLeads.value.length * 120 + 100) // Estimate height
+        // Real panel width (content is 320px), never wider than the viewport.
+        const popupWidth = Math.min(320, viewportWidth - 32)
+        const estimatedHeight = Math.min(320, duplicateLeads.value.length * 96 + 80) // Estimate height
         
         let top = 0
         let left = 0
@@ -404,12 +404,12 @@ onUnmounted(() => {
 }
 
 .duplicate-leads-modal-content {
-    padding: 0px 18px;
+    padding: 0px 12px;
     background-color: #FFFFFF;
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    height: 444px;
-    width: 416px;
+    height: 340px;
+    width: 320px;
     display: flex;
     flex-direction: column;
 }
@@ -418,13 +418,15 @@ onUnmounted(() => {
     background-color: #FFFFFF;
     border-bottom: 1px solid #EBECEF;
     flex-shrink: 0;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
 }
 
 .modal-title {
     font-family: Montserrat;
     /* font-weight: 700; */
-    font-size: 14px !important;
-    line-height: 24px;
+    font-size: 12px !important;
+    line-height: 18px;
     color: #0B0736;
 }
 
@@ -455,66 +457,66 @@ onUnmounted(() => {
     position: relative;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 1px solid rgba(244, 244, 244, 1);
-    margin: 12px 0px;
-    padding: 12px;
+    margin: 8px 0px;
+    padding: 8px 10px;
 }
 
 .duplicate-lead-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .lead-title {
     font-family: Montserrat;
     font-weight: 600;
-    font-size: 12px !important;
-    line-height: 20px;
+    font-size: 11px !important;
+    line-height: 16px;
     color: #0B0736;
-    margin: 0 0 12px 0;
+    margin: 0 0 8px 0;
 }
 
 .lead-info {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .info-row {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .info-label {
     font-family: Montserrat;
     font-weight: 500;
-    font-size: 11px;
-    line-height: 14px;
+    font-size: 10px;
+    line-height: 12px;
     color: #979797;
 }
 
 .info-value {
     font-family: Montserrat;
     font-weight: 500;
-    font-size: 12px;
-    line-height: 16px;
+    font-size: 11px;
+    line-height: 14px;
     color: #353535;
     display: inline-block;
 }
 
 .phone-type {
     color: #6B7280;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
-    line-height: 16px;
+    line-height: 14px;
 }
 
 .lead-avatar {
-    bottom: 16px;
-    right: 16px;
+    bottom: 10px;
+    right: 10px;
 }
 
 .avatar-sm {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     object-fit: cover;
 }
 
@@ -525,7 +527,7 @@ onUnmounted(() => {
 }
 
 .avatar-sm iconify-icon {
-    font-size: 18px;
+    font-size: 14px;
 }
 
 .cursor-pointer {
@@ -601,14 +603,14 @@ onUnmounted(() => {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     border: 0;
-    border-radius: 10px;
-    padding: 7px 14px;
+    border-radius: 8px;
+    padding: 5px 10px;
     background: var(--gradient-primary, linear-gradient(135deg, #5b21b6 0%, #4c1d95 55%, #312e81 100%));
     color: #fff;
     font-family: Montserrat, sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.01em;
     cursor: pointer;
@@ -636,7 +638,7 @@ onUnmounted(() => {
     pointer-events: none;
 }
 .merge-btn-3d__icon {
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1;
 }
 .merge-btn-3d:hover {
@@ -672,22 +674,22 @@ onUnmounted(() => {
 .duplicate-lead-card--locked { opacity: .75; cursor: not-allowed; }
 .duplicate-lead-card--locked:hover { transform: none; box-shadow: none !important; }
 .other-branch-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 10px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 999px;
     background: #FEF3C7; color: #92400E;
-    font-size: 11px; font-weight: 600;
+    font-size: 10px; font-weight: 600;
 }
-.dup-labels { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 8px; }
+.dup-labels { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 6px; }
 .dup-match { justify-content: flex-end; }
 .stage-line:empty { display: none; }
-.stage-line { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
+.stage-line { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin-bottom: 6px; }
 .stage-chip {
-    display: inline-block; padding: 2px 10px; border-radius: 999px;
-    background: #F1F5F9; color: #334155; font-size: 11px; font-weight: 700;
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    background: #F1F5F9; color: #334155; font-size: 10px; font-weight: 700;
 }
 .blocked-reason, .ok-reason {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; font-weight: 600; line-height: 1.3;
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 600; line-height: 1.3;
 }
 .blocked-reason { color: #B45309; }
 .ok-reason { color: #15803D; }

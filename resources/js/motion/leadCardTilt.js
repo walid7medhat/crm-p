@@ -5,9 +5,9 @@
 const FINE_POINTER = '(hover: hover) and (pointer: fine)'
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 
-const MAX_TILT = 2.2
-const MAX_SHIFT = 1
-const LIFT = -3
+const MAX_TILT = 1.6
+const MAX_SHIFT = 0.6
+const LIFT = -1
 
 let frame = 0
 let pending = null
