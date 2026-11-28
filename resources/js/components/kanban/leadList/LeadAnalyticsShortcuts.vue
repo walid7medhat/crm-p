@@ -1,15 +1,20 @@
 <template>
-  <section class="lead-analytics-row lfs" role="toolbar" aria-label="Lead quick filters">
+  <section
+    class="lead-analytics-row lfs"
+    :class="{ 'lfs--mobile-temp': isMobileTemp }"
+    role="toolbar"
+    aria-label="Lead quick filters"
+  >
     <div class="lfs-bar">
       <div
-        v-for="(group, groupIndex) in filterGroups"
+        v-for="(group, groupIndex) in visibleGroups"
         :key="group.id"
         class="lfs-segment"
         :class="`lfs-segment--${group.id}`"
       >
-        <span v-if="groupIndex > 0" class="lfs-divider" aria-hidden="true" />
+        <span v-if="!isMobileTemp && groupIndex > 0" class="lfs-divider" aria-hidden="true" />
 
-        <span class="lfs-segment__label">{{ group.label }}</span>
+        <span v-if="!isMobileTemp" class="lfs-segment__label">{{ group.label }}</span>
 
         <div class="lfs-pills">
           <button
@@ -33,8 +38,8 @@
               v-if="chip.icon"
               :icon="chip.icon"
               class="lfs-pill__icon"
-              width="14"
-              height="14"
+              :width="isMobileTemp ? 12 : 14"
+              :height="isMobileTemp ? 12 : 14"
               aria-hidden="true"
             />
             <span class="lfs-pill__label">{{ chip.label }}</span>
@@ -43,7 +48,7 @@
         </div>
       </div>
 
-      <div v-if="activeFilter" class="lfs-active-banner">
+      <div v-if="activeFilter && !isMobileTemp" class="lfs-active-banner">
         <span class="lfs-active-banner__text">
           Filtering:
           <strong>{{ activeFilterLabel }}</strong>
@@ -74,9 +79,16 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  /** `mobile-temp` = compact Hot/Warm/Cold row for the mobile board. */
+  variant: {
+    type: String,
+    default: 'default',
+  },
 })
 
 const emit = defineEmits(['toggle-filter'])
+
+const isMobileTemp = computed(() => props.variant === 'mobile-temp')
 
 const filterLabelByKey = Object.fromEntries(
   [
@@ -93,15 +105,24 @@ const activeFilterLabel = computed(() => {
   return filterLabelByKey[props.activeFilter] || props.activeFilter
 })
 
+const temperatureChips = [
+  { key: 'temp_cold', metricKey: 'tempCold', label: 'Cold', tone: 'cold', icon: 'lucide:snowflake', hint: 'Cold leads' },
+  { key: 'temp_warm', metricKey: 'tempWarm', label: 'Warm', tone: 'warm', icon: 'lucide:thermometer', hint: 'Warm leads' },
+  { key: 'temp_hot', metricKey: 'tempHot', label: 'Hot', tone: 'hot', icon: 'lucide:flame', hint: 'Hot leads' },
+]
+
+/** Mobile compact row follows the reference order: Hot → Warm → Cold. */
+const mobileTemperatureChips = [
+  { key: 'temp_hot', metricKey: 'tempHot', label: 'Hot', tone: 'hot', icon: 'lucide:flame', hint: 'Hot leads' },
+  { key: 'temp_warm', metricKey: 'tempWarm', label: 'Warm', tone: 'warm', icon: 'lucide:sun', hint: 'Warm leads' },
+  { key: 'temp_cold', metricKey: 'tempCold', label: 'Cold', tone: 'cold', icon: 'lucide:snowflake', hint: 'Cold leads' },
+]
+
 const filterGroups = [
   {
     id: 'temperature',
     label: 'TEMP',
-    chips: [
-      { key: 'temp_cold', metricKey: 'tempCold', label: 'Cold', tone: 'cold', icon: 'lucide:snowflake', hint: 'Cold leads' },
-      { key: 'temp_warm', metricKey: 'tempWarm', label: 'Warm', tone: 'warm', icon: 'lucide:thermometer', hint: 'Warm leads' },
-      { key: 'temp_hot', metricKey: 'tempHot', label: 'Hot', tone: 'hot', icon: 'lucide:flame', hint: 'Hot leads' },
-    ],
+    chips: temperatureChips,
   },
   {
     id: 'calls',
@@ -112,6 +133,11 @@ const filterGroups = [
     ],
   },
 ]
+
+const visibleGroups = computed(() => {
+  if (!isMobileTemp.value) return filterGroups
+  return [{ id: 'temperature', label: 'TEMP', chips: mobileTemperatureChips }]
+})
 
 function formatValue(value) {
   const n = Number(value)
@@ -142,14 +168,17 @@ function onChipClick(key) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 16px;
-  width: 100%;
+  gap: 8px 14px;
+  width: fit-content;
+  max-width: 100%;
   min-width: 0;
-  padding: 4px 2px 4px;
-  border: none;
-  border-bottom: none;
-  background: transparent;
-  box-shadow: none;
+  padding: 8px 12px;
+  border: 1px solid rgba(226, 224, 236, 0.9);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 18px -14px rgba(40, 20, 70, 0.35);
 }
 
 .lfs-segment {
@@ -162,18 +191,18 @@ function onChipClick(key) {
 
 .lfs-divider {
   width: 1px;
-  height: 24px;
-  background: rgba(30, 27, 46, 0.12);
+  height: 22px;
+  background: #e6e4ee;
   flex-shrink: 0;
-  margin: 0 4px;
+  margin: 0 2px 0 4px;
 }
 
 .lfs-segment__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: #b0acb8;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -192,17 +221,18 @@ function onChipClick(key) {
   align-items: center;
   gap: 6px;
   margin: 0;
-  padding: 6px 12px;
+  height: 32px;
+  padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #eceaf1;
   background: #ffffff;
-  color: #111827;
-  font-size: 12px;
+  color: #1c1917;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 1px rgba(30, 20, 50, 0.04);
   transition:
     color 0.15s ease,
     border-color 0.15s ease,
@@ -232,10 +262,10 @@ function onChipClick(key) {
 }
 
 .lfs-pill__count {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-primary-ink);
+  color: #1c1917;
   min-width: 0;
   text-align: left;
 }
@@ -245,23 +275,23 @@ function onChipClick(key) {
 }
 
 .lfs-pill--cold {
-  --pill-accent: #0284c7;
+  --pill-accent: #3b82f6;
 }
 
 .lfs-pill--warm {
-  --pill-accent: #b45309;
+  --pill-accent: #f59e0b;
 }
 
 .lfs-pill--hot {
-  --pill-accent: #ea580c;
+  --pill-accent: #f97316;
 }
 
 .lfs-pill--answered {
-  --pill-accent: #16a34a;
+  --pill-accent: #22c55e;
 }
 
 .lfs-pill--no-answer {
-  --pill-accent: #dc2626;
+  --pill-accent: #ef4444;
 }
 
 .lfs-pill:hover {
@@ -363,24 +393,132 @@ function onChipClick(key) {
 }
 
 @media (max-width: 768px) {
-  .lfs {
+  .lfs:not(.lfs--mobile-temp) {
     padding: 0 4px;
     margin-bottom: 8px;
   }
 
-  .lfs-segment {
+  .lfs:not(.lfs--mobile-temp) .lfs-segment {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
 
-  .lfs-divider {
+  .lfs:not(.lfs--mobile-temp) .lfs-divider {
     display: none;
   }
 
-  .lfs-bar {
+  .lfs:not(.lfs--mobile-temp) .lfs-bar {
     flex-wrap: wrap;
     overflow-x: visible;
   }
+}
+
+/* Compact Hot / Warm / Cold row for the mobile board (above stage pills). */
+.lfs--mobile-temp {
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.lfs--mobile-temp .lfs-bar {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 0;
+}
+
+.lfs--mobile-temp .lfs-segment,
+.lfs--mobile-temp .lfs-pills {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lfs--mobile-temp .lfs-pill {
+  flex: 1 1 0;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 8px;
+  gap: 4px;
+  border: none;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+.lfs--mobile-temp .lfs-pill__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lfs--mobile-temp .lfs-pill__count {
+  font-size: 11px;
+  font-weight: 700;
+  color: inherit;
+}
+
+.lfs--mobile-temp .lfs-pill--hot {
+  background: #fee2e2;
+  color: #991b1b;
+  --pill-accent: #991b1b;
+}
+
+.lfs--mobile-temp .lfs-pill--warm {
+  background: #ffedd5;
+  color: #c2410c;
+  --pill-accent: #c2410c;
+}
+
+.lfs--mobile-temp .lfs-pill--cold {
+  background: #e0f2fe;
+  color: #0369a1;
+  --pill-accent: #0369a1;
+}
+
+.lfs--mobile-temp .lfs-pill--hot .lfs-pill__icon,
+.lfs--mobile-temp .lfs-pill--hot .lfs-pill__label,
+.lfs--mobile-temp .lfs-pill--hot .lfs-pill__count,
+.lfs--mobile-temp .lfs-pill--warm .lfs-pill__icon,
+.lfs--mobile-temp .lfs-pill--warm .lfs-pill__label,
+.lfs--mobile-temp .lfs-pill--warm .lfs-pill__count,
+.lfs--mobile-temp .lfs-pill--cold .lfs-pill__icon,
+.lfs--mobile-temp .lfs-pill--cold .lfs-pill__label,
+.lfs--mobile-temp .lfs-pill--cold .lfs-pill__count {
+  color: inherit !important;
+}
+
+.lfs--mobile-temp .lfs-pill.is-active {
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.lfs--mobile-temp .lfs-pill--hot.is-active,
+.lfs--mobile-temp .lfs-pill--hot:hover {
+  background: #fecaca !important;
+  color: #7f1d1d;
+}
+
+.lfs--mobile-temp .lfs-pill--warm.is-active,
+.lfs--mobile-temp .lfs-pill--warm:hover {
+  background: #fed7aa !important;
+  color: #9a3412;
+}
+
+.lfs--mobile-temp .lfs-pill--cold.is-active,
+.lfs--mobile-temp .lfs-pill--cold:hover {
+  background: #bae6fd !important;
+  color: #075985;
+}
+
+.lfs--mobile-temp .lfs-pill:hover {
+  box-shadow: none;
+  filter: none;
 }
 </style>

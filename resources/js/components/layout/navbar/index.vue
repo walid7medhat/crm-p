@@ -5515,7 +5515,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   .lead-board-id {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     padding: 0;
     border: 0;
@@ -5525,8 +5525,8 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   }
 
   .lead-board-id__avatar {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
@@ -5539,7 +5539,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     justify-content: center;
     color: #fff !important;
     -webkit-text-fill-color: #fff;
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 700;
   }
 
@@ -5549,22 +5549,22 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     text-overflow: ellipsis;
     white-space: nowrap;
     color: #111111;
-    font-size: 22px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
     line-height: 1.1;
   }
 
   .lead-board-add {
-    height: 36px;
-    padding: 0 14px;
+    height: 30px;
+    padding: 0 10px;
     border: 0;
-    border-radius: 12px;
+    border-radius: 10px;
     /* Theme purple — same as the desktop "Create New" button. */
     background: var(--gradient-primary) !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: -0.02em;
     white-space: nowrap;
@@ -5580,21 +5580,21 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     padding: 0;
-    border-radius: 14px;
+    border-radius: 10px;
     border: 1px solid #ececef;
     background: #ffffff;
     color: var(--color-primary);
-    font-size: 20px;
+    font-size: 15px;
     cursor: pointer;
   }
 
   .navbar-header--lead-board .kanban-mob-notification :deep(.notification-bell-btn) {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
     border: 1px solid #ececef;
     background: #ffffff;
     color: var(--color-primary);
@@ -5610,6 +5610,16 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
   .navbar-header--lead-board .kanban-mob-search-field input {
     padding-left: 14px !important;
     padding-right: 34px !important;
+    font-size: 12px !important;
+  }
+
+  .navbar-header--lead-board .kanban-mob-search-field :deep(input)::placeholder,
+  .navbar-header--lead-board .kanban-mob-search-field :deep(.form-control)::placeholder,
+  .navbar-header--lead-board .kanban-mob-search-field .search-input::placeholder,
+  .kanban-mob-search-row .search-input-container :deep(input)::placeholder,
+  .kanban-mob-search-row .search-input::placeholder {
+    font-size: 11px !important;
+    font-weight: 400 !important;
   }
 
   .kanban-mob-create {
@@ -5694,7 +5704,7 @@ body:has(.modal.show, [class*="modal-overlay"], .complete-fields-overlay, .date-
 
   .kanban-mob-toolbar__search .search-input-container :deep(input)::placeholder,
   .kanban-mob-toolbar__search .search-input::placeholder {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
 
   .kanban-mob-toolbar__search .search-filters-pills {

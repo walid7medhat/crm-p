@@ -61,6 +61,14 @@
         <div class="board-head">
             <!-- Mobile: one tab per stage (no "All leads"), each outlined in its stage colour;
                  the active tab is filled with that colour. -->
+            <LeadAnalyticsShortcuts
+                v-if="kanbanIsMobile"
+                variant="mobile-temp"
+                :metrics="leadAnalyticsMetrics"
+                :active-filter="activeShortcutFilter"
+                @toggle-filter="onShortcutFilterToggle"
+            />
+
             <div v-if="kanbanIsMobile" class="mobile-stage-carousel" role="tablist" aria-label="Lead stages">
                 <button
                     v-for="col in columns"
@@ -73,7 +81,9 @@
                     :aria-selected="String(mobileListFilterStageId) === String(col.status) ? 'true' : 'false'"
                     @click="selectMobileStage(col.status, $event)"
                 >
-                    {{ col.title }} ({{ stageCountForColumn(col) }})
+                    <span class="mobile-stage-carousel__dot" aria-hidden="true" />
+                    <span class="mobile-stage-carousel__name">{{ col.title }}</span>
+                    <span class="mobile-stage-carousel__count">{{ stageCountForColumn(col) }}</span>
                 </button>
             </div>
 
@@ -332,6 +342,137 @@
                                                 >
                                                     <iconify-icon :icon="isLeadSelected(task.id) ? 'lucide:check' : 'lucide:square'" />
                                                 </button>
+
+                                                <!-- Mobile lead card (reference layout). Desktop/tablet keep the block below. -->
+                                                <div v-if="kanbanIsMobile" class="mlead">
+                                                    <!-- 1) Top: lead name + duplicate / merge + Hot/Warm/Cold -->
+                                                    <div class="mlead__head">
+                                                        <p class="mlead__title mb-0" :title="task.lead_name">{{ task.lead_name || 'Untitled' }}</p>
+                                                        <div class="mlead__head-actions">
+                                                            <div
+                                                                v-if="canSeeDuplicates && task.duplicate_no > 0"
+                                                                class="duplicate-badge position-relative cursor-pointer"
+                                                                @click.stop="openDuplicateLeadsModal(task.id, $event)"
+                                                            >
+                                                                <div class="duplicate-icon-wrapper">
+                                                                    <div class="duplicate-rectangle duplicate-rectangle-back"></div>
+                                                                    <div class="duplicate-rectangle duplicate-rectangle-front">
+                                                                        <span class="duplicate-number">{{ task.duplicate_no || 0 }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                v-if="Number(task.merged_count) > 0"
+                                                                type="button"
+                                                                class="merged-flag"
+                                                                aria-label="Show merged leads"
+                                                                @click.stop="openMergedLeadsModal(task.id, $event.currentTarget)"
+                                                                @dblclick.stop
+                                                                @pointerdown.stop
+                                                            >
+                                                                <iconify-icon icon="lucide:git-merge" />
+                                                                <span>{{ task.merged_count }}</span>
+                                                            </button>
+                                                            <span
+                                                                v-if="mobileLeadHeat(task)"
+                                                                class="mlead__heat"
+                                                                :class="'mlead__heat--' + mobileLeadHeat(task)"
+                                                            >
+                                                                <iconify-icon :icon="mobileHeatIcon(mobileLeadHeat(task))" aria-hidden="true" />
+                                                                <span>{{ mobileHeatLabel(mobileLeadHeat(task)) }}</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- 2) Metadata: created by / at / branch -->
+                                                    <p v-if="mobileCreatedMeta(column, task)" class="mlead__created mb-0">
+                                                        {{ mobileCreatedMeta(column, task) }}
+                                                    </p>
+
+                                                    <!-- 3) Client: name + phone with country flag -->
+                                                    <div
+                                                        v-if="(cardNameOnCard(column, task) && cardClientLabel(column, task)) || (cardPhoneBesideName(column, task) && task.work_phone)"
+                                                        class="mlead__client"
+                                                    >
+                                                        <span class="mlead__avatar" aria-hidden="true">{{ mobileClientInitials(cardClientLabel(column, task) || task.lead_name) }}</span>
+                                                        <div class="mlead__client-copy min-w-0">
+                                                            <p
+                                                                v-if="cardNameOnCard(column, task) && cardClientLabel(column, task)"
+                                                                class="mlead__client-name mb-0"
+                                                                :title="cardClientLabel(column, task)"
+                                                            >{{ cardClientLabel(column, task) }}</p>
+                                                            <p
+                                                                v-if="cardPhoneBesideName(column, task) && task.work_phone"
+                                                                class="mlead__client-phone mb-0"
+                                                                :title="canSeeLeadNumber(task) ? task.work_phone : ''"
+                                                            >
+                                                                <span
+                                                                    v-if="phoneCountryFlag(task)"
+                                                                    class="phone-country-flag"
+                                                                    :title="phoneCountryTitle(task)"
+                                                                    aria-hidden="true"
+                                                                >{{ phoneCountryFlag(task) }}</span>
+                                                                <template v-if="canSeeLeadNumber(task)">{{ task.work_phone }}</template>
+                                                                <template v-else>{{ leadNumberMask(task.work_phone).head }}<span class="blurred-stars">{{ leadNumberMask(task.work_phone).stars }}</span></template>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- 4) Client requirement pills -->
+                                                    <div v-if="mobileLeadTags(task).length" class="mlead__req">
+                                                        <span
+                                                            v-for="tag in mobileLeadTags(task)"
+                                                            :key="tag.key"
+                                                            class="mlead__tag"
+                                                            :title="tag.label"
+                                                        >
+                                                            <iconify-icon :icon="tag.icon" aria-hidden="true" />
+                                                            <span>{{ tag.label }}</span>
+                                                        </span>
+                                                    </div>
+
+                                                    <!-- 5) Bottom: responsible (avatar+name) · last activity · source label -->
+                                                    <div
+                                                        v-if="(cardHasField(column, task, 'responsible_person') && hasResponsiblePerson(task)) || (cardHasField(column, task, 'assigned_by') && hasAssignedBy(task)) || task.lead_source"
+                                                        class="mlead__foot"
+                                                    >
+                                                        <div
+                                                            v-if="cardHasField(column, task, 'responsible_person') && hasResponsiblePerson(task)"
+                                                            class="mlead__foot-person"
+                                                            @click.stop="openPersonProfile(task, 'responsible', $event)"
+                                                        >
+                                                            <img
+                                                                v-if="responsiblePersonAvatar(task) && !brokenCardAvatars[task.id]"
+                                                                :src="responsiblePersonAvatar(task)"
+                                                                alt=""
+                                                                class="mlead__foot-avatar"
+                                                                @error="markCardAvatarBroken(task)"
+                                                            />
+                                                            <span v-else class="mlead__foot-avatar mlead__foot-avatar--fallback" aria-hidden="true">
+                                                                <iconify-icon icon="lucide:user-round"></iconify-icon>
+                                                            </span>
+                                                            <span
+                                                                class="mlead__foot-name"
+                                                                :title="task.responsible_person?.name || ''"
+                                                            >{{ task.responsible_person?.name }}</span>
+                                                        </div>
+                                                        <span v-else class="mlead__foot-person" aria-hidden="true" />
+                                                        <span
+                                                            v-if="cardHasField(column, task, 'assigned_by') && hasAssignedBy(task)"
+                                                            class="mlead__foot-activity"
+                                                            :title="`Last activity ${formatActivityDate(task)}`"
+                                                        >{{ formatActivityDate(task) }}</span>
+                                                        <span
+                                                            v-if="task.lead_source"
+                                                            class="mlead__foot-source"
+                                                            :title="task.lead_source"
+                                                        >
+                                                            <LeadSourceMark :source="task.lead_source" :lead="task" />
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <template v-else>
                                                 <!-- Task Header - Lead Name + badges (single row) -->
                                                 <div class="task-header d-flex align-items-center gap-2 mb-12 min-w-0">
                                                     <p class="task-title flex-grow-1 mb-0 min-w-0 text-truncate" :title="task.lead_name">{{ task.lead_name }}</p>
@@ -632,6 +773,7 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </template>
                                             </div>
                                         </template>
                                 </draggable>
@@ -3878,6 +4020,83 @@ const clientDetailRows = (task) => {
     return rows
 }
 
+const mobileClientInitials = (label) => {
+    const parts = String(label || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+    if (!parts.length) return '?'
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase()
+    return `${parts[0].slice(0, 1)}${parts[parts.length - 1].slice(0, 1)}`.toUpperCase()
+}
+
+const mobileLeadHeat = (task) => {
+    const heat = normalizeLeadHeat(task)
+    if (heat === 'hot' || heat === 'warm' || heat === 'cold') return heat
+    const priority = String(task?.priority || '').toLowerCase()
+    if (priority.includes('hot')) return 'hot'
+    if (priority.includes('warm')) return 'warm'
+    if (priority.includes('cold')) return 'cold'
+    const status = String(task?.status_lead || '').toLowerCase()
+    if (status.includes('hot')) return 'hot'
+    if (status.includes('warm')) return 'warm'
+    if (status.includes('cold')) return 'cold'
+    return null
+}
+
+const mobileHeatIcon = (heat) => {
+    if (heat === 'hot') return 'lucide:flame'
+    if (heat === 'warm') return 'lucide:sun'
+    return 'lucide:snowflake'
+}
+
+const mobileHeatLabel = (heat) => {
+    if (heat === 'hot') return 'Hot'
+    if (heat === 'warm') return 'Warm'
+    if (heat === 'cold') return 'Cold'
+    return ''
+}
+
+/** Subtle subtitle under the title: Created By · Created At · Branch */
+const mobileCreatedMeta = (column, task) => {
+    const parts = []
+    if (cardHasField(column, task, 'created_by') && hasDynamicFieldValue(task, 'created_by')) {
+        const by = getCreatedByDisplay(task)
+        if (by && by !== '—') parts.push(by)
+    }
+    if (cardHasField(column, task, 'created_at') && task.created_at) {
+        const stamp = [formatCardDate(task.created_at), formatCardTime(task.created_at)].filter(Boolean).join(' ')
+        if (stamp) parts.push(stamp)
+    }
+    const branch = String(task?.lead_branch_source || '').trim()
+    if (branch) parts.push(branch)
+    return parts.join(' · ')
+}
+
+/** Requirement pills: location, property type, size, budget. */
+const mobileLeadTags = (task) => {
+    const rows = clientDetailRows(task)
+    const location = rows.find((r) => r.key === 'location')
+    const bedrooms = rows.find((r) => r.key === 'bedrooms')
+    const budget = rows.find((r) => r.key === 'budget')
+    const tags = []
+    if (location) tags.push(location)
+    const propertyType = getPriorityPropertyType(task)
+    if (propertyType) {
+        tags.push({ key: 'property_type', icon: 'lucide:building-2', label: propertyType })
+    }
+    if (bedrooms) tags.push(bedrooms)
+    if (budget) {
+        const rent = String(budget.label || '').includes('/yr')
+        const spaced = String(budget.label || '').replace(/^(.+?)-(.+)$/, '$1 – $2')
+        tags.push({
+            ...budget,
+            label: rent || /AED/i.test(spaced) ? spaced : `${spaced} AED`,
+        })
+    }
+    return tags
+}
+
 const activePersonHover = ref(null)
 const personHoverHideTimer = ref(null)
 const personHoverDetailsCache = new Map()
@@ -5846,14 +6065,11 @@ function stageTextOn(hex) {
     return stageIsLight(hex) ? '#1c1730' : '#ffffff'
 }
 
-// Mobile stage tab: border in the stage colour; filled with it when active.
-// Light colours (e.g. yellow) use dark text so the label stays readable.
+// Mobile stage tab: colored stage dot; active pill uses dark fill (reference layout).
 function mobileStagePillStyle(col) {
     const color = col?.color || getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#733E87'
     return {
-        '--pill-color': color,
-        '--pill-text': stageIsLight(color) ? '#1c1730' : color,
-        '--pill-active-text': stageTextOn(color),
+        '--pill-dot': color,
     }
 }
 
@@ -9558,13 +9774,12 @@ const fetchRevertNotifications = async () => {
     content: none !important;
 }
 
-/* Cards inside: light tint of the stage colour as the border, and a soft lift. */
+/* Mobile cards: soft system border/shadow; stage colour stays as a thin left accent. */
 .kanban-outer--mobile .kanban-column .kanban-card--mobile {
-    border-color: color-mix(in srgb, var(--column-color, #733E87) 28%, #ffffff) !important;
-    box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.35) !important;
+    border-color: var(--color-border, #e8e6ee) !important;
+    box-shadow: 0 8px 20px -14px rgba(15, 23, 42, 0.22) !important;
 }
 
-/* Stage-colour stripe on the left of every mobile lead card. */
 .kanban-outer--mobile .kanban-column .kanban-card--mobile::after {
     content: '';
     position: absolute;
@@ -9572,8 +9787,8 @@ const fetchRevertNotifications = async () => {
     bottom: 0;
     left: 0;
     width: 3px;
-    border-radius: 12px 0 0 12px;
-    background: var(--column-color, #733E87);
+    border-radius: 16px 0 0 16px;
+    background: var(--column-color, var(--color-primary, #733E87));
     opacity: 1;
     pointer-events: none;
     z-index: 2;
@@ -9582,7 +9797,7 @@ const fetchRevertNotifications = async () => {
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:hover,
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:active,
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:focus-visible {
-    border-color: color-mix(in srgb, var(--column-color, #733E87) 42%, #ffffff) !important;
+    border-color: var(--color-primary-border, #e7dcec) !important;
     transition: border-color 0.08s ease;
 }
 
@@ -9664,11 +9879,11 @@ const fetchRevertNotifications = async () => {
 .kanban-outer--mobile .kanban-card--mobile {
     position: relative;
     overflow: hidden;
-    border: 1px solid var(--color-purple-light) !important;
+    border: 1px solid var(--color-border) !important;
     border-radius: 16px !important;
-    background: #fff !important;
-    box-shadow: none !important;
-    padding: 14px 14px 12px !important;
+    background: var(--color-surface, #fff) !important;
+    box-shadow: 0 10px 24px -16px rgba(15, 23, 42, 0.28) !important;
+    padding: 16px !important;
     margin-bottom: 12px !important;
     touch-action: manipulation;
     -webkit-user-select: none;
@@ -9680,7 +9895,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-outer--mobile .kanban-card--mobile:active {
-    background: #fafafa;
+    background: var(--color-surface-hover, #fafafa);
 }
 
 .kanban-outer--mobile .kanban-card--mobile:nth-child(2) { animation-delay: 40ms; }
@@ -9695,75 +9910,268 @@ const fetchRevertNotifications = async () => {
     to { opacity: 1; transform: none; }
 }
 
-.kanban-outer--mobile .kanban-card--mobile .task-header {
-    margin-bottom: 6px !important;
-}
-
-.kanban-outer--mobile .kanban-card--mobile .task-title {
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1.3;
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-}
-
-.kanban-outer--mobile .kanban-card--mobile .task-info {
+.kanban-outer--mobile .mlead {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-}
-
-.kanban-outer--mobile .kanban-card--mobile .info-item,
-.kanban-outer--mobile .kanban-card--mobile .date-info {
-    margin-bottom: 0 !important;
+    gap: 12px;
     min-width: 0;
 }
 
-.kanban-outer--mobile .kanban-card--mobile .date-info {
-    grid-column: 1 / -1;
+.kanban-outer--mobile .mlead__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
 }
 
-/* Activity row (date left, avatar + source mark right) and the lone source mark take the
-   full card width instead of one half-width grid cell. */
-.kanban-outer--mobile .kanban-card--mobile .lead-activity-row,
-.kanban-outer--mobile .kanban-card--mobile .lead-source-mark-row {
-    grid-column: 1 / -1;
+.kanban-outer--mobile .mlead__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--color-text-primary, #171717) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: none;
 }
 
-.kanban-outer--mobile .kanban-card--mobile .lead-activity-row hr {
+.kanban-outer--mobile .mlead__head-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex: 0 0 auto;
+    max-width: 48%;
+    flex-wrap: wrap;
+}
+
+.kanban-outer--mobile .mlead__created {
+    margin-top: -6px;
+    color: var(--color-text-secondary, #64748b) !important;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-outer--mobile .mlead__heat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.kanban-outer--mobile .mlead__heat iconify-icon {
+    font-size: 12px;
+}
+
+.kanban-outer--mobile .mlead__heat--hot {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.kanban-outer--mobile .mlead__heat--warm {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.kanban-outer--mobile .mlead__heat--cold {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.kanban-outer--mobile .mlead__client {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.kanban-outer--mobile .mlead__avatar {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-soft, #f7f2f8);
+    color: var(--color-primary, #733E87);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.kanban-outer--mobile .mlead__client-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.kanban-outer--mobile .mlead__client-name {
+    color: var(--color-text-primary, #171717) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: none;
+}
+
+.kanban-outer--mobile .mlead__client-phone {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--color-text-secondary, #64748b) !important;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-outer--mobile .mlead__client-phone .phone-country-flag {
+    flex: 0 0 auto;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.kanban-outer--mobile .mlead__client-phone .blurred-stars {
+    filter: blur(3px);
+    user-select: none;
+}
+
+.kanban-outer--mobile .mlead__req {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.kanban-outer--mobile .mlead__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 100%;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--color-surface-muted, #f4f5f7);
+    color: var(--color-text-nav, #4b4568);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.kanban-outer--mobile .mlead__tag iconify-icon {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--color-text-muted, #6b7280);
+}
+
+.kanban-outer--mobile .mlead__tag span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-outer--mobile .mlead__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     margin-top: 2px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #e8e6ee);
+    min-width: 0;
 }
 
-.kanban-outer--mobile .kanban-card--mobile .info-item--span {
-    grid-column: 1 / -1;
+.kanban-outer--mobile .mlead__foot-person {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 auto;
+    max-width: 55%;
 }
 
-.kanban-outer--mobile .kanban-card--mobile .info-label,
-.kanban-outer--mobile .kanban-card--mobile .text-secondary-light {
-    font-size: 11px !important;
-    color: #9aa0ad !important;
+.kanban-outer--mobile .mlead__foot-avatar {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-surface-muted, #f4f5f7);
 }
 
-.kanban-outer--mobile .kanban-card--mobile .info-value {
+.kanban-outer--mobile .mlead__foot-avatar--fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted, #6b7280);
+    font-size: 13px;
+}
+
+.kanban-outer--mobile .mlead__foot-name {
+    min-width: 0;
+    color: var(--color-text-primary, #171717) !important;
     font-size: 13px;
     font-weight: 600;
-    color: #1c1730;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-outer--mobile .mlead__foot-activity {
+    flex: 0 0 auto;
+    color: var(--color-text-secondary, #64748b) !important;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.kanban-outer--mobile .mlead__foot-source {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
 }
 
 .mobile-stage-carousel {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
-    margin: 4px 0 12px;
-    padding: 6px;
+    margin: 4px 0 0;
+    padding: 2px 0 0;
     overflow-x: auto;
     overflow-y: hidden;
-    border: 1px solid var(--color-purple-light);
-    border-radius: 16px;
-    background: #ffffff;
+    border: none;
+    border-radius: 0;
+    background: transparent;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
     scrollbar-width: none;
@@ -9774,25 +10182,52 @@ const fetchRevertNotifications = async () => {
 }
 
 .mobile-stage-carousel__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     flex: 0 0 auto;
     height: 36px;
-    padding: 0 14px;
-    border: 1.5px solid var(--pill-color, #733E87);
+    padding: 0 12px 0 10px;
+    border: 1px solid var(--color-border, #e8e6ee);
     border-radius: 999px;
-    background: #ffffff;
-    color: var(--pill-text, #733E87);
-    font-size: 14px;
+    background: var(--color-surface, #ffffff);
+    color: var(--color-text-primary, #171717);
+    font-size: 13px;
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mobile-stage-carousel__dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pill-dot, var(--color-primary, #733E87));
+}
+
+.mobile-stage-carousel__name {
+    line-height: 1;
+}
+
+.mobile-stage-carousel__count {
+    color: var(--color-text-secondary, #64748b);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
 }
 
 .mobile-stage-carousel__pill.is-active {
-    background: var(--pill-color, #733E87);
-    color: var(--pill-active-text, #ffffff);
-    box-shadow: 0 6px 14px -8px var(--pill-color, #733E87);
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.mobile-stage-carousel__pill.is-active .mobile-stage-carousel__count {
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .mobile-stage-carousel__pill:active {
@@ -11055,19 +11490,25 @@ const fetchRevertNotifications = async () => {
         padding: 0 8px;
     }
 
-    .board-head .mobile-stage-carousel {
+    .board-head > :deep(.lfs--mobile-temp) {
         grid-column: 1 / -1;
         grid-row: 1;
-        margin: 2px 0 8px;
+        margin: 2px 0 6px;
+    }
+
+    .board-head .mobile-stage-carousel {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin: 0;
     }
 
     .board-head .board-view-switch {
         display: none;
     }
 
-    .board-head > :deep(.lead-analytics-row) {
+    .board-head > :deep(.lead-analytics-row:not(.lfs--mobile-temp)) {
         grid-column: 1 / -1;
-        grid-row: 2;
+        grid-row: 3;
     }
 
     .board-view-switch__label {
