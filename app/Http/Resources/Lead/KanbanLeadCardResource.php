@@ -388,7 +388,23 @@ class KanbanLeadCardResource extends JsonResource
             'duplicate_no' => $duplicateNo,
             'duplicate_ids' => $duplicateIds,
             'is_reverted' => ! is_null($this->revert),
-            'added_by_user' => $this->whenLoaded('addedBy', fn () => $this->formatCreatorUser($this->addedBy)),
+            'added_by_user' => $this->whenLoaded('addedBy', function () {
+                $formatted = $this->formatCreatorUser($this->addedBy);
+                if ($formatted) {
+                    return $formatted;
+                }
+                // Brand isolation can hide the full user payload; still send a name for the card.
+                if ($this->addedBy) {
+                    return [
+                        'id' => $this->addedBy->id,
+                        'name' => \App\Models\User::resolveDisplayName($this->addedBy),
+                        'display_name' => $this->addedBy->display_name,
+                        'status' => $this->addedBy->status,
+                    ];
+                }
+
+                return null;
+            }),
              'responsible_person' => $this->formatLeadPoolUser($this->responsiblePerson),
             'parent' => $this->whenLoaded('addedBy', fn () => $this->formatLeadPoolUser($this->addedBy)),
             'assigned_at' => $this->created_at,

@@ -407,9 +407,9 @@
                                                             v-if="(cardHasField(column, task, 'created_by') && hasDynamicFieldValue(task, 'created_by')) || (cardHasField(column, task, 'created_at') && task.created_at) || task.lead_branch_source"
                                                             class="card-meta"
                                                         >
-                                                            <span v-if="cardHasField(column, task, 'created_by') && hasDynamicFieldValue(task, 'created_by')" class="card-meta-item" :title="`Created by ${getCreatedByDisplay(task)}`">{{ getCreatedByDisplay(task) }}</span>
-                                                            <span v-if="cardHasField(column, task, 'created_at') && task.created_at" class="card-meta-item" :title="formatCardDate(task.created_at)">{{ formatCardDate(task.created_at) }}</span>
-                                                            <span v-if="task.lead_branch_source" class="card-meta-item" :title="task.lead_branch_source">{{ task.lead_branch_source }}</span>
+                                                            <span v-if="cardHasField(column, task, 'created_by') && hasDynamicFieldValue(task, 'created_by')" class="card-meta-item card-meta-item--by" :title="`Created by ${getCreatedByDisplay(task)}`"><span class="card-meta-label">by</span> {{ getCreatedByDisplay(task) }}</span>
+                                                            <span v-if="cardHasField(column, task, 'created_at') && task.created_at" class="card-meta-item card-meta-item--fixed" :title="`${formatCardDate(task.created_at)} ${formatCardTime(task.created_at)}`"><span class="card-meta-label">at</span> {{ formatCardDate(task.created_at) }} {{ formatCardTime(task.created_at) }}</span>
+                                                            <span v-if="task.lead_branch_source" class="card-meta-item card-meta-item--fixed" :title="task.lead_branch_source">{{ task.lead_branch_source }}</span>
                                                         </div>
                                                         <div class="req-row">
                                                             <span
@@ -4066,32 +4066,30 @@ const isCreatorInactive = (task) => {
 
 const getCreatedByDisplay = (task) => {
     const u = task?.added_by_user
-    console.log('CREATED BY', task?.id, JSON.stringify(u))
+    if (u?.name) return String(u.name).trim()
+    if (u?.display_name) return String(u.display_name).trim()
+    if (typeof u === 'string' && u.trim()) return u.trim()
 
+    const parent = task?.parent
+    if (parent?.name) return String(parent.name).trim()
+    if (parent?.display_name) return String(parent.display_name).trim()
+
+    // Inactive creators used to hide the name; still show who created when we have a label.
     if (isCreatorInactive(task)) {
         return (
-            u.branch_name ||
-            u.office_name ||
-            u.admin_parent_name ||
+            u?.branch_name ||
+            u?.office_name ||
+            u?.admin_parent_name ||
             task?.lead_branch_source ||
             '—'
         )
     }
 
-    if (u?.name) return u.name
-    if (typeof u === 'string' && u.trim()) return u.trim()
-    if (task?.added_by != null && task?.added_by !== '') {
-        return String(task.added_by)
-    }
     return '—'
 }
 const hasDynamicFieldValue = (task, key) => {
     if (key === 'created_by') {
-        return !!(
-            task?.added_by_user?.name ||
-            (typeof task?.added_by_user === 'object' && task.added_by_user && Object.keys(task.added_by_user).length > 0) ||
-            (task?.added_by != null && task?.added_by !== '')
-        )
+        return getCreatedByDisplay(task) !== '—'
     }
     // For bedrooms: show root task.bedrooms only when we are not hiding bedrooms because the *priority* requirement is plot/land.
     if (key === 'bedrooms') {
@@ -5336,9 +5334,21 @@ function formatCardDate(dateString) {
     return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric',
         timeZone: CARD_TIME_ZONE,
     })
+}
+
+function formatCardTime(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return ''
+    const raw = date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        hour12: true,
+        timeZone: CARD_TIME_ZONE,
+    })
+    // "2 PM" → "2 pm"
+    return raw.replace(/\s?(AM|PM)/i, (_, period) => ` ${period.toLowerCase()}`)
 }
 /** Activity tile: day only, no clock time. */
 function formatActivityDate(task) {
@@ -8191,7 +8201,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-card .task-title {
-    font-size: 11px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     letter-spacing: -0.02em;
     line-height: 1.3;
@@ -8249,11 +8259,12 @@ const fetchRevertNotifications = async () => {
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
-    color: #171717;
-    font-size: 10px;
+    font-family: Montserrat, system-ui, sans-serif;
+    color: #111111;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1.35;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
     white-space: nowrap;
 }
 
@@ -9253,19 +9264,36 @@ const fetchRevertNotifications = async () => {
 
 .card-meta-item {
     min-width: 0;
-    flex: 0 1 auto;
     overflow: hidden;
     color: #8a8a8a;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 500;
     line-height: 1.35;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.card-meta-item--by {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.card-meta-item--fixed {
+    flex: 0 0 auto;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.card-meta-label,
+.card-meta-time {
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
 .card-meta-item + .card-meta-item::before {
     content: '·';
-    margin: 0 5px;
+    margin: 0 4px;
     color: #d4d4d4;
 }
 
