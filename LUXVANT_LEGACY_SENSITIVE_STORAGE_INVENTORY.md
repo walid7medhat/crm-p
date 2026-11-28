@@ -2,7 +2,7 @@
 
 **Scope:** `storage/app/public` (and historic `/storage` URLs).
 **Date:** 2026-11-13
-**Branch:** `deploy/luxvant-release`
+**Branch:** `main` (legacy deploy branch archived as `archive/deploy-luxvant-release-2026-11-28`)
 **Action taken:** none (no moves, renames, or URL breaks).
 
 This inventory classifies **path categories** used by the CRM. Live disk volume counts vary by environment; do not treat this as a production file listing.

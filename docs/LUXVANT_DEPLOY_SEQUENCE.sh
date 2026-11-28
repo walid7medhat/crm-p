@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Maintenance-safe Package S / Package B deploy helpers.
-# DO NOT RUN until explicit approval.
+# Optional Package S / Package B file-copy helpers (brand package staging).
+# Normal day-to-day deploys for OIA and Luxvant use main only:
+#   see docs/DEPLOY.md  →  git pull --ff-only origin main
+# DO NOT RUN these package helpers until explicit approval.
 #
 # Usage examples:
 #   REPO=/path/to/local STAGE=/tmp/lux_stage ./docs/LUXVANT_DEPLOY_SEQUENCE.sh stage

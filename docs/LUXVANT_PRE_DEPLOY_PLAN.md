@@ -1,5 +1,9 @@
 # Luxvant Pre-Deploy Plan — Security Fixes (+ Brand Runtime)
 
+> **Workflow note (2026-11-28):** Day-to-day OIA and Luxvant deploys use **`main` only**.  
+> See [`docs/DEPLOY.md`](DEPLOY.md). This document remains a historical package S/B checklist;  
+> it does **not** require `deploy/luxvant-release` or any other deployment branch.
+
 **Status:** READY FOR APPROVAL — **DO NOT DEPLOY** until explicit approval.  
 **Live:** https://luxvant.altcrm.com/  
 **Prepared:** 2026-11-12  
