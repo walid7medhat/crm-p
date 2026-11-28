@@ -654,6 +654,16 @@ class LeadController extends Controller
             $leadData['source_client_phone'] = $request->input('source_client_phone');
             $leadData['source_client_email'] = $request->input('source_client_email');
             $leadData['source_relation'] = $request->input('source_relation');
+
+            // Referred by an existing client: mark it on source_relation with the client's lead id
+            // (only a lead this user added or is responsible for — same list as /my-clients).
+            if ($request->input('referral_type') === 'existing') {
+                $referrerId = (int) $request->input('source_client_id');
+                $referrerId = $referrerId > 0 && Lead::whereKey($referrerId)
+                    ->where(fn ($q) => $q->where('added_by', $user->id)->orWhere('responsible_person_id', $user->id))
+                    ->exists() ? $referrerId : null;
+                $leadData['source_relation'] = Lead::existingClientRelation($referrerId);
+            }
         }
             $lead = Lead::create($leadData);
        if (!empty($initialComment)) {

@@ -25,6 +25,57 @@ class Lead extends Model
     // 
     use HasFactory; use AltCRMLeadTrait; use SoftDeletes; use BrandOwned; use BranchFiltered;
     protected $guarded=[];
+
+    /**
+     * source_relation prefix for a Referral lead referred by an existing client:
+     * "existing_client:<referrer lead id>" (or just "existing_client" when the id is unknown).
+     */
+    public const EXISTING_CLIENT_RELATION = 'existing_client';
+
+    /** @var array<int, string|null> referrer lead id => its lead_source (per request) */
+    protected static array $referrerSourceCache = [];
+
+    public static function existingClientRelation(?int $referrerLeadId): string
+    {
+        return $referrerLeadId
+            ? self::EXISTING_CLIENT_RELATION.':'.$referrerLeadId
+            : self::EXISTING_CLIENT_RELATION;
+    }
+
+    public static function isExistingClientRelation(?string $relation): bool
+    {
+        $relation = (string) $relation;
+
+        return $relation === self::EXISTING_CLIENT_RELATION
+            || str_starts_with($relation, self::EXISTING_CLIENT_RELATION.':');
+    }
+
+    public static function referrerLeadIdFromRelation(?string $relation): ?int
+    {
+        if (! self::isExistingClientRelation($relation)) {
+            return null;
+        }
+        $id = (int) substr((string) $relation, strlen(self::EXISTING_CLIENT_RELATION) + 1);
+
+        return $id > 0 ? $id : null;
+    }
+
+    /** lead_source of the existing client who referred this lead (null when unknown). */
+    public static function referrerLeadSource(?string $relation): ?string
+    {
+        $id = self::referrerLeadIdFromRelation($relation);
+        if (! $id) {
+            return null;
+        }
+        if (! array_key_exists($id, static::$referrerSourceCache)) {
+            static::$referrerSourceCache[$id] = static::withoutGlobalScopes()
+                ->whereKey($id)
+                ->value('lead_source');
+        }
+
+        return static::$referrerSourceCache[$id];
+    }
+
     public const INTELLIGENCE_FIELDS = [
         'score',
         'priority',

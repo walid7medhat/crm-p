@@ -67,9 +67,26 @@ function isOiaSource(key) {
     return key.includes('oia') && !key.includes('whatsapp') && !key.includes('wati')
 }
 
-export function leadSourceMark(source) {
+/** Referral by an existing client: one person (not the group "users" icon). */
+const EXISTING_CLIENT_REFERRAL_MARK = { icon: 'lucide:user-round-check', bg: '#0f766e' }
+
+/** True when the lead's source is Referral and source_relation marks an existing client. */
+export function isExistingClientReferral(lead) {
+    if (!lead) return false
+    const source = String(lead.lead_source || '').trim().toLowerCase()
+    return source === 'referral' && lead.is_existing_client_referral === true
+}
+
+export function leadSourceMark(source, options = {}) {
     const title = String(source || '').trim()
     if (!title) return null
+    if (options.existingClient) {
+        const by = String(options.referrer || '').trim()
+        return {
+            title: by ? `Referral from existing client: ${by}` : 'Referral from existing client',
+            ...EXISTING_CLIENT_REFERRAL_MARK,
+        }
+    }
     const key = title.toLowerCase()
     const mark = isOiaSource(key) ? OIA_MARK : (EXACT[key] || fuzzyMark(key))
     return { title, ...mark }

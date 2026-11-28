@@ -78,6 +78,9 @@ if (!empty($rawMetaData['field_data']) && is_array($rawMetaData['field_data'])) 
             
             // Lead Source
             'lead_source' => $this->lead_source,
+            'source_client_name' => $this->source_client_name,
+            'is_existing_client_referral' => \App\Models\Lead::isExistingClientRelation($this->source_relation),
+            'referrer_lead_source' => \App\Models\Lead::referrerLeadSource($this->source_relation),
             'integration_id' => $this->integration_id,
             /** Listing scope: project linked on the lead (e.g. Meta / integration flow). */
             'project_id' => $this->project_id,

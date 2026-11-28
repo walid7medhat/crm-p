@@ -305,7 +305,7 @@
                             v-if="lead.lead_source && !(hasAssignedBy(lead) && enabledFieldsForLead(lead).some((field) => field.key === 'assigned_by'))"
                             class="d-flex justify-content-end"
                         >
-                            <LeadSourceMark :source="lead.lead_source" />
+                            <LeadSourceMark :source="lead.lead_source" :lead="lead" />
                         </div> -->
                     </div>
                 </div>

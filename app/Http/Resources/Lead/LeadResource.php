@@ -339,6 +339,8 @@ $branchName =
             'source_client_phone' => $this->source_client_phone,
             'source_client_email' => $this->source_client_email,
             'source_relation' => $this->source_relation,
+            'is_existing_client_referral' => \App\Models\Lead::isExistingClientRelation($this->source_relation),
+            'referrer_lead_source' => \App\Models\Lead::referrerLeadSource($this->source_relation),
             // Company Information
             'company_name' => $this->company_name,
             'position' => $this->position,

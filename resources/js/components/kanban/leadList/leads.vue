@@ -230,21 +230,16 @@
                             <div
                                 class="column-header d-flex align-items-center justify-content-between flex-shrink-0"
                                 :class="{ 'column-header--mobile': kanbanIsMobile, 'cursor-move': !kanbanIsMobile }"
-                                :style="stageFlowStyle(column)"
+                                :style="{ backgroundColor: column.color || 'var(--color-primary)', color: stageTextOn(column.color) }"
                             >
                                 <div class="d-flex align-items-center gap-2 column-header__title-block">
-                                    <iconify-icon
-                                        v-if="!kanbanIsMobile"
-                                        :icon="stageFlowIcon(column.title)"
-                                        class="column-header__icon"
+                                    <span
+                                        class="column-header__dot"
+                                        :style="{ backgroundColor: stageTextOn(column.color) }"
                                         aria-hidden="true"
                                     />
-                                    <span v-if="kanbanIsMobile" class="column-header__dot" aria-hidden="true" />
                                     <div v-if="editingStageId !== column.status" class="header-title-wrapper" @click="startEditingStage(column)">
                                         <p class="header-title">{{ column.title }}</p>
-                                        <small class="leads-count-badge">
-                                            {{ formatStageCount(stageCountForColumn(column)) }}
-                                        </small>
                                     </div>
                                     <input 
                                         v-else
@@ -257,6 +252,9 @@
                                         type="text"
                                     />
                                 </div>
+                                <small v-if="editingStageId !== column.status" class="leads-count-badge">
+                                    {{ formatStageCount(stageCountForColumn(column)) }}
+                                </small>
                             </div>
 
                             <div
@@ -392,108 +390,133 @@
                                                 </div>
                                                 
                                                  <div class="task-info">
+                                                        <div
+                                                            v-if="cardNameOnCard(column, task) && cardClientLabel(column, task)"
+                                                            class="client-name"
+                                                            :title="cardClientLabel(column, task)"
+                                                        >
+                                                            <span class="client-name-text">{{ cardClientLabel(column, task) }}</span>
+                                                            <span
+                                                                v-if="task?.work_phone && phoneCountryFlag(task)"
+                                                                class="phone-country-flag"
+                                                                :title="phoneCountryTitle(task)"
+                                                                aria-hidden="true"
+                                                            >{{ phoneCountryFlag(task) }}</span>
+                                                        </div>
+                                                        <div
+                                                            v-if="(cardHasField(column, task, 'created_by') && hasDynamicFieldValue(task, 'created_by')) || (cardHasField(column, task, 'created_at') && task.created_at) || task.lead_branch_source"
+                                                            class="card-meta"
+                                                        >
+                                                            <span v-if="cardHasField(column, task, 'created_by') && hasDynamicFieldValue(task, 'created_by')" class="card-meta-item card-meta-item--by" :title="`Created by ${getCreatedByDisplay(task)}`"><span class="card-meta-label">by</span> {{ getCreatedByDisplay(task) }}</span>
+                                                            <span v-if="cardHasField(column, task, 'created_at') && task.created_at" class="card-meta-item card-meta-item--fixed" :title="`${formatCardDate(task.created_at)} ${formatCardTime(task.created_at)}`"><span class="card-meta-label">at</span> {{ formatCardDate(task.created_at) }} {{ formatCardTime(task.created_at) }}</span>
+                                                            <span v-if="task.lead_branch_source" class="card-meta-item card-meta-item--fixed" :title="task.lead_branch_source">{{ task.lead_branch_source }}</span>
+                                                        </div>
+                                                        <div class="req-row">
+                                                            <span
+                                                                v-for="row in clientDetailRows(task).filter(row => row.key === 'location')"
+                                                                :key="row.key"
+                                                                class="req-item"
+                                                                :title="row.label"
+                                                            >
+                                                                <iconify-icon icon="lucide:map-pin" aria-hidden="true"></iconify-icon>
+                                                                <span>{{ row.label }}</span>
+                                                            </span>
+                                                            <span
+                                                                v-if="getPriorityPropertyType(task)"
+                                                                class="req-item"
+                                                                :title="getPriorityPropertyType(task)"
+                                                            >
+                                                                <iconify-icon icon="lucide:building-2" aria-hidden="true"></iconify-icon>
+                                                                <span>{{ getPriorityPropertyType(task) }}</span>
+                                                            </span>
+                                                            <span
+                                                                v-for="row in clientDetailRows(task).filter(row => row.key === 'bedrooms')"
+                                                                :key="row.key"
+                                                                class="req-item"
+                                                                :title="row.label"
+                                                            >
+                                                                <iconify-icon icon="lucide:bed-double" aria-hidden="true"></iconify-icon>
+                                                                <span>{{ row.label }}</span>
+                                                            </span>
+                                                            <span
+                                                                v-for="row in clientDetailRows(task).filter(row => row.key === 'budget')"
+                                                                :key="row.key"
+                                                                class="req-item"
+                                                                :title="row.label"
+                                                            >
+                                                                <iconify-icon icon="lucide:wallet" aria-hidden="true"></iconify-icon>
+                                                                <span>{{ row.label }}</span>
+                                                            </span>
+                                                            <div class="card-extras">
                                                         <template v-for="field in enabledFieldsForColumn(column, task)" :key="field.key">
+                                                            <template v-if="isStructuredCardField(field.key)" />
                                                             <!-- Created at (timestamp) — API: created_at -->
                                                             <div
-                                                                v-if="field.key === 'created_at'"
+                                                                v-else-if="field.key === 'created_at'"
                                                                 class="info-item date-info d-flex align-items-center gap-1 mb-8"
                                                             >
-                                                                <span class="text-secondary-light text-xs">Created</span>
+                                                                <iconify-icon icon="lucide:calendar" class="created-at-mark" title="Created" aria-label="Created"></iconify-icon>
                                                                 <span>{{ formatDate(task.created_at) }}</span>
                                                             </div>
                                                             <!-- Created by (person) — settings key created_by maps to added_by / added_by_user on lead -->
                                                             <div
                                                                 v-else-if="field.key === 'created_by'"
-                                                                class="info-item mb-8"
+                                                                class="info-item created-by-info d-flex align-items-center gap-1 mb-8"
                                                             >
-                                                                <div class="info-label text-secondary-light text-xs">Created By</div>
+                                                                <iconify-icon icon="lucide:user-round" class="created-by-mark" title="Created by" aria-label="Created by"></iconify-icon>
                                                                 <div class="info-value">{{ getCreatedByDisplay(task) }}</div>
                                                             </div>
                                                             
-                                                            <!-- First Name -->
-                                                            <div v-else-if="field.key === 'first_name'" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">Name</div>
-                                                                <div class="info-value">{{ task.salutation }} {{ task.first_name }}</div>
-                                                            </div>
+                                                            <!-- Client name is rendered above; structured field is swallowed. -->
+                                                            <template v-else-if="field.key === 'first_name'" />
                                                             
                                                             <!-- Source -->
-                                                            <div v-else-if="field.key === 'lead_source' && task.lead_source" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs mb-1">Source</div>
+                                                            <div v-else-if="field.key === 'lead_source' && task.lead_source" class="info-item card-source mb-8">
                                                                 <div class="info-value">{{ task.lead_source }}</div>
                                                             </div>
                                                             
                                                             <!-- Lead Branch Source -->
-                                                            <div v-else-if="field.key === 'lead_branch_source' && task.lead_branch_source" class="info-item mb-12">
-                                                                <div class="info-label text-secondary-light text-xs mb-1">Lead Branch Source</div>
-                                                                <div class="info-value">{{ task.lead_branch_source }}</div>
+                                                            <div v-else-if="field.key === 'lead_branch_source' && task.lead_branch_source" class="client-detail">
+                                                                <iconify-icon icon="lucide:file-text" aria-hidden="true"></iconify-icon>
+                                                                <span>{{ task.lead_branch_source }}</span>
                                                             </div>
                                                               
-                                                            <!-- Work Phone -->
-                                                            <div v-else-if="field.key === 'work_phone' && task?.work_phone" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">Phone</div>
-                                                                <div class="info-value info-value--phone">
-                                                                    <span
-                                                                        v-if="phoneCountryFlag(task)"
-                                                                        class="phone-country-flag"
-                                                                        :title="phoneCountryTitle(task)"
-                                                                        aria-hidden="true"
-                                                                    >{{ phoneCountryFlag(task) }}</span>
-                                                                    <span>{{ task.work_phone.slice(0,8) + '....' }}</span>
-                                                                </div>
-                                                            </div>
+                                                            <!-- Phone digits stay off the card; country flag sits with the client name. -->
+                                                            <template v-else-if="field.key === 'work_phone'" />
                                                             
-                                                            <!-- Email -->
-                                                            <div v-else-if="field.key === 'email' && task.email" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">Email</div>
-                                                                <div class="info-value">{{ formatMaskedEmail(task.email) }}</div>
-                                                            </div>
+                                                            <template v-else-if="field.key === 'email'" />
                                                             
-                                                            <!-- Bedrooms -->
-                                                                <div v-else-if="field.key === 'bedrooms' && shouldShowPriorityBedrooms(task)" class="info-item mb-8">
-                                                                    <div class="info-label text-secondary-light text-xs">Bedrooms</div>
-                                                                    <div class="info-value">{{ getPriorityBedrooms(task) }}</div>
-                                                                </div>
+                                                            <template v-else-if="field.key === 'bedrooms' || field.key === 'budget'" />
                                                                 
-                                                                <!-- Property Type - من الـ priority requirement -->
-                                                                <div v-else-if="field.key === 'property_type' && getPriorityPropertyType(task)" class="info-item mb-8">
-                                                                    <div class="info-label text-secondary-light text-xs">Property Type</div>
-                                                                    <div class="info-value">{{ getPriorityPropertyType(task) }}</div>
-                                                                </div>
+                                                                <template v-else-if="field.key === 'property_type'" />
                                                                 
                                                                 <!-- Lead Type - من الـ priority requirement -->
-                                                                <div v-else-if="field.key === 'lead_type' && getPriorityLeadType(task)" class="info-item mb-8">
-                                                                    <div class="info-label text-secondary-light text-xs">Lead Type</div>
-                                                                    <div class="info-value">{{ displayLeadType(getPriorityLeadType(task)) }}</div>
+                                                                <div v-else-if="field.key === 'lead_type' && getPriorityLeadType(task)" class="client-detail">
+                                                                    <iconify-icon icon="lucide:file-text" aria-hidden="true"></iconify-icon>
+                                                                    <span>{{ displayLeadType(getPriorityLeadType(task)) }}</span>
                                                                 </div>
                                                                 
                                                                 <!-- Property Status - من الـ priority requirement -->
-                                                                <div v-else-if="field.key === 'property_status' && getPriorityPropertyStatus(task)" class="info-item mb-8">
-                                                                    <div class="info-label text-secondary-light text-xs">Property Status</div>
-                                                                    <div class="info-value">{{ displayPropertyStatus(getPriorityPropertyStatus(task)) }}</div>
+                                                                <div v-else-if="field.key === 'property_status' && getPriorityPropertyStatus(task)" class="client-detail">
+                                                                    <iconify-icon icon="lucide:file-text" aria-hidden="true"></iconify-icon>
+                                                                    <span>{{ displayPropertyStatus(getPriorityPropertyStatus(task)) }}</span>
                                                                 </div>
                                                                 
                                                                 <!-- Purpose Of Purchase - من الـ priority requirement -->
-                                                                <div v-else-if="field.key === 'purpose_buying' && getPriorityPurposeBuying(task)" class="info-item mb-8">
-                                                                    <div class="info-label text-secondary-light text-xs">Purpose</div>
-                                                                    <div class="info-value">{{ getPriorityPurposeBuying(task) }}</div>
+                                                                <div v-else-if="field.key === 'purpose_buying' && getPriorityPurposeBuying(task)" class="client-detail">
+                                                                    <iconify-icon icon="lucide:file-text" aria-hidden="true"></iconify-icon>
+                                                                    <span>{{ getPriorityPurposeBuying(task) }}</span>
                                                                 </div>
                                                                 
-                                                                <!-- Budget - من الـ priority requirement -->
-                                                                <div v-else-if="field.key === 'budget' && getPriorityBudget(task)" class="info-item mb-8">
-                                                                    <div class="info-label text-secondary-light text-xs">Budget</div>
-                                                                    <div class="info-value">{{ getPriorityBudget(task) }} AED</div>
-                                                                </div>
                                                             
                                                             <!-- WhatsApp -->
-                                                            <div v-else-if="field.key === 'whatsapp_number' && task.whatsapp_number" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">WhatsApp</div>
-                                                                <div class="info-value">{{ task.whatsapp_number }}</div>
+                                                            <div v-else-if="field.key === 'whatsapp_number' && task.whatsapp_number" class="client-detail">
+                                                                <iconify-icon icon="lucide:file-text" aria-hidden="true"></iconify-icon>
+                                                                <span v-if="canSeeLeadNumber(task)">{{ task.whatsapp_number }}</span>
+                                                                <span v-else>{{ leadNumberMask(task.whatsapp_number).head }}<span class="blurred-stars">{{ leadNumberMask(task.whatsapp_number).stars }}</span></span>
                                                             </div>
 
-                                                            <div v-else-if="field.key === 'api_first_question' && task.api_first_question" class="info-item info-item--span mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">More Information</div>
-                                                                <div class="info-value">{{formatMaskedQuestion(task.api_first_question)}}</div>
-                                                            </div>
+                                                            <template v-else-if="field.key === 'api_first_question'" />
 
                                                             
                                                             
@@ -548,21 +571,65 @@
                                                                                 @click.stop="openPersonProfile(task, 'activity', $event)"
                                                                             />
                                                                         </div>
-                                                                        <LeadSourceMark :source="task.lead_source" />
+                                                                        <LeadSourceMark :source="task.lead_source" :lead="task" />
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div v-else-if="hasDynamicFieldValue(task, field.key)" class="info-item mb-8">
-                                                                <div class="info-label text-secondary-light text-xs">{{ field.label || field.key }}</div>
-                                                                <div class="info-value">{{ getDynamicFieldDisplay(task, field.key) }}</div>
+                                                            <div v-else-if="field.key !== 'api_first_question' && field.key !== 'work_phone' && field.key !== 'email' && hasDynamicFieldValue(task, field.key)" class="client-detail">
+                                                                <iconify-icon icon="lucide:file-text" aria-hidden="true"></iconify-icon>
+                                                                <span>{{ getDynamicFieldDisplay(task, field.key) }}</span>
                                                             </div>
                                                           
                                                         </template>
+                                                        </div>
+                                                        </div>
                                                         <div
-                                                            v-if="task.lead_source && !cardShowsActivityRow(column, task)"
-                                                            class="lead-source-mark-row d-flex justify-content-end"
+                                                            v-if="(cardHasField(column, task, 'responsible_person') && hasResponsiblePerson(task)) || task.lead_source || (cardHasField(column, task, 'assigned_by') && hasAssignedBy(task)) || (cardHasField(column, task, 'whatsapp_number') && task.whatsapp_number)"
+                                                            class="card-foot"
                                                         >
-                                                            <LeadSourceMark :source="task.lead_source" />
+                                                            <div v-if="cardHasField(column, task, 'responsible_person') && hasResponsiblePerson(task)" class="card-foot-person">
+                                                                <div
+                                                                    class="person-hover-anchor"
+                                                                    @mouseenter.stop="showPersonHoverCard(task, 'responsible', $event)"
+                                                                    @mouseleave.stop="hidePersonHoverCard"
+                                                                    @click.stop="openPersonProfile(task, 'responsible', $event)"
+                                                                >
+                                                                    <img
+                                                                        v-if="responsiblePersonAvatar(task) && !brokenCardAvatars[task.id]"
+                                                                        :src="responsiblePersonAvatar(task)"
+                                                                        alt=""
+                                                                        class="avatar-sm rounded-circle"
+                                                                        @error="markCardAvatarBroken(task)"
+                                                                    />
+                                                                    <span v-else class="card-foot-avatar" aria-hidden="true">
+                                                                        <iconify-icon icon="lucide:user-round"></iconify-icon>
+                                                                    </span>
+                                                                </div>
+                                                                <span
+                                                                    class="card-foot-name"
+                                                                    :title="task.responsible_person?.name || ''"
+                                                                    @mouseenter.stop="showPersonHoverCard(task, 'responsible', $event)"
+                                                                    @mouseleave.stop="hidePersonHoverCard"
+                                                                    @click.stop="openPersonProfile(task, 'responsible', $event)"
+                                                                >{{ task.responsible_person?.name }}</span>
+                                                            </div>
+                                                            <div class="card-foot-end">
+                                                                <span
+                                                                    v-if="cardHasField(column, task, 'assigned_by') && hasAssignedBy(task)"
+                                                                    class="card-foot-activity-date"
+                                                                    :title="`Last activity ${formatActivityDate(task)}`"
+                                                                >{{ formatActivityDate(task) }}</span>
+                                                                <span
+                                                                    v-if="cardHasField(column, task, 'whatsapp_number') && task.whatsapp_number"
+                                                                    class="card-foot-channel"
+                                                                    :title="canSeeLeadNumber(task) ? task.whatsapp_number : ''"
+                                                                >
+                                                                    <iconify-icon icon="lucide:message-circle" aria-hidden="true"></iconify-icon>
+                                                                </span>
+                                                                <span v-if="task.lead_source" class="card-foot-source" :title="task.lead_source">
+                                                                    <LeadSourceMark :source="task.lead_source" :lead="task" />
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                             </div>
@@ -744,7 +811,9 @@
                                 <span v-else class="lead-list-muted">—</span>
                             </td>
                             <td class="lead-list-col-phone">
-                                <span class="lead-list-clip lead-list-value lead-list-value--phone">{{ listPhone(row.task) || '—' }}</span>
+                                <span v-if="canSeeLeadNumber(row.task)" class="lead-list-clip lead-list-value lead-list-value--phone">{{ listPhone(row.task) || '—' }}</span>
+                                <span v-else-if="row.task?.work_phone" class="lead-list-clip lead-list-value lead-list-value--phone">{{ leadNumberMask(row.task.work_phone).head }}<span class="blurred-stars">{{ leadNumberMask(row.task.work_phone).stars }}</span></span>
+                                <span v-else class="lead-list-clip lead-list-value lead-list-value--phone">—</span>
                             </td>
                         </tr>
                     </tbody>
@@ -1610,6 +1679,13 @@ const kanbanCardPersonAvatar = (person) => {
 const responsiblePersonAvatar = (task) => {
     if (!task?.responsible_person?.name && !task?.responsible_person?.avatar) return ''
     return kanbanCardPersonAvatar(task.responsible_person)
+}
+
+const brokenCardAvatars = ref({})
+const markCardAvatarBroken = (task) => {
+    const id = task?.id
+    if (id == null || brokenCardAvatars.value[id]) return
+    brokenCardAvatars.value = { ...brokenCardAvatars.value, [id]: true }
 }
 
 const seedActivityAvatarCacheFromColumns = (cols) => {
@@ -3660,14 +3736,26 @@ const enabledFields = computed(() => {
         .sort((a, b) => a.order - b.order)
 })
 
+const CARD_DISPLAY_RANK = {
+    created_by: 1,
+    created_at: 2,
+    lead_source: 3,
+    lead_branch_source: 4,
+    first_name: 5,
+    work_phone: 6,
+}
+
 const orderCardFields = (fields) => {
     const filtered = fields.filter(field => field.key !== 'lead_name')
-    const normal = filtered.filter(field => field.key !== 'responsible_person' && field.key !== 'assigned_by')
-    const responsible = filtered.find(field => field.key === 'responsible_person')
-    const assigned = filtered.find(field => field.key === 'assigned_by')
-    if (responsible) normal.push(responsible)
-    if (assigned) normal.push(assigned)
-    return normal
+    const rank = (key) => {
+        if (key === 'responsible_person') return 100
+        if (key === 'assigned_by') return 101
+        return CARD_DISPLAY_RANK[key] ?? 50
+    }
+    return [...filtered].sort((a, b) => {
+        const diff = rank(a.key) - rank(b.key)
+        return diff !== 0 ? diff : (a.order ?? 0) - (b.order ?? 0)
+    })
 }
 
 const hasResponsiblePerson = (task) => {
@@ -3718,6 +3806,98 @@ const enabledFieldsForColumn = (column, task) => {
 
 const isFieldEnabled = (fieldKey) => {
     return cardFields.value.some(field => field.key === fieldKey && field.enabled)
+}
+
+const cardHasField = (column, task, key) => {
+    return enabledFieldsForColumn(column, task).some((field) => field.key === key)
+}
+
+const STRUCTURED_CARD_FIELDS = new Set([
+    'created_by',
+    'created_at',
+    'lead_source',
+    'first_name',
+    'work_phone',
+    'bedrooms',
+    'budget',
+    'responsible_person',
+    'assigned_by',
+    'email',
+    'api_first_question',
+    'last_name',
+    'lead_branch_source',
+])
+
+const isStructuredCardField = (key) => STRUCTURED_CARD_FIELDS.has(key)
+
+const cardNameOnCard = (column, task) => {
+    return cardHasField(column, task, 'first_name')
+}
+
+const cardClientLabel = (column, task) => {
+    if (cardNameOnCard(column, task)) {
+        return `${task?.salutation || ''} ${task?.first_name || ''}`.trim()
+    }
+    return String(task?.lead_name || '').trim()
+}
+
+// Same gate as the lead view: admins and the responsible person see the full number.
+// Everyone else sees the first three characters, then blurred stars.
+const canSeeLeadNumber = (task) => {
+    const current = user.value
+    if (!current) return false
+    const roles = current.roles || []
+    const isAdmin = roles.includes('super_admin') || roles.includes('admin') || roles.includes('branch_admin')
+    const isResponsible = Number(task?.responsible_person_id) === Number(current.id)
+    return isAdmin || isResponsible
+}
+
+const leadNumberMask = (value) => {
+    const text = String(value || '')
+    const rest = text.slice(3)
+    return {
+        head: text.slice(0, 3),
+        stars: rest ? '★'.repeat(rest.length) : '',
+    }
+}
+
+const cardPhoneBesideName = (column, task) => {
+    return !!task?.work_phone && enabledFieldsForColumn(column, task).some((field) => field.key === 'work_phone')
+}
+
+const compactCardMoney = (value) => {
+    const n = Number(String(value ?? '').replace(/,/g, '').trim())
+    if (!Number.isFinite(n) || n <= 0) return ''
+    if (n >= 1000000) {
+        const millions = n / 1000000
+        const text = Number.isInteger(millions) ? String(millions) : millions.toFixed(1).replace(/\.0$/, '')
+        return `${text}M`
+    }
+    if (n >= 1000) return `${Math.round(n / 1000)}K`
+    return String(Math.round(n))
+}
+
+const clientDetailRows = (task) => {
+    const req = getPriorityRequirement(task)
+    const rows = []
+    const area = String(req?.area_label || task?.area || '').split(',')[0].trim()
+    let bedroomsLabel = ''
+    const bedrooms = getPriorityBedrooms(task)
+    if (bedrooms !== null && bedrooms !== undefined && bedrooms !== '') {
+        const raw = String(bedrooms).trim().toLowerCase()
+        bedroomsLabel = raw === '0' || raw === 'studio' ? 'Studio' : `${bedrooms} BR`
+    }
+    if (area) rows.push({ key: 'location', icon: 'lucide:map-pin', label: area })
+    if (bedroomsLabel) rows.push({ key: 'bedrooms', icon: 'lucide:bed-double', label: bedroomsLabel })
+
+    const from = compactCardMoney(req?.budget_from)
+    const to = compactCardMoney(req?.budget_to)
+    const money = from && to && from !== to ? `${from}-${to}` : (from || to)
+    if (money) {
+        const rent = String(req?.lead_type || '').toLowerCase() === 'rent'
+        rows.push({ key: 'budget', icon: 'lucide:wallet-cards', label: rent ? `${money}/yr` : money })
+    }
+    return rows
 }
 
 const activePersonHover = ref(null)
@@ -3908,32 +4088,30 @@ const isCreatorInactive = (task) => {
 
 const getCreatedByDisplay = (task) => {
     const u = task?.added_by_user
-    console.log('CREATED BY', task?.id, JSON.stringify(u))
+    if (u?.name) return String(u.name).trim()
+    if (u?.display_name) return String(u.display_name).trim()
+    if (typeof u === 'string' && u.trim()) return u.trim()
 
+    const parent = task?.parent
+    if (parent?.name) return String(parent.name).trim()
+    if (parent?.display_name) return String(parent.display_name).trim()
+
+    // Inactive creators used to hide the name; still show who created when we have a label.
     if (isCreatorInactive(task)) {
         return (
-            u.branch_name ||
-            u.office_name ||
-            u.admin_parent_name ||
+            u?.branch_name ||
+            u?.office_name ||
+            u?.admin_parent_name ||
             task?.lead_branch_source ||
             '—'
         )
     }
 
-    if (u?.name) return u.name
-    if (typeof u === 'string' && u.trim()) return u.trim()
-    if (task?.added_by != null && task?.added_by !== '') {
-        return String(task.added_by)
-    }
     return '—'
 }
 const hasDynamicFieldValue = (task, key) => {
     if (key === 'created_by') {
-        return !!(
-            task?.added_by_user?.name ||
-            (typeof task?.added_by_user === 'object' && task.added_by_user && Object.keys(task.added_by_user).length > 0) ||
-            (task?.added_by != null && task?.added_by !== '')
-        )
+        return getCreatedByDisplay(task) !== '—'
     }
     // For bedrooms: show root task.bedrooms only when we are not hiding bedrooms because the *priority* requirement is plot/land.
     if (key === 'bedrooms') {
@@ -4105,7 +4283,14 @@ const shouldHideBedroomsDueToPlotPriority = (task) => {
 const getPriorityPropertyType = (task) => {
     const priorityReq = getPriorityRequirement(task)
     if (!priorityReq) return null
-    return priorityReq.property_type_label || null
+    const label = priorityReq.property_type_label
+        || priorityReq.property_type_name
+        || (typeof priorityReq.property_type === 'string' ? priorityReq.property_type : '')
+        || priorityReq.property_type?.name
+        || priorityReq.property_type?.label
+        || ''
+    const text = String(label).trim()
+    return text || null
 }
 
 // دالة للحصول على الـ lead type من الـ priority requirement
@@ -5163,9 +5348,41 @@ function formatDate(dateString) {
     })
     return `${formattedDate}  |  ${formattedTime}`
 }
-/** Activity tile: Bitrix24 LAST_ACTIVITY_TIME (last_activity_at / bitrix24_last_activity_at). */
+
+function formatCardDate(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        timeZone: CARD_TIME_ZONE,
+    })
+}
+
+function formatCardTime(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return ''
+    const raw = date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        hour12: true,
+        timeZone: CARD_TIME_ZONE,
+    })
+    // "2 PM" → "2 pm"
+    return raw.replace(/\s?(AM|PM)/i, (_, period) => ` ${period.toLowerCase()}`)
+}
+/** Activity tile: day only, no clock time. */
 function formatActivityDate(task) {
-    return formatDate(activityDisplayAt(task))
+    const raw = activityDisplayAt(task)
+    if (!raw) return ''
+    const date = new Date(raw)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        timeZone: CARD_TIME_ZONE,
+    })
 }
 
 function clearMobileLongPress() {
@@ -7224,15 +7441,9 @@ const fetchRevertNotifications = async () => {
     max-width: 252px;
     display: flex;
     flex-direction: column;
-    background:
-      linear-gradient(
-        165deg,
-        rgba(255, 255, 255, 0.18) 0%,
-        rgba(255, 255, 255, 0.05) 40%,
-        rgba(255, 255, 255, 0) 100%
-      );
+    background: transparent;
     border-radius: 18px;
-    border: 1px solid rgba(30, 27, 46, 0.1);
+    border: none;
     box-shadow: none;
     align-self: stretch;
     min-height: calc(100dvh - 200px);
@@ -7246,7 +7457,7 @@ const fetchRevertNotifications = async () => {
 }
 
 .kanban-column:not(:first-child) {
-    border-left: 1px solid rgba(30, 27, 46, 0.12);
+    border-left: none;
     padding-left: 0;
     margin-left: 0;
 }
@@ -7273,18 +7484,63 @@ const fetchRevertNotifications = async () => {
 }
 
 .column-header {
-    min-height: 36px;
-    margin: 8px 8px 0;
-    padding: 7px 12px;
-    border-radius: 999px !important;
+    min-height: 40px;
+    margin: 0;
+    padding: 12px 12px 10px;
+    border-radius: 18px 18px 0 0 !important;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     z-index: 1;
     clip-path: none !important;
-    border: 1px solid rgba(15, 23, 42, 0.22) !important;
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.55),
-      0 2px 6px rgba(15, 23, 42, 0.16);
+    color: #1c1917;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.column-header__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--column-color, var(--color-primary));
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column .column-content-scrollable {
+    background: rgba(255, 255, 255, 0.62);
+    border-radius: 0 0 18px 18px;
+    margin: 0;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column:not(:first-child) {
+    border-left: none !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .kanban-column .column-header {
+    background: rgb(from var(--column-color, var(--color-primary)) r g b / 0.92) !important;
+    min-height: 36px !important;
+    padding: 7px 12px !important;
+    border-radius: 18px 18px 0 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .column-header .header-title {
+    font-size: 13px;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .column-header .leads-count-badge {
+    font-size: 12px;
+}
+
+.kanban-outer:not(.kanban-outer--mobile) .column-header__dot {
+    width: 7px;
+    height: 7px;
 }
 
 
@@ -7733,14 +7989,11 @@ const fetchRevertNotifications = async () => {
        without this the browser starts a text selection that spreads across other cards. */
     -webkit-user-select: none;
     user-select: none;
-    border: 1px solid rgba(30, 27, 46, 0.14) !important;
-    border-radius: 14px !important;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, #ffffff 42%, #fbfbfd 100%) !important;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.92),
-        0 1px 2px rgba(1, 6, 45, 0.04),
-        0 8px 16px -12px rgba(1, 6, 45, 0.18) !important;
+    padding: 13px 13px 11px !important;
+    border: 1px solid #e6e6e6 !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
     margin-left: 2px;
     margin-right: 2px;
     position: relative;
@@ -7748,12 +8001,11 @@ const fetchRevertNotifications = async () => {
     /* transform: translate3d(var(--px), var(--py), 0) rotateX(var(--rx)) rotateY(var(--ry)); */
     transform-style: preserve-3d;
     transition:
-        box-shadow 0.08s ease,
-        border-color 0.08s ease,
-        scale 0.08s ease;
-    --tilt-strength: 0.2;  /* قلله أكتر لو لسه كبير */
-    --max-tilt: 2deg;      /* أقصى ميل حتى لو الماوس في الطرف */
-    --max-shift: 2px;      /* أقصى إزاحة */
+        box-shadow 0.22s ease,
+        border-color 0.22s ease;
+    --tilt-strength: 0;
+    --max-tilt: 0deg;
+    --max-shift: 0px;
     transform:
     translate3d(
         clamp(calc(var(--max-shift) * -1), calc(var(--px) * var(--tilt-strength)), var(--max-shift)),
@@ -7777,20 +8029,44 @@ const fetchRevertNotifications = async () => {
     pointer-events: none;
     z-index: 0;
     opacity: 0;
-    transition: none;
-    background: transparent;
+    transition: opacity 0.12s ease;
+    background: radial-gradient(
+        140px 90px at var(--gx) var(--gy),
+        rgba(255, 255, 255, 0.9),
+        rgba(255, 255, 255, 0) 68%
+    );
+}
+
+/* Left accent takes the stage colour from the column (--column-color). */
+.kanban-outer:not(.kanban-outer--mobile) .kanban-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    border-radius: 12px 0 0 12px;
+    background: var(--column-color, var(--color-primary, #733e87));
+    pointer-events: none;
+    z-index: 2;
 }
 
 @media (hover: hover) and (pointer: fine) {
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card:hover:not(.ghost):not(.dragging):not(.kanban-card--motion-hold):not(.is-tilting) {
-        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 42%, #ffffff) !important;
+        border-color: #dcdcdc !important;
+        box-shadow: 0 8px 20px -16px rgba(0, 0, 0, 0.28) !important;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting:not(.ghost):not(.kanban-card--motion-hold),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-releasing:not(.ghost),
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.dragging {
         z-index: 4;
-        border-color: color-mix(in srgb, var(--column-color, var(--color-primary, #733E87)) 42%, #ffffff) !important;
+        border-color: #e6e6e6 !important;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting::before {
+        opacity: 0;
     }
 
     .kanban-outer:not(.kanban-outer--mobile) .kanban-card.is-tilting {
@@ -7935,11 +8211,96 @@ const fetchRevertNotifications = async () => {
     color: #1a1528 !important;
 }
 
+.kanban-card .task-title,
+.kanban-card .info-value,
+.kanban-card .date-info span,
+.kanban-card .client-detail,
+.kanban-card .client-contact-phone,
+.kanban-card .card-foot-name,
+.kanban-card .card-foot-activity-label,
+.kanban-card .card-foot-activity-date {
+    text-shadow: none;
+}
+
 .kanban-card .task-title {
-    font-size: 13.5px !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.01em;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
     line-height: 1.3;
+    color: #111111 !important;
+    text-shadow: none;
+}
+
+.kanban-card .lead-deal-tag,
+.kanban-card .lead-deal-tag:hover,
+.kanban-card .lead-deal-tag:active {
+    padding: 0;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+.kanban-card .lead-deal-tag__face,
+.kanban-card .lead-deal-tag:active .lead-deal-tag__face {
+    height: 18px;
+    padding: 0 6px;
+    border: 1px solid #e6e6e6;
+    border-radius: 6px;
+    background: #f7f7f7;
+    color: #404040;
+    font-size: 11px;
+    font-weight: 600;
+    text-shadow: none;
+    box-shadow: none;
+    transform: none;
+}
+
+.kanban-card .lead-deal-tag__face::before,
+.kanban-card .lead-deal-tag__face::after {
+    display: none;
+}
+
+.kanban-card .lead-deal-tag__icon {
+    font-size: 11px;
+    filter: none;
+}
+
+.client-phone .blurred-stars,
+.client-contact-phone .blurred-stars,
+.client-detail .blurred-stars,
+.lead-list-value--phone .blurred-stars {
+    filter: blur(3px);
+    user-select: none;
+}
+
+.client-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    font-family: Montserrat, system-ui, sans-serif;
+    color: #111111;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.client-name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-name .phone-country-flag {
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 1;
 }
 
 .kanban-card .task-title:hover {
@@ -8374,14 +8735,13 @@ const fetchRevertNotifications = async () => {
 
 .task-title {
     font-family: Montserrat;
-    font-weight: 700;
-    font-style: Bold;
+    font-weight: 600;
+    font-style: normal;
     font-size: 12px;
-    line-height: 19px;
-    letter-spacing: -0.25px;
-    color: #0B0736;
-
-    }
+    line-height: 16px;
+    letter-spacing: 0;
+    color: #2a2438;
+}
 
 .task-header {
     align-items: center;
@@ -8551,8 +8911,8 @@ const fetchRevertNotifications = async () => {
 
 .duplicate-icon-wrapper {
     position: relative;
-    width: 24px;
-    height: 28px;
+    width: 18px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -8560,19 +8920,19 @@ const fetchRevertNotifications = async () => {
 
 .duplicate-rectangle {
     position: absolute;
-    width: 20px;
-    height: 24px;
+    width: 15px;
+    height: 18px;
     background-color: #FFFFFF;
     border: 1px solid #D1D5DB;
-    border-radius: 4px;
+    border-radius: 3px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .duplicate-rectangle-back {
-    top: 4px;
-    left: 4px;
+    top: 3px;
+    left: 3px;
     z-index: 1;
 }
 
@@ -8585,7 +8945,7 @@ const fetchRevertNotifications = async () => {
 .duplicate-number {
     font-family: Montserrat;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 9px;
     line-height: 1;
     color: #0B0736;
     display: flex;
@@ -8597,9 +8957,9 @@ const fetchRevertNotifications = async () => {
     font-family: Montserrat;
     font-weight: 500;
     font-style: Medium;
-    font-size: 10px;
-    line-height: 9px;
-    letter-spacing: 0%;
+    font-size: 11px;
+    line-height: 1.3;
+    letter-spacing: 0;
     color: #64748b;
 }
 
@@ -8607,13 +8967,451 @@ const fetchRevertNotifications = async () => {
     color: #1e293b;
 }
 
-.header-title {
-    font-weight: 700;
-    font-style: normal;
-    font-size: 11px;
-    line-height: 1.2;
+.created-at-mark,
+.created-by-mark {
+    font-size: 12px;
+    color: #7a6b86;
+    flex-shrink: 0;
+}
+
+.card-meta {
+    gap: 2px;
+}
+
+.kanban-card .card-meta .info-value,
+.kanban-card .date-info span {
+    font-size: 11px !important;
+    font-weight: 500;
+    color: #5c5668 !important;
+}
+
+.kanban-card .card-source .info-value {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #f4eef8;
+    color: #6b4c7a !important;
+    font-size: 10px !important;
+    font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+}
+
+.client-contact {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.client-contact-name,
+.client-contact-phone {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+
+.kanban-card .client-contact-name {
+    color: #3c3648 !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+}
+
+.kanban-card .client-contact-phone {
+    max-width: 100%;
+    color: #6a6474 !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em;
+}
+
+.req-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 5px;
+    min-width: 0;
+    margin-top: 2px;
+    padding-top: 7px;
+    border-top: 1px solid #eeeeee;
+}
+
+.req-row:not(:has(.req-item, .client-detail)) {
+    display: none;
+}
+
+.req-item,
+.req-row .client-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #262626;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+}
+
+.req-item iconify-icon,
+.req-row .client-detail iconify-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: #8a8a8a;
+    font-size: 10px;
+}
+
+.req-item span,
+.req-row .client-detail span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-details,
+.card-extras {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    min-width: 0;
+}
+
+.req-row > .card-extras {
+    display: contents;
+}
+
+.card-extras:not(:has(.client-detail)) {
+    display: none;
+}
+
+.client-detail {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #4b4556;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.client-details .client-detail:first-child {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.client-detail iconify-icon {
+    font-size: 12px;
+    color: #7a6b86;
+    flex-shrink: 0;
+}
+
+.client-detail span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-foot {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    padding-top: 8px;
+}
+
+.card-source-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.card-source-row .card-source {
+    min-width: 0;
+}
+
+.card-source-flag {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.card-foot-person {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.card-foot-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    color: #404040;
+    font-size: 11px;
+    box-shadow: 0 0 0 1px #f0f0f0;
+}
+
+.card-foot-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #171717;
+    font-size: 12px !important;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.card-foot-activity {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    flex: 0 0 auto;
+    max-width: none;
+    min-width: 0;
+    padding-left: 8px;
+    border-left: 1px solid #efeaf2;
+}
+
+.card-foot-activity-icon {
+    margin-top: 2px;
+    font-size: 14px;
+    color: #7a6b86;
+}
+
+.card-foot-activity-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.card-foot-activity-label {
+    color: #8a8494;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.card-foot-activity-date {
+    color: #8a8a8a;
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.card-foot-source,
+.card-foot-channel {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin-left: 0;
+    align-self: center;
+    padding: 0;
+    border: none;
+    color: #171717;
+    font-size: 14px;
+}
+
+
+.card-foot .avatar-sm {
+    width: 22px;
+    height: 22px;
+    box-shadow: 0 0 0 1px #f0f0f0;
+}
+
+.kanban-card .task-header {
+    margin-bottom: 7px !important;
+}
+
+.kanban-card .task-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.kanban-card .task-info .info-item,
+.kanban-card .task-info .client-detail,
+.kanban-card .task-info .card-source-row,
+.kanban-card .task-info .client-contact,
+.kanban-card .task-info .client-details {
+    margin: 0 !important;
+}
+
+.card-meta {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+.card-meta-item {
+    min-width: 0;
+    overflow: hidden;
+    color: #8a8a8a;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-meta-item--by {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.card-meta-item--fixed {
+    flex: 0 0 auto;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.card-meta-label,
+.card-meta-time {
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.card-meta-item + .card-meta-item::before {
+    content: '·';
+    margin: 0 4px;
+    color: #d4d4d4;
+}
+
+.card-foot {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid #eeeeee;
+    background: transparent;
+    overflow: hidden;
+}
+
+.card-foot-end {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+    margin-left: auto;
+}
+
+.kanban-card .task-info > .info-item,
+.kanban-card .task-info > .client-contact,
+.kanban-card .task-info > .card-meta,
+.kanban-card .task-info > .card-source,
+.kanban-card .task-info > .card-foot,
+.kanban-card .task-info > .client-info-chips {
+    margin-bottom: 0 !important;
+}
+
+.kanban-card .card-source .info-value {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    height: 18px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #f4eef8;
+    box-shadow: none;
+    font-size: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b4c7a !important;
+    text-shadow: none;
+}
+
+.kanban-card .created-by-info,
+.kanban-card .date-info {
+    min-width: 0;
+}
+
+.kanban-card .created-by-info .info-value,
+.kanban-card .date-info span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kanban-card .card-foot .lead-activity-row {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.kanban-card .lead-activity-row hr {
+    display: none;
+}
+
+.kanban-card .lead-activity-row .assignedBy {
+    margin-top: 0 !important;
+}
+
+.kanban-card .lead-activity-row .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+}
+
+.kanban-card .responsible-info {
+    align-items: center;
+}
+
+.header-title {
+    font-weight: 600;
+    font-style: normal;
+    font-size: 14px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    text-transform: none;
     color: inherit !important;
     margin: 0;
 }
@@ -8667,11 +9465,13 @@ const fetchRevertNotifications = async () => {
     width: 400px;
 }
 .leads-count-badge {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.1;
     color: inherit !important;
-    margin-left: 2px;
-    font-weight: 800 !important;
+    opacity: 0.8;
+    margin-left: auto;
+    font-weight: 500 !important;
+    flex-shrink: 0;
 }
 
 .column-header__icon {
@@ -8786,19 +9586,19 @@ const fetchRevertNotifications = async () => {
     box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.35) !important;
 }
 
-/* Stage-colour stripe on the left — only while the card is hovered / pressed. */
+/* Stage-colour stripe on the left of every mobile lead card. */
 .kanban-outer--mobile .kanban-column .kanban-card--mobile::after {
     content: '';
     position: absolute;
-    top: 12px;
-    bottom: 12px;
+    top: 0;
+    bottom: 0;
     left: 0;
     width: 3px;
-    border-radius: 0 3px 3px 0;
+    border-radius: 12px 0 0 12px;
     background: var(--column-color, #733E87);
-    opacity: 0;
-    transition: opacity 0.15s ease;
+    opacity: 1;
     pointer-events: none;
+    z-index: 2;
 }
 
 .kanban-outer--mobile .kanban-column .kanban-card--mobile:hover,
@@ -10314,28 +11114,28 @@ const fetchRevertNotifications = async () => {
 .merged-flag {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    height: 22px;
-    padding: 0 8px 0 6px;
+    gap: 3px;
+    height: 18px;
+    padding: 0 6px 0 5px;
     border: 0;
-    border-radius: 8px 8px 8px 3px;
+    border-radius: 6px 6px 6px 2px;
     background: var(--gradient-primary, var(--color-primary));
     color: #fff !important;
     -webkit-text-fill-color: #fff;
     font-family: Montserrat, system-ui, sans-serif;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.38),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.16),
-        0 3px 0 color-mix(in srgb, var(--color-primary) 62%, #000),
-        0 7px 10px -4px rgba(var(--color-primary-rgb), 0.5);
+        inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+        0 2px 0 color-mix(in srgb, var(--color-primary) 62%, #000),
+        0 5px 8px -4px rgba(var(--color-primary-rgb), 0.5);
     transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
 }
-.merged-flag iconify-icon { font-size: 13px; color: #fff; }
+.merged-flag iconify-icon { font-size: 10px; color: #fff; }
 .merged-flag:hover { filter: brightness(1.06); }
 .merged-flag:active {
     transform: translateY(1px);
@@ -10344,5 +11144,5 @@ const fetchRevertNotifications = async () => {
         inset 0 -1px 0 rgba(0, 0, 0, 0.16),
         0 1px 0 color-mix(in srgb, var(--color-primary) 62%, #000);
 }
-.merged-flag--sm { height: 20px; font-size: 10px; flex-shrink: 0; }
+.merged-flag--sm { height: 16px; font-size: 9px; flex-shrink: 0; }
 </style>
